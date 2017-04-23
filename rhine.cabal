@@ -4,7 +4,7 @@
 -- The name of the package.
 name:                rhine
 
--- The package version.  See the Haskell package versioning policy (PVP) 
+-- The package version.  See the Haskell package versioning policy (PVP)
 -- for standards guiding when and how versions should be incremented.
 -- http://www.haskell.org/haskellwiki/Package_versioning_policy
 -- PVP summary:      +-+------- breaking API changes
@@ -13,10 +13,10 @@ name:                rhine
 version:             0.1.0.0
 
 -- A short (one-line) description of the package.
--- synopsis:            
+-- synopsis:
 
 -- A longer description of the package.
--- description:         
+-- description:
 
 -- The license under which the package is released.
 license:             BSD3
@@ -27,20 +27,20 @@ license-file:        LICENSE
 -- The package author(s).
 author:              Manuel Bärenz
 
--- An email address to which users can send suggestions, bug reports, and 
+-- An email address to which users can send suggestions, bug reports, and
 -- patches.
 maintainer:          maths@manuelbaerenz.de
 
 -- A copyright notice.
--- copyright:           
+-- copyright:
 
 category:            FRP
 
 build-type:          Simple
 
--- Extra files to be distributed with the package, such as examples or a 
+-- Extra files to be distributed with the package, such as examples or a
 -- README.
--- extra-source-files:  
+-- extra-source-files:
 
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
@@ -48,20 +48,31 @@ cabal-version:       >=1.10
 
 library
   -- Modules exported by the library.
-  -- exposed-modules:     
-  
+  exposed-modules:
+    FRP.Rhine
+    FRP.Rhine.Clock
+    FRP.Rhine.Reactimation
+    FRP.Rhine.Reactimation.Tick
+    FRP.Rhine.ResamplingBuffer
+    FRP.Rhine.ResamplingPoint
+    FRP.Rhine.Schedule
+    FRP.Rhine.SF
+    FRP.Rhine.SyncSF
+    FRP.Rhine.TimeDomain
+
   -- Modules included in this library but not exported.
-  -- other-modules:       
-  
+  -- other-modules:
+
   -- LANGUAGE extensions used by modules in this package.
-  -- other-extensions:    
-  
+  -- other-extensions:
+
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9
-  
+  build-depends:       base >=4.8 && <5
+                    ,  dunai
+                    ,  transformers
+
   -- Directories containing source files.
   hs-source-dirs:      src
-  
+
   -- Base language which the package is written in.
   default-language:    Haskell2010
-  
