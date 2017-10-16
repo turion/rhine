@@ -44,7 +44,7 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      release_0.1.0.0
+  tag:      v0.1.0.0
 
 
 library
