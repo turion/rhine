@@ -1,4 +1,4 @@
-* README
+# README
 --------
 
 Rhine is a library for synchronous and asynchronous Functional Reactive Programming (FRP).
