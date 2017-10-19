@@ -35,7 +35,7 @@ build-type:          Simple
 
 extra-doc-files:     README.md
 
-cabal-version:       >=1.10
+cabal-version:       >=1.18
 
 source-repository head
   type:     git
@@ -100,7 +100,7 @@ executable test
   main-is:             Test.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base  >= 4.8     && <5
-                     , rhine == 0.1.0.0
+                     , rhine
   default-language:    Haskell2010
 
 executable HelloWorld
@@ -108,7 +108,7 @@ executable HelloWorld
   main-is:             HelloWorld.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base  >= 4.8     && <5
-                     , rhine == 0.1.0.0
+                     , rhine
   default-language:    Haskell2010
 
 executable Demonstration
@@ -116,5 +116,5 @@ executable Demonstration
   main-is:             Demonstration.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base  >= 4.8     && <5
-                     , rhine == 0.1.0.0
+                     , rhine
   default-language:    Haskell2010

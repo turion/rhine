@@ -31,7 +31,7 @@ reusable standard solutions. In the places
 where these aspects need to intertwine, typing
 constraints on clocks come into effect, enforcing clock safety.
 
-A typical example, which can be run as @cabal run Demonstration@,
+A typical example, which can be run as `cabal run Demonstration`,
 would be:
 
 ```
