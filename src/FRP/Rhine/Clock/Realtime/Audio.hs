@@ -21,9 +21,10 @@ import GHC.Float       (double2Float)
 import GHC.TypeLits    (Nat, natVal, KnownNat)
 import Data.Time.Clock
 
--- transformers?
+-- transformers
 -- TODO Delete as soon as dunai is updated
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.IO.Class
 
 
 -- dunai
@@ -88,7 +89,8 @@ theBufferSize
 theBufferSize = fromInteger . natVal
 
 
-instance (KnownNat bufferSize, AudioClockRate rate) => Clock IO (AudioClock rate bufferSize) where
+instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
+      => Clock m (AudioClock rate bufferSize) where
   type TimeDomainOf (AudioClock rate bufferSize) = UTCTime
   type Tag          (AudioClock rate bufferSize) = Maybe Double
 
@@ -97,22 +99,22 @@ instance (KnownNat bufferSize, AudioClockRate rate) => Clock IO (AudioClock rate
       step       = picosecondsToDiffTime -- The only sufficiently precise conversion function
                      $ round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
       bufferSize = theBufferSize audioClock
-      once f = try $ arrM (lift . f) >>> throwS -- TODO Delete once dunai is updated
-      once_ = once . const
+      --once f = try $ arrM (lift . f) >>> throwS -- TODO Delete once dunai is updated
+      --once_ = once . const
 
-      runningClock :: UTCTime -> Maybe Double -> MSF IO () (UTCTime, Maybe Double)
+      runningClock :: MonadIO m => UTCTime -> Maybe Double -> MSF m () (UTCTime, Maybe Double)
       runningClock initialTime maybeWasLate = safely $ do
         bufferFullTime <- try $ proc () -> do
           n <- count    -< ()
           let nextTime = (realToFrac step * fromIntegral (n :: Int)) `addUTCTime` initialTime
           _ <- throwOn' -< (n >= bufferSize, nextTime)
           returnA       -< (nextTime, if n == 0 then maybeWasLate else Nothing)
-        currentTime <- once_ getCurrentTime
+        currentTime <- once_ $ liftIO getCurrentTime
         let
           lateDiff = realToFrac $ currentTime `diffUTCTime` bufferFullTime
           late     = if lateDiff > 0 then Just lateDiff else Nothing
         safe $ runningClock bufferFullTime late
-    initialTime <- getCurrentTime
+    initialTime <- liftIO getCurrentTime
     return
       ( runningClock initialTime Nothing
       , initialTime
