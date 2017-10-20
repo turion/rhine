@@ -80,12 +80,13 @@ timeInfoOf f = arrM_ $ asks f
 
 -- * Useful aliases
 
+-- TODO Is it cleverer to generalise to Arrow?
 {- | Alias for 'Control.Category.>>>' (sequential composition)
 with higher operator precedence, designed to work with the other operators, e.g.:
 
 > syncsf1 >-> syncsf2 @@ clA **@ sched @** syncsf3 >-> syncsf4 @@ clB
 -}
-infixr 4 >->
+infixr 6 >->
 (>->) :: Monad m
       => SyncSF m cl a b
       -> SyncSF m cl   b c
@@ -93,7 +94,7 @@ infixr 4 >->
 (>->) = (>>>)
 
 -- | Alias for 'Control.Arrow.<<<'.
-infixl 4 <-<
+infixl 6 <-<
 (<-<) :: Monad m
       => SyncSF m cl   b c
       -> SyncSF m cl a b
