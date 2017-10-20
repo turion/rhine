@@ -5,7 +5,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
 
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+-- {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+-- TODO Find out exact version of cabal? GHC? that have a problem with this
 
 module FRP.Rhine.Clock.Realtime.Audio
   ( AudioClock (..)
