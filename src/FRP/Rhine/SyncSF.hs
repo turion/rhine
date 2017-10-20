@@ -8,6 +8,7 @@ module FRP.Rhine.SyncSF where
 
 -- base
 import Control.Arrow
+import Control.Category (Category)
 import qualified Control.Category (id)
 
 -- transformers
@@ -85,20 +86,24 @@ timeInfoOf f = arrM_ $ asks f
 with higher operator precedence, designed to work with the other operators, e.g.:
 
 > syncsf1 >-> syncsf2 @@ clA **@ sched @** syncsf3 >-> syncsf4 @@ clB
+
+The type signature specialises e.g. to
+
+> (>->) :: Monad m => SyncSF m cl a b -> SyncSF m cl b c -> SyncSF m cl a c
 -}
 infixr 6 >->
-(>->) :: Monad m
-      => SyncSF m cl a b
-      -> SyncSF m cl   b c
-      -> SyncSF m cl a   c
+(>->) :: Category cat
+      => cat a b
+      -> cat   b c
+      -> cat a   c
 (>->) = (>>>)
 
--- | Alias for 'Control.Arrow.<<<'.
+-- | Alias for 'Control.Category.<<<'.
 infixl 6 <-<
-(<-<) :: Monad m
-      => SyncSF m cl   b c
-      -> SyncSF m cl a b
-      -> SyncSF m cl a   c
+(<-<) :: Category cat
+      => cat   b c
+      -> cat a b
+      -> cat a   c
 (<-<) = (<<<)
 
 {- | Output a constant value.
