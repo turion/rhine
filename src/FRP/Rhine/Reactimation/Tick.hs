@@ -206,22 +206,7 @@ tick tickable@Tickable
         , buffer2  = buffer2 rightTickable
         , lastTime = ParallelLastTime lastTimeA (lastTime rightTickable)
         }
-tick Tickable
-  { ticksf   = Synchronous _
-  , lastTime = SequentialLastTime {}
-  } _ _ = error "Impossible pattern in tick"
-tick Tickable
-  { ticksf   = Synchronous _
-  , lastTime = ParallelLastTime {}
-  } _ _ = error "Impossible pattern in tick"
-tick Tickable
-  { ticksf   = Sequential {}
-  , lastTime = LeafLastTime _
-  } _ _ = error "Impossible pattern in tick"
-tick Tickable
-  { ticksf   = Parallel {}
-  , lastTime = LeafLastTime _
-  } _ _ = error "Impossible pattern in tick"
+tick Tickable {} _ _ = error "Impossible pattern in tick"
 
 -- TODO It seems wasteful to unwrap and rewrap log(N) Tickables
 -- (where N is the size of the clock tree) each tick,
