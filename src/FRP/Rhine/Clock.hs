@@ -7,6 +7,9 @@
 {-# LANGUAGE TypeFamilies          #-}
 module FRP.Rhine.Clock where
 
+-- transformers
+import Control.Monad.Trans.Class (lift, MonadTrans)
+
 -- dunai
 import Data.MonadicStreamFunction
 
@@ -139,3 +142,11 @@ instance (Monad m1, Monad m2, Clock m1 a)
       ( hoistMSF monadMorphism runningClock
       , initialTime
       )
+
+type LiftClock m t cl = HoistClock m (t m) cl
+
+liftClock :: (Monad m, MonadTrans t) => cl -> LiftClock m t cl
+liftClock hoistedClock = HoistClock
+  { monadMorphism = lift
+  , ..
+  }
