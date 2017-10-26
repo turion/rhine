@@ -44,7 +44,7 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.1.0.0
+  tag:      v0.1.1.0
 
 
 library
@@ -57,6 +57,8 @@ library
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Millisecond
+    FRP.Rhine.Clock.Realtime.Stdin
+    FRP.Rhine.Clock.Select
     FRP.Rhine.Clock.Step
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.Tick
@@ -81,7 +83,7 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base         >= 4.7   && < 5
-                    ,  dunai        >= 0.1.2 && < 0.2
+                    ,  dunai        == 0.1.1.*
                     ,  transformers >= 0.5   && < 0.6
                     ,  time         >= 1.6   && < 1.7
                     ,  free         >= 4.12  && < 4.13

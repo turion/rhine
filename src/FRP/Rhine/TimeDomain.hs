@@ -1,7 +1,11 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
-module FRP.Rhine.TimeDomain where
+module FRP.Rhine.TimeDomain
+  ( module FRP.Rhine.TimeDomain
+  , UTCTime
+  )
+  where
 
 -- time
 import Data.Time.Clock (UTCTime, diffUTCTime)

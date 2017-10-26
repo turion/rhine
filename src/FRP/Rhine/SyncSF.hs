@@ -12,7 +12,7 @@ import qualified Control.Category (id)
 
 -- transformers
 import Control.Monad.Trans.Reader
-  ( ReaderT, ask, asks, mapReaderT, withReaderT)
+  (ReaderT, ask, asks, mapReaderT, withReaderT)
 
 -- dunai
 import Data.MonadicStreamFunction
@@ -31,10 +31,14 @@ import FRP.Rhine.TimeDomain
 --   that is, reading the current 'TimeInfo' of the clock 'cl'.
 type SyncSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
 
+-- | A synchronous signal is a |SyncSF| with no input required.
+--   It produces its output on its own.
+type SyncSignal m cl a = SyncSF m cl () a
+
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
---   'td' denotes the time domain.
-type Behaviour m td a = forall cl. td ~ TimeDomainOf cl => SyncSF m cl () a
+--   'td' denotes the |TimeDomain|.
+type Behaviour m td a = forall cl. td ~ TimeDomainOf cl => SyncSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
 type Behavior  m td a = Behaviour m td a
@@ -85,7 +89,7 @@ with higher operator precedence, designed to work with the other operators, e.g.
 
 > syncsf1 >-> syncsf2 @@ clA **@ sched @** syncsf3 >-> syncsf4 @@ clB
 -}
-infixr 4 >->
+infixr 6 >->
 (>->) :: Monad m
       => SyncSF m cl a b
       -> SyncSF m cl   b c
@@ -93,7 +97,7 @@ infixr 4 >->
 (>->) = (>>>)
 
 -- | Alias for 'Control.Arrow.<<<'.
-infixl 4 <-<
+infixl 6 <-<
 (<-<) :: Monad m
       => SyncSF m cl   b c
       -> SyncSF m cl a b
