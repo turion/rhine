@@ -76,6 +76,7 @@ library
     FRP.Rhine.SF
     FRP.Rhine.SF.Combinators
     FRP.Rhine.SyncSF
+    FRP.Rhine.SyncSF.Except
     FRP.Rhine.TimeDomain
 
   -- LANGUAGE extensions used by modules in this package.

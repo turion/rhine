@@ -20,8 +20,6 @@ import qualified Control.Monad.Trans.MSF.Except as MSFE
 -- rhine
 import FRP.Rhine
 
---newtype SyncExcept m cl a b e = SyncExcept (MSFE.MSFExcept (ReaderT (TimeInfo cl) m) a b e)
---  deriving (Functor, Applicative, Monad)
 
 type SyncExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
 
