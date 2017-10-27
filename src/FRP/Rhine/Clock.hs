@@ -130,8 +130,8 @@ data HoistClock m1 m2 cl = HoistClock
   , monadMorphism :: forall a . m1 a -> m2 a
   }
 
-instance (Monad m1, Monad m2, Clock m1 a)
-      => Clock m2 (HoistClock m1 m2 a) where
+instance (Monad m1, Monad m2, Clock m1 cl)
+      => Clock m2 (HoistClock m1 m2 cl) where
   type TimeDomainOf (HoistClock m1 m2 cl) = TimeDomainOf cl
   type Tag          (HoistClock m1 m2 cl) = Tag          cl
   startClock HoistClock {..} = do
