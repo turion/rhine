@@ -46,6 +46,17 @@ hoistSchedule hoist Schedule {..} = Schedule startSchedule'
     hoistMSF = liftMSFPurer
     -- TODO This should be a dunai issue
 
+
+hoistedClockSchedule
+  :: ( Monad m1, Monad m2
+     , TimeDomainOf cl1 ~ TimeDomainOf cl2)
+  => (forall a . m1 a -> m2 a)
+  -> Schedule m1 cl1 cl2
+  -> Schedule m2 (HoistClock m1 m2 cl1) (HoistClock m1 m2 cl2)
+hoistedClockSchedule hoist schedule = Schedule startSchedule'
+  where
+    startSchedule' (HoistClock cl1 _) (HoistClock cl2 _) = startSchedule (hoistSchedule hoist schedule) cl1 cl2
+
 -- | Swaps the clocks for a given schedule.
 flipSchedule
   :: Monad m
