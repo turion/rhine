@@ -1,7 +1,8 @@
-{-# LANGUAGE Arrows          #-}
-{-# LANGUAGE RankNTypes      #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE Arrows           #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE TypeFamilies     #-}
 
 module FRP.Rhine.SyncSF where
 
@@ -163,25 +164,69 @@ derivative
   => SyncSF m cl v v
 derivative = derivativeFrom zeroVector
 
+-- | A weighted moving average signal function.
+--   The output is the average of the first input,
+--   weighted by the second input
+--   (which is assumed to be always between 0 and 1).
+--   The weight is applied to the average of the last tick,
+--   so a weight of 1 simply repeats the past value unchanged,
+--   whereas a weight of 0 outputs the current value.
+weightedAverageFrom
+  :: ( Monad m, VectorSpace v
+     , Groundfield v ~ Diff (TimeDomainOf cl))
+  => v -- ^ The initial position
+  -> SyncSF m cl (v, Groundfield v) v
+weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
+  let
+    vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
+  returnA -< (vAvg', vAvg')
 
--- | An average, or low pass. It will average out, or filter,
+-- | An exponential moving average, or low pass.
+--   It will average out, or filter,
 --   all features below a given time scale.
 averageFrom
   :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
      , Groundfield v ~ Diff (TimeDomainOf cl))
   => v -- ^ The initial position
   -> Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
   -> SyncSF m cl v v
-averageFrom v0 t = feedback v0 $ proc (v, vAvg) -> do
+averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
-  let vAvg' = (v ^* sinceTick ^+^ vAvg ^* t) ^/ (sinceTick + t)
-  returnA                   -< (vAvg', vAvg')
+  let
+    weight = exp $ - (sinceTick / t)
+  weightedAverageFrom v0    -< (v, weight)
 
 
 -- | An average, or low pass, initialised to zero.
 average
   :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
      , Groundfield v ~ Diff (TimeDomainOf cl))
   => Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
   -> SyncSF m cl v v
 average = averageFrom zeroVector
+
+-- | A linearised version of 'averageFrom'.
+--   It is more efficient, but only accurate
+--   if the supplied time scale is much bigger
+--   than the average time difference between two ticks.
+averageLinFrom
+  :: ( Monad m, VectorSpace v
+     , Groundfield v ~ Diff (TimeDomainOf cl))
+  => v -- ^ The initial position
+  -> Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
+  -> SyncSF m cl v v
+averageLinFrom v0 t = proc v -> do
+  TimeInfo {..} <- timeInfo -< ()
+  let
+    weight = t / (sinceTick + t)
+  weightedAverageFrom v0    -< (v, weight)
+
+-- | Linearised version of 'average'.
+averageLin
+  :: ( Monad m, VectorSpace v
+     , Groundfield v ~ Diff (TimeDomainOf cl))
+  => Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
+  -> SyncSF m cl v v
+averageLin = averageLinFrom zeroVector
