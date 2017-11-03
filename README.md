@@ -1,6 +1,8 @@
 # README
 --------
 
+[![Build Status](https://travis-ci.org/turion/rhine.svg?branch=master)](https://travis-ci.org/turion/rhine)
+
 Rhine is a library for synchronous and asynchronous Functional Reactive Programming (FRP).
 It separates the aspects of clocking, scheduling and resampling
 from each other, and ensures clock-safety on the type level.
