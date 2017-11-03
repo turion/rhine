@@ -22,14 +22,11 @@ import GHC.TypeLits    (Nat, natVal, KnownNat)
 import Data.Time.Clock
 
 -- transformers
--- TODO Delete as soon as dunai is updated
-import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class
 
 
 -- dunai
 import Control.Monad.Trans.MSF.Except
-  hiding (once, once_) -- TODO Delete with dunai 0.1.2
 
 -- rhine
 import FRP.Rhine
@@ -155,11 +152,3 @@ pureAudioClockF = RescaledClock
   { unscaledClock = PureAudioClock
   , rescale       = double2Float
 }
-
--- ** To be ported to @dunai@
-
-once :: Monad m => (a -> m e) -> MSFExcept m a b e
-once f = try $ arrM (lift . f) >>> throwS
--- TODO Delete once dunai is updated
-once_ :: Monad m => m e -> MSFExcept m a b e
-once_ = once . const

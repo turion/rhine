@@ -10,8 +10,7 @@ module FRP.Rhine.Clock.Select where
 import FRP.Rhine
 
 -- dunai
--- import Data.MonadicStreamFunction.Async (concatS)
--- TODO dunai 0.1.2
+import Data.MonadicStreamFunction.Async (concatS)
 
 -- base
 import Data.Maybe (catMaybes, maybeToList)
@@ -56,15 +55,8 @@ schedSelectClocks = Schedule {..}
             , (time, ) . Right <$> select subClock2 tag ]
       return (runningSelectClocks, initialTime)
 
--- ** To be ported to @dunai@
 
-concatS :: Monad m => MStream m [b] -> MStream m b
-concatS msf = MSF $ \_ -> tick msf []
-  where
-    tick msf (b:bs) = return (b, MSF $ \_ -> tick msf bs)
-    tick msf []     = do
-      (bs, msf') <- unMSF msf ()
-      tick msf' bs
-
+-- | Helper function that runs an 'MSF' with 'Maybe' output
+--   until it returns a value.
 filterS :: Monad m => MSF m () (Maybe b) -> MSF m () b
 filterS = concatS . (>>> arr maybeToList)

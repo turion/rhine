@@ -11,6 +11,8 @@ module FRP.Rhine.Clock.Step where
 -- base
 import GHC.TypeLits
 
+-- dunai
+import Data.MonadicStreamFunction.Async (concatS)
 
 -- rhine
 import FRP.Rhine
@@ -49,15 +51,3 @@ scheduleStep = Schedule f where
         k <- arr (+1) <<< count -< ()
         returnA                 -< [ (k, Left  ()) | k `mod` n1 == 0 ]
                                 ++ [ (k, Right ()) | k `mod` n2 == 0 ]
-
-
--- * To be ported to dunai
-
--- TODO Will be in dunai
-concatS :: Monad m => MSF m () [b] -> MSF m () b
-concatS msf = MSF $ \_ -> tick msf []
-  where
-    tick msf (b:bs) = return (b, MSF $ \_ -> tick msf bs)
-    tick msf []     = do
-      (bs, msf') <- unMSF msf ()
-      tick msf' bs
