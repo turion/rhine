@@ -5,4 +5,5 @@ ghc:
   - "7.10"
 env:
   - PACKAGE="rhine"
+  - PACKAGE="rhine-gloss"
 before_install: cd ${PACKAGE}
