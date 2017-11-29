@@ -1,4 +1,5 @@
-{-# LANGUAGE Arrows #-}
+{-# LANGUAGE Arrows          #-}
+{-# LANGUAGE RecordWildCards #-}
 {- | Wrapper library to write Gloss applications in Rhine.
 @gloss@ acts as the backend here.
 
@@ -9,14 +10,17 @@ In order to run such a reactive program, you have to use 'flowGloss'.
 module FRP.Rhine.Gloss where
 
 -- base
-import Prelude hiding (id)
 import Control.Category (id)
+import Data.Functor.Identity (Identity)
+import Prelude hiding (id)
 
 -- gloss
 import Graphics.Gloss.Interface.Pure.Game
 
 -- rhine
 import FRP.Rhine
+import FRP.Rhine.Clock.Select
+import FRP.Rhine.Reactimation.Tick
 
 -- TODO Consider generalising to IO
 
