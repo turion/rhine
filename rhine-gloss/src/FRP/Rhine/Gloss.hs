@@ -1,6 +1,7 @@
-{-# LANGUAGE Arrows          #-}
-{-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE Arrows            #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE RecordWildCards   #-}
 {- | Wrapper library to write Gloss applications in Rhine.
 @gloss@ acts as the backend here.
 
