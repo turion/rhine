@@ -15,16 +15,21 @@ module FRP.Rhine.Gloss where
 
 -- base
 import Control.Category (id)
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity (Identity, runIdentity)
 import Prelude hiding (id)
 
 -- gloss
 import Graphics.Gloss.Interface.Pure.Game
 
+-- dunai
+import Control.Monad.Trans.MSF.Reader (readerS, runReaderS)
+
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.Clock.Select
 import FRP.Rhine.Reactimation.Tick
+import FRP.Rhine.ResamplingBuffer.Collect
+import FRP.Rhine.ResamplingBuffer.KeepLast
 
 -- TODO Consider generalising to IO
 
