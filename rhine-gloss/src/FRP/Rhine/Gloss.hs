@@ -84,12 +84,16 @@ type GlossRhine a = Rhine Identity (GlossClock a) () Picture
 
 type GlossSyncSF a = SyncSF Identity GlossSimulationClock [a] Picture
 
-
-buildGlossSF
+{- | For most applications, it is sufficient to implement
+a single synchronous signal function
+that is called with a list of all relevant events
+that occurred in the last tick.
+-}
+buildGlossRhine
   :: (Event -> Maybe a) -- ^ The event selector
   -> GlossSyncSF a      -- ^ The 'SyncSF'
   -> GlossRhine a
-buildGlossSF select syncsfEvent syncsfSim
+buildGlossRhine select syncsfEvent syncsfSim
   =   id @@  SelectClock { mainClock = GlossEventClock, .. }
   >-- collect -@- glossSchedule
   --> withProperSimClock syncsfSim @@ GlossSimulationClock_
