@@ -82,11 +82,12 @@ glossSchedule = error errMsg
 --   @a@ is the type of subevents that are selected.
 type GlossRhine a = Rhine Identity (GlossClock a) () Picture
 
+type GlossSyncSF a = SyncSF Identity GlossSimulationClock [a] Picture
 
 
 buildGlossSF
   :: (Event -> Maybe a) -- ^ The event selector
-  -> SyncSF Identity GlossSimulationClock [a] Picture
+  -> GlossSyncSF a      -- ^ The 'SyncSF'
   -> GlossRhine a
 buildGlossSF select syncsfEvent syncsfSim
   =   id @@  SelectClock { mainClock = GlossEventClock, .. }
