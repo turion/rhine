@@ -18,7 +18,7 @@ cabal-version:       >=1.18
 
 library
   exposed-modules:     FRP.Rhine.Gloss
-  build-depends:       base >=4.9 && <4.10
+  build-depends:       base  >= 4.7    && < 5
                      , rhine == 0.2.*
                      , gloss == 1.11.*
   hs-source-dirs:      src
