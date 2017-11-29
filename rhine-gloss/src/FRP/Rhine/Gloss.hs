@@ -73,6 +73,7 @@ withProperSimClock
   -> SyncSF m GlossSimulationClock_ a b
 withProperSimClock syncsf = readerS $ (intermingle *** id) >>> runReaderS syncsf
   where
+    intermingle :: Monad m => MSF m ((), Float) TimeInfo GlossSimulationClock
     intermingle = proc ((), sinceTick) -> do
       absolute <- sumS -< sinceTick
       let
@@ -106,8 +107,8 @@ buildGlossRhine
   :: (Event -> Maybe a) -- ^ The event selector
   -> GlossSyncSF a      -- ^ The 'SyncSF'
   -> GlossRhine a
-buildGlossRhine select syncsfEvent syncsfSim
-  =   id @@  SelectClock { mainClock = GlossEventClock, .. }
+buildGlossRhine select syncsfSim
+  =   syncId @@  SelectClock { mainClock = GlossEventClock, .. }
   >-- collect -@- glossSchedule
   --> withProperSimClock syncsfSim @@ GlossSimulationClock_
 
@@ -121,7 +122,7 @@ flowGloss
 flowGloss display color n Rhine {..}
   = play display color n world getPic handleEvent simStep
   where
-    world = createTickable trivialResamplingBuffer sf () $ keepLast Blank
+    world = createTickable (trivialResamplingBuffer cl) sf (keepLast Blank) ()
     getPic Tickable { buffer2 } = fst $ runIdentity $ get buffer2 ()
-    handleEvent event  tickable = runIdentity $ tick () $ Left event
-    simStep     diff   tickable = runIdentity $ tick () $ Right diff
+    handleEvent event  tickable = runIdentity $ tick tickable () $ Left event
+    simStep     diff   tickable = runIdentity $ tick tickable () $ Right diff
