@@ -4,5 +4,5 @@ ghc:
   - "8.0"
   - "7.10"
 env:
-  - PACKAGE = "rhine"
-before_install: cd $PACKAGE
+  - PACKAGE="rhine"
+before_install: cd ${PACKAGE}
