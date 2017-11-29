@@ -1,3 +1,4 @@
+{-# LANGUAGE Arrows #-}
 {- | Wrapper library to write Gloss applications in Rhine.
 @gloss@ acts as the backend here.
 
@@ -6,6 +7,10 @@ since the @gloss@ API only offers callbacks.
 In order to run such a reactive program, you have to use 'flowGloss'.
 -}
 module FRP.Rhine.Gloss where
+
+-- base
+import Prelude hiding (id)
+import Control.Category (id)
 
 -- gloss
 import Graphics.Gloss.Interface.Pure.Game
