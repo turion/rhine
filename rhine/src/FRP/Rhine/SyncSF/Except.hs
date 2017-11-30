@@ -1,5 +1,8 @@
 {-# LANGUAGE Arrows           #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE TypeFamilies     #-}
+
 module FRP.Rhine.SyncSF.Except
   ( module FRP.Rhine.SyncSF.Except
   , module X
@@ -22,6 +25,13 @@ import FRP.Rhine
 
 
 type SyncExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
+
+type BehaviourFExcept m td a b e
+  = forall cl. td ~ TimeDomainOf cl => SyncExcept m cl a b e
+
+-- | Compatibility to U.S. american spelling.
+type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
+
 
 -- | Commute the effects of the |ReaderT| and the |ExceptT| monad.
 commuteReaderExcept :: ReaderT r (ExceptT e m) a -> ExceptT e (ReaderT r m) a
@@ -70,10 +80,11 @@ keepFirst = safely $ do
 --   outputting the remaining time difference.
 timer
   :: ( Monad m
-     , Clock m cl
-     , Ord (Diff (TimeDomainOf cl)))
-  => Diff (TimeDomainOf cl)
-  -> SyncSF (ExceptT () m) cl a (Diff (TimeDomainOf cl))
+     , TimeDomain td
+     , Ord (Diff td)
+     )
+  => Diff td
+  -> BehaviorF (ExceptT () m) td a (Diff td)
 timer diff = proc _ -> do
   time      <- timeInfoOf absolute -< ()
   startTime <- keepFirst           -< time
@@ -84,10 +95,10 @@ timer diff = proc _ -> do
 -- | Like 'timer', but divides the remaining time by the total time.
 scaledTimer
   :: ( Monad m
-     , Clock m cl
-     , Fractional (Diff (TimeDomainOf cl))
-     , Ord        (Diff (TimeDomainOf cl))
+     , TimeDomain td
+     , Fractional (Diff td)
+     , Ord        (Diff td)
      )
-  => Diff (TimeDomainOf cl)
-  -> SyncSF (ExceptT () m) cl a (Diff (TimeDomainOf cl))
+  => Diff td
+  -> BehaviorF (ExceptT () m) td a (Diff td)
 scaledTimer diff = timer diff >>> arr (/ diff)
