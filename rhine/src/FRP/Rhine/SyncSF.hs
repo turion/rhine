@@ -30,20 +30,28 @@ import FRP.Rhine.TimeDomain
 
 -- | A (synchronous) monadic stream function
 --   with the additional side effect of being time-aware,
---   that is, reading the current 'TimeInfo' of the clock 'cl'.
+--   that is, reading the current 'TimeInfo' of the clock @cl@.
 type SyncSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
 
--- | A synchronous signal is a |SyncSF| with no input required.
+-- | A synchronous signal is a 'SyncSF' with no input required.
 --   It produces its output on its own.
 type SyncSignal m cl a = SyncSF m cl () a
 
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
---   'td' denotes the |TimeDomain|.
+--   @td@ denotes the 'TimeDomain'.
 type Behaviour m td a = forall cl. td ~ TimeDomainOf cl => SyncSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
 type Behavior  m td a = Behaviour m td a
+
+-- | A (side-effectful) behaviour function is a time-aware synchronous stream
+--   function that doesn't depend on a particular clock.
+--   @td denotes the 'TimeDomain'.
+type BehaviourF m td a b = forall cl. td ~ TimeDomainOf cl => SyncSF m cl a b
+
+-- | Compatibility to U.S. american spelling.
+type BehaviorF  m td a b = BehaviourF m td a b
 
 
 -- * Utilities to create 'SyncSF's from simpler data
@@ -131,8 +139,8 @@ syncId = Control.Category.id
 --   of the input, with initial offset @v0@.
 integralFrom
   :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl))
-  => v -> SyncSF m cl v v
+     , Groundfield v ~ Diff td)
+  => v -> BehaviorF m td v v
 integralFrom v0 = proc v -> do
   _sinceTick <- timeInfoOf sinceTick -< ()
   sumFrom v0                         -< _sinceTick *^ v
@@ -140,8 +148,8 @@ integralFrom v0 = proc v -> do
 -- | Euler integration, with zero initial offset.
 integral
   :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl))
-  => SyncSF m cl v v
+     , Groundfield v ~ Diff td)
+  => BehaviorF m td v v
 integral = integralFrom zeroVector
 
 
@@ -150,8 +158,8 @@ integral = integralFrom zeroVector
 --   The input is initialised with @v0@.
 derivativeFrom
   :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl))
-  => v -> SyncSF m cl v v
+     , Groundfield v ~ Diff td)
+  => v -> BehaviorF m td v v
 derivativeFrom v0 = proc v -> do
   vLast         <- delay v0 -< v
   TimeInfo {..} <- timeInfo -< ()
@@ -160,8 +168,8 @@ derivativeFrom v0 = proc v -> do
 -- | Numerical derivative with input initialised to zero.
 derivative
   :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl))
-  => SyncSF m cl v v
+     , Groundfield v ~ Diff td)
+  => BehaviorF m td v v
 derivative = derivativeFrom zeroVector
 
 -- | A weighted moving average signal function.
@@ -173,9 +181,9 @@ derivative = derivativeFrom zeroVector
 --   whereas a weight of 0 outputs the current value.
 weightedAverageFrom
   :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl))
+     , Groundfield v ~ Diff td)
   => v -- ^ The initial position
-  -> SyncSF m cl (v, Groundfield v) v
+  -> BehaviorF m td (v, Groundfield v) v
 weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
   let
     vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
@@ -187,10 +195,10 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
 averageFrom
   :: ( Monad m, VectorSpace v
      , Floating (Groundfield v)
-     , Groundfield v ~ Diff (TimeDomainOf cl))
+     , Groundfield v ~ Diff td)
   => v -- ^ The initial position
-  -> Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
-  -> SyncSF m cl v v
+  -> Diff td -- ^ The time scale on which the signal is averaged
+  -> BehaviorF m td v v
 averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
@@ -202,9 +210,9 @@ averageFrom v0 t = proc v -> do
 average
   :: ( Monad m, VectorSpace v
      , Floating (Groundfield v)
-     , Groundfield v ~ Diff (TimeDomainOf cl))
-  => Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
-  -> SyncSF m cl v v
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time scale on which the signal is averaged
+  -> BehaviourF m td v v
 average = averageFrom zeroVector
 
 -- | A linearised version of 'averageFrom'.
@@ -213,10 +221,10 @@ average = averageFrom zeroVector
 --   than the average time difference between two ticks.
 averageLinFrom
   :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl))
+     , Groundfield v ~ Diff td)
   => v -- ^ The initial position
-  -> Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
-  -> SyncSF m cl v v
+  -> Diff td -- ^ The time scale on which the signal is averaged
+  -> BehaviourF m td v v
 averageLinFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
@@ -226,7 +234,7 @@ averageLinFrom v0 t = proc v -> do
 -- | Linearised version of 'average'.
 averageLin
   :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl))
-  => Diff (TimeDomainOf cl) -- ^ The time scale on which the signal is averaged
-  -> SyncSF m cl v v
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time scale on which the signal is averaged
+  -> BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
