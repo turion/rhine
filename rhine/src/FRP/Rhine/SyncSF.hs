@@ -30,16 +30,16 @@ import FRP.Rhine.TimeDomain
 
 -- | A (synchronous) monadic stream function
 --   with the additional side effect of being time-aware,
---   that is, reading the current 'TimeInfo' of the clock 'cl'.
+--   that is, reading the current 'TimeInfo' of the clock @cl@.
 type SyncSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
 
--- | A synchronous signal is a |SyncSF| with no input required.
+-- | A synchronous signal is a 'SyncSF' with no input required.
 --   It produces its output on its own.
 type SyncSignal m cl a = SyncSF m cl () a
 
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
---   'td' denotes the |TimeDomain|.
+--   @td@ denotes the 'TimeDomain'.
 type Behaviour m td a = forall cl. td ~ TimeDomainOf cl => SyncSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
