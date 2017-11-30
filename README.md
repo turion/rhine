@@ -36,7 +36,7 @@ constraints on clocks come into effect, enforcing clock safety.
 A typical example, which can be run as `cabal run Demonstration`,
 would be:
 
-```
+```haskell
   -- | Create a simple message containing the time stamp since program start,
   --   for each tick of the clock.
   --   Since 'createMessage' works for arbitrary clocks (and doesn't need further input data),
