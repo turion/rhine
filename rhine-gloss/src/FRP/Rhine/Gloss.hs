@@ -41,6 +41,7 @@ type GlossClock a
 --   @a@ is the type of subevents that are selected.
 type GlossRhine a = Rhine Identity (GlossClock a) () Picture
 
+-- | The type of a 'SyncSF' that you have to implement to get a @gloss@ app.
 type GlossSyncSF a = SyncSF Identity GlossSimulationClock [a] Picture
 
 {- | For most applications, it is sufficient to implement
@@ -50,7 +51,7 @@ that occurred in the last tick.
 -}
 buildGlossRhine
   :: (Event -> Maybe a) -- ^ The event selector
-  -> GlossSyncSF a      -- ^ The 'SyncSF'
+  -> GlossSyncSF a      -- ^ The 'SyncSF' representing the game loop.
   -> GlossRhine a
 buildGlossRhine select syncsfSim
   =   timeInfoOf tag @@  SelectClock { mainClock = GlossEventClock, .. }
