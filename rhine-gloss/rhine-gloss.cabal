@@ -18,6 +18,7 @@ cabal-version:       >=1.18
 
 library
   exposed-modules:     FRP.Rhine.Gloss
+  other-modules:       FRP.Rhine.Gloss.Internals
   build-depends:       base  >= 4.7    && < 5
                      , rhine == 0.2.*
                      , dunai == 0.2.*
