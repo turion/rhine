@@ -9,13 +9,21 @@ In order to run such a reactive program, you have to use 'flowGloss'.
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE TypeFamilies     #-}
-module FRP.Rhine.Gloss where
+module FRP.Rhine.Gloss
+  ( module FRP.Rhine.Gloss
+  , module X
+  )
+  where
 
 -- base
 import Data.Functor.Identity (Identity, runIdentity)
 
+import qualified Control.Arrow as X
+
 -- gloss
 import Graphics.Gloss.Interface.Pure.Game
+
+import qualified Graphics.Gloss as X
 
 -- rhine
 import FRP.Rhine
@@ -23,6 +31,9 @@ import FRP.Rhine.Clock.Select
 import FRP.Rhine.Reactimation.Tick
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.KeepLast
+
+import qualified FRP.Rhine        as X
+import qualified FRP.Rhine.SyncSF as X
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Internals
