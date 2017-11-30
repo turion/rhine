@@ -70,16 +70,25 @@ instance Clock m GlossSimulationClock where
 --   write your synchronous stream function on the 'GlossSimulationClock'
 --   and then use this function to transform it.
 withProperSimClock
-  :: SyncSF m GlossSimulationClock  a b
+  :: Monad m
+  => SyncSF m GlossSimulationClock  a b
   -> SyncSF m GlossSimulationClock_ a b
 withProperSimClock syncsf = readerS $ (intermingle *** id) >>> runReaderS syncsf
   where
-    intermingle :: Monad m => MSF m ((), Float) TimeInfo GlossSimulationClock
-    intermingle = proc ((), sinceTick) -> do
+    intermingle :: Monad m => MSF m (TimeInfo GlossSimulationClock_) (TimeInfo GlossSimulationClock)
+    intermingle = proc TimeInfo {tag} -> do
+      let sinceTick = tag
       absolute <- sumS -< sinceTick
-      let
-        sinceStart = absolute
-      returnA -< TimeInfo { tag = (), .. }
+      let sinceStart = absolute
+      returnA          -< TimeInfo { tag = (), .. }
+
+-- | The clock that ticks for every @gloss@ graphics output.
+data GlossGraphicsClock = GlossGraphicsClock
+
+instance Clock m GlossGraphicsClock where
+  type TimeDomainOf GlossGraphicsClock = ()
+  type Tag          GlossGraphicsClock = ()
+  startClock _ = error errMsg
 
 
 -- | The overall clock of a valid @rhine@ 'SF' that can be run by @gloss@.
@@ -109,7 +118,7 @@ buildGlossRhine
   -> GlossSyncSF a      -- ^ The 'SyncSF'
   -> GlossRhine a
 buildGlossRhine select syncsfSim
-  =   syncId @@  SelectClock { mainClock = GlossEventClock, .. }
+  =   timeInfoOf tag @@  SelectClock { mainClock = GlossEventClock, .. }
   >-- collect -@- glossSchedule
   --> withProperSimClock syncsfSim @@ GlossSimulationClock_
 
@@ -123,7 +132,14 @@ flowGloss
 flowGloss display color n Rhine {..}
   = play display color n world getPic handleEvent simStep
   where
-    world = createTickable (trivialResamplingBuffer cl) sf (keepLast Blank) ()
-    getPic Tickable { buffer2 } = fst $ runIdentity $ get buffer2 ()
-    handleEvent event  tickable = runIdentity $ tick tickable () $ Left event
-    simStep     diff   tickable = runIdentity $ tick tickable () $ Right diff
+    graphicsBuffer
+      :: ResamplingBuffer Identity
+           GlossSimulationClock_ GlossGraphicsClock
+           Picture               Picture
+    graphicsBuffer = keepLast Blank
+    world = createTickable (trivialResamplingBuffer clock) sf graphicsBuffer ()
+    getPic Tickable { buffer2 } = fst $ runIdentity $ get buffer2 $ TimeInfo () () () ()
+    handleEvent event tickable = case select (sequentialCl1 clock) event of
+      Just a  -> runIdentity $ tick tickable () $ Left a -- Event is relevant
+      Nothing -> tickable -- Event is irrelevant, state doesn't change
+    simStep diff tickable = runIdentity $ tick tickable () $ Right diff
