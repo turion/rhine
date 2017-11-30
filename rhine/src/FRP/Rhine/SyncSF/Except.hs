@@ -1,4 +1,5 @@
-{-# LANGUAGE Arrows #-}
+{-# LANGUAGE Arrows           #-}
+{-# LANGUAGE FlexibleContexts #-}
 module FRP.Rhine.SyncSF.Except
   ( module FRP.Rhine.SyncSF.Except
   , module X
@@ -57,3 +58,36 @@ throwOn e = proc b -> throwOn' -< (b, e)
 --   and then throws an exception.
 step :: Monad m => (a -> m (b, e)) -> SyncExcept m cl a b e
 step f = MSFE.step $ lift . f
+
+-- | Remembers and indefinitely outputs the first input value.
+keepFirst :: Monad m => SyncSF m cl a a
+keepFirst = safely $ do
+  a <- try throwS
+  safe $ arr $ const a
+
+
+-- | Throws an exception after the specified time difference,
+--   outputting the remaining time difference.
+timer
+  :: ( Monad m
+     , Clock m cl
+     , Ord (Diff (TimeDomainOf cl)))
+  => Diff (TimeDomainOf cl)
+  -> SyncSF (ExceptT () m) cl a (Diff (TimeDomainOf cl))
+timer diff = proc _ -> do
+  time      <- timeInfoOf absolute -< ()
+  startTime <- keepFirst           -< time
+  let remainingTime = time `diffTime` startTime
+  _         <- throwOn ()          -< remainingTime > diff
+  returnA                          -< remainingTime
+
+-- | Like 'timer', but divides the remaining time by the total time.
+scaledTimer
+  :: ( Monad m
+     , Clock m cl
+     , Fractional (Diff (TimeDomainOf cl))
+     , Ord        (Diff (TimeDomainOf cl))
+     )
+  => Diff (TimeDomainOf cl)
+  -> SyncSF (ExceptT () m) cl a (Diff (TimeDomainOf cl))
+scaledTimer diff = timer diff >>> arr (/ diff)
