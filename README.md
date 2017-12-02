@@ -14,7 +14,7 @@ user input at unpredictable times.
 Coordinating these different rates is a hard problem in general.
 If not enough care is taken, buffer underruns and overflows, space and time leaks,
 accidental synchronisation of independent sub-systems,
-and concurrency issues such as dead-locks may all occur.
+and concurrency issues, such as deadlocks, may all occur.
 
 Rhine tackles these problems by annotating
 the signal processing components with clocks,
@@ -23,8 +23,8 @@ input, processed and output.
 Different components of the signal network
 will become active at different times, or work
 at different rates. If components running under different clocks need to communicate, it
-has to be decided when each component be-
-comes active ("scheduling"), and how data is
+has to be decided when each component becomes
+active ("scheduling"), and how data is
 transferred between the different rates ("resampling").
 Rhine separates all these aspects from each
 other, and from the individual signal processing of each subsystem.
