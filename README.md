@@ -2,6 +2,7 @@
 --------
 
 [![Build Status](https://travis-ci.org/turion/rhine.svg?branch=master)](https://travis-ci.org/turion/rhine)
+[![Version on Hackage](https://img.shields.io/hackage/v/rhine.svg)](https://hackage.haskell.org/package/rhine)
 
 Rhine is a library for synchronous and asynchronous Functional Reactive Programming (FRP).
 It separates the aspects of clocking, scheduling and resampling
