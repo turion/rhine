@@ -47,7 +47,7 @@ type Behavior  m td a = Behaviour m td a
 
 -- | A (side-effectful) behaviour function is a time-aware synchronous stream
 --   function that doesn't depend on a particular clock.
---   @td denotes the 'TimeDomain'.
+--   @td@ denotes the 'TimeDomain'.
 type BehaviourF m td a b = forall cl. td ~ TimeDomainOf cl => SyncSF m cl a b
 
 -- | Compatibility to U.S. american spelling.
