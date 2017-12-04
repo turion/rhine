@@ -16,5 +16,5 @@ mainSyncSF :: GlossSyncSF a
 mainSyncSF = timeInfoOf sinceStart >>> arr (* 50) >>> arr gears
 
 main :: IO ()
-main = flowGloss (InWindow "sonnen" (400, 400) (10, 10)) (greyN 0.3) 30
+main = flowGloss (InWindow "rhine-gloss-gears" (400, 400) (10, 10)) (greyN 0.3) 30
      $ buildGlossRhine Just mainSyncSF
