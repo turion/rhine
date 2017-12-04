@@ -4,15 +4,15 @@ The version numbering follows the package `dunai`.
 Since `rhine` reexports modules from `dunai`,
 every major version in `dunai` triggers a major version in `rhine`.
 
-## 0.1.0.0
+## 0.4.0.0 -- 2017.12.04
 
-* Initial version
+* Documentation typos fixed
+* Added `ChangeLog.md`
 
-## 0.1.1.0
+## 0.3.0.0
 
-* Added `FRP.Rhine.Clock.Realtime.Stdin` (console keyboard event clock)
-* Added `FRP.Rhine.Clock.Select` (event selection clock)
-* Added `FRP.Rhine.SyncSF.Except` (synchronous exception handling)
+* Version bump
+* Documentation typos fixed (Thanks to Gabor Greif)
 
 ## 0.2.0.0
 
@@ -20,12 +20,12 @@ every major version in `dunai` triggers a major version in `rhine`.
 * Removed several utilities that are now in `dunai`
 * Extended averaging functions
 
-## 0.3.0.0
+## 0.1.1.0
 
-* Version bump
-* Documentation typos fixed (Thanks to Gabor Greif)
+* Added `FRP.Rhine.Clock.Realtime.Stdin` (console keyboard event clock)
+* Added `FRP.Rhine.Clock.Select` (event selection clock)
+* Added `FRP.Rhine.SyncSF.Except` (synchronous exception handling)
 
-## 0.4.0.0 -- 2017.12.04
+## 0.1.0.0
 
-* Documentation typos fixed
-* Added `ChangeLog.md`
+* Initial version
