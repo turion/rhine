@@ -33,6 +33,8 @@ category:            FRP
 
 build-type:          Simple
 
+extra-source-files:  ChangeLog.md
+
 extra-doc-files:     README.md
 
 cabal-version:       >=1.18
