@@ -7,3 +7,7 @@
 ## 0.3.0.0  -- 2017-11-30
 
 * Added simple example.
+
+## 0.4.0.0 -- 2017.12.04
+
+* Version bump
