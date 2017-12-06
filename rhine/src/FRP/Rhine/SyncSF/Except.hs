@@ -22,10 +22,28 @@ import qualified Control.Monad.Trans.MSF.Except as MSFE
 
 -- rhine
 import FRP.Rhine
+import FRP.Rhine.SyncSF.Except.Util
 
+-- * Types
 
+{- | A synchronous exception-throwing signal function.
+It is based on a @newtype@, 'MSFExcept',
+to exhibit a monad interface /in the exception type/.
+`return` then corresponds to throwing an exception,
+and `(>>=)` is exception handling.
+(For more information, see the documentation of 'MSFExcept'.)
+
+* @m@:  The monad that the signal function may take side effects in
+* @cl@: The clock on which the signal function ticks
+* @a@:  The input type
+* @b@:  The output type
+* @e@:  The type of exceptions that can be thrown
+-}
 type SyncExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
 
+{- | A clock polymorphic 'SyncExcept'.
+Any clock with time domain @td@ may occur.
+-}
 type BehaviourFExcept m td a b e
   = forall cl. td ~ TimeDomainOf cl => SyncExcept m cl a b e
 
@@ -33,12 +51,10 @@ type BehaviourFExcept m td a b e
 type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
 
 
--- | Commute the effects of the |ReaderT| and the |ExceptT| monad.
-commuteReaderExcept :: ReaderT r (ExceptT e m) a -> ExceptT e (ReaderT r m) a
-commuteReaderExcept a = ExceptT $ ReaderT $ \r -> runExceptT $ runReaderT a r
 
 -- | Enter the monad context in the exception
 --   for |SyncSF|s in the |ExceptT| monad.
+--   The 'SyncSF' will be run until it encounters an exception.
 try :: Monad m => SyncSF (ExceptT e m) cl a b -> SyncExcept m cl a b e
 try = MSFE.try . liftMSFPurer commuteReaderExcept
 
@@ -51,17 +67,19 @@ once f = MSFE.once $ lift . f
 once_ :: Monad m => m e -> SyncExcept m cl a b e
 once_ = once . const
 
--- |
+-- | Immediately throw the exception on the input.
 throwS :: Monad m => SyncSF (ExceptT e m) cl e a
 throwS = arrMSync throwE
 
+-- | Throw the given exception when the 'Bool' turns true.
+throwOn :: Monad m => e -> SyncSF (ExceptT e m) cl Bool ()
+throwOn e = proc b -> throwOn' -< (b, e)
+
+-- | Variant of 'throwOn', where the exception can vary every tick.
 throwOn' :: Monad m => SyncSF (ExceptT e m) cl (Bool, e) ()
 throwOn' = proc (b, e) -> if b
   then throwS  -< e
   else returnA -< ()
-
-throwOn :: Monad m => e -> SyncSF (ExceptT e m) cl Bool ()
-throwOn e = proc b -> throwOn' -< (b, e)
 
 
 -- | Advances a single tick with the given Kleisli arrow,

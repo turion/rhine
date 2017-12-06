@@ -79,6 +79,9 @@ library
     FRP.Rhine.SyncSF.Except
     FRP.Rhine.TimeDomain
 
+  other-modules:
+    FRP.Rhine.SyncSF.Except.Util
+
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
 
