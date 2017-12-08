@@ -81,3 +81,18 @@ would be:
 
   -- typeError = ms500 >>> printEverySecond
 ```
+
+## This repository
+
+* `rhine/`: The main library, which is also mirrored on hackage.
+* `rhine-gloss/`: A wrapper library to [gloss](https://hackage.haskell.org/package/gloss), a functional OpenGL library.
+
+## Related projects
+
+* https://github.com/turion/rhine-tutorial: Presentation and tutorial app
+* https://github.com/fphh/rhine-ghcjs/:
+  A little browser game written with Rhine and `react-hs`,
+  compiles with `GHCJS` to JavaScript.
+* https://github.com/turion/sonnendemo:
+  An interactive simulation with a GUI version and a console version,
+  using `rhine-gloss`.
