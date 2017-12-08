@@ -23,6 +23,7 @@ import Data.VectorSpace
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.SyncSF.Except (keepFirst)
 import FRP.Rhine.TimeDomain
 
 
@@ -91,6 +92,13 @@ printAbsoluteTime = timeInfoOf absolute >>> arrMSync print
 -}
 timeInfoOf :: Monad m => (TimeInfo cl -> b) -> SyncSF m cl a b
 timeInfoOf f = arrM_ $ asks f
+
+-- | Calculate the time passed since the 'SyncSF' was instantiated.
+timeSinceSimStart :: Monad m => SyncSF m cl a (Diff (TimeDomainOf cl))
+timeSinceSimStart = proc _ -> do
+  time      <- timeInfoOf absolute -< ()
+  startTime <- keepFirst           -< time
+  returnA                          -< time `diffTime` startTime
 
 -- * Useful aliases
 

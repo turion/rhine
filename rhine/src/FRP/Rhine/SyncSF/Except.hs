@@ -77,7 +77,7 @@ keepFirst = safely $ do
 
 
 -- | Throws an exception after the specified time difference,
---   outputting the remaining time difference.
+--   outputting the time passed since the 'timer' was instantiated.
 timer
   :: ( Monad m
      , TimeDomain td
@@ -86,11 +86,9 @@ timer
   => Diff td
   -> BehaviorF (ExceptT () m) td a (Diff td)
 timer diff = proc _ -> do
-  time      <- timeInfoOf absolute -< ()
-  startTime <- keepFirst           -< time
-  let remainingTime = time `diffTime` startTime
-  _         <- throwOn ()          -< remainingTime > diff
-  returnA                          -< remainingTime
+  sinceSimStart <- timeSinceSimStart -< ()
+  _             <- throwOn ()        -< sinceSimStart > diff
+  returnA                            -< sinceSimStart
 
 -- | Like 'timer', but divides the remaining time by the total time.
 scaledTimer
