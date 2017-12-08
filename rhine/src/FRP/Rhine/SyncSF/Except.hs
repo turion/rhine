@@ -52,6 +52,12 @@ type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
 
 
 
+commuteExceptReader :: ExceptT e (ReaderT r m) a -> ReaderT r (ExceptT e m) a
+commuteExceptReader a = ReaderT $ \r -> ExceptT $ runReaderT (runExceptT a) r
+
+runSyncExcept :: Monad m => SyncExcept m cl a b e -> SyncSF (ExceptT e m) cl a b
+runSyncExcept = liftMSFPurer commuteExceptReader . runMSFExcept
+
 -- | Enter the monad context in the exception
 --   for |SyncSF|s in the |ExceptT| monad.
 --   The 'SyncSF' will be run until it encounters an exception.
