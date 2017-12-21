@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -6,6 +7,9 @@
 {-# LANGUAGE TypeFamilies          #-}
 
 module FRP.Rhine.Schedule where
+
+-- transformers
+import Control.Monad.Trans.Reader
 
 -- dunai
 import Data.MonadicStreamFunction
@@ -57,6 +61,23 @@ flipSchedule Schedule {..} = Schedule startSchedule_
     swapEither :: Either a b -> Either b a -- TODO Why is stuff like this not in base? Maybe send pull request...
     swapEither (Left  a) = Right a
     swapEither (Right b) = Left  b
+
+
+-- TODO What's the most general way we can lift a schedule this way?
+readerSchedule
+  :: ( Monad m
+     , Clock (ReaderT r m) cl1, Clock (ReaderT r m) cl2
+     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     )
+  => Schedule m
+       (HoistClock (ReaderT r m) m cl1) (HoistClock (ReaderT r m) m cl2)
+  -> Schedule (ReaderT r m) cl1 cl2
+readerSchedule Schedule {..}
+  = Schedule $ \cl1 cl2 -> ReaderT $ \r -> first liftMSFTrans
+  <$> startSchedule
+        (HoistClock cl1 $ flip runReaderT r)
+        (HoistClock cl2 $ flip runReaderT r)
+
 
 -- * Composite clocks
 
