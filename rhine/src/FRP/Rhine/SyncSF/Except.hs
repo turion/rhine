@@ -116,6 +116,16 @@ timer diff = proc _ -> do
   _         <- throwOn ()          -< remainingTime > diff
   returnA                          -< remainingTime
 
+-- | Like 'timer_', but doesn't output the remaining time at all.
+timer_
+  :: ( Monad m
+     , TimeDomain td
+     , Ord (Diff td)
+     )
+  => Diff td
+  -> BehaviorF (ExceptT () m) td a ()
+timer_ diff = timer diff >>> arr (const ())
+
 -- | Like 'timer', but divides the remaining time by the total time.
 scaledTimer
   :: ( Monad m
