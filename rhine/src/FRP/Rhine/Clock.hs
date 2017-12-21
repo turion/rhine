@@ -101,6 +101,28 @@ instance (Monad m, TimeDomain td, Clock m cl)
       )
 
 -- | Instead of a mere function as morphism of time domains,
+--   we can transform one time domain into the other with Kleisli arrow.
+data RescaledClockM m cl td = RescaledClockM
+  { unscaledClockM :: cl
+  -- ^ The clock before the rescaling
+  , rescaleM       :: TimeDomainOf cl
+                   -> m td
+  -- ^ Computing the new time effectfully from the old time
+  }
+
+instance (Monad m, TimeDomain td, Clock m cl)
+      => Clock m (RescaledClockM m cl td) where
+  type TimeDomainOf (RescaledClockM m cl td) = td
+  type Tag          (RescaledClockM m cl td) = Tag cl
+  startClock RescaledClockM {..} = do
+    (runningClock, initTime) <- startClock unscaledClockM
+    rescaledInitTime         <- rescaleM initTime
+    return
+      ( runningClock >>> first (arrM rescaleM)
+      , rescaledInitTime
+      )
+
+-- | Instead of a mere function as morphism of time domains,
 --   we can transform one time domain into the other with a monadic stream function.
 data RescaledClockS m cl td tag = RescaledClockS
   { unscaledClockS :: cl
