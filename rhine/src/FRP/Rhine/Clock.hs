@@ -8,6 +8,7 @@
 module FRP.Rhine.Clock where
 
 -- transformers
+import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Trans.Class (lift, MonadTrans)
 
 -- dunai
@@ -170,5 +171,13 @@ type LiftClock m t cl = HoistClock m (t m) cl
 liftClock :: (Monad m, MonadTrans t) => cl -> LiftClock m t cl
 liftClock hoistedClock = HoistClock
   { monadMorphism = lift
+  , ..
+  }
+
+type IOClock m cl = HoistClock IO m cl
+
+ioClock :: MonadIO m => cl -> IOClock m cl
+ioClock hoistedClock = HoistClock
+  { monadMorphism = liftIO
   , ..
   }
