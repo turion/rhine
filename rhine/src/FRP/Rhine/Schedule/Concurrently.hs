@@ -13,8 +13,12 @@ import FRP.Rhine
 --   and collects the results in the foreground thread.
 --   Caution: The data processing will still happen in the same thread
 --   (since data processing and scheduling are separated concerns).
-concurrently :: (Clock IO cl1, Clock IO cl2, TimeDomainOf cl1 ~ TimeDomainOf cl2) => Schedule IO cl1 cl2
-concurrently =  Schedule $ \cl1 cl2 -> do
+concurrently
+  :: ( Clock IO cl1, Clock IO cl2
+     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     )
+  => Schedule IO cl1 cl2
+concurrently = Schedule $ \cl1 cl2 -> do
   iMVar <- newEmptyMVar
   mvar  <- newEmptyMVar
   _ <- forkIO $ do
