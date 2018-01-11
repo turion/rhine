@@ -100,6 +100,31 @@ timeSinceSimStart = proc _ -> do
   startTime <- keepFirst           -< time
   returnA                          -< time `diffTime` startTime
 
+-- | Continuously return the tag of the current tick.
+theTag :: Monad m => SyncSF m cl a (Tag cl)
+theTag = timeInfoOf tag
+
+
+{- | Call a 'SyncSF' every time the input is 'Just a'.
+
+Caution: This will not change the time differences since the last tick.
+For example,
+while @integrate 1@ is approximately the same as @timeInfoOf sinceStart@,
+@mapMaybe $ integrate 1@ is very different from
+@mapMaybe $ timeInfoOf sinceStart@.
+The former only integrates when the input is @Just 1@,
+whereas the latter always returns the correct time since start of the program.
+-}
+mapMaybe
+  :: Monad m
+  => SyncSF m cl        a         b
+  -> SyncSF m cl (Maybe a) (Maybe b)
+mapMaybe behaviour = proc ma -> case ma of
+  Nothing -> returnA                -< Nothing
+  Just a  -> arr Just <<< behaviour -< a
+-- TODO Consider integrating up the time deltas
+
+
 -- * Useful aliases
 
 -- TODO Is it cleverer to generalise to Arrow?

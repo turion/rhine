@@ -38,9 +38,11 @@ sleepClock = sleepClock_ Step
     sleepClock_ :: Step n -> Millisecond n
     sleepClock_ cl = RescaledClockS cl $ const $ do
       now <- getCurrentTime
+      let ticks = arrM_ $ do
+            threadDelay $ fromInteger $ stepsize cl * 1000
+            getCurrentTime
       return
-        ( arrM_ (threadDelay (fromInteger $ stepsize cl * 1000) >> getCurrentTime)
-          *** arr (const False)
+        ( ticks *** arr (const False)
         , now
         )
 
@@ -55,13 +57,13 @@ waitClock :: KnownNat n => Millisecond n
 waitClock = RescaledClockS Step $ \_ -> do
   initTime <- getCurrentTime
   let
-    runningClock = proc (n, ()) -> do
-      beforeSleep <- arrM_ getCurrentTime -< ()
+    runningClock = arrM $ \(n, ()) -> do
+      beforeSleep <- getCurrentTime
       let
         diff :: Double
         diff      = realToFrac $ beforeSleep `diffUTCTime` initTime
         remaining = fromInteger $ n * 1000 - round (diff * 1000000)
-      _           <- arrM  threadDelay    -< remaining
-      now         <- arrM_ getCurrentTime -< () -- TODO Test whether this is a performance penalty
-      returnA                             -< (now, diff > 0)
+      threadDelay remaining
+      now         <- getCurrentTime -- TODO Test whether this is a performance penalty
+      return (now, diff > 0)
   return (runningClock, initTime)

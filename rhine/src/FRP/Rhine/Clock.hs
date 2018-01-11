@@ -8,6 +8,7 @@
 module FRP.Rhine.Clock where
 
 -- transformers
+import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Trans.Class (lift, MonadTrans)
 
 -- dunai
@@ -101,6 +102,28 @@ instance (Monad m, TimeDomain td, Clock m cl)
       )
 
 -- | Instead of a mere function as morphism of time domains,
+--   we can transform one time domain into the other with Kleisli arrow.
+data RescaledClockM m cl td = RescaledClockM
+  { unscaledClockM :: cl
+  -- ^ The clock before the rescaling
+  , rescaleM       :: TimeDomainOf cl
+                   -> m td
+  -- ^ Computing the new time effectfully from the old time
+  }
+
+instance (Monad m, TimeDomain td, Clock m cl)
+      => Clock m (RescaledClockM m cl td) where
+  type TimeDomainOf (RescaledClockM m cl td) = td
+  type Tag          (RescaledClockM m cl td) = Tag cl
+  startClock RescaledClockM {..} = do
+    (runningClock, initTime) <- startClock unscaledClockM
+    rescaledInitTime         <- rescaleM initTime
+    return
+      ( runningClock >>> first (arrM rescaleM)
+      , rescaledInitTime
+      )
+
+-- | Instead of a mere function as morphism of time domains,
 --   we can transform one time domain into the other with a monadic stream function.
 data RescaledClockS m cl td tag = RescaledClockS
   { unscaledClockS :: cl
@@ -148,5 +171,13 @@ type LiftClock m t cl = HoistClock m (t m) cl
 liftClock :: (Monad m, MonadTrans t) => cl -> LiftClock m t cl
 liftClock hoistedClock = HoistClock
   { monadMorphism = lift
+  , ..
+  }
+
+type IOClock m cl = HoistClock IO m cl
+
+ioClock :: MonadIO m => cl -> IOClock m cl
+ioClock hoistedClock = HoistClock
+  { monadMorphism = liftIO
   , ..
   }

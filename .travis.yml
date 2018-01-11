@@ -1,9 +1,19 @@
 language: haskell
 ghc:
-  - "8.2"
-  - "8.0"
-  - "7.10"
+- '8.2'
+- '8.0'
+- '7.10'
 env:
-  - PACKAGE="rhine"
-  - PACKAGE="rhine-gloss"
+- PACKAGE="rhine"
+- PACKAGE="rhine-gloss"
 before_install: cd ${PACKAGE}
+
+deploy:
+  provider: hackage
+  username: turion
+  password:
+    secure: G/2ZSEAUdlyUj5EGZheKO/AxS1fUm7biFzK21wysDWR4KJ5vJEyvywJp3ML4F3dS1cfHdn7YTrtUvRg9jpNjaDcqf3UEs0z4EK/jj2kDi/EbkScrw9Q1A5Wpy2Rmohv+oajauJPw9tglYnaOzQgFOiWqlaeX2x7Zlmlf5LLlmTzffTsFYwmKFYbUiiIaiYDrDs21oYMezYnKj4y+JdNLCMJC3Nz0Q8J6JEgdMnvRLj/d94+m6P7dPn3AOqTnjeKetXOTYw+APc80pIS4gL2NC/tje1jp3W5vdZVouqc3I5vXKokjRM+/j4blwRiMik3JNDk6sfo/uVC1hvEg6ZHCpG12vZu8mUNu0OHixmoXUi4+dxvYJuNegCKFKczgPe9X37gK3TwglEXSkqUDT89yk1INN4ELZN2hEQvzdnGNn/xWlt3t+XxoAzzQLuvW+zCLqosviZ1bmplXZolsoSvXtqPBVAqC1lJVBhNooHETk/k+8MoiBXNKJ/PZboDWbtLvvZ3HpJF24iNKIMKZ1QzY6pR0FymHTDebJc9p+9RCGsLdt2jRDkzzYmmRxytnF4TYb0dMJDtmQ4xqv8cPHYO6WsJdNw3GvkfwGFmgWcw1mZlx6Y5a47nYkTdDmqmZ/jyhKySqVUMOTaEZxm6BUd3xlP94ZxBDc8f7p05LNIh+4JM=
+  on:
+    repo: turion/rhine
+    tags: true
+    condition: "$PACKAGE =~ ^(rhine|rhine-gloss)$"

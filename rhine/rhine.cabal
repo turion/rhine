@@ -58,6 +58,7 @@ library
     FRP.Rhine.Clock.FixedRate
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
+    FRP.Rhine.Clock.Realtime.Event
     FRP.Rhine.Clock.Realtime.Millisecond
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
@@ -79,6 +80,7 @@ library
     FRP.Rhine.SF.Combinators
     FRP.Rhine.SyncSF
     FRP.Rhine.SyncSF.Except
+    FRP.Rhine.SyncSF.Reader
     FRP.Rhine.TimeDomain
 
   other-modules:
