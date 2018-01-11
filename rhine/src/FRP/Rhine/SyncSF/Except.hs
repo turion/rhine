@@ -1,3 +1,10 @@
+{- | This module provides exception handling, and thus control flow,
+to synchronous signal functions.
+
+The API presented here closely follows dunai's 'Control.Monad.Trans.MSF.Except',
+and reexports everything needed from there.
+-}
+
 {-# LANGUAGE Arrows           #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
@@ -51,10 +58,11 @@ type BehaviourFExcept m td a b e
 type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
 
 
-
+-- | Commute a 'ReaderT' layer past an 'ExceptT' layer.
 commuteExceptReader :: ExceptT e (ReaderT r m) a -> ReaderT r (ExceptT e m) a
 commuteExceptReader a = ReaderT $ \r -> ExceptT $ runReaderT (runExceptT a) r
 
+-- | Leave the monad context, to use the 'SyncExcept' as an 'Arrow'.
 runSyncExcept :: Monad m => SyncExcept m cl a b e -> SyncSF (ExceptT e m) cl a b
 runSyncExcept = liftMSFPurer commuteExceptReader . runMSFExcept
 

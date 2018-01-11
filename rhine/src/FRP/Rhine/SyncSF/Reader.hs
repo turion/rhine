@@ -1,3 +1,6 @@
+{- | Create and remove 'ReaderT' layers in 'SyncSF's.
+-}
+
 {-# LANGUAGE RankNTypes    #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies  #-}

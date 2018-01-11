@@ -1,3 +1,11 @@
+{- | This module supplies a general purpose monad transformer
+that adds a syntactical "delay", or "waiting" side effect.
+
+This allows for universal and deterministic scheduling of clocks
+that implement their waiting actions in 'ScheduleT'.
+See 'FRP.Rhine.Schedule.Trans' for more details.
+-}
+
 {-# LANGUAGE DeriveFunctor #-}
 module Control.Monad.Schedule where
 

@@ -7,7 +7,7 @@ import FRP.Rhine
 -- | Given a monadic stream function that accepts
 --   a varying number of inputs (a list),
 --   a `ResamplingBuffer` can be formed
---   that collects all input in a timestamped list
+--   that collects all input in a timestamped list.
 msfBuffer
   :: Monad m
   => MSF m (TimeInfo cl2, [(TimeInfo cl1, a)]) b

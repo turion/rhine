@@ -1,3 +1,5 @@
+{- | Interpolation buffers.
+-}
 {-# LANGUAGE Arrows       #-}
 {-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.ResamplingBuffer.Interpolation where

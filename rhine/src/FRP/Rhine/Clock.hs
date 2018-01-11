@@ -1,3 +1,7 @@
+{- | This module provides the 'Clock' type class, several utilities,
+and certain general constructions of 'Clock's,
+such as clocks lifted along monad morphisms or time rescalings.
+-}
 {-# LANGUAGE Arrows                #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -166,16 +170,21 @@ instance (Monad m1, Monad m2, Clock m1 cl)
       , initialTime
       )
 
+
+-- | Lift a clock type into a monad transformer.
 type LiftClock m t cl = HoistClock m (t m) cl
 
+-- | Lift a clock value into a monad transformer.
 liftClock :: (Monad m, MonadTrans t) => cl -> LiftClock m t cl
 liftClock hoistedClock = HoistClock
   { monadMorphism = lift
   , ..
   }
 
+-- | Lift a clock type into 'MonadIO'.
 type IOClock m cl = HoistClock IO m cl
 
+-- | Lift a clock value into 'MonadIO'.
 ioClock :: MonadIO m => cl -> IOClock m cl
 ioClock hoistedClock = HoistClock
   { monadMorphism = liftIO

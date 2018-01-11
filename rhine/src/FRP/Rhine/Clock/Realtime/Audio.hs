@@ -1,3 +1,7 @@
+{- | Provides several clocks to use for audio processing,
+both realtime and batch/file based.
+-}
+
 {-# LANGUAGE Arrows                #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -147,6 +151,9 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
 -- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float'.
 type PureAudioClockF (rate :: AudioRate) = RescaledClock (PureAudioClock rate) Float
 
+
+-- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float',
+--   using 'double2Float' to rescale.
 pureAudioClockF :: PureAudioClockF rate
 pureAudioClockF = RescaledClock
   { unscaledClock = PureAudioClock
