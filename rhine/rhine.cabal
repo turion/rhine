@@ -79,8 +79,10 @@ library
     FRP.Rhine.SF
     FRP.Rhine.SF.Combinators
     FRP.Rhine.SyncSF
+    FRP.Rhine.SyncSF.Core
     FRP.Rhine.SyncSF.Except
     FRP.Rhine.SyncSF.Reader
+    FRP.Rhine.SyncSF.Util
     FRP.Rhine.TimeDomain
 
   other-modules:

@@ -31,7 +31,6 @@ import Control.Monad.Trans.Reader
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.Schedule.Concurrently
-import FRP.Rhine.SyncSF.Reader
 
 {- A simple example using events looks as follows:
 
