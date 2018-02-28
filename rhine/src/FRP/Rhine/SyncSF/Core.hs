@@ -53,14 +53,22 @@ type BehaviorF  m td a b = BehaviourF m td a b
 
 -- * Utilities to create 'SyncSF's from simpler data
 
--- TODO Test in which situations it makes sense not to change cl
 -- | Hoist a 'SyncSF' along a monad morphism.
 hoistSyncSF
   :: (Monad m1, Monad m2)
   => (forall c. m1 c -> m2 c)
   -> SyncSF m1 cl a b
+  -> SyncSF m2 cl a b
+hoistSyncSF hoist = liftMSFPurer $ mapReaderT hoist
+
+-- | Hoist a 'SyncSF' and its clock along a monad morphism.
+hoistSyncSFAndClock
+  :: (Monad m1, Monad m2)
+  => (forall c. m1 c -> m2 c)
+  -> SyncSF m1 cl a b
   -> SyncSF m2 (HoistClock m1 m2 cl) a b
-hoistSyncSF hoist = liftMSFPurer $ withReaderT (retag id) . mapReaderT hoist
+hoistSyncSFAndClock hoist
+  = liftMSFPurer $ withReaderT (retag id) . mapReaderT hoist
 
 -- | A monadic stream function without dependency on time
 --   is a 'SyncSF' for any clock.
