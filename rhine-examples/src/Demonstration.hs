@@ -23,6 +23,17 @@ createMessage str
   =   timeInfoOf sinceStart >-> arr show
   >-> arr (("Clock " ++ str ++ " has ticked at: ") ++)
 
+-- | Specialise 'createMessage' to a specific clock,
+--   ticking twice a second.
+ms500 :: SyncSF IO (Millisecond 500) () String
+ms500 = createMessage "500 MS"
+
+-- | Specialise 'createMessage' to a different clock,
+--   ticking every 1.2 seconds.
+ms1200 :: SyncSF IO (Millisecond 1200) () String
+ms1200 = createMessage "1200 MS"
+
+
 -- | Output a message /every second/ (= every 1000 milliseconds).
 --   Let us assume we want to assure that 'printEverySecond'
 --   is only called every second,
@@ -30,17 +41,9 @@ createMessage str
 printEverySecond :: Show a => SyncSF IO (Millisecond 1000) a ()
 printEverySecond = arrMSync print
 
--- | Specialise 'createMessage' to a specific clock.
-ms500 :: SyncSF IO (Millisecond 500) () String
-ms500 = createMessage "500 MS"
-
-
-ms1200 :: SyncSF IO (Millisecond 1200) () String
-ms1200 = createMessage "1200 MS"
-
 -- | Create messages every 500 ms and every 1200 ms,
 --   collecting all of them in a list,
---   which is output every second.
+--   which is output at every second.
 main :: IO ()
 main = flow $
   ms500 @@ waitClock **@ concurrently @** ms1200 @@ waitClock
@@ -50,7 +53,7 @@ main = flow $
 
 -- | Rhine prevents the consumption of a signal at a different clock than it is created,
 --   if no explicit resampling strategy is given.
+--   /One does not simply create and consume data at different rates./
 --   Uncomment the following for a type error (the clocks don't match).
-
 
 -- typeError = ms500 >>> printEverySecond
