@@ -34,7 +34,10 @@ reusable standard solutions. In the places
 where these aspects need to intertwine, typing
 constraints on clocks come into effect, enforcing clock safety.
 
-A typical example, which can be run as `cabal run Demonstration`,
+## Example
+
+A typical example,
+which can be run as `cd rhine-examples/ && cabal run Demonstration`,
 would be:
 
 ```haskell
@@ -86,6 +89,7 @@ would be:
 
 * `rhine/`: The main library, which is also mirrored on hackage.
 * `rhine-gloss/`: A wrapper library to [gloss](https://hackage.haskell.org/package/gloss), a functional OpenGL library.
+* `rhine-examples/`: Different examples as a starting point to learn Rhine.
 
 ## Related projects
 

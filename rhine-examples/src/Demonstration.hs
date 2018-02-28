@@ -47,6 +47,10 @@ main = flow $
   >-- collect -@- concurrently -->
   printEverySecond @@ waitClock
 
--- | Uncomment the following for a type error (the clocks don't match):
+
+-- | Rhine prevents the consumption of a signal at a different clock than it is created,
+--   if no explicit resampling strategy is given.
+--   Uncomment the following for a type error (the clocks don't match).
+
 
 -- typeError = ms500 >>> printEverySecond
