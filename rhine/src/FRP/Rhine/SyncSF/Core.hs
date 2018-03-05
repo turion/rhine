@@ -34,7 +34,7 @@ type SyncSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
 
 -- | A synchronous signal is a 'SyncSF' with no input required.
 --   It produces its output on its own.
-type SyncSignal m cl a = SyncSF m cl () a
+type SyncSignal m cl a = forall arbitrary . SyncSF m cl arbitrary a
 
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
