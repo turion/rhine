@@ -14,6 +14,7 @@ module FRP.Rhine.SyncSF.Core
 import Control.Arrow
 
 -- transformers
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 
 -- dunai
@@ -69,6 +70,13 @@ hoistSyncSFAndClock
   -> SyncSF m2 (HoistClock m1 m2 cl) a b
 hoistSyncSFAndClock hoist
   = liftMSFPurer $ withReaderT (retag id) . mapReaderT hoist
+
+-- | Lift a 'SyncSF' into a monad transformer.
+liftSyncSF
+  :: (Monad m, MonadTrans t, Monad (t m))
+  => SyncSF    m  cl a b
+  -> SyncSF (t m) cl a b
+liftSyncSF = hoistSyncSF lift
 
 -- | A monadic stream function without dependency on time
 --   is a 'SyncSF' for any clock.
