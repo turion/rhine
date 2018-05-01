@@ -53,6 +53,7 @@ library
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.Count
+    FRP.Rhine.Clock.Cycle
     FRP.Rhine.Clock.FixedRate
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy

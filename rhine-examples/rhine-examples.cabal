@@ -30,3 +30,12 @@ executable Demonstration
   build-depends:       base  >= 4.7     && <5
                      , rhine == 0.4.*
   default-language:    Haskell2010
+
+executable RepeatingClocks
+  hs-source-dirs:      src
+  main-is:             RepeatingClocks.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base  >= 4.7     && <5
+                     , rhine == 0.4.*
+                     , transformers >= 0.4   && < 0.6
+  default-language:    Haskell2010
