@@ -6,6 +6,7 @@ ghc:
 env:
 - PACKAGE="rhine"
 - PACKAGE="rhine-gloss"
+- PACKAGE="rhine-sdl2"
 before_install: cd ${PACKAGE}
 
 deploy:
