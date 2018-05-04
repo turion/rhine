@@ -1,0 +1,7 @@
+resolver: lts-10.0
+extra-deps:
+  - dunai-0.4.0.0
+  - ../rhine
+nix:
+  enable: true
+  packages: [mesa freeglut]
