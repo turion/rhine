@@ -26,7 +26,7 @@ commuteReaders a
 --   by passing the original behaviour the extra @r@ input.
 readerS
   :: Monad m
-  => BehaviourF m td (a, r) b -> BehaviourF (ReaderT r m) td a b
+  => SyncSF m cl (a, r) b -> SyncSF (ReaderT r m) cl a b
 readerS behaviour
   = liftMSFPurer commuteReaders $ MSF.readerS $ arr swap >>> behaviour
 
@@ -34,12 +34,12 @@ readerS behaviour
 --   by making it an explicit input to the behaviour.
 runReaderS
   :: Monad m
-  => BehaviourF (ReaderT r m) td a b -> BehaviourF m td (a, r) b
+  => SyncSF (ReaderT r m) cl a b -> SyncSF m cl (a, r) b
 runReaderS behaviour
   = arr swap >>> (MSF.runReaderS $ liftMSFPurer commuteReaders behaviour)
 
 -- | Remove a 'ReaderT' layer by passing the readonly environment explicitly.
 runReaderS_
   :: Monad m
-  => BehaviourF (ReaderT r m) td a b -> r -> BehaviourF m td a b
+  => SyncSF (ReaderT r m) cl a b -> r -> SyncSF m cl a b
 runReaderS_ behaviour r = arr (, r) >>> runReaderS behaviour

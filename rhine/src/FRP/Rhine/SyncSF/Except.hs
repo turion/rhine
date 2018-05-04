@@ -93,6 +93,7 @@ throwOn' = proc (b, e) -> if b
 step :: Monad m => (a -> m (b, e)) -> SyncExcept m cl a b e
 step f = MSFE.step $ lift . f
 
+-- TODO Port back to dunai
 -- | Remembers and indefinitely outputs the first input value.
 keepFirst :: Monad m => SyncSF m cl a a
 keepFirst = safely $ do
