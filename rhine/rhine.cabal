@@ -66,6 +66,7 @@ library
     FRP.Rhine.ResamplingBuffer
     FRP.Rhine.ResamplingBuffer.Collect
     FRP.Rhine.ResamplingBuffer.FIFO
+    FRP.Rhine.ResamplingBuffer.LIFO
     FRP.Rhine.ResamplingBuffer.Interpolation
     FRP.Rhine.ResamplingBuffer.KeepLast
     FRP.Rhine.ResamplingBuffer.MSF
