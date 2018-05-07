@@ -1,7 +1,6 @@
-{-# LANGUAGE Arrows           #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE Arrows       #-}
+{-# LANGUAGE RankNTypes   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module FRP.Rhine.SyncSF.Except
   ( module FRP.Rhine.SyncSF.Except
@@ -16,12 +15,13 @@ import Control.Monad.Trans.Except as X
 import Control.Monad.Trans.Reader
 
 -- dunai
+import Data.MonadicStreamFunction
 import Control.Monad.Trans.MSF.Except hiding (try, once, once_, throwOn, throwOn', throwS)
 -- TODO Find out whether there is a cleverer way to handle exports
 import qualified Control.Monad.Trans.MSF.Except as MSFE
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.SyncSF.Core
 import FRP.Rhine.SyncSF.Except.Util
 
 -- * Types
@@ -92,48 +92,3 @@ throwOn' = proc (b, e) -> if b
 --   and then throws an exception.
 step :: Monad m => (a -> m (b, e)) -> SyncExcept m cl a b e
 step f = MSFE.step $ lift . f
-
--- TODO Port back to dunai
--- | Remembers and indefinitely outputs the first input value.
-keepFirst :: Monad m => SyncSF m cl a a
-keepFirst = safely $ do
-  a <- try throwS
-  safe $ arr $ const a
-
-
--- | Throws an exception after the specified time difference,
---   outputting the remaining time difference.
-timer
-  :: ( Monad m
-     , TimeDomain td
-     , Ord (Diff td)
-     )
-  => Diff td
-  -> BehaviorF (ExceptT () m) td a (Diff td)
-timer diff = proc _ -> do
-  time      <- timeInfoOf absolute -< ()
-  startTime <- keepFirst           -< time
-  let remainingTime = time `diffTime` startTime
-  _         <- throwOn ()          -< remainingTime > diff
-  returnA                          -< remainingTime
-
--- | Like 'timer_', but doesn't output the remaining time at all.
-timer_
-  :: ( Monad m
-     , TimeDomain td
-     , Ord (Diff td)
-     )
-  => Diff td
-  -> BehaviorF (ExceptT () m) td a ()
-timer_ diff = timer diff >>> arr (const ())
-
--- | Like 'timer', but divides the remaining time by the total time.
-scaledTimer
-  :: ( Monad m
-     , TimeDomain td
-     , Fractional (Diff td)
-     , Ord        (Diff td)
-     )
-  => Diff td
-  -> BehaviorF (ExceptT () m) td a (Diff td)
-scaledTimer diff = timer diff >>> arr (/ diff)

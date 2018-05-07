@@ -3,9 +3,12 @@
 
 name:                rhine-gloss
 version:             0.4.0.0
--- synopsis:
-description:         Wrapper to run reactive programs written in Rhine
+synopsis:            Wrapper to run reactive programs written in Rhine
                      with Gloss as backend
+description:
+  This package provides a simple wrapper for the `gloss` library,
+  or rather the function `Graphics.Gloss.play`,
+  enabling you to write `gloss` applications as synchronous signal functions.
 license:             BSD3
 license-file:        LICENSE
 author:              Manuel Bärenz
@@ -14,6 +17,7 @@ maintainer:          programming@manuelbaerenz.de
 category:            FRP
 build-type:          Simple
 extra-source-files:  ChangeLog.md
+extra-doc-files:     README.md
 cabal-version:       >=1.18
 
 library

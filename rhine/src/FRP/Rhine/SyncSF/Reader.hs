@@ -13,7 +13,7 @@ import Control.Monad.Trans.Reader
 import qualified Control.Monad.Trans.MSF.Reader as MSF
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.SyncSF.Core
 
 
 -- | Commute two 'ReaderT' transformer layers past each other

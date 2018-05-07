@@ -1,7 +1,12 @@
-{- | Example application for the @gloss@ wrapper. -}
+# README
 
+This package provides a simple wrapper for the `gloss` library,
+or rather the function `Graphics.Gloss.play`,
+enabling you to write `gloss` applications as synchronous signal functions.
+An example "gears" program, which you can run as `cabal run gloss-gears`,
+now becomes as simple as:
 
--- rhine-gloss
+```haskell
 import FRP.Rhine.Gloss
 
 
@@ -18,3 +23,4 @@ mainSyncSF = timeInfoOf sinceStart >>> arr (* 50) >>> arr gears
 main :: IO ()
 main = flowGloss (InWindow "rhine-gloss-gears" (400, 400) (10, 10)) (greyN 0.3) 30
      $ buildGlossRhine Just mainSyncSF
+```
