@@ -27,13 +27,9 @@ while the time span for the sustain period ends
 when the user stops pressing the key.
 -}
 
--- pulse-simple
-import Sound.Pulse.Simple
-
 
 -- rhine
 import FRP.Rhine
-import FRP.Rhine.Clock.Realtime.Audio
 import FRP.Rhine.Clock.Realtime.Millisecond
 import FRP.Rhine.Clock.Realtime.Stdin
 import FRP.Rhine.ResamplingBuffer.KeepLast
