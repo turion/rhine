@@ -87,6 +87,11 @@ throwOn' = proc (b, e) -> if b
   then throwS  -< e
   else returnA -< ()
 
+-- | When the input is @Just e@, throw the exception @e@.
+throwMaybe :: Monad m => SyncSF (ExceptT e m) cl (Maybe e) (Maybe a)
+throwMaybe = proc me -> case me of
+  Nothing -> returnA -< Nothing
+  Just e  -> throwS  -< e
 
 -- | Advances a single tick with the given Kleisli arrow,
 --   and then throws an exception.
