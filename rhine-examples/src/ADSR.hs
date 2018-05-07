@@ -34,7 +34,6 @@ import FRP.Rhine.Clock.Realtime.Millisecond
 import FRP.Rhine.Clock.Realtime.Stdin
 import FRP.Rhine.ResamplingBuffer.KeepLast
 import FRP.Rhine.Schedule.Concurrently
-import FRP.Rhine.SyncSF.Except
 
 -- * The definition of an ADSR
 
@@ -48,6 +47,7 @@ data ADSR td s = ADSR
   }
 
 -- | Some sample settings for an 'ADSR'.
+myADSR :: ADSR UTCTime Double
 myADSR = ADSR
   { a = 0.05
   , d = 0.2
@@ -90,11 +90,11 @@ runADSR ADSR {..} = safely $ do
     where
       adsrFrom attackAmplitude = do
         (_, releaseAmplitude) <- try $ (`till` keyReleased) $ safely $ do
-          overdue <- try $ attack a
+          overdue <- try $ attack a attackAmplitude
           _       <- try $ decay d s overdue
           safe $ sustain s
         (_, attackAmplitude') <- try $ (`till` keyPressed) $ safely $ do
-          _ <- try $ release r s
+          _ <- try $ release r releaseAmplitude
           safe $ sustain 0
         adsrFrom attackAmplitude'
 
@@ -130,8 +130,9 @@ attack
   :: ( Monad m, TimeDomain td
      , Ord amplitude, Fractional amplitude, Diff td ~ amplitude )
   => Diff td -- ^ The attack time, in which the amplitude will rise from 0 to 1.
+  -> amplitude -- ^ The initial amplitude
   -> Behaviour (ExceptT (Diff td) m) td amplitude
-attack a = linearly a 0 1 0
+attack a amplitude = linearly a amplitude 1 0
 
 -- | The period in which the amplitude falls from 1 to the sustain level,
 --   and then an exception is thrown.
