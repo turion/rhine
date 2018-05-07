@@ -7,7 +7,9 @@ env:
 - PACKAGE="rhine"
 - PACKAGE="rhine-gloss"
 - PACKAGE="rhine-examples"
-before_install: cd ${PACKAGE}
+before_install:
+  - cd ${PACKAGE}
+  - cabal sandbox add-source ../rhine
 
 deploy:
   provider: hackage
