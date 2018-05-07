@@ -25,4 +25,3 @@ import FRP.Rhine.Schedule         as X
 import FRP.Rhine.SF               as X
 import FRP.Rhine.SF.Combinators   as X
 import FRP.Rhine.SyncSF           as X
-import FRP.Rhine.TimeDomain       as X

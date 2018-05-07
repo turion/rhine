@@ -5,7 +5,12 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeFamilies          #-}
-module FRP.Rhine.Clock where
+module FRP.Rhine.Clock
+  ( module FRP.Rhine.Clock
+  , module FRP.Rhine.TimeDomain
+  , module Data.MonadicStreamFunction
+  )
+where
 
 -- transformers
 import Control.Monad.IO.Class (liftIO, MonadIO)
