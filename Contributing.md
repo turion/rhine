@@ -37,5 +37,6 @@
 Thanks go to:
 
 * https://github.com/ivanperez-keera/
-* https://github.com/ggreif
+* https://github.com/ggreif/
 * https://github.com/fphh/
+* https://github.com/alexpeits/
