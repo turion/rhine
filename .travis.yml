@@ -12,6 +12,7 @@ before_install:
   - cabal sandbox init
   - cd ..
   - cd ${PACKAGE}
+  - cabal sandbox init
   - cabal sandbox add-source ../rhine
 
 deploy:
