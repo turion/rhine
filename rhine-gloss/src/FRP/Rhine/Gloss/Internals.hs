@@ -21,7 +21,7 @@ import Control.Monad.Trans.MSF.Reader (readerS, runReaderS)
 import Graphics.Gloss.Interface.Pure.Game
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (readerS, runReaderS)
 import FRP.Rhine.Clock.Select
 
 
