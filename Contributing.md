@@ -26,9 +26,10 @@
 
 * At the moment, the `master` branch should always build,
   in all supported configurations.
+* All new contributions go to the `develop` branch.
 * New releases are prepared and tested on `release-N.n.n.n`-branches,
   and tagged when merged and uploaded to hackage.
-* In the future, Rhine may switch to this model:
+* Rhine aims to follow this model:
   http://nvie.com/posts/a-successful-git-branching-model/
 
 ## Contributors
