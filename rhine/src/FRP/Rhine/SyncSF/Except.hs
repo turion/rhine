@@ -5,7 +5,7 @@
 module FRP.Rhine.SyncSF.Except
   ( module FRP.Rhine.SyncSF.Except
   , module X
-  , safe, safely, Empty, exceptS, runMSFExcept
+  , safe, safely, Empty, exceptS, runMSFExcept, currentInput
   )
   where
 
