@@ -19,7 +19,7 @@
 
 * Rhine should be compilable with `cabal` and `stack`.
 * Rhine does not make an effort to support old GHC versions.
-  Currently, Rhine builds on GHC versions 7.10, 8.0 and 8.2,
+  Currently, Rhine builds on GHC versions 8.0 and 8.2,
   but this may change in the future.
 
 ### Branching model

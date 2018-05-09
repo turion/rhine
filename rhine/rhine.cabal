@@ -55,6 +55,7 @@ library
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.Count
+    FRP.Rhine.Clock.Cycle
     FRP.Rhine.Clock.FixedRate
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
@@ -93,7 +94,7 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base         >= 4.7   && < 5
+  build-depends:       base         >= 4.9
                     ,  dunai        == 0.4.0.*
                     ,  transformers == 0.5.*
                     ,  time         == 1.8.*
