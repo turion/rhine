@@ -19,7 +19,7 @@ executable HelloWorld
   hs-source-dirs:      src
   main-is:             HelloWorld.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base  >= 4.7     && <5
+  build-depends:       base  >= 4.9
                      , rhine == 0.5.*
   default-language:    Haskell2010
 
@@ -27,7 +27,7 @@ executable Demonstration
   hs-source-dirs:      src
   main-is:             Demonstration.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base  >= 4.7     && <5
+  build-depends:       base  >= 4.9
                      , rhine == 0.5.*
   default-language:    Haskell2010
 
@@ -37,4 +37,12 @@ executable ADSR
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.7     && <5
                      , rhine        == 0.5.*
+
+executable CycleClock
+  hs-source-dirs:      src
+  main-is:             CycleClock.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base  >= 4.7     && <5
+                     , rhine        == 0.5.*
+                     , transformers == 0.5.*
   default-language:    Haskell2010
