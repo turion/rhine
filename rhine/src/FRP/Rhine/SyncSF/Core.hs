@@ -14,6 +14,7 @@ module FRP.Rhine.SyncSF.Core
 import Control.Arrow
 
 -- transformers
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 
 -- dunai
@@ -33,7 +34,7 @@ type SyncSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
 
 -- | A synchronous signal is a 'SyncSF' with no input required.
 --   It produces its output on its own.
-type SyncSignal m cl a = SyncSF m cl () a
+type SyncSignal m cl a = forall arbitrary . SyncSF m cl arbitrary a
 
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
@@ -69,6 +70,13 @@ hoistSyncSFAndClock
   -> SyncSF m2 (HoistClock m1 m2 cl) a b
 hoistSyncSFAndClock hoist
   = liftMSFPurer $ withReaderT (retag id) . mapReaderT hoist
+
+-- | Lift a 'SyncSF' into a monad transformer.
+liftSyncSF
+  :: (Monad m, MonadTrans t, Monad (t m))
+  => SyncSF    m  cl a b
+  -> SyncSF (t m) cl a b
+liftSyncSF = hoistSyncSF lift
 
 -- | A monadic stream function without dependency on time
 --   is a 'SyncSF' for any clock.
