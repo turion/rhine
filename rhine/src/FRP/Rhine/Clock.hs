@@ -25,10 +25,13 @@ import FRP.Rhine.TimeDomain
 -- * The 'Clock' type class
 
 {- |
-A clock creates a stream of time stamps,
+A clock creates a stream of time stamps and additional information,
 possibly together with side effects in a monad 'm'
 that cause the environment to wait until the specified time is reached.
+-}
+type RunningClock m time tag = MSF m () (time, tag)
 
+{- |
 Since we want to leverage Haskell's type system to annotate signal functions by their clocks,
 each clock must be an own type, 'cl'.
 Different values of the same clock type should tick at the same speed,
@@ -46,7 +49,7 @@ class TimeDomain (TimeDomainOf cl) => Clock m cl where
   --   i.e. an effectful stream of tagged time stamps together with an initialisation time.
   startClock
     :: cl -- ^ The clock value, containing e.g. settings or device parameters
-    -> m (MSF m () (TimeDomainOf cl, Tag cl), TimeDomainOf cl) -- ^ The stream of time stamps, and the initial time
+    -> m (RunningClock m (TimeDomainOf cl) (Tag cl), TimeDomainOf cl) -- ^ The stream of time stamps, and the initial time
 
 
 -- * Auxiliary definitions and utilities
