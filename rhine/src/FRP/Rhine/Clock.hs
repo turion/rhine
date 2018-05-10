@@ -32,6 +32,13 @@ that cause the environment to wait until the specified time is reached.
 type RunningClock m time tag = MSF m () (time, tag)
 
 {- |
+When starting a clock, the initial time is measured
+(typically by means of a side effect),
+and a running clock is returned.
+-}
+type RunningClockStarter m time tag = m (RunningClock m time tag, time)
+
+{- |
 Since we want to leverage Haskell's type system to annotate signal functions by their clocks,
 each clock must be an own type, 'cl'.
 Different values of the same clock type should tick at the same speed,
@@ -49,7 +56,7 @@ class TimeDomain (TimeDomainOf cl) => Clock m cl where
   --   i.e. an effectful stream of tagged time stamps together with an initialisation time.
   startClock
     :: cl -- ^ The clock value, containing e.g. settings or device parameters
-    -> m (RunningClock m (TimeDomainOf cl) (Tag cl), TimeDomainOf cl) -- ^ The stream of time stamps, and the initial time
+    -> RunningClockStarter m (TimeDomainOf cl) (Tag cl) -- ^ The stream of time stamps, and the initial time
 
 
 -- * Auxiliary definitions and utilities
