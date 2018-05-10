@@ -99,6 +99,8 @@ rescaledScheduleS Schedule {..} = Schedule startSchedule'
 
 
 -- TODO What's the most general way we can lift a schedule this way?
+-- | Lifts a schedule into the 'ReaderT' transformer,
+--   supplying the same environment to its scheduled clocks.
 readerSchedule
   :: ( Monad m
      , Clock (ReaderT r m) cl1, Clock (ReaderT r m) cl2
