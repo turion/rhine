@@ -27,7 +27,7 @@ data Schedule m cl1 cl2
   => Schedule
     { startSchedule
         :: cl1 -> cl2
-        -> m (MSF m () (TimeDomainOf cl1, Either (Tag cl1) (Tag cl2)), TimeDomainOf cl1)
+        -> RunningClockStarter m (TimeDomainOf cl1) (Either (Tag cl1) (Tag cl2))
     }
 -- The type constraint in the constructor is actually useful when pattern matching on 'Schedule',
 -- which is interesting since a constraint like 'Monad m' is useful.
