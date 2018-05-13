@@ -3,12 +3,14 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeOperators #-}
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
+import Data.Maybe (fromMaybe)
 import Data.Time.Clock
 import Control.Concurrent (threadDelay)
-import GHC.TypeLits       (Nat, KnownNat)
+import GHC.TypeLits
 
 -- fixed-vector
 import Data.Vector.Sized (Vector, fromList)
@@ -16,6 +18,8 @@ import Data.Vector.Sized (Vector, fromList)
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.Clock.Step
+import FRP.Rhine.ResamplingBuffer.Collect
+import FRP.Rhine.ResamplingBuffer.Util
 
 {- |
 A clock ticking every 'n' milliseconds,
@@ -76,3 +80,23 @@ waitClock = Millisecond $ RescaledClockS Step $ \_ -> do
       now         <- getCurrentTime -- TODO Test whether this is a performance penalty
       return (now, diff > 0)
   return (runningClock, initTime)
+
+
+-- TODO It would be great if this could be directly implemented in terms of downsampleStep
+downsampleMillisecond
+  :: (KnownNat n, Monad m)
+  => ResamplingBuffer m (Millisecond k) (Millisecond (n * k)) a (Vector n a)
+downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
+  where
+    assumeSize = fromMaybe $ error $ unwords
+      [ "You are using an incorrectly implemented schedule"
+      , "for two Millisecond clocks."
+      , "Use a correct schedule like downsampleMillisecond."
+      ]
+
+-- | Two 'Millisecond' clocks can always be scheduled deterministically.
+scheduleMillisecond :: Schedule IO (Millisecond n1) (Millisecond n2)
+scheduleMillisecond = Schedule startSchedule'
+  where
+    startSchedule' (Millisecond cl1) (Millisecond cl2)
+      = startSchedule (rescaledScheduleS scheduleStep) cl1 cl2
