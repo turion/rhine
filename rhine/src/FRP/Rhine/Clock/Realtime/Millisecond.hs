@@ -1,6 +1,7 @@
 {-# LANGUAGE Arrows         #-}
 {-# LANGUAGE DataKinds      #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies   #-}
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
@@ -9,6 +10,8 @@ import Data.Time.Clock
 import Control.Concurrent (threadDelay)
 import GHC.TypeLits       (Nat, KnownNat)
 
+-- fixed-vector
+import Data.Vector.Sized (Vector, fromList)
 
 -- rhine
 import FRP.Rhine
@@ -25,8 +28,14 @@ The tag of this clock is 'Bool',
 where 'True' represents successful realtime,
 and 'False' a lag.
 -}
-type Millisecond (n :: Nat) = RescaledClockS IO (Step n) UTCTime Bool
+newtype Millisecond (n :: Nat) = Millisecond (RescaledClockS IO (Step n) UTCTime Bool)
 -- TODO Consider changing the tag to Maybe Double
+
+instance Clock IO (Millisecond n) where
+  type TimeDomainOf (Millisecond n) = UTCTime
+  type Tag          (Millisecond n) = Bool
+  startClock (Millisecond cl) = startClock cl
+
 
 -- | This clock simply sleeps 'n' milliseconds after each tick.
 --   The current time is measured, but no adjustment is made.
@@ -36,7 +45,7 @@ sleepClock :: KnownNat n => Millisecond n
 sleepClock = sleepClock_ Step
   where
     sleepClock_ :: Step n -> Millisecond n
-    sleepClock_ cl = RescaledClockS cl $ const $ do
+    sleepClock_ cl = Millisecond $ RescaledClockS cl $ const $ do
       now <- getCurrentTime
       let ticks = arrM_ $ do
             threadDelay $ fromInteger $ stepsize cl * 1000
@@ -54,7 +63,7 @@ sleepClock = sleepClock_ Step
 --   If the next tick should already have occurred,
 --   the tag is set to 'False', representing a failed real time attempt.
 waitClock :: KnownNat n => Millisecond n
-waitClock = RescaledClockS Step $ \_ -> do
+waitClock = Millisecond $ RescaledClockS Step $ \_ -> do
   initTime <- getCurrentTime
   let
     runningClock = arrM $ \(n, ()) -> do
