@@ -17,7 +17,6 @@ import FRP.Rhine.Clock
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
 import FRP.Rhine.SF
-import FRP.Rhine.TimeDomain
 
 
 {- | A signal function ('SF') enclosed by matching 'ResamplingBuffer's and further auxiliary data,

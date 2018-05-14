@@ -1,3 +1,4 @@
+{-# LANGUAGE Arrows                #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
@@ -27,7 +28,7 @@ data Schedule m cl1 cl2
   => Schedule
     { startSchedule
         :: cl1 -> cl2
-        -> m (MSF m () (TimeDomainOf cl1, Either (Tag cl1) (Tag cl2)), TimeDomainOf cl1)
+        -> RunningClockStarter m (TimeDomainOf cl1) (Either (Tag cl1) (Tag cl2))
     }
 -- The type constraint in the constructor is actually useful when pattern matching on 'Schedule',
 -- which is interesting since a constraint like 'Monad m' is useful.
@@ -62,8 +63,44 @@ flipSchedule Schedule {..} = Schedule startSchedule_
     swapEither (Left  a) = Right a
     swapEither (Right b) = Left  b
 
+-- TODO I originally wanted to rescale a schedule and its clocks at the same time.
+-- That's rescaleSequentialClock.
+-- | If a schedule works for two clocks, a rescaling of the clocks
+--   also applies to the schedule.
+rescaledSchedule
+  :: Monad m
+  => Schedule m cl1 cl2
+  -> Schedule m (RescaledClock cl1 td) (RescaledClock cl2 td)
+rescaledSchedule schedule = Schedule $ startSchedule'
+  where
+    startSchedule' cl1 cl2 = startSchedule (rescaledScheduleS schedule) (rescaledClockToS cl1) (rescaledClockToS cl2)
+
+-- | As 'rescaledSchedule', with a stateful rescaling
+rescaledScheduleS
+  :: Monad m
+  => Schedule m cl1 cl2
+  -> Schedule m (RescaledClockS m cl1 td tag1) (RescaledClockS m cl2 td tag2)
+rescaledScheduleS Schedule {..} = Schedule startSchedule'
+  where
+    startSchedule' (RescaledClockS cl1 rescaleS1) (RescaledClockS cl2 rescaleS2) = do
+      (runningSchedule, initTime ) <- startSchedule cl1 cl2
+      (rescaling1     , initTime') <- rescaleS1 initTime
+      (rescaling2     , _        ) <- rescaleS2 initTime
+      let runningSchedule'
+            = runningSchedule >>> proc (time, tag12) -> case tag12 of
+                Left  tag1 -> do
+                  (time', tag1') <- rescaling1 -< (time, tag1)
+                  returnA -< (time', Left  tag1')
+                Right tag2 -> do
+                  (time', tag2') <- rescaling2 -< (time, tag2)
+                  returnA -< (time', Right tag2')
+      return (runningSchedule', initTime')
+
+
 
 -- TODO What's the most general way we can lift a schedule this way?
+-- | Lifts a schedule into the 'ReaderT' transformer,
+--   supplying the same environment to its scheduled clocks.
 readerSchedule
   :: ( Monad m
      , Clock (ReaderT r m) cl1, Clock (ReaderT r m) cl2

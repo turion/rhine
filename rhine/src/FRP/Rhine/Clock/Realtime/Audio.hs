@@ -16,6 +16,7 @@ module FRP.Rhine.Clock.Realtime.Audio
   ( AudioClock (..)
   , AudioRate (..)
   , PureAudioClock (..)
+  , PureAudioClockF (..)
   , pureAudioClockF
   )
   where
@@ -30,10 +31,10 @@ import Control.Monad.IO.Class
 
 
 -- dunai
-import Control.Monad.Trans.MSF.Except
+import Control.Monad.Trans.MSF.Except hiding (step)
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.Clock
 
 -- | Rates at which audio signals are typically sampled.
 data AudioRate
