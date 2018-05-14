@@ -10,10 +10,11 @@ import Control.Concurrent
 import Control.Monad.Trans.Class
 
 -- dunai
+import Control.Monad.Trans.MSF.Except
 import Control.Monad.Trans.MSF.Writer
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (try, once_, throwMaybe)
 
 
 -- | Runs two clocks in separate GHC threads
@@ -73,3 +74,29 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
   tell w1
   tell w2
   return (arrM_ (WriterT $ takeMVar mvar), initTime)
+
+concurrentlyExcept
+  :: ( Clock (ExceptT e IO) cl1
+     , Clock (ExceptT e IO) cl2
+     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     )
+  => Schedule (ExceptT e IO) cl1 cl2
+concurrentlyExcept = Schedule $ \cl1 cl2 -> do
+  iMVar <- newEmptyMVar
+  mvar  <- newEmptyMVar
+  evar  <- newEmptyMVar
+  _ <- forkIO $ do
+    (runningClock, initTime) <- startClock cl1
+    putMVar iMVar initTime
+    undefined -- reactimate $ runningClock >>> second (arr Left)  >>> arrM (putMVar mvar)
+  _ <- forkIO $ do
+    (runningClock, initTime) <- startClock cl2
+    putMVar iMVar initTime
+    let throwingClock = runMSFExcept $ do
+          e <- try runningClock
+          _ <- once_ $ lift $ tryPutMVar evar e
+          return e
+    runExceptT $ reactimate $ throwingClock >>> second (arr Right) >>> arrM (lift . putMVar mvar) >>> arrM_ (lift $ tryTakeMVar evar) >>> throwMaybe
+  initTime <- takeMVar iMVar -- The first clock to be initialised sets the first time stamp
+  _        <- takeMVar iMVar -- Initialise the second clock
+  return (arrM_ $ takeMVar mvar, initTime)
