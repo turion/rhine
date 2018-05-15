@@ -63,8 +63,7 @@ scheduleStep = Schedule f where
 -- but the user might implement an incorrect schedule.
 downsampleStep
   :: (KnownNat n, Monad m)
-  => (Vector n a -> b)
-  -> ResamplingBuffer m (Step k) (Step (n * k)) a b
+  => ResamplingBuffer m (Step k) (Step (n * k)) a (Vector n a)
 downsampleStep = collect >>-^ arr (fromList >>> assumeSize)
   where
     assumeSize = fromMaybe $ error $ unwords
