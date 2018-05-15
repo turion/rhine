@@ -9,14 +9,19 @@ module FRP.Rhine.Clock.Step where
 
 
 -- base
+import Data.Maybe (fromMaybe)
 import GHC.TypeLits
+
+-- fixed-vector
+import Data.Vector.Sized (Vector, fromList)
 
 -- dunai
 import Data.MonadicStreamFunction.Async (concatS)
 
 -- rhine
 import FRP.Rhine
-
+import FRP.Rhine.ResamplingBuffer.Collect
+import FRP.Rhine.ResamplingBuffer.Util
 
 -- | A pure (side effect free) clock ticking at multiples of 'n'.
 --   The tick rate is in the type signature,
@@ -51,3 +56,19 @@ scheduleStep = Schedule f where
         k <- arr (+1) <<< count -< ()
         returnA                 -< [ (k, Left  ()) | k `mod` n1 == 0 ]
                                 ++ [ (k, Right ()) | k `mod` n2 == 0 ]
+
+-- TODO The problem is that the schedule doesn't give a guarantee where in the n ticks of the first clock the second clock will tick.
+-- For this to work, it has to be the last.
+-- With scheduleStep, this works,
+-- but the user might implement an incorrect schedule.
+downsampleStep
+  :: (KnownNat n, Monad m)
+  => (Vector n a -> b)
+  -> ResamplingBuffer m (Step k) (Step (n * k)) a b
+downsampleStep = collect >>-^ arr (fromList >>> assumeSize)
+  where
+    assumeSize = fromMaybe $ error $ unwords
+      [ "You are using an incorrectly implemented schedule"
+      , "for two Step clocks."
+      , "Use a correct schedule like downsampleStep."
+      ]
