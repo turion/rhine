@@ -28,18 +28,16 @@ concurrently
 concurrently = Schedule $ \cl1 cl2 -> do
   iMVar <- newEmptyMVar
   mvar  <- newEmptyMVar
-  _ <- forkIO $ do
-    (runningClock, initTime) <- startClock cl1
-    putMVar iMVar initTime
-    reactimate $ runningClock >>> second (arr Left)  >>> arrM (putMVar mvar)
-  _ <- forkIO $ do
-    (runningClock, initTime) <- startClock cl2
-    putMVar iMVar initTime
-    reactimate $ runningClock >>> second (arr Right) >>> arrM (putMVar mvar)
+  _ <- launchSubthread cl1 Left  iMVar mvar
+  _ <- launchSubthread cl2 Right iMVar mvar
   initTime <- takeMVar iMVar -- The first clock to be initialised sets the first time stamp
   _        <- takeMVar iMVar -- Initialise the second clock
   return (arrM_ $ takeMVar mvar, initTime)
-
+  where
+    launchSubthread cl leftright iMVar mvar = forkIO $ do
+      (runningClock, initTime) <- startClock cl
+      putMVar iMVar initTime
+      reactimate $ runningClock >>> second (arr leftright) >>> arrM (putMVar mvar)
 -- TODO These threads can't be killed from outside easily since we've lost their ids
 -- => make a MaybeT or ExceptT variant
 
@@ -53,19 +51,8 @@ concurrentlyWriter
 concurrentlyWriter = Schedule $ \cl1 cl2 -> do
   iMVar <- lift newEmptyMVar
   mvar  <- lift newEmptyMVar
-  _ <- lift $ forkIO $ do
-    ((runningClock, initTime), w) <- runWriterT $ startClock cl1
-    putMVar iMVar (initTime, w)
-    reactimate $ proc _ -> do
-      (wL, (td, tag_)) <- runWriterS runningClock -< ()
-      arrM (putMVar mvar)                        -< ((td, Left tag_), wL)
-  -- TODO It's a shame I can't refactor these two blocks with a let binding
-  _ <- lift $ forkIO $ do
-    ((runningClock, initTime), w) <- runWriterT $ startClock cl2
-    putMVar iMVar (initTime, w)
-    reactimate $ proc _ -> do
-      (wR, (td, tag_)) <- runWriterS runningClock -< ()
-      arrM (putMVar mvar)                        -< ((td, Right tag_), wR)
+  _ <- launchSubthread cl1 Left  iMVar mvar
+  _ <- launchSubthread cl2 Right iMVar mvar
   -- The first clock to be initialised sets the first time stamp
   (initTime, w1) <- lift $ takeMVar iMVar
    -- Initialise the second clock
@@ -73,3 +60,10 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
   tell w1
   tell w2
   return (arrM_ (WriterT $ takeMVar mvar), initTime)
+  where
+    launchSubthread cl leftright iMVar mvar = lift $ forkIO $ do
+      ((runningClock, initTime), w) <- runWriterT $ startClock cl
+      putMVar iMVar (initTime, w)
+      reactimate $ proc _ -> do
+        (w', (td, tag_)) <- runWriterS runningClock -< ()
+        arrM (putMVar mvar)                        -< ((td, leftright tag_), w')
