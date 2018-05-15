@@ -5,6 +5,8 @@ module FRP.Rhine.Schedule.Concurrently where
 
 -- base
 import Control.Concurrent
+import Control.Monad (void)
+import Data.IORef
 
 -- transformers
 import Control.Monad.Trans.Class
@@ -75,6 +77,10 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
   tell w2
   return (arrM_ (WriterT $ takeMVar mvar), initTime)
 
+-- | Schedule in the @ExceptT e IO@ monad.
+--   Whenever one clock encounters an exception in 'ExceptT',
+--   this exception is thrown in the other clock's 'ExceptT' layer as well,
+--   and in the schedule's (i.e. in the main clock's) thread.
 concurrentlyExcept
   :: ( Clock (ExceptT e IO) cl1
      , Clock (ExceptT e IO) cl2
@@ -82,21 +88,37 @@ concurrentlyExcept
      )
   => Schedule (ExceptT e IO) cl1 cl2
 concurrentlyExcept = Schedule $ \cl1 cl2 -> do
-  iMVar <- newEmptyMVar
-  mvar  <- newEmptyMVar
-  evar  <- newEmptyMVar
-  _ <- forkIO $ do
-    (runningClock, initTime) <- startClock cl1
-    putMVar iMVar initTime
-    undefined -- reactimate $ runningClock >>> second (arr Left)  >>> arrM (putMVar mvar)
-  _ <- forkIO $ do
-    (runningClock, initTime) <- startClock cl2
-    putMVar iMVar initTime
-    let throwingClock = runMSFExcept $ do
-          e <- try runningClock
-          _ <- once_ $ lift $ tryPutMVar evar e
-          return e
-    runExceptT $ reactimate $ throwingClock >>> second (arr Right) >>> arrM (lift . putMVar mvar) >>> arrM_ (lift $ tryTakeMVar evar) >>> throwMaybe
-  initTime <- takeMVar iMVar -- The first clock to be initialised sets the first time stamp
-  _        <- takeMVar iMVar -- Initialise the second clock
-  return (arrM_ $ takeMVar mvar, initTime)
+  (iMVar, mvar, errorref) <- lift $ do
+    iMVar <- newEmptyMVar -- The initialisation time is transferred over this variable. It's written to twice.
+    mvar  <- newEmptyMVar -- The ticks and exceptions are transferred over this variable. It receives two 'Left' values in total.
+    errorref <- newIORef Nothing -- Used to broadcast the exception to both clocks
+    _ <- launchSubThread cl1 Left  iMVar mvar errorref
+    _ <- launchSubThread cl2 Right iMVar mvar errorref
+    return (iMVar, mvar, errorref)
+  catchAndDrain mvar $ do
+    initTime <- ExceptT $ takeMVar iMVar -- The first clock to be initialised sets the first time stamp
+    _        <- ExceptT $ takeMVar iMVar -- Initialise the second clock
+    let runningSchedule = arrM_ $ do
+          eTick <- lift $ takeMVar mvar
+          case eTick of
+            Right tick -> return tick
+            Left e     -> do
+              lift $ writeIORef errorref $ Just e -- Broadcast the exception to both clocks
+              throwE e
+    return (runningSchedule, initTime)
+  where
+    launchSubThread cl leftright iMVar mvar errorref = forkIO $ do
+      started <- runExceptT $ startClock cl
+      case started of
+        Right (runningClock, initTime) -> do
+          putMVar iMVar $ Right initTime
+          Left e <- runExceptT $ reactimate $ runningClock >>> proc (td, tag2) -> do
+            arrM (lift . putMVar mvar)            -< Right (td, leftright tag2)
+            me <- arrM_ (lift $ readIORef errorref) -< ()
+            _  <- throwMaybe               -< me
+            returnA -< ()
+          putMVar mvar $ Left e -- Either throw own exception or acknowledge the exception from the other clock
+        Left e -> void $ putMVar iMVar $ Left e
+    catchAndDrain mvar startScheduleAction = catchE startScheduleAction $ \e -> do
+      _ <- reactimate $ (arrM_ $ ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
+      throwE e
