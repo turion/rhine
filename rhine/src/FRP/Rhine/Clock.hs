@@ -217,8 +217,8 @@ rescaledClockToS = rescaledClockMToS . rescaledClockToM
 
 -- | Applying a monad morphism yields a new clock.
 data HoistClock m1 m2 cl = HoistClock
-  { hoistedClock  :: cl
-  , monadMorphism :: forall a . m1 a -> m2 a
+  { unhoistedClock :: cl
+  , monadMorphism  :: forall a . m1 a -> m2 a
   }
 
 instance (Monad m1, Monad m2, Clock m1 cl)
@@ -226,7 +226,7 @@ instance (Monad m1, Monad m2, Clock m1 cl)
   type TimeDomainOf (HoistClock m1 m2 cl) = TimeDomainOf cl
   type Tag          (HoistClock m1 m2 cl) = Tag          cl
   startClock HoistClock {..} = do
-    (runningClock, initialTime) <- monadMorphism $ startClock hoistedClock
+    (runningClock, initialTime) <- monadMorphism $ startClock unhoistedClock
     let hoistMSF = liftMSFPurer
     -- TODO Look out for API changes in dunai here
     return
@@ -237,7 +237,7 @@ instance (Monad m1, Monad m2, Clock m1 cl)
 type LiftClock m t cl = HoistClock m (t m) cl
 
 liftClock :: (Monad m, MonadTrans t) => cl -> LiftClock m t cl
-liftClock hoistedClock = HoistClock
+liftClock unhoistedClock = HoistClock
   { monadMorphism = lift
   , ..
   }
@@ -245,7 +245,7 @@ liftClock hoistedClock = HoistClock
 type IOClock m cl = HoistClock IO m cl
 
 ioClock :: MonadIO m => cl -> IOClock m cl
-ioClock hoistedClock = HoistClock
+ioClock unhoistedClock = HoistClock
   { monadMorphism = liftIO
   , ..
   }

@@ -42,6 +42,9 @@ data ResamplingBuffer m cla clb a b = ResamplingBuffer
     --   and a continuation.
   }
 
+-- | A type synonym to allow for abbreviation.
+type ResBuf m cla clb a b = ResamplingBuffer m cla clb a b
+
 
 -- | Hoist a 'ResamplingBuffer' along a monad morphism.
 hoistResamplingBuffer
