@@ -60,7 +60,8 @@ hoistClockSchedule
   -> Schedule m2 (HoistClock m1 m2 cl1) (HoistClock m1 m2 cl2)
 hoistClockSchedule hoist schedule = Schedule startSchedule'
   where
-    startSchedule' (HoistClock cl1 _) (HoistClock cl2 _) = startSchedule (hoistSchedule hoist schedule) cl1 cl2
+    startSchedule' (HoistClock cl1 _) (HoistClock cl2 _)
+      = startSchedule (hoistSchedule hoist schedule) cl1 cl2
 
 -- | Swaps the clocks for a given schedule.
 flipSchedule
@@ -129,6 +130,7 @@ readerSchedule Schedule {..}
 
 -- * Composite clocks
 
+-- ** Sequentially composed clocks
 
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous sequential composition of signal functions.
@@ -148,6 +150,20 @@ instance (Monad m, Clock m cl1, Clock m cl2)
   startClock SequentialClock {..}
     = startSchedule sequentialSchedule sequentialCl1 sequentialCl2
 
+-- | Hoist a sequential clock, preserving its decomposition.
+--   Hoists the individual clocks and the schedule.
+hoistedSeqClock
+  :: (Monad m, Monad m')
+  => (forall a . m a -> m' a)
+  -> SequentialClock m cl1 cl2
+  -> SequentialClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)
+hoistedSeqClock morph (SequentialClock {..}) = SequentialClock
+  { sequentialCl1      = HoistClock sequentialCl1 morph
+  , sequentialCl2      = HoistClock sequentialCl2 morph
+  , sequentialSchedule = hoistClockSchedule morph sequentialSchedule
+  }
+
+-- ** Parallelly composed clocks
 
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous parallel composition of signal functions.
@@ -165,6 +181,19 @@ instance (Monad m, Clock m cl1, Clock m cl2)
   type Tag          (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
   startClock ParallelClock {..}
     = startSchedule parallelSchedule parallelCl1 parallelCl2
+
+-- | Hoist a parallel clock, preserving its decomposition.
+--   Hoists the individual clocks and the schedule.
+hoistedParClock
+  :: (Monad m, Monad m')
+  => (forall a . m a -> m' a)
+  -> ParallelClock m cl1 cl2
+  -> ParallelClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)
+hoistedParClock morph (ParallelClock {..}) = ParallelClock
+  { parallelCl1      = HoistClock parallelCl1 morph
+  , parallelCl2      = HoistClock parallelCl2 morph
+  , parallelSchedule = hoistClockSchedule morph parallelSchedule
+  }
 
 
 -- * Navigating the clock tree
