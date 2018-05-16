@@ -1,0 +1,111 @@
+name:                rhine
+
+version:             0.5.0.0
+
+synopsis: Functional Reactive Programming with type-level clocks
+
+description:
+  Rhine is a library for synchronous and asynchronous Functional Reactive Programming (FRP).
+  It separates the aspects of clocking, scheduling and resampling
+  from each other, and ensures clock-safety on the type level.
+  Signal processing units can be annotated by clocks,
+  which hold the information when data will be
+  input, processed and output.
+  Different components of the signal network
+  will become active at different times, or work
+  at different rates.
+  To schedule the components and allow them to communicate,
+  several standard scheduling and resampling solutions are implemented.
+  Own schedules and resampling buffers can be implemented in a reusable fashion.
+  A (synchronous) program outputting "Hello World!" every tenth of a second looks like this:
+  @flow $ arrMSync_ (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)@
+
+
+license:             BSD3
+
+license-file:        LICENSE
+
+author:              Manuel Bärenz
+
+maintainer:          maths@manuelbaerenz.de
+
+category:            FRP
+
+build-type:          Simple
+
+extra-source-files:  ChangeLog.md
+
+extra-doc-files:     README.md
+
+cabal-version:       >=1.18
+
+source-repository head
+  type:     git
+  location: git@github.com:turion/rhine.git
+
+source-repository this
+  type:     git
+  location: git@github.com:turion/rhine.git
+  tag:      v0.5.0.0
+
+
+library
+  exposed-modules:
+    Control.Monad.Schedule
+    FRP.Rhine
+    FRP.Rhine.Clock
+    FRP.Rhine.Clock.Count
+    FRP.Rhine.Clock.Cycle
+    FRP.Rhine.Clock.FixedRate
+    FRP.Rhine.Clock.Realtime.Audio
+    FRP.Rhine.Clock.Realtime.Busy
+    FRP.Rhine.Clock.Realtime.Event
+    FRP.Rhine.Clock.Realtime.Millisecond
+    FRP.Rhine.Clock.Realtime.Stdin
+    FRP.Rhine.Clock.Select
+    FRP.Rhine.Clock.Step
+    FRP.Rhine.Reactimation
+    FRP.Rhine.Reactimation.Tick
+    FRP.Rhine.ResamplingBuffer
+    FRP.Rhine.ResamplingBuffer.Collect
+    FRP.Rhine.ResamplingBuffer.FIFO
+    FRP.Rhine.ResamplingBuffer.Interpolation
+    FRP.Rhine.ResamplingBuffer.KeepLast
+    FRP.Rhine.ResamplingBuffer.LIFO
+    FRP.Rhine.ResamplingBuffer.MSF
+    FRP.Rhine.ResamplingBuffer.Timeless
+    FRP.Rhine.ResamplingBuffer.Util
+    FRP.Rhine.Schedule
+    FRP.Rhine.Schedule.Concurrently
+    FRP.Rhine.Schedule.Trans
+    FRP.Rhine.SF
+    FRP.Rhine.SF.Combinators
+    FRP.Rhine.SyncSF
+    FRP.Rhine.SyncSF.Core
+    FRP.Rhine.SyncSF.Except
+    FRP.Rhine.SyncSF.Reader
+    FRP.Rhine.SyncSF.Util
+    FRP.Rhine.TimeDomain
+
+  other-modules:
+    FRP.Rhine.SyncSF.Except.Util
+
+  -- LANGUAGE extensions used by modules in this package.
+  -- other-extensions:
+
+  -- Other library packages from which modules are imported.
+  build-depends:       base         >= 4.9
+                    ,  dunai        == 0.4.0.*
+                    ,  transformers == 0.5.*
+                    ,  time         == 1.8.*
+                    ,  free         == 5.0.*
+                    ,  containers   == 0.5.*
+                    ,  vector-sized == 0.6.*
+
+  -- Directories containing source files.
+  hs-source-dirs:      src
+
+  ghc-options:         -Wall
+
+  -- Base language which the package is written in.
+  default-language:    Haskell2010
