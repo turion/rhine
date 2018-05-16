@@ -13,6 +13,7 @@ import Control.Monad.Trans.Class
 
 -- dunai
 import Control.Monad.Trans.MSF.Except
+import Control.Monad.Trans.MSF.Maybe
 import Control.Monad.Trans.MSF.Writer
 
 -- rhine
@@ -122,3 +123,20 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
     catchAndDrain mvar startScheduleAction = catchE startScheduleAction $ \e -> do
       _ <- reactimate $ (arrM_ $ ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
       throwE e
+
+-- | As 'concurrentlyExcept', with a single possible exception value.
+concurrentlyMaybe
+  :: ( Clock (MaybeT IO) cl1
+     , Clock (MaybeT IO) cl2
+     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     )
+  => Schedule (MaybeT IO) cl1 cl2
+concurrentlyMaybe = Schedule $ \cl1 cl2 -> startSchedule
+  (hoistSchedule exceptTIOToMaybeTIO concurrentlyExcept)
+    (HoistClock cl1 maybeTIOToExceptTIO)
+    (HoistClock cl2 maybeTIOToExceptTIO)
+      where
+        exceptTIOToMaybeTIO :: ExceptT () IO a -> MaybeT IO a
+        exceptTIOToMaybeTIO = exceptToMaybeT
+        maybeTIOToExceptTIO :: MaybeT IO a -> ExceptT () IO a
+        maybeTIOToExceptTIO = maybeToExceptT ()
