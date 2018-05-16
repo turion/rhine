@@ -56,3 +56,14 @@ hoistResamplingBuffer hoist ResamplingBuffer {..} = ResamplingBuffer
   { put = (((hoistResamplingBuffer hoist <$>) . hoist) .) . put
   , get = (second (hoistResamplingBuffer hoist) <$>) . hoist . get
   }
+
+-- | Hoist a 'ResamplingBuffer' along a monad morphism.
+hoistResamplingBufferAndClocks
+  :: (Monad m1, Monad m2)
+  => (forall c. m1 c -> m2 c)
+  -> ResamplingBuffer m1 cla clb a b
+  -> ResamplingBuffer m2 (HoistClock m1 m2 cla) (HoistClock m1 m2 clb) a b
+hoistResamplingBufferAndClocks hoist ResamplingBuffer {..} = ResamplingBuffer
+  { put = (((hoistResamplingBufferAndClocks hoist <$>) . hoist) .) . put . retag id
+  , get = (second (hoistResamplingBufferAndClocks hoist) <$>) . hoist . get . retag id
+  }

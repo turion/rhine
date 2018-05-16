@@ -53,3 +53,18 @@ data SF m cl a b where
     => SF m cl1 a b
     -> SF m cl2 a b
     -> SF m (ParallelClock m cl1 cl2) a b
+
+-- * Hoist 'SF's along monad morphisms
+hoistSeqSF
+  :: ( Monad m, Monad m'
+     , cl1 ~ Leftmost cl1, cl1 ~ Rightmost cl1
+     , cl2 ~ Leftmost cl2, cl2 ~ Rightmost cl2
+     )
+  => (forall x . m x -> m' x)
+  -> SF m (SequentialClock m cl1 cl2) a b
+  -> SF m' (SequentialClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)) a b
+hoistSeqSF monadMorphism (Sequential (Synchronous syncsf1) rb (Synchronous syncsf2)) =
+  Sequential
+    (Synchronous $ hoistSyncSFAndClock monadMorphism syncsf1)
+    (hoistResamplingBufferAndClocks monadMorphism rb)
+    (Synchronous $ hoistSyncSFAndClock monadMorphism syncsf2)

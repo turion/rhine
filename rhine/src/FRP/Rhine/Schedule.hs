@@ -239,3 +239,19 @@ parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left  tag
 parClockTagInclusion (ParClockInR parClockInR) tag = parClockTagInclusion parClockInR $ Right tag
 parClockTagInclusion ParClockRefl              tag = tag
+
+{-
+-- * Hoist composite clocks along monad morphisms
+
+type family HoistedClock m m' cl where
+  HoistedClock m m' (SequentialClock m cl1 cl2) = SequentialClock m' (HoistedClock m m' cl1)  (HoistedClock m m' cl2)
+  HoistedClock m m' (ParallelClock   m cl1 cl2) = ParallelClock   m' (HoistedClock m m' cl1)  (HoistedClock m m' cl2)
+  HoistedClock m m' cl = HoistClock m m' cl
+
+hoistedClock :: (forall a . m a -> m' a) -> cl -> HoistedClock m m' cl
+hoistedClock morph (SequentialClock {..}) = SequentialClock
+  { sequentialCl1      = hoistedClock  morph sequentialCl1
+  , sequentialCl2      = hoistedClock  morph sequentialCl1
+  , sequentialSchedule = hoistSchedule morph sequentialSchedule
+  }
+-}
