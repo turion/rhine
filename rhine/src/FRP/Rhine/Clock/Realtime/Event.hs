@@ -158,8 +158,8 @@ eventClockOn
   => Chan event
   -> HoistClock (EventChanT event m) m (EventClock event)
 eventClockOn chan = HoistClock
-  { hoistedClock  = EventClock
-  , monadMorphism = flip runReaderT chan
+  { unhoistedClock = EventClock
+  , monadMorphism  = flip runReaderT chan
   }
 
 {- |
