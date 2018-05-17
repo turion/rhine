@@ -55,7 +55,7 @@ schedSelectClocks = Schedule {..}
             , (time, ) . Right <$> select subClock2 tag ]
       return (runningSelectClocks, initialTime)
 
--- | A universal schedule for a subclock and it's main clock.
+-- | A universal schedule for a subclock and its main clock.
 schedSelectClockAndMain
   :: (Monad m, Monoid cl, Clock m cl)
   => Schedule m cl (SelectClock cl a)
