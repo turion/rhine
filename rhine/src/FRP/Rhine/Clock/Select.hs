@@ -55,6 +55,23 @@ schedSelectClocks = Schedule {..}
             , (time, ) . Right <$> select subClock2 tag ]
       return (runningSelectClocks, initialTime)
 
+-- | A universal schedule for a subclock and its main clock.
+schedSelectClockAndMain
+  :: (Monad m, Monoid cl, Clock m cl)
+  => Schedule m cl (SelectClock cl a)
+schedSelectClockAndMain = Schedule {..}
+  where
+    startSchedule mainClock' SelectClock {..} = do
+      (runningClock, initialTime) <- startClock
+        $ mainClock' `mappend` mainClock
+      let
+        runningSelectClock = concatS $ proc _ -> do
+          (time, tag) <- runningClock -< ()
+          returnA                     -< catMaybes
+            [ Just (time, Left tag)
+            , (time, ) . Right <$> select tag ]
+      return (runningSelectClock, initialTime)
+
 
 -- | Helper function that runs an 'MSF' with 'Maybe' output
 --   until it returns a value.
