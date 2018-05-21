@@ -24,6 +24,9 @@ module FRP.Rhine.Clock.Realtime.Event where
 import Control.Concurrent.Chan
 import Data.Time.Clock
 
+-- deepseq
+import Control.DeepSeq
+
 -- transformers
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
@@ -121,6 +124,13 @@ emitS = arrMSync emit
 -- | Emit an event whenever the input value is @Just event@.
 emitSMaybe :: MonadIO m => SyncSF (EventChanT event m) cl (Maybe event) ()
 emitSMaybe = mapMaybe emitS >>> arr (const ())
+
+-- | Like 'emit', but completely evaluates the event before emitting it.
+emit' :: (NFData event, MonadIO m) => event -> EventChanT event m ()
+emit' event = event `deepseq` do
+  chan <- ask
+  liftIO $ writeChan chan event
+
 
 -- * Event clocks and schedules
 
