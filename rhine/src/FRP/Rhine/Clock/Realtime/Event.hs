@@ -96,9 +96,9 @@ and, by using 'eventClockOn', to every clock that should tick on the event.
 runEventChanS
   :: Monad m
   => Chan event
-  -> BehaviourF (EventChanT event m) td a b -> BehaviourF m td a b
-runEventChanS chan behaviour = runReaderS_ behaviour chan
--- TODO Weirdly, can't refactor this using flip. (GHC bug?)
+  -> SyncSF (EventChanT event m) cl a b
+  -> SyncSF m cl a b
+runEventChanS = flip runReaderS_
 
 -- * Event emission
 
