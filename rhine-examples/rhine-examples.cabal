@@ -35,14 +35,14 @@ executable ADSR
   hs-source-dirs:      src
   main-is:             ADSR.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.7     && <5
+  build-depends:       base         >= 4.9
                      , rhine        == 0.5.*
 
 executable CycleClock
   hs-source-dirs:      src
   main-is:             CycleClock.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base  >= 4.7     && <5
+  build-depends:       base  >= 4.9
                      , rhine        == 0.5.*
                      , transformers == 0.5.*
   default-language:    Haskell2010
