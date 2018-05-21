@@ -12,7 +12,7 @@ module FRP.Rhine.Clock.Realtime.Audio
   ( AudioClock (..)
   , AudioRate (..)
   , PureAudioClock (..)
-  , PureAudioClockF (..)
+  , PureAudioClockF
   , pureAudioClockF
   )
   where
