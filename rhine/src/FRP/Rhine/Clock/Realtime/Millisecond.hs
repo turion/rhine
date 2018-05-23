@@ -78,7 +78,7 @@ waitClock = Millisecond $ RescaledClockS Step $ \_ -> do
         remaining = fromInteger $ n * 1000 - round (diff * 1000000)
       threadDelay remaining
       now         <- getCurrentTime -- TODO Test whether this is a performance penalty
-      return (now, diff > 0)
+      return (now, remaining > 0)
   return (runningClock, initTime)
 
 
