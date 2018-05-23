@@ -12,6 +12,8 @@ import FRP.Rhine
 import FRP.Rhine.Clock.Realtime.Event
 import FRP.Rhine.Clock.Realtime.Millisecond
 
+-- * Subsystems
+
 -- | The 'IO' monad,
 --   augmented with the capability of sending and receiving events.
 type EventIO = EventChanT String IO
@@ -25,6 +27,8 @@ emitEvents = arrMSync_ $ emit "Hello World!"
 handleEvents :: (MonadIO m, Tag cl ~ String) => SyncSF m cl () ()
 handleEvents = theTag >>> arrMSync (putStrLn >>> liftIO)
 
+-- * Running the subsystems in the same thread, or in separate threads
+
 -- | Run both subsystems in parallel.
 eventExample :: IO ()
 eventExample = runEventChanT $ flow
@@ -34,6 +38,7 @@ eventExample = runEventChanT $ flow
     handleEventSystem = handleEvents @@ EventClock
 
 -- | Run both subsystems in different threads.
+--   This means that the channel must be created manually.
 threadsExample :: IO ()
 threadsExample = do
   chan <- newChan
