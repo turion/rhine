@@ -9,6 +9,8 @@ Note that _events work across multiple clocks_,
 i.e. it is possible (and encouraged) to emit events from signals
 on a different clock than the event clock.
 This is in line with the Rhine philosophy that _event sources are clocks_.
+
+A simple example using events can be found in rhine-examples.
 -}
 
 {-# LANGUAGE DataKinds             #-}
@@ -18,11 +20,19 @@ This is in line with the Rhine philosophy that _event sources are clocks_.
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-module FRP.Rhine.Clock.Realtime.Event where
+module FRP.Rhine.Clock.Realtime.Event
+  ( module FRP.Rhine.Clock.Realtime.Event
+  , module Control.Monad.IO.Class
+  , newChan
+  )
+  where
 
 -- base
 import Control.Concurrent.Chan
 import Data.Time.Clock
+
+-- deepseq
+import Control.DeepSeq
 
 -- transformers
 import Control.Monad.IO.Class
@@ -32,31 +42,6 @@ import Control.Monad.Trans.Reader
 import FRP.Rhine
 import FRP.Rhine.Schedule.Concurrently
 
-{- A simple example using events looks as follows:
-
-@
-import FRP.Rhine.Clock.Realtime.Millisecond
-import FRP.Rhine.SyncSF.Except
-
--- | A simple example that creates an event every second
---   and handles it by outputting it on the console.
-type EventIO = EventChanT String IO
-eventExample :: IO ()
-eventExample = runEventChanT $ flow
-  $ emitEventSystem **@ concurrentlyWithEvents @** handleEventSystem
-  where
-    emitEventSystem = safely emitEvents @@ liftClock waitClock
-    emitEvents :: SyncExcept EventIO (HoistClock IO EventIO (Millisecond 10)) () () Empty
-    emitEvents = do
-      try $ timer_ 1
-      once_ $ emit "Hello World!"
-      emitEvents
-
-    handleEventSystem = handleEvents @@ EventClock
-    handleEvents :: MonadIO m => SyncSF m (EventClock String) () ()
-    handleEvents = theTag >>> arrMSync (putStrLn >>> liftIO)
-@
--}
 
 
 -- * Monads allowing for event emission and handling
@@ -64,6 +49,11 @@ eventExample = runEventChanT $ flow
 -- | A monad transformer in which events can be emitted onto a 'Chan'.
 type EventChanT event m = ReaderT (Chan event) m
 
+-- | Escape the 'EventChanT' layer by explicitly providing a channel
+--   over which events are sent.
+--   Often this is not needed, and 'runEventChanT' can be used instead.
+withChan :: Chan event -> EventChanT event m a -> m a
+withChan = flip runReaderT
 
 {- | Create a channel across which events can be communicated,
 and subsequently execute all event effects on this channel.
@@ -75,7 +65,7 @@ This way, exactly one channel is created.
 Caution: Don't use this with 'liftMSFPurer',
 since it would create a new channel every tick.
 Instead, create one @chan :: Chan c@, e.g. with 'newChan',
-and then use 'runEventChanS'.
+and then use 'withChanS'.
 -}
 runEventChanT :: MonadIO m => EventChanT event m a -> m a
 runEventChanT a = do
@@ -93,12 +83,12 @@ then, by using this function,
 pass the channel to every behaviour or 'SyncSF' that wants to emit events,
 and, by using 'eventClockOn', to every clock that should tick on the event.
 -}
-runEventChanS
+withChanS
   :: Monad m
   => Chan event
   -> SyncSF (EventChanT event m) cl a b
   -> SyncSF m cl a b
-runEventChanS = flip runReaderS_
+withChanS = flip runReaderS_
 
 -- * Event emission
 
@@ -121,6 +111,23 @@ emitS = arrMSync emit
 -- | Emit an event whenever the input value is @Just event@.
 emitSMaybe :: MonadIO m => SyncSF (EventChanT event m) cl (Maybe event) ()
 emitSMaybe = mapMaybe emitS >>> arr (const ())
+
+-- | Like 'emit', but completely evaluates the event before emitting it.
+emit' :: (NFData event, MonadIO m) => event -> EventChanT event m ()
+emit' event = event `deepseq` do
+  chan <- ask
+  liftIO $ writeChan chan event
+
+-- | Like 'emitS', but completely evaluates the event before emitting it.
+emitS' :: (NFData event, MonadIO m) => SyncSF (EventChanT event m) cl event ()
+emitS' = arrMSync emit'
+
+-- | Like 'emitSMaybe', but completely evaluates the event before emitting it.
+emitSMaybe'
+  :: (NFData event, MonadIO m)
+  => SyncSF (EventChanT event m) cl (Maybe event) ()
+emitSMaybe' = mapMaybe emitS' >>> arr (const ())
+
 
 -- * Event clocks and schedules
 
@@ -152,14 +159,14 @@ instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
 
 -- | Create an event clock that is bound to a specific event channel.
 --   This is usually only useful if you can't apply 'runEventChanT'
---   to the main loop (see 'runEventChanS').
+--   to the main loop (see 'withChanS').
 eventClockOn
   :: MonadIO m
   => Chan event
   -> HoistClock (EventChanT event m) m (EventClock event)
 eventClockOn chan = HoistClock
   { unhoistedClock = EventClock
-  , monadMorphism  = flip runReaderT chan
+  , monadMorphism  = withChan chan
   }
 
 {- |
