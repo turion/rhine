@@ -78,6 +78,13 @@ liftSyncSF
   -> SyncSF (t m) cl a b
 liftSyncSF = hoistSyncSF lift
 
+-- | Lift a 'SyncSF' and its clock into a monad transformer.
+liftSyncSFAndClock
+  :: (Monad m, MonadTrans t, Monad (t m))
+  => SyncSF    m                 cl  a b
+  -> SyncSF (t m) (LiftClock m t cl) a b
+liftSyncSFAndClock = hoistSyncSFAndClock lift
+
 -- | A monadic stream function without dependency on time
 --   is a 'SyncSF' for any clock.
 timeless :: Monad m => MSF m a b -> SyncSF m cl a b
