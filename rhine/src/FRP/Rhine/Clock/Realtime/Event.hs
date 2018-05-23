@@ -9,6 +9,8 @@ Note that _events work across multiple clocks_,
 i.e. it is possible (and encouraged) to emit events from signals
 on a different clock than the event clock.
 This is in line with the Rhine philosophy that _event sources are clocks_.
+
+A simple example using events can be found in rhine-examples.
 -}
 
 {-# LANGUAGE DataKinds             #-}
@@ -18,7 +20,12 @@ This is in line with the Rhine philosophy that _event sources are clocks_.
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-module FRP.Rhine.Clock.Realtime.Event where
+module FRP.Rhine.Clock.Realtime.Event
+  ( module FRP.Rhine.Clock.Realtime.Event
+  , module Control.Monad.IO.Class
+  , newChan
+  )
+  where
 
 -- base
 import Control.Concurrent.Chan
@@ -35,31 +42,6 @@ import Control.Monad.Trans.Reader
 import FRP.Rhine
 import FRP.Rhine.Schedule.Concurrently
 
-{- A simple example using events looks as follows:
-
-@
-import FRP.Rhine.Clock.Realtime.Millisecond
-import FRP.Rhine.SyncSF.Except
-
--- | A simple example that creates an event every second
---   and handles it by outputting it on the console.
-type EventIO = EventChanT String IO
-eventExample :: IO ()
-eventExample = runEventChanT $ flow
-  $ emitEventSystem **@ concurrentlyWithEvents @** handleEventSystem
-  where
-    emitEventSystem = safely emitEvents @@ liftClock waitClock
-    emitEvents :: SyncExcept EventIO (HoistClock IO EventIO (Millisecond 10)) () () Empty
-    emitEvents = do
-      try $ timer_ 1
-      once_ $ emit "Hello World!"
-      emitEvents
-
-    handleEventSystem = handleEvents @@ EventClock
-    handleEvents :: MonadIO m => SyncSF m (EventClock String) () ()
-    handleEvents = theTag >>> arrMSync (putStrLn >>> liftIO)
-@
--}
 
 
 -- * Monads allowing for event emission and handling
