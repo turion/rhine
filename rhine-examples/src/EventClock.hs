@@ -6,9 +6,6 @@
 import Control.Concurrent
 import Control.Monad (void)
 
--- transformers
--- TODO This is annoying
-import Control.Monad.Trans.Reader (runReaderT)
 
 -- rhine
 import FRP.Rhine
@@ -40,8 +37,10 @@ eventExample = runEventChanT $ flow
 threadsExample :: IO ()
 threadsExample = do
   chan <- newChan
-  void $ forkIO $ flow $ handleEvents @@ (eventClockOn chan :: HoistClock (EventChanT String IO) IO (EventClock String))
-  flip runReaderT chan $ flow $ emitEvents @@ liftClock waitClock
+  void $ forkIO $ flow $ handleEvents @@ (eventClockOn chan :: HoistClock EventIO IO (EventClock String))
+  withChan chan $ flow $ emitEvents @@ liftClock waitClock
+
+-- * The main program
 
 main :: IO ()
 main = do

@@ -53,5 +53,4 @@ executable EventClock
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base  >= 4.9
                      , rhine        == 0.5.*
-                     , transformers == 0.5.*
   default-language:    Haskell2010

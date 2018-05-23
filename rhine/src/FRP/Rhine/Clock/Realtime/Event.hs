@@ -49,6 +49,11 @@ import FRP.Rhine.Schedule.Concurrently
 -- | A monad transformer in which events can be emitted onto a 'Chan'.
 type EventChanT event m = ReaderT (Chan event) m
 
+-- | Escape the 'EventChanT' layer by explicitly providing a channel
+--   over which events are sent.
+--   Often this is not needed, and 'runEventChanT' can be used instead.
+withChan :: Chan event -> EventChanT event m a -> m a
+withChan = flip runReaderT
 
 {- | Create a channel across which events can be communicated,
 and subsequently execute all event effects on this channel.
@@ -60,7 +65,7 @@ This way, exactly one channel is created.
 Caution: Don't use this with 'liftMSFPurer',
 since it would create a new channel every tick.
 Instead, create one @chan :: Chan c@, e.g. with 'newChan',
-and then use 'runEventChanS'.
+and then use 'withChanS'.
 -}
 runEventChanT :: MonadIO m => EventChanT event m a -> m a
 runEventChanT a = do
@@ -78,12 +83,12 @@ then, by using this function,
 pass the channel to every behaviour or 'SyncSF' that wants to emit events,
 and, by using 'eventClockOn', to every clock that should tick on the event.
 -}
-runEventChanS
+withChanS
   :: Monad m
   => Chan event
   -> SyncSF (EventChanT event m) cl a b
   -> SyncSF m cl a b
-runEventChanS = flip runReaderS_
+withChanS = flip runReaderS_
 
 -- * Event emission
 
@@ -144,14 +149,14 @@ instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
 
 -- | Create an event clock that is bound to a specific event channel.
 --   This is usually only useful if you can't apply 'runEventChanT'
---   to the main loop (see 'runEventChanS').
+--   to the main loop (see 'withChanS').
 eventClockOn
   :: MonadIO m
   => Chan event
   -> HoistClock (EventChanT event m) m (EventClock event)
 eventClockOn chan = HoistClock
   { unhoistedClock = EventClock
-  , monadMorphism  = flip runReaderT chan
+  , monadMorphism  = withChan chan
   }
 
 {- |
