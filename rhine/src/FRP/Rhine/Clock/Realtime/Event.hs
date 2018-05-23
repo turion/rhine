@@ -118,6 +118,16 @@ emit' event = event `deepseq` do
   chan <- ask
   liftIO $ writeChan chan event
 
+-- | Like 'emitS', but completely evaluates the event before emitting it.
+emitS' :: (NFData event, MonadIO m) => SyncSF (EventChanT event m) cl event ()
+emitS' = arrMSync emit'
+
+-- | Like 'emitSMaybe', but completely evaluates the event before emitting it.
+emitSMaybe'
+  :: (NFData event, MonadIO m)
+  => SyncSF (EventChanT event m) cl (Maybe event) ()
+emitSMaybe' = mapMaybe emitS' >>> arr (const ())
+
 
 -- * Event clocks and schedules
 
