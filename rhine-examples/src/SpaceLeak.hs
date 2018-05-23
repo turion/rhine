@@ -12,7 +12,7 @@ import FRP.Rhine.Schedule.Concurrently
 
 rb :: (Monad m, Num a) => ResamplingBuffer m cla clb a a
 rb = timelessResamplingBuffer AsyncMealy
-  { amPut = \a s -> let s' = a + s in s' `seq` return $ s'
+  { amPut = \a s -> let s' = a + s in return s'
   , amGet = \  s -> return (s, s)
   } 0
 
@@ -30,8 +30,17 @@ rb'' = pureBuffer $ foldl' (+) 0
 rb''' :: (Monad m, Num a) => ResamplingBuffer m cla clb a a
 rb''' = collect >>-^ arr (foldl' (+) 0)
 
+rb'''' :: (Monad m, Num a) => ResamplingBuffer m cla clb a a
+rb'''' = timelessResamplingBuffer AsyncMealy
+  { amPut = \a s -> let s' = a + s in s' `seq` return s'
+  , amGet = \  s -> return (s, s)
+  } 0
+
+rb''''' :: (Monad m, Num a) => ResamplingBuffer m cla clb a a
+rb''''' = foldBuffer (+) 0
+
 thing1 = timeInfoOf sinceStart >>> arr sin
 
 main = do
   putStrLn "Press return to force the buffer"
-  flow $ thing1 @@ Busy >-- rb -@- concurrently --> arrMSync print @@ StdinClock
+  flow $ thing1 @@ Busy >-- rb''''' -@- concurrently --> arrMSync print @@ StdinClock
