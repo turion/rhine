@@ -39,13 +39,13 @@ Basic usage (synchronous case):
 
 @
 sensor :: ClSF MyMonad MyClock () a
-sensor = arrMSync_ produceData
+sensor = constMCl produceData
 
 processing :: ClSF MyMonad MyClock a b
 processing = ...
 
 actuator :: ClSF MyMonad MyClock b ()
-actuator = arrMSync consumeData
+actuator = arrMCl consumeData
 
 mainSF :: ClSF MyMonad MyClock () ()
 mainSF = sensor >-> processing >-> actuator

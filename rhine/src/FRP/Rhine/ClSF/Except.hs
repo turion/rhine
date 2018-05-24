@@ -75,7 +75,7 @@ once_ = once . const
 
 -- | Immediately throw the exception on the input.
 throwS :: Monad m => ClSF (ExceptT e m) cl e a
-throwS = arrMSync throwE
+throwS = arrMCl throwE
 
 -- | Throw the given exception when the 'Bool' turns true.
 throwOn :: Monad m => e -> ClSF (ExceptT e m) cl Bool ()

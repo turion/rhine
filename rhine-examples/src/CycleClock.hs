@@ -18,7 +18,7 @@ everyNowAndThen = proc _ -> do
   returnA                       -< msg
 
 mainRhine :: MonadIO m => Rhine (ScheduleT Integer m) MyClock () ()
-mainRhine = everyNowAndThen >-> arrMSync (liftIO . putStrLn) @@ CycleClock
+mainRhine = everyNowAndThen >-> arrMCl (liftIO . putStrLn) @@ CycleClock
 
 main :: IO ()
 main = runScheduleIO $ flow mainRhine

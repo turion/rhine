@@ -61,7 +61,7 @@ would be:
   --   is only called every second,
   --   then we constrain its type signature with the clock @Millisecond 1000@.
   printEverySecond :: Show a => ClSF IO (Millisecond 1000) a ()
-  printEverySecond = arrMSync print
+  printEverySecond = arrMCl print
 
   -- | Specialise 'createMessage' to a specific clock.
   ms500 :: ClSF IO (Millisecond 500) () String

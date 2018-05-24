@@ -36,7 +36,7 @@ message = arr $ const "Hello World!"
 
 -- | Perform a random computation, using a lot of CPU time.
 randomNumbers :: MonadIO m => Behaviour m td String
-randomNumbers = arrMSync_ $ liftIO $ do
+randomNumbers = constMCl $ liftIO $ do
   m <- randomRIO (4, 6 :: Integer)
   x <- randomRIO (-3, 3 :: Double)
   return $ "Random number: " ++ printf "%.3f" (iterate tan x !! (10 ^ m))
@@ -44,7 +44,7 @@ randomNumbers = arrMSync_ $ liftIO $ do
 -- | Each time an event arrives, this function is called.
 --   It simply outputs the event on the console.
 handleEvents :: (MonadIO m, Tag cl ~ String) => ClSF m cl () ()
-handleEvents = theTag >>> arrMSync (putStrLn >>> liftIO)
+handleEvents = theTag >>> arrMCl (putStrLn >>> liftIO)
 
 -- * Running the subsystems in the same thread, or in separate threads
 
@@ -72,8 +72,8 @@ threadsExample = do
 --   as a computationally expensive one.
 responsive :: ClSF IO (Millisecond 100) () ()
 responsive = timeInfo >>> proc TimeInfo {..} -> do
-  arrMSync putStrLn -< "Current time: " ++ show sinceStart
-  arrMSync putStrLn -< "Real time " ++ (if tag then "" else "UN") ++ "successful"
+  arrMCl putStrLn -< "Current time: " ++ show sinceStart
+  arrMCl putStrLn -< "Real time " ++ (if tag then "" else "UN") ++ "successful"
 
 
 -- | Producing random numbers using a lot of CPU causes all subsystems on the same thread to lag.

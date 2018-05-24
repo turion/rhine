@@ -39,7 +39,7 @@ ms1200 = createMessage "1200 MS"
 --   is only called every second,
 --   then we constrain its type signature with the clock @Millisecond 1000@.
 printEverySecond :: Show a => ClSF IO (Millisecond 1000) a ()
-printEverySecond = arrMSync print
+printEverySecond = arrMCl print
 
 -- | Create messages every 500 ms and every 1200 ms,
 --   collecting all of them in a list,

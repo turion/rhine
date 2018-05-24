@@ -106,7 +106,7 @@ emit event = do
 
 -- | Emit an event on every tick.
 emitS :: MonadIO m => ClSF (EventChanT event m) cl event ()
-emitS = arrMSync emit
+emitS = arrMCl emit
 
 -- | Emit an event whenever the input value is @Just event@.
 emitSMaybe :: MonadIO m => ClSF (EventChanT event m) cl (Maybe event) ()
@@ -120,7 +120,7 @@ emit' event = event `deepseq` do
 
 -- | Like 'emitS', but completely evaluates the event before emitting it.
 emitS' :: (NFData event, MonadIO m) => ClSF (EventChanT event m) cl event ()
-emitS' = arrMSync emit'
+emitS' = arrMCl emit'
 
 -- | Like 'emitSMaybe', but completely evaluates the event before emitting it.
 emitSMaybe'

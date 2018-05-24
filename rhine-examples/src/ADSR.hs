@@ -169,7 +169,7 @@ key = (count >>^ odd) @@ StdinClock
 -- | Output the current amplitude of the ADSR hull on the console,
 --   every 0.03 seconds.
 consoleADSR :: Rhine IO (Millisecond 30) Bool ()
-consoleADSR = runADSR myADSR >-> arrMSync print @@ waitClock
+consoleADSR = runADSR myADSR >-> arrMCl print @@ waitClock
 
 -- | Runs the main program, where you have the choice between console output
 --   and pulse output.

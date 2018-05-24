@@ -91,12 +91,12 @@ timeless :: Monad m => MSF m a b -> ClSF m cl a b
 timeless = liftMSFTrans
 
 -- | Utility to lift Kleisli arrows directly to 'ClSF's.
-arrMSync :: Monad m => (a -> m b) -> ClSF m cl a b
-arrMSync = timeless . arrM
+arrMCl :: Monad m => (a -> m b) -> ClSF m cl a b
+arrMCl = timeless . arrM
 
 -- | Version without input.
-arrMSync_ :: Monad m => m b -> ClSF m cl a b
-arrMSync_ = timeless . arrM_
+constMCl :: Monad m => m b -> ClSF m cl a b
+constMCl = timeless . arrM_
 
 {- | Call a 'ClSF' every time the input is 'Just a'.
 

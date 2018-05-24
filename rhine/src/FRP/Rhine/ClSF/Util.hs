@@ -34,7 +34,7 @@ timeInfo = arrM_ ask
 such as record selectors:
 @
 printAbsoluteTime :: ClSF IO cl () ()
-printAbsoluteTime = timeInfoOf absolute >>> arrMSync print
+printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
 @
 -}
 timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
