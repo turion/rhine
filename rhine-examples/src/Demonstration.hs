@@ -25,12 +25,12 @@ createMessage str
 
 -- | Specialise 'createMessage' to a specific clock,
 --   ticking twice a second.
-ms500 :: SyncSF IO (Millisecond 500) () String
+ms500 :: ClSF IO (Millisecond 500) () String
 ms500 = createMessage "500 MS"
 
 -- | Specialise 'createMessage' to a different clock,
 --   ticking every 1.2 seconds.
-ms1200 :: SyncSF IO (Millisecond 1200) () String
+ms1200 :: ClSF IO (Millisecond 1200) () String
 ms1200 = createMessage "1200 MS"
 
 
@@ -38,7 +38,7 @@ ms1200 = createMessage "1200 MS"
 --   Let us assume we want to assure that 'printEverySecond'
 --   is only called every second,
 --   then we constrain its type signature with the clock @Millisecond 1000@.
-printEverySecond :: Show a => SyncSF IO (Millisecond 1000) a ()
+printEverySecond :: Show a => ClSF IO (Millisecond 1000) a ()
 printEverySecond = arrMSync print
 
 -- | Create messages every 500 ms and every 1200 ms,

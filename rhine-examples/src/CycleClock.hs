@@ -11,7 +11,7 @@ import FRP.Rhine.Clock.Cycle
 
 type MyClock = CycleClock '[500, 1000]
 
-everyNowAndThen :: Monad m => SyncSF m MyClock arbitrary String
+everyNowAndThen :: Monad m => ClSF m MyClock arbitrary String
 everyNowAndThen = proc _ -> do
   time <- timeInfoOf sinceStart -< ()
   let msg = unwords ["It's now", show time, "o'clock."]

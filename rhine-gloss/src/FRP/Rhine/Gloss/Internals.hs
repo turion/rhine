@@ -59,15 +59,15 @@ instance Clock m GlossSimulationClock where
   type Tag  GlossSimulationClock = ()
   startClock _ = error errMsg
 
--- | To use all features of the 'SyncSF' framework,
+-- | To use all features of the 'ClSF' framework,
 --   write your synchronous stream function on the 'GlossSimulationClock'
 --   and then use this function to transform it.
 withProperSimClock
   :: Monad m
-  => SyncSF m GlossSimulationClock  a b
-  -> SyncSF m GlossSimulationClock_ a b
-withProperSimClock syncsf = readerS
-  $ (intermingle *** Category.id) >>> runReaderS syncsf
+  => ClSF m GlossSimulationClock  a b
+  -> ClSF m GlossSimulationClock_ a b
+withProperSimClock clsf = readerS
+  $ (intermingle *** Category.id) >>> runReaderS clsf
   where
     intermingle :: Monad m => MSF m (TimeInfo GlossSimulationClock_) (TimeInfo GlossSimulationClock)
     intermingle = proc TimeInfo {tag} -> do

@@ -10,10 +10,10 @@ import FRP.Rhine
 -- * Utilities to build 'ResamplingBuffer's from smaller components
 
 infix 2 >>-^
--- | Postcompose a 'ResamplingBuffer' with a matching 'SyncSF'.
+-- | Postcompose a 'ResamplingBuffer' with a matching 'ClSF'.
 (>>-^) :: Monad m
       => ResamplingBuffer m cl1 cl2 a b
-      -> SyncSF           m     cl2   b c
+      -> ClSF             m     cl2   b c
       -> ResamplingBuffer m cl1 cl2 a   c
 resBuf >>-^ syncSF = ResamplingBuffer put_ get_
   where
@@ -25,9 +25,9 @@ resBuf >>-^ syncSF = ResamplingBuffer put_ get_
 
 
 infix 1 ^->>
--- | Precompose a 'ResamplingBuffer' with a matching 'SyncSF'.
+-- | Precompose a 'ResamplingBuffer' with a matching 'ClSF'.
 (^->>) :: Monad m
-      => SyncSF           m cl1     a b
+      => ClSF             m cl1     a b
       -> ResamplingBuffer m cl1 cl2   b c
       -> ResamplingBuffer m cl1 cl2 a   c
 syncSF ^->> resBuf = ResamplingBuffer put_ get_

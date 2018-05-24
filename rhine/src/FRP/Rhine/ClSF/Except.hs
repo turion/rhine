@@ -2,8 +2,8 @@
 {-# LANGUAGE RankNTypes   #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module FRP.Rhine.SyncSF.Except
-  ( module FRP.Rhine.SyncSF.Except
+module FRP.Rhine.ClSF.Except
+  ( module FRP.Rhine.ClSF.Except
   , module X
   , safe, safely, Empty, exceptS, runMSFExcept, currentInput
   )
@@ -21,8 +21,8 @@ import Control.Monad.Trans.MSF.Except hiding (try, once, once_, throwOn, throwOn
 import qualified Control.Monad.Trans.MSF.Except as MSFE
 
 -- rhine
-import FRP.Rhine.SyncSF.Core
-import FRP.Rhine.SyncSF.Except.Util
+import FRP.Rhine.ClSF.Core
+import FRP.Rhine.ClSF.Except.Util
 
 -- * Types
 
@@ -55,13 +55,13 @@ type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
 commuteExceptReader :: ExceptT e (ReaderT r m) a -> ReaderT r (ExceptT e m) a
 commuteExceptReader a = ReaderT $ \r -> ExceptT $ runReaderT (runExceptT a) r
 
-runSyncExcept :: Monad m => SyncExcept m cl a b e -> SyncSF (ExceptT e m) cl a b
+runSyncExcept :: Monad m => SyncExcept m cl a b e -> ClSF (ExceptT e m) cl a b
 runSyncExcept = liftMSFPurer commuteExceptReader . runMSFExcept
 
 -- | Enter the monad context in the exception
---   for |SyncSF|s in the |ExceptT| monad.
---   The 'SyncSF' will be run until it encounters an exception.
-try :: Monad m => SyncSF (ExceptT e m) cl a b -> SyncExcept m cl a b e
+--   for |ClSF|s in the |ExceptT| monad.
+--   The 'ClSF' will be run until it encounters an exception.
+try :: Monad m => ClSF (ExceptT e m) cl a b -> SyncExcept m cl a b e
 try = MSFE.try . liftMSFPurer commuteReaderExcept
 
 -- | Within the same tick, perform a monadic action,
@@ -74,21 +74,21 @@ once_ :: Monad m => m e -> SyncExcept m cl a b e
 once_ = once . const
 
 -- | Immediately throw the exception on the input.
-throwS :: Monad m => SyncSF (ExceptT e m) cl e a
+throwS :: Monad m => ClSF (ExceptT e m) cl e a
 throwS = arrMSync throwE
 
 -- | Throw the given exception when the 'Bool' turns true.
-throwOn :: Monad m => e -> SyncSF (ExceptT e m) cl Bool ()
+throwOn :: Monad m => e -> ClSF (ExceptT e m) cl Bool ()
 throwOn e = proc b -> throwOn' -< (b, e)
 
 -- | Variant of 'throwOn', where the exception can vary every tick.
-throwOn' :: Monad m => SyncSF (ExceptT e m) cl (Bool, e) ()
+throwOn' :: Monad m => ClSF (ExceptT e m) cl (Bool, e) ()
 throwOn' = proc (b, e) -> if b
   then throwS  -< e
   else returnA -< ()
 
 -- | When the input is @Just e@, throw the exception @e@.
-throwMaybe :: Monad m => SyncSF (ExceptT e m) cl (Maybe e) (Maybe a)
+throwMaybe :: Monad m => ClSF (ExceptT e m) cl (Maybe e) (Maybe a)
 throwMaybe = proc me -> case me of
   Nothing -> returnA -< Nothing
   Just e  -> throwS  -< e

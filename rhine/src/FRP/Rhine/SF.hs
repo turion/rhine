@@ -7,7 +7,7 @@ module FRP.Rhine.SF where
 import FRP.Rhine.Clock
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
-import FRP.Rhine.SyncSF
+import FRP.Rhine.ClSF
 
 
 {- | 'SF' is an abbreviation for "signal function".
@@ -28,7 +28,7 @@ data SF m cl a b where
   --   For such an 'SF', data enters and leaves the system at the same rate as it is processed.
   Synchronous
     :: ( cl ~ Leftmost cl, cl ~ Rightmost cl)
-    => SyncSF m cl a b
+    => ClSF m cl a b
     -> SF     m cl a b
   -- | Two 'SF's may be sequentially composed if there is a matching 'ResamplingBuffer' between them.
   Sequential

@@ -31,7 +31,7 @@ type EventIO = EventChanT String IO
 -- ** Sample data
 
 -- | Output "Hello World!" every second.
-message :: Monad m => SyncSF m (HoistClock IO EventIO (Millisecond 1000)) () String
+message :: Monad m => ClSF m (HoistClock IO EventIO (Millisecond 1000)) () String
 message = arr $ const "Hello World!"
 
 -- | Perform a random computation, using a lot of CPU time.
@@ -43,7 +43,7 @@ randomNumbers = arrMSync_ $ liftIO $ do
 
 -- | Each time an event arrives, this function is called.
 --   It simply outputs the event on the console.
-handleEvents :: (MonadIO m, Tag cl ~ String) => SyncSF m cl () ()
+handleEvents :: (MonadIO m, Tag cl ~ String) => ClSF m cl () ()
 handleEvents = theTag >>> arrMSync (putStrLn >>> liftIO)
 
 -- * Running the subsystems in the same thread, or in separate threads
@@ -70,7 +70,7 @@ threadsExample = do
 --   that tries to run in parallel at a higher frequency,
 --   but will be caused to lag because it is run in the same thread
 --   as a computationally expensive one.
-responsive :: SyncSF IO (Millisecond 100) () ()
+responsive :: ClSF IO (Millisecond 100) () ()
 responsive = timeInfo >>> proc TimeInfo {..} -> do
   arrMSync putStrLn -< "Current time: " ++ show sinceStart
   arrMSync putStrLn -< "Real time " ++ (if tag then "" else "UN") ++ "successful"
@@ -84,7 +84,7 @@ randomsExample = runEventChanT $ flow wholeSystem
     emitEventSystem   = randomNumbers >-> emitS @@ busy
     handleEventSystem = handleEvents            @@ EventClock
     eventSystem = emitEventSystem **@ concurrentlyWithEvents @** handleEventSystem
-    responsiveSystem = liftSyncSFAndClock responsive @@ liftClock waitClock -- TODO This can be lifted in one go
+    responsiveSystem = liftClSFAndClock responsive @@ liftClock waitClock -- TODO This can be lifted in one go
     wholeSystem = eventSystem **@ concurrentlyWithEvents @** responsiveSystem
 
 

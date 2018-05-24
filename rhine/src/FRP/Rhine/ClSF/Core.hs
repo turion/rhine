@@ -1,8 +1,8 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE TypeFamilies     #-}
-module FRP.Rhine.SyncSF.Core
-  ( module FRP.Rhine.SyncSF.Core
+module FRP.Rhine.ClSF.Core
+  ( module FRP.Rhine.ClSF.Core
   , module FRP.Rhine.Clock
   , module FRP.Rhine.TimeDomain
   , module Control.Arrow
@@ -25,21 +25,21 @@ import FRP.Rhine.Clock
 import FRP.Rhine.TimeDomain
 
 
--- * Synchronous signal functions and behaviours
+-- * Clocked signal functions and behaviours
 
--- | A (synchronous) monadic stream function
+-- | A (synchronous, clocked) monadic stream function
 --   with the additional side effect of being time-aware,
 --   that is, reading the current 'TimeInfo' of the clock @cl@.
-type SyncSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
+type ClSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
 
--- | A synchronous signal is a 'SyncSF' with no input required.
+-- | A clocked signal is a 'ClSF' with no input required.
 --   It produces its output on its own.
-type SyncSignal m cl a = forall arbitrary . SyncSF m cl arbitrary a
+type ClSignal m cl a = forall arbitrary . ClSF m cl arbitrary a
 
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
 --   @td@ denotes the 'TimeDomain'.
-type Behaviour m td a = forall cl. td ~ Time cl => SyncSignal m cl a
+type Behaviour m td a = forall cl. td ~ Time cl => ClSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
 type Behavior  m td a = Behaviour m td a
@@ -47,58 +47,58 @@ type Behavior  m td a = Behaviour m td a
 -- | A (side-effectful) behaviour function is a time-aware synchronous stream
 --   function that doesn't depend on a particular clock.
 --   @td@ denotes the 'TimeDomain'.
-type BehaviourF m td a b = forall cl. td ~ Time cl => SyncSF m cl a b
+type BehaviourF m td a b = forall cl. td ~ Time cl => ClSF m cl a b
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorF  m td a b = BehaviourF m td a b
 
--- * Utilities to create 'SyncSF's from simpler data
+-- * Utilities to create 'ClSF's from simpler data
 
--- | Hoist a 'SyncSF' along a monad morphism.
-hoistSyncSF
+-- | Hoist a 'ClSF' along a monad morphism.
+hoistClSF
   :: (Monad m1, Monad m2)
   => (forall c. m1 c -> m2 c)
-  -> SyncSF m1 cl a b
-  -> SyncSF m2 cl a b
-hoistSyncSF hoist = liftMSFPurer $ mapReaderT hoist
+  -> ClSF m1 cl a b
+  -> ClSF m2 cl a b
+hoistClSF hoist = liftMSFPurer $ mapReaderT hoist
 
--- | Hoist a 'SyncSF' and its clock along a monad morphism.
-hoistSyncSFAndClock
+-- | Hoist a 'ClSF' and its clock along a monad morphism.
+hoistClSFAndClock
   :: (Monad m1, Monad m2)
   => (forall c. m1 c -> m2 c)
-  -> SyncSF m1 cl a b
-  -> SyncSF m2 (HoistClock m1 m2 cl) a b
-hoistSyncSFAndClock hoist
+  -> ClSF m1 cl a b
+  -> ClSF m2 (HoistClock m1 m2 cl) a b
+hoistClSFAndClock hoist
   = liftMSFPurer $ withReaderT (retag id) . mapReaderT hoist
 
--- | Lift a 'SyncSF' into a monad transformer.
-liftSyncSF
+-- | Lift a 'ClSF' into a monad transformer.
+liftClSF
   :: (Monad m, MonadTrans t, Monad (t m))
-  => SyncSF    m  cl a b
-  -> SyncSF (t m) cl a b
-liftSyncSF = hoistSyncSF lift
+  => ClSF    m  cl a b
+  -> ClSF (t m) cl a b
+liftClSF = hoistClSF lift
 
--- | Lift a 'SyncSF' and its clock into a monad transformer.
-liftSyncSFAndClock
+-- | Lift a 'ClSF' and its clock into a monad transformer.
+liftClSFAndClock
   :: (Monad m, MonadTrans t, Monad (t m))
-  => SyncSF    m                 cl  a b
-  -> SyncSF (t m) (LiftClock m t cl) a b
-liftSyncSFAndClock = hoistSyncSFAndClock lift
+  => ClSF    m                 cl  a b
+  -> ClSF (t m) (LiftClock m t cl) a b
+liftClSFAndClock = hoistClSFAndClock lift
 
 -- | A monadic stream function without dependency on time
---   is a 'SyncSF' for any clock.
-timeless :: Monad m => MSF m a b -> SyncSF m cl a b
+--   is a 'ClSF' for any clock.
+timeless :: Monad m => MSF m a b -> ClSF m cl a b
 timeless = liftMSFTrans
 
--- | Utility to lift Kleisli arrows directly to 'SyncSF's.
-arrMSync :: Monad m => (a -> m b) -> SyncSF m cl a b
+-- | Utility to lift Kleisli arrows directly to 'ClSF's.
+arrMSync :: Monad m => (a -> m b) -> ClSF m cl a b
 arrMSync = timeless . arrM
 
 -- | Version without input.
-arrMSync_ :: Monad m => m b -> SyncSF m cl a b
+arrMSync_ :: Monad m => m b -> ClSF m cl a b
 arrMSync_ = timeless . arrM_
 
-{- | Call a 'SyncSF' every time the input is 'Just a'.
+{- | Call a 'ClSF' every time the input is 'Just a'.
 
 Caution: This will not change the time differences since the last tick.
 For example,
@@ -110,8 +110,8 @@ whereas the latter always returns the correct time since start of the program.
 -}
 mapMaybe
   :: Monad m
-  => SyncSF m cl        a         b
-  -> SyncSF m cl (Maybe a) (Maybe b)
+  => ClSF m cl        a         b
+  -> ClSF m cl (Maybe a) (Maybe b)
 mapMaybe behaviour = proc ma -> case ma of
   Nothing -> returnA                -< Nothing
   Just a  -> arr Just <<< behaviour -< a

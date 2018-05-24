@@ -80,14 +80,14 @@ to create the channel.
 Typically, create a @chan :: Chan c@ in your main program
 before the main loop (e.g. 'flow') would be run,
 then, by using this function,
-pass the channel to every behaviour or 'SyncSF' that wants to emit events,
+pass the channel to every behaviour or 'ClSF' that wants to emit events,
 and, by using 'eventClockOn', to every clock that should tick on the event.
 -}
 withChanS
   :: Monad m
   => Chan event
-  -> SyncSF (EventChanT event m) cl a b
-  -> SyncSF m cl a b
+  -> ClSF (EventChanT event m) cl a b
+  -> ClSF m cl a b
 withChanS = flip runReaderS_
 
 -- * Event emission
@@ -105,11 +105,11 @@ emit event = do
   liftIO $ writeChan chan event
 
 -- | Emit an event on every tick.
-emitS :: MonadIO m => SyncSF (EventChanT event m) cl event ()
+emitS :: MonadIO m => ClSF (EventChanT event m) cl event ()
 emitS = arrMSync emit
 
 -- | Emit an event whenever the input value is @Just event@.
-emitSMaybe :: MonadIO m => SyncSF (EventChanT event m) cl (Maybe event) ()
+emitSMaybe :: MonadIO m => ClSF (EventChanT event m) cl (Maybe event) ()
 emitSMaybe = mapMaybe emitS >>> arr (const ())
 
 -- | Like 'emit', but completely evaluates the event before emitting it.
@@ -119,13 +119,13 @@ emit' event = event `deepseq` do
   liftIO $ writeChan chan event
 
 -- | Like 'emitS', but completely evaluates the event before emitting it.
-emitS' :: (NFData event, MonadIO m) => SyncSF (EventChanT event m) cl event ()
+emitS' :: (NFData event, MonadIO m) => ClSF (EventChanT event m) cl event ()
 emitS' = arrMSync emit'
 
 -- | Like 'emitSMaybe', but completely evaluates the event before emitting it.
 emitSMaybe'
   :: (NFData event, MonadIO m)
-  => SyncSF (EventChanT event m) cl (Maybe event) ()
+  => ClSF (EventChanT event m) cl (Maybe event) ()
 emitSMaybe' = mapMaybe emitS' >>> arr (const ())
 
 

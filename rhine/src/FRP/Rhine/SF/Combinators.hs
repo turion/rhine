@@ -18,7 +18,7 @@ import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Reactimation
 import FRP.Rhine.Schedule
 import FRP.Rhine.SF
-import FRP.Rhine.SyncSF
+import FRP.Rhine.ClSF
 
 
 -- * Combinators and syntactic sugar for high-level composition of signal functions.
@@ -30,7 +30,7 @@ infix 5 @@
 --   and leaves (@Rightmost cl@) the system at the same as it is processed (@cl@).
 (@@) :: ( cl ~ Leftmost cl
         , cl ~ Rightmost cl )
-     => SyncSF m cl a b -> cl -> Rhine m cl a b
+     => ClSF m cl a b -> cl -> Rhine m cl a b
 (@@) = Rhine . Synchronous
 
 

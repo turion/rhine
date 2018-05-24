@@ -38,16 +38,16 @@ in a monad 'm'.
 Basic usage (synchronous case):
 
 @
-sensor :: SyncSF MyMonad MyClock () a
+sensor :: ClSF MyMonad MyClock () a
 sensor = arrMSync_ produceData
 
-processing :: SyncSF MyMonad MyClock a b
+processing :: ClSF MyMonad MyClock a b
 processing = ...
 
-actuator :: SyncSF MyMonad MyClock b ()
+actuator :: ClSF MyMonad MyClock b ()
 actuator = arrMSync consumeData
 
-mainSF :: SyncSF MyMonad MyClock () ()
+mainSF :: ClSF MyMonad MyClock () ()
 mainSF = sensor >-> processing >-> actuator
 
 main :: MyMonad ()

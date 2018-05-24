@@ -32,8 +32,8 @@ import FRP.Rhine.Reactimation.Tick
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.KeepLast
 
-import qualified FRP.Rhine        as X
-import qualified FRP.Rhine.SyncSF as X
+import qualified FRP.Rhine      as X
+import qualified FRP.Rhine.ClSF as X
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Internals
@@ -52,22 +52,22 @@ type GlossClock a
 --   @a@ is the type of subevents that are selected.
 type GlossRhine a = Rhine Identity (GlossClock a) () Picture
 
--- | The type of a 'SyncSF' that you have to implement to get a @gloss@ app.
-type GlossSyncSF a = SyncSF Identity GlossSimulationClock [a] Picture
+-- | The type of a 'ClSF' that you have to implement to get a @gloss@ app.
+type GlossClSF a = ClSF Identity GlossSimulationClock [a] Picture
 
 {- | For most applications, it is sufficient to implement
-a single synchronous signal function
+a single signal function
 that is called with a list of all relevant events
 that occurred in the last tick.
 -}
 buildGlossRhine
   :: (Event -> Maybe a) -- ^ The event selector
-  -> GlossSyncSF a      -- ^ The 'SyncSF' representing the game loop.
+  -> GlossClSF a        -- ^ The 'ClSF' representing the game loop.
   -> GlossRhine a
-buildGlossRhine select syncsfSim
+buildGlossRhine select clsfSim
   =   timeInfoOf tag @@  SelectClock { mainClock = GlossEventClock, .. }
   >-- collect -@- glossSchedule
-  --> withProperSimClock syncsfSim @@ GlossSimulationClock_
+  --> withProperSimClock clsfSim @@ GlossSimulationClock_
 
 -- | The main function that will start the @gloss@ backend and run the 'SF'.
 flowGloss

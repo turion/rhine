@@ -80,15 +80,15 @@ library
     FRP.Rhine.Schedule.Trans
     FRP.Rhine.SF
     FRP.Rhine.SF.Combinators
-    FRP.Rhine.SyncSF
-    FRP.Rhine.SyncSF.Core
-    FRP.Rhine.SyncSF.Except
-    FRP.Rhine.SyncSF.Reader
-    FRP.Rhine.SyncSF.Util
+    FRP.Rhine.ClSF
+    FRP.Rhine.ClSF.Core
+    FRP.Rhine.ClSF.Except
+    FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.Util
     FRP.Rhine.TimeDomain
 
   other-modules:
-    FRP.Rhine.SyncSF.Except.Util
+    FRP.Rhine.ClSF.Except.Util
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:

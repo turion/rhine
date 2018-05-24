@@ -1,6 +1,6 @@
-{-| Utilities for 'FRP.Rhine.SyncSF.Except' that need not be exported.
+{-| Utilities for 'FRP.Rhine.ClSF.Except' that need not be exported.
 -}
-module FRP.Rhine.SyncSF.Except.Util where
+module FRP.Rhine.ClSF.Except.Util where
 
 -- transformers
 import Control.Monad.Trans.Except

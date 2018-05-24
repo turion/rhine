@@ -190,22 +190,22 @@ keyReleased :: Monad m => BehaviourF (ExceptT () m) td Bool ()
 keyReleased = arr not >>> keyPressed
 
 
--- | Executes the first 'SyncSF' in parallel with a second 'SyncSF',
+-- | Executes the first 'ClSF' in parallel with a second 'ClSF',
 --   only forwarding the output of the first,
 --   until the second one raises an exception.
 --   That exception is returned,
---   together with the current output of the first 'SyncSF'.
+--   together with the current output of the first 'ClSF'.
 till
   :: Monad m
-  => SyncSF                 m  cl a b
-  -> SyncSF (ExceptT  e     m) cl a   c
-  -> SyncSF (ExceptT (e, b) m) cl a b
-till syncsf syncsfe = proc a -> do
-  b <- liftSyncSF syncsf   -< a
+  => ClSF                 m  cl a b
+  -> ClSF (ExceptT  e     m) cl a   c
+  -> ClSF (ExceptT (e, b) m) cl a b
+till clsf clsfe = proc a -> do
+  b <- liftClSF clsf   -< a
   _ <- runSyncExcept synce -< (b, a)
   returnA -< b
     where
       synce = do
-        e      <- try $ syncsfe <<< arr snd
+        e      <- try $ clsfe <<< arr snd
         (b, _) <- currentInput
         return (e, b)

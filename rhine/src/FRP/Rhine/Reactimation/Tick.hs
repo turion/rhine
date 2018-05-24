@@ -101,7 +101,7 @@ tick :: ( Monad m, Clock m cl
      -> m (Tickable m cla clb cl clc cld a b c d)
 -- Only if we have reached a leaf of the tree, data is actually processed.
 tick Tickable
-  { ticksf   = Synchronous syncsf
+  { ticksf   = Synchronous clsf
   , lastTime = LeafLastTime lastTime
   , .. } now tag = do
     let
@@ -113,13 +113,13 @@ tick Tickable
         }
     -- Get an input value from the left buffer
     (b, buffer1') <- get buffer1 $ retag (parClockTagInclusion parClockInL) ti
-    -- Run it through the synchronous signal function
-    (c, syncsf')  <- unMSF syncsf b `runReaderT` ti
+    -- Run it through the signal function
+    (c, clsf')  <- unMSF clsf b `runReaderT` ti
     -- Put the output into the right buffer
     buffer2'      <- put buffer2 (retag (parClockTagInclusion parClockInR) ti) c
     return Tickable
       { buffer1  = buffer1'
-      , ticksf   = Synchronous syncsf'
+      , ticksf   = Synchronous clsf'
       , buffer2  = buffer2'
       , lastTime = LeafLastTime now
       , .. }

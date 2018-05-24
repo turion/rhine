@@ -24,4 +24,4 @@ import FRP.Rhine.ResamplingBuffer as X
 import FRP.Rhine.Schedule         as X
 import FRP.Rhine.SF               as X
 import FRP.Rhine.SF.Combinators   as X
-import FRP.Rhine.SyncSF           as X
+import FRP.Rhine.ClSF           as X
