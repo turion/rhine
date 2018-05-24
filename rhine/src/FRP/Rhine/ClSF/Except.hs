@@ -39,13 +39,13 @@ and `(>>=)` is exception handling.
 * @b@:  The output type
 * @e@:  The type of exceptions that can be thrown
 -}
-type SyncExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
+type ClSFExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
 
-{- | A clock polymorphic 'SyncExcept'.
+{- | A clock polymorphic 'ClSFExcept'.
 Any clock with time domain @td@ may occur.
 -}
 type BehaviourFExcept m td a b e
-  = forall cl. td ~ Time cl => SyncExcept m cl a b e
+  = forall cl. td ~ Time cl => ClSFExcept m cl a b e
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
@@ -55,22 +55,22 @@ type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
 commuteExceptReader :: ExceptT e (ReaderT r m) a -> ReaderT r (ExceptT e m) a
 commuteExceptReader a = ReaderT $ \r -> ExceptT $ runReaderT (runExceptT a) r
 
-runSyncExcept :: Monad m => SyncExcept m cl a b e -> ClSF (ExceptT e m) cl a b
-runSyncExcept = liftMSFPurer commuteExceptReader . runMSFExcept
+runClSFExcept :: Monad m => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
+runClSFExcept = liftMSFPurer commuteExceptReader . runMSFExcept
 
 -- | Enter the monad context in the exception
 --   for |ClSF|s in the |ExceptT| monad.
 --   The 'ClSF' will be run until it encounters an exception.
-try :: Monad m => ClSF (ExceptT e m) cl a b -> SyncExcept m cl a b e
+try :: Monad m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
 try = MSFE.try . liftMSFPurer commuteReaderExcept
 
 -- | Within the same tick, perform a monadic action,
 --   and immediately throw the value as an exception.
-once :: Monad m => (a -> m e) -> SyncExcept m cl a b e
+once :: Monad m => (a -> m e) -> ClSFExcept m cl a b e
 once f = MSFE.once $ lift . f
 
 -- | A variant of |once| without input.
-once_ :: Monad m => m e -> SyncExcept m cl a b e
+once_ :: Monad m => m e -> ClSFExcept m cl a b e
 once_ = once . const
 
 -- | Immediately throw the exception on the input.
@@ -95,5 +95,5 @@ throwMaybe = proc me -> case me of
 
 -- | Advances a single tick with the given Kleisli arrow,
 --   and then throws an exception.
-step :: Monad m => (a -> m (b, e)) -> SyncExcept m cl a b e
+step :: Monad m => (a -> m (b, e)) -> ClSFExcept m cl a b e
 step f = MSFE.step $ lift . f

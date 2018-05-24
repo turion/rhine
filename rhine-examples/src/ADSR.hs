@@ -202,7 +202,7 @@ till
   -> ClSF (ExceptT (e, b) m) cl a b
 till clsf clsfe = proc a -> do
   b <- liftClSF clsf   -< a
-  _ <- runSyncExcept synce -< (b, a)
+  _ <- runClSFExcept synce -< (b, a)
   returnA -< b
     where
       synce = do
