@@ -36,8 +36,8 @@ newtype Millisecond (n :: Nat) = Millisecond (RescaledClockS IO (Step n) UTCTime
 -- TODO Consider changing the tag to Maybe Double
 
 instance Clock IO (Millisecond n) where
-  type TimeDomainOf (Millisecond n) = UTCTime
-  type Tag          (Millisecond n) = Bool
+  type Time (Millisecond n) = UTCTime
+  type Tag  (Millisecond n) = Bool
   startClock (Millisecond cl) = startClock cl
 
 

@@ -15,8 +15,8 @@ import FRP.Rhine.ResamplingBuffer.Util
 linear
   :: ( Monad m, Clock m cl1, Clock m cl2
      , VectorSpace v
-     , Groundfield v ~ Diff (TimeDomainOf cl1)
-     , Groundfield v ~ Diff (TimeDomainOf cl2)
+     , Groundfield v ~ Diff (Time cl1)
+     , Groundfield v ~ Diff (Time cl2)
      )
   => v -- ^ The initial velocity (derivative of the signal)
   -> v -- ^ The initial position

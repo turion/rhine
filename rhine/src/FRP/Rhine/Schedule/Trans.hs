@@ -15,13 +15,13 @@ import FRP.Rhine
 --   Indeed, this is the purpose for which 'ScheduleT' was defined.
 schedule
   :: ( Monad m
-     , Clock (ScheduleT (Diff (TimeDomainOf cl1)) m) cl1
-     , Clock (ScheduleT (Diff (TimeDomainOf cl1)) m) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
-     , Ord (Diff (TimeDomainOf cl1))
-     , Num (Diff (TimeDomainOf cl1))
+     , Clock (ScheduleT (Diff (Time cl1)) m) cl1
+     , Clock (ScheduleT (Diff (Time cl1)) m) cl2
+     , Time cl1 ~ Time cl2
+     , Ord (Diff (Time cl1))
+     , Num (Diff (Time cl1))
      )
-  => Schedule (ScheduleT (Diff (TimeDomainOf cl1)) m) cl1 cl2
+  => Schedule (ScheduleT (Diff (Time cl1)) m) cl1 cl2
 schedule = Schedule {..}
   where
     startSchedule cl1 cl2 = do
@@ -35,16 +35,16 @@ schedule = Schedule {..}
     -- Combines the two individual running clocks to one running clock.
     runningSchedule
       :: ( Monad m
-         , Clock (ScheduleT (Diff (TimeDomainOf cl1)) m) cl1
-         , Clock (ScheduleT (Diff (TimeDomainOf cl2)) m) cl2
-         , TimeDomainOf cl1 ~ TimeDomainOf cl2
-         , Ord (Diff (TimeDomainOf cl1))
-         , Num (Diff (TimeDomainOf cl1))
+         , Clock (ScheduleT (Diff (Time cl1)) m) cl1
+         , Clock (ScheduleT (Diff (Time cl2)) m) cl2
+         , Time cl1 ~ Time cl2
+         , Ord (Diff (Time cl1))
+         , Num (Diff (Time cl1))
          )
       => cl1 -> cl2
-      -> MSF (ScheduleT (Diff (TimeDomainOf cl1)) m) () (TimeDomainOf cl1, Tag cl1)
-      -> MSF (ScheduleT (Diff (TimeDomainOf cl1)) m) () (TimeDomainOf cl2, Tag cl2)
-      -> MSF (ScheduleT (Diff (TimeDomainOf cl1)) m) () (TimeDomainOf cl1, Either (Tag cl1) (Tag cl2))
+      -> MSF (ScheduleT (Diff (Time cl1)) m) () (Time cl1, Tag cl1)
+      -> MSF (ScheduleT (Diff (Time cl1)) m) () (Time cl2, Tag cl2)
+      -> MSF (ScheduleT (Diff (Time cl1)) m) () (Time cl1, Either (Tag cl1) (Tag cl2))
     runningSchedule cl1 cl2 rc1 rc2 = MSF $ \_ -> do
       -- Race both clocks against each other
       raceResult <- race (unMSF rc1 ()) (unMSF rc2 ())

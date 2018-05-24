@@ -11,6 +11,6 @@ import FRP.Rhine
 data Count = Count -- Sesame street anyone?
 
 instance Monad m => Clock m Count where
-  type TimeDomainOf Count = Integer
-  type Tag          Count = ()
+  type Time Count = Integer
+  type Tag  Count = ()
   startClock _ = return (count &&& arr (const ()), 0)

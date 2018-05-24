@@ -26,8 +26,8 @@ data SelectClock cl a = SelectClock
 
 
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
-  type TimeDomainOf (SelectClock cl a) = TimeDomainOf cl
-  type Tag          (SelectClock cl a) = a
+  type Time (SelectClock cl a) = Time cl
+  type Tag  (SelectClock cl a) = a
   startClock SelectClock {..} = do
     (runningClock, initialTime) <- startClock mainClock
     let

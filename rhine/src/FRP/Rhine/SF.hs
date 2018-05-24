@@ -33,9 +33,9 @@ data SF m cl a b where
   -- | Two 'SF's may be sequentially composed if there is a matching 'ResamplingBuffer' between them.
   Sequential
     :: ( Clock m clab, Clock m clcd
-       , TimeDomainOf clab ~ TimeDomainOf clcd
-       , TimeDomainOf clab ~ TimeDomainOf (Rightmost clab)
-       , TimeDomainOf clcd ~ TimeDomainOf (Leftmost  clcd)
+       , Time clab ~ Time clcd
+       , Time clab ~ Time (Rightmost clab)
+       , Time clcd ~ Time (Leftmost  clcd)
        )
     => SF               m            clab                  a b
     -> ResamplingBuffer m (Rightmost clab) (Leftmost clcd)   b c
@@ -44,11 +44,11 @@ data SF m cl a b where
   -- | Two 'SF's with the same input and output data may be parallely composed.
   Parallel
     :: ( Clock m cl1, Clock m cl2
-       , TimeDomainOf cl1 ~ TimeDomainOf (Rightmost cl1)
-       , TimeDomainOf cl2 ~ TimeDomainOf (Rightmost cl2)
-       , TimeDomainOf cl1 ~ TimeDomainOf cl2
-       , TimeDomainOf cl1 ~ TimeDomainOf (Leftmost cl1)
-       , TimeDomainOf cl2 ~ TimeDomainOf (Leftmost cl2)
+       , Time cl1 ~ Time (Rightmost cl1)
+       , Time cl2 ~ Time (Rightmost cl2)
+       , Time cl1 ~ Time cl2
+       , Time cl1 ~ Time (Leftmost cl1)
+       , Time cl2 ~ Time (Leftmost cl2)
        )
     => SF m cl1 a b
     -> SF m cl2 a b

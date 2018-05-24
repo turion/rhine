@@ -90,8 +90,8 @@ theBufferSize = fromInteger . natVal
 
 instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
       => Clock m (AudioClock rate bufferSize) where
-  type TimeDomainOf (AudioClock rate bufferSize) = UTCTime
-  type Tag          (AudioClock rate bufferSize) = Maybe Double
+  type Time (AudioClock rate bufferSize) = UTCTime
+  type Tag  (AudioClock rate bufferSize) = Maybe Double
 
   startClock audioClock = do
     let
@@ -136,8 +136,8 @@ class PureAudioClockRate (rate :: AudioRate) where
 
 
 instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) where
-  type TimeDomainOf (PureAudioClock rate) = Double
-  type Tag          (PureAudioClock rate) = ()
+  type Time (PureAudioClock rate) = Double
+  type Tag  (PureAudioClock rate) = ()
 
   startClock audioClock = return
     ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())

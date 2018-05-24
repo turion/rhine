@@ -13,8 +13,8 @@ import FRP.Rhine
 newtype FixedRate = FixedRate Double
 
 instance Monad m => Clock m FixedRate where
-  type TimeDomainOf FixedRate = Double
-  type Tag FixedRate = ()
+  type Time FixedRate = Double
+  type Tag  FixedRate = ()
   startClock (FixedRate timeStep) = return
     ( arr (const timeStep) >>> sumS &&& arr (const ())
     , 0

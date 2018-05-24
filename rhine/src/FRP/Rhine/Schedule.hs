@@ -24,11 +24,11 @@ import FRP.Rhine.Clock
 --   It outputs a time stamp and an 'Either' value,
 --   which specifies which of the two subclocks has ticked.
 data Schedule m cl1 cl2
-  = (TimeDomainOf cl1 ~ TimeDomainOf cl2)
+  = (Time cl1 ~ Time cl2)
   => Schedule
     { startSchedule
         :: cl1 -> cl2
-        -> RunningClockStarter m (TimeDomainOf cl1) (Either (Tag cl1) (Tag cl2))
+        -> RunningClockStarter m (Time cl1) (Either (Tag cl1) (Tag cl2))
     }
 -- The type constraint in the constructor is actually useful when pattern matching on 'Schedule',
 -- which is interesting since a constraint like 'Monad m' is useful.
@@ -104,7 +104,7 @@ rescaledScheduleS Schedule {..} = Schedule startSchedule'
 readerSchedule
   :: ( Monad m
      , Clock (ReaderT r m) cl1, Clock (ReaderT r m) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule m
        (HoistClock (ReaderT r m) m cl1) (HoistClock (ReaderT r m) m cl2)
@@ -122,7 +122,7 @@ readerSchedule Schedule {..}
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous sequential composition of signal functions.
 data SequentialClock m cl1 cl2
-  = TimeDomainOf cl1 ~ TimeDomainOf cl2
+  = Time cl1 ~ Time cl2
   => SequentialClock
     { sequentialCl1      :: cl1
     , sequentialCl2      :: cl2
@@ -132,8 +132,8 @@ data SequentialClock m cl1 cl2
 
 instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (SequentialClock m cl1 cl2) where
-  type TimeDomainOf (SequentialClock m cl1 cl2) = TimeDomainOf cl1
-  type Tag          (SequentialClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
+  type Time (SequentialClock m cl1 cl2) = Time cl1
+  type Tag  (SequentialClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
   startClock SequentialClock {..}
     = startSchedule sequentialSchedule sequentialCl1 sequentialCl2
 
@@ -141,7 +141,7 @@ instance (Monad m, Clock m cl1, Clock m cl2)
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous parallel composition of signal functions.
 data ParallelClock m cl1 cl2
-  = TimeDomainOf cl1 ~ TimeDomainOf cl2
+  = Time cl1 ~ Time cl2
   => ParallelClock
     { parallelCl1      :: cl1
     , parallelCl2      :: cl2
@@ -150,8 +150,8 @@ data ParallelClock m cl1 cl2
 
 instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (ParallelClock m cl1 cl2) where
-  type TimeDomainOf (ParallelClock m cl1 cl2) = TimeDomainOf cl1
-  type Tag          (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
+  type Time (ParallelClock m cl1 cl2) = Time cl1
+  type Tag  (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
   startClock ParallelClock {..}
     = startSchedule parallelSchedule parallelCl1 parallelCl2
 
@@ -180,7 +180,7 @@ data LastTime cl where
   ParallelLastTime
     :: LastTime cl1 -> LastTime cl2
     -> LastTime (ParallelClock   m cl1 cl2)
-  LeafLastTime :: TimeDomainOf cl -> LastTime cl
+  LeafLastTime :: Time cl -> LastTime cl
 
 
 -- | An inclusion of a clock into a tree of parallel compositions of clocks.

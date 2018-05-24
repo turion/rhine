@@ -39,7 +39,7 @@ type SyncSignal m cl a = forall arbitrary . SyncSF m cl arbitrary a
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
 --   @td@ denotes the 'TimeDomain'.
-type Behaviour m td a = forall cl. td ~ TimeDomainOf cl => SyncSignal m cl a
+type Behaviour m td a = forall cl. td ~ Time cl => SyncSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
 type Behavior  m td a = Behaviour m td a
@@ -47,7 +47,7 @@ type Behavior  m td a = Behaviour m td a
 -- | A (side-effectful) behaviour function is a time-aware synchronous stream
 --   function that doesn't depend on a particular clock.
 --   @td@ denotes the 'TimeDomain'.
-type BehaviourF m td a b = forall cl. td ~ TimeDomainOf cl => SyncSF m cl a b
+type BehaviourF m td a b = forall cl. td ~ Time cl => SyncSF m cl a b
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorF  m td a b = BehaviourF m td a b

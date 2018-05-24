@@ -50,12 +50,12 @@ data Tickable m cla clb cl clc cld a b c d = Tickable
     -- | The last times when the different parts of the signal tree have ticked.
   , lastTime    :: LastTime cl
     -- | The time when the whole clock was initialised.
-  , initTime    :: TimeDomainOf cl
+  , initTime    :: Time cl
   }
 
 
 -- | Initialise the tree of last tick times.
-initLastTime :: SF m cl a b -> TimeDomainOf cl -> LastTime cl
+initLastTime :: SF m cl a b -> Time cl -> LastTime cl
 initLastTime (Synchronous _)        initTime = LeafLastTime initTime
 initLastTime (Sequential sf1 _ sf2) initTime =
   SequentialLastTime
@@ -72,7 +72,7 @@ createTickable
   :: ResamplingBuffer m cla (Leftmost cl)                       a b
   -> SF               m                   cl                      b c
   -> ResamplingBuffer m                      (Rightmost cl) cld     c d
-  -> TimeDomainOf cl
+  -> Time cl
   -> Tickable         m cla (Leftmost cl) cl (Rightmost cl) cld a b c d
 createTickable buffer1 ticksf buffer2 initTime = Tickable
   { parClockInL = ParClockRefl
@@ -88,15 +88,15 @@ which is of type 'Either tag1 tag2' in case of a 'SequentialClock' or a 'Paralle
 encoding either a tick for the left clock or the right clock.
 -}
 tick :: ( Monad m, Clock m cl
-        , TimeDomainOf cla ~ TimeDomainOf cl
-        , TimeDomainOf clb ~ TimeDomainOf cl
-        , TimeDomainOf clc ~ TimeDomainOf cl
-        , TimeDomainOf cld ~ TimeDomainOf cl
-        , TimeDomainOf (Leftmost  cl) ~ TimeDomainOf cl
-        , TimeDomainOf (Rightmost cl) ~ TimeDomainOf cl
+        , Time cla ~ Time cl
+        , Time clb ~ Time cl
+        , Time clc ~ Time cl
+        , Time cld ~ Time cl
+        , Time (Leftmost  cl) ~ Time cl
+        , Time (Rightmost cl) ~ Time cl
         )
      => Tickable    m cla clb cl clc cld a b c d
-     -> TimeDomainOf cl -- ^ Timestamp of the present tick
+     -> Time cl -- ^ Timestamp of the present tick
      -> Tag cl -- ^ 'Tag' of the overall clock; contains the information which subsystem will become active
      -> m (Tickable m cla clb cl clc cld a b c d)
 -- Only if we have reached a leaf of the tree, data is actually processed.

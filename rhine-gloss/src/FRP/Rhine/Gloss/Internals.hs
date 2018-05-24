@@ -36,8 +36,8 @@ errMsg =  "You cannot start gloss apps with FRP.Rhine.flow. "
 data GlossEventClock = GlossEventClock
 
 instance Clock m GlossEventClock where
-  type TimeDomainOf GlossEventClock = ()
-  type Tag          GlossEventClock = Event
+  type Time GlossEventClock = ()
+  type Tag  GlossEventClock = Event
   startClock _ = error errMsg
 
 -- | The clock that ticks for every @gloss@ simulation step,
@@ -46,8 +46,8 @@ instance Clock m GlossEventClock where
 data GlossSimulationClock_ = GlossSimulationClock_
 
 instance Clock m GlossSimulationClock_ where
-  type TimeDomainOf GlossSimulationClock_ = ()
-  type Tag          GlossSimulationClock_ = Float
+  type Time GlossSimulationClock_ = ()
+  type Tag  GlossSimulationClock_ = Float
   startClock _ = error errMsg
 
 -- | The clock that ticks for every @gloss@ simulation step.
@@ -55,8 +55,8 @@ instance Clock m GlossSimulationClock_ where
 data GlossSimulationClock = GlossSimulationClock
 
 instance Clock m GlossSimulationClock where
-  type TimeDomainOf GlossSimulationClock = Float
-  type Tag          GlossSimulationClock = ()
+  type Time GlossSimulationClock = Float
+  type Tag  GlossSimulationClock = ()
   startClock _ = error errMsg
 
 -- | To use all features of the 'SyncSF' framework,
@@ -80,8 +80,8 @@ withProperSimClock syncsf = readerS
 data GlossGraphicsClock = GlossGraphicsClock
 
 instance Clock m GlossGraphicsClock where
-  type TimeDomainOf GlossGraphicsClock = ()
-  type Tag          GlossGraphicsClock = ()
+  type Time GlossGraphicsClock = ()
+  type Tag  GlossGraphicsClock = ()
   startClock _ = error errMsg
 
 -- | A schedule you can't actually use, for internal purposes.

@@ -22,7 +22,7 @@ import FRP.Rhine
 --   (since data processing and scheduling are separated concerns).
 concurrently
   :: ( Clock IO cl1, Clock IO cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule IO cl1 cl2
 concurrently = Schedule $ \cl1 cl2 -> do
@@ -45,7 +45,7 @@ concurrentlyWriter
   :: ( Monoid w
      , Clock (WriterT w IO) cl1
      , Clock (WriterT w IO) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule (WriterT w IO) cl1 cl2
 concurrentlyWriter = Schedule $ \cl1 cl2 -> do

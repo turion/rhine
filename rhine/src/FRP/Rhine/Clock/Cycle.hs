@@ -36,8 +36,8 @@ data CycleClock (v :: [Nat]) where
 
 instance (Monad m, NonemptyNatList v)
       => Clock (ScheduleT Integer m) (CycleClock v) where
-  type TimeDomainOf (CycleClock v) = Integer
-  type Tag          (CycleClock v) = ()
+  type Time (CycleClock v) = Integer
+  type Tag  (CycleClock v) = ()
   startClock cl = return
     ( cycleS (theList cl) >>> withSideEffect wait >>> sumS &&& arr (const ())
     , 0

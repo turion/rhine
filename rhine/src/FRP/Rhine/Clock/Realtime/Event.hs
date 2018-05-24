@@ -144,8 +144,8 @@ instance Monoid (EventClock event) where
   mappend _ _ = EventClock
 
 instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
-  type Tag          (EventClock event) = event
-  type TimeDomainOf (EventClock event) = UTCTime
+  type Time (EventClock event) = UTCTime
+  type Tag  (EventClock event) = event
   startClock _ = do
     initialTime <- liftIO getCurrentTime
     return
@@ -183,7 +183,7 @@ Typical use cases:
   which are lifted using 'liftClock'.
 -}
 concurrentlyWithEvents
-  :: ( TimeDomainOf cl1 ~ TimeDomainOf cl2
+  :: ( Time cl1 ~ Time cl2
      , Clock (EventChanT event IO) cl1
      , Clock (EventChanT event IO) cl2
      )

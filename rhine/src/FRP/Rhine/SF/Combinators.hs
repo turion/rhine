@@ -85,9 +85,9 @@ rh    =  rh1 >-- rb -@- sched --> rh2
 infixr 1 -->
 (-->) :: ( Clock m cl1
          , Clock m cl2
-         , TimeDomainOf cl1 ~ TimeDomainOf cl2
-         , TimeDomainOf (Rightmost cl1) ~ TimeDomainOf cl1
-         , TimeDomainOf (Leftmost  cl2) ~ TimeDomainOf cl2
+         , Time cl1 ~ Time cl2
+         , Time (Rightmost cl1) ~ Time cl1
+         , Time (Leftmost  cl2) ~ Time cl2
          , Clock m (Rightmost cl1)
          , Clock m (Leftmost  cl2)
          )
@@ -128,11 +128,11 @@ rh    =  rh1 **\@ sched \@** rh2
 infix 3 @**
 (@**) :: ( Clock m cl1
           , Clock m cl2
-          , TimeDomainOf cl1 ~ TimeDomainOf (Rightmost cl1)
-          , TimeDomainOf cl2 ~ TimeDomainOf (Rightmost cl2)
-          , TimeDomainOf cl1 ~ TimeDomainOf (Leftmost cl1)
-          , TimeDomainOf cl2 ~ TimeDomainOf (Leftmost cl2)
-          , TimeDomainOf cl1 ~ TimeDomainOf cl2
+          , Time cl1 ~ Time (Rightmost cl1)
+          , Time cl2 ~ Time (Rightmost cl2)
+          , Time cl1 ~ Time (Leftmost cl1)
+          , Time cl2 ~ Time (Leftmost cl2)
+          , Time cl1 ~ Time cl2
           )
        => RhineParallelAndSchedule m cl1 cl2 a b
        -> Rhine m cl2 a b

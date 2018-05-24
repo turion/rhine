@@ -45,7 +45,7 @@ type SyncExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
 Any clock with time domain @td@ may occur.
 -}
 type BehaviourFExcept m td a b e
-  = forall cl. td ~ TimeDomainOf cl => SyncExcept m cl a b e
+  = forall cl. td ~ Time cl => SyncExcept m cl a b e
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e

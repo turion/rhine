@@ -34,8 +34,8 @@ stepsize :: Step n -> Integer
 stepsize step@Step = natVal step
 
 instance Monad m => Clock m (Step n) where
-  type TimeDomainOf (Step n) = Integer
-  type Tag          (Step n) = ()
+  type Time (Step n) = Integer
+  type Tag  (Step n) = ()
   startClock cl = return
     ( count >>> arr (* stepsize cl)
       &&& arr (const ())
