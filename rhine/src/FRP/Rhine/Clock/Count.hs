@@ -13,4 +13,4 @@ data Count = Count -- Sesame street anyone?
 instance Monad m => Clock m Count where
   type Time Count = Integer
   type Tag  Count = ()
-  startClock _ = return (count &&& arr (const ()), 0)
+  initClock _ = return (count &&& arr (const ()), 0)

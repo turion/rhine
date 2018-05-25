@@ -58,7 +58,7 @@ class TimeDomain (Time cl) => Clock m cl where
   type Tag cl
   -- | The method that produces to a clock value a running clock,
   --   i.e. an effectful stream of tagged time stamps together with an initialisation time.
-  startClock
+  initClock
     :: cl -- ^ The clock value, containing e.g. settings or device parameters
     -> RunningClockStarter m (Time cl) (Tag cl) -- ^ The stream of time stamps, and the initial time
 
@@ -142,8 +142,8 @@ instance (Monad m, TimeDomain td, Clock m cl)
       => Clock m (RescaledClock cl td) where
   type Time (RescaledClock cl td) = td
   type Tag          (RescaledClock cl td) = Tag cl
-  startClock (RescaledClock cl f) = do
-    (runningClock, initTime) <- startClock cl
+  initClock (RescaledClock cl f) = do
+    (runningClock, initTime) <- initClock cl
     return
       ( runningClock >>> first (arr f)
       , f initTime
@@ -162,8 +162,8 @@ instance (Monad m, TimeDomain td, Clock m cl)
       => Clock m (RescaledClockM m cl td) where
   type Time (RescaledClockM m cl td) = td
   type Tag          (RescaledClockM m cl td) = Tag cl
-  startClock RescaledClockM {..} = do
-    (runningClock, initTime) <- startClock unscaledClockM
+  initClock RescaledClockM {..} = do
+    (runningClock, initTime) <- initClock unscaledClockM
     rescaledInitTime         <- rescaleM initTime
     return
       ( runningClock >>> first (arrM rescaleM)
@@ -192,8 +192,8 @@ instance (Monad m, TimeDomain td, Clock m cl)
       => Clock m (RescaledClockS m cl td tag) where
   type Time (RescaledClockS m cl td tag) = td
   type Tag          (RescaledClockS m cl td tag) = tag
-  startClock RescaledClockS {..} = do
-    (runningClock, initTime) <- startClock unscaledClockS
+  initClock RescaledClockS {..} = do
+    (runningClock, initTime) <- initClock unscaledClockS
     (rescaling, rescaledInitTime) <- rescaleS initTime
     return
       ( runningClock >>> rescaling
@@ -225,8 +225,8 @@ instance (Monad m1, Monad m2, Clock m1 cl)
       => Clock m2 (HoistClock m1 m2 cl) where
   type Time (HoistClock m1 m2 cl) = Time cl
   type Tag          (HoistClock m1 m2 cl) = Tag          cl
-  startClock HoistClock {..} = do
-    (runningClock, initialTime) <- monadMorphism $ startClock unhoistedClock
+  initClock HoistClock {..} = do
+    (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
     let hoistMSF = liftMSFPurer
     -- TODO Look out for API changes in dunai here
     return

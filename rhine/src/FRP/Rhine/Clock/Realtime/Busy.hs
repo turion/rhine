@@ -19,7 +19,7 @@ instance Clock IO Busy where
   type Time Busy = UTCTime
   type Tag  Busy = ()
 
-  startClock _ = do
+  initClock _ = do
     initialTime <- getCurrentTime
     return
       ( arrM_ getCurrentTime

@@ -24,9 +24,9 @@ schedule
   => Schedule (ScheduleT (Diff (Time cl1)) m) cl1 cl2
 schedule = Schedule {..}
   where
-    startSchedule cl1 cl2 = do
-      (runningClock1, initTime) <- startClock cl1
-      (runningClock2, _)        <- startClock cl2
+    initSchedule cl1 cl2 = do
+      (runningClock1, initTime) <- initClock cl1
+      (runningClock2, _)        <- initClock cl2
       return
         ( runningSchedule cl1 cl2 runningClock1 runningClock2
         , initTime

@@ -146,7 +146,7 @@ instance Monoid (EventClock event) where
 instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime
   type Tag  (EventClock event) = event
-  startClock _ = do
+  initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
       ( arrM_ $ do

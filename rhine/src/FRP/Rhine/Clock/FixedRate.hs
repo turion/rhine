@@ -15,7 +15,7 @@ newtype FixedRate = FixedRate Double
 instance Monad m => Clock m FixedRate where
   type Time FixedRate = Double
   type Tag  FixedRate = ()
-  startClock (FixedRate timeStep) = return
+  initClock (FixedRate timeStep) = return
     ( arr (const timeStep) >>> sumS &&& arr (const ())
     , 0
     )

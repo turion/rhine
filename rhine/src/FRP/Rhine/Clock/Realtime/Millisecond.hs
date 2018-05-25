@@ -38,7 +38,7 @@ newtype Millisecond (n :: Nat) = Millisecond (RescaledClockS IO (Step n) UTCTime
 instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag  (Millisecond n) = Bool
-  startClock (Millisecond cl) = startClock cl
+  initClock (Millisecond cl) = initClock cl
 
 
 -- | This clock simply sleeps 'n' milliseconds after each tick.
@@ -96,7 +96,7 @@ downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
 
 -- | Two 'Millisecond' clocks can always be scheduled deterministically.
 scheduleMillisecond :: Schedule IO (Millisecond n1) (Millisecond n2)
-scheduleMillisecond = Schedule startSchedule'
+scheduleMillisecond = Schedule initSchedule'
   where
-    startSchedule' (Millisecond cl1) (Millisecond cl2)
-      = startSchedule (rescaledScheduleS scheduleStep) cl1 cl2
+    initSchedule' (Millisecond cl1) (Millisecond cl2)
+      = initSchedule (rescaledScheduleS scheduleStep) cl1 cl2

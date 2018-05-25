@@ -62,7 +62,7 @@ flow
      )
   => Rhine m cl () () -> m ()
 flow Rhine {..} = do
-  (runningClock, initTime) <- startClock clock
+  (runningClock, initTime) <- initClock clock
   -- Run the main loop
   flow' runningClock $ createTickable
     (trivialResamplingBuffer clock)

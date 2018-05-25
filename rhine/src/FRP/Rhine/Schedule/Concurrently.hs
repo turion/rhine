@@ -35,7 +35,7 @@ concurrently = Schedule $ \cl1 cl2 -> do
   return (arrM_ $ takeMVar mvar, initTime)
   where
     launchSubthread cl leftright iMVar mvar = forkIO $ do
-      (runningClock, initTime) <- startClock cl
+      (runningClock, initTime) <- initClock cl
       putMVar iMVar initTime
       reactimate $ runningClock >>> second (arr leftright) >>> arrM (putMVar mvar)
 -- TODO These threads can't be killed from outside easily since we've lost their ids
@@ -62,7 +62,7 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
   return (arrM_ (WriterT $ takeMVar mvar), initTime)
   where
     launchSubthread cl leftright iMVar mvar = lift $ forkIO $ do
-      ((runningClock, initTime), w) <- runWriterT $ startClock cl
+      ((runningClock, initTime), w) <- runWriterT $ initClock cl
       putMVar iMVar (initTime, w)
       reactimate $ proc _ -> do
         (w', (td, tag_)) <- runWriterS runningClock -< ()

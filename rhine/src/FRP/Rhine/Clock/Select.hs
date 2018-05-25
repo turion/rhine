@@ -28,8 +28,8 @@ data SelectClock cl a = SelectClock
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
   type Time (SelectClock cl a) = Time cl
   type Tag  (SelectClock cl a) = a
-  startClock SelectClock {..} = do
-    (runningClock, initialTime) <- startClock mainClock
+  initClock SelectClock {..} = do
+    (runningClock, initialTime) <- initClock mainClock
     let
       runningSelectClock = filterS $ proc _ -> do
         (time, tag) <- runningClock -< ()
@@ -44,8 +44,8 @@ schedSelectClocks
   => Schedule m (SelectClock cl a) (SelectClock cl b)
 schedSelectClocks = Schedule {..}
   where
-    startSchedule subClock1 subClock2 = do
-      (runningClock, initialTime) <- startClock
+    initSchedule subClock1 subClock2 = do
+      (runningClock, initialTime) <- initClock
         $ mainClock subClock1 `mappend` mainClock subClock2
       let
         runningSelectClocks = concatS $ proc _ -> do
@@ -61,8 +61,8 @@ schedSelectClockAndMain
   => Schedule m cl (SelectClock cl a)
 schedSelectClockAndMain = Schedule {..}
   where
-    startSchedule mainClock' SelectClock {..} = do
-      (runningClock, initialTime) <- startClock
+    initSchedule mainClock' SelectClock {..} = do
+      (runningClock, initialTime) <- initClock
         $ mainClock' `mappend` mainClock
       let
         runningSelectClock = concatS $ proc _ -> do

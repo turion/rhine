@@ -26,7 +26,7 @@ import FRP.Rhine.Clock
 data Schedule m cl1 cl2
   = (Time cl1 ~ Time cl2)
   => Schedule
-    { startSchedule
+    { initSchedule
         :: cl1 -> cl2
         -> RunningClockStarter m (Time cl1) (Either (Tag cl1) (Tag cl2))
     }
@@ -44,10 +44,10 @@ hoistSchedule
   => (forall a . m1 a -> m2 a)
   -> Schedule m1 cl1 cl2
   -> Schedule m2 cl1 cl2
-hoistSchedule hoist Schedule {..} = Schedule startSchedule'
+hoistSchedule hoist Schedule {..} = Schedule initSchedule'
   where
-    startSchedule' cl1 cl2 = hoist
-      $ first (hoistMSF hoist) <$> startSchedule cl1 cl2
+    initSchedule' cl1 cl2 = hoist
+      $ first (hoistMSF hoist) <$> initSchedule cl1 cl2
     hoistMSF = liftMSFPurer
     -- TODO This should be a dunai issue
 
@@ -56,9 +56,9 @@ flipSchedule
   :: Monad m
   => Schedule m cl1 cl2
   -> Schedule m cl2 cl1
-flipSchedule Schedule {..} = Schedule startSchedule_
+flipSchedule Schedule {..} = Schedule initSchedule_
   where
-    startSchedule_ cl2 cl1 = first (arr (second swapEither) <<<) <$> startSchedule cl1 cl2
+    initSchedule_ cl2 cl1 = first (arr (second swapEither) <<<) <$> initSchedule cl1 cl2
     swapEither :: Either a b -> Either b a -- TODO Why is stuff like this not in base? Maybe send pull request...
     swapEither (Left  a) = Right a
     swapEither (Right b) = Left  b
@@ -71,19 +71,19 @@ rescaledSchedule
   :: Monad m
   => Schedule m cl1 cl2
   -> Schedule m (RescaledClock cl1 td) (RescaledClock cl2 td)
-rescaledSchedule schedule = Schedule $ startSchedule'
+rescaledSchedule schedule = Schedule $ initSchedule'
   where
-    startSchedule' cl1 cl2 = startSchedule (rescaledScheduleS schedule) (rescaledClockToS cl1) (rescaledClockToS cl2)
+    initSchedule' cl1 cl2 = initSchedule (rescaledScheduleS schedule) (rescaledClockToS cl1) (rescaledClockToS cl2)
 
 -- | As 'rescaledSchedule', with a stateful rescaling
 rescaledScheduleS
   :: Monad m
   => Schedule m cl1 cl2
   -> Schedule m (RescaledClockS m cl1 td tag1) (RescaledClockS m cl2 td tag2)
-rescaledScheduleS Schedule {..} = Schedule startSchedule'
+rescaledScheduleS Schedule {..} = Schedule initSchedule'
   where
-    startSchedule' (RescaledClockS cl1 rescaleS1) (RescaledClockS cl2 rescaleS2) = do
-      (runningSchedule, initTime ) <- startSchedule cl1 cl2
+    initSchedule' (RescaledClockS cl1 rescaleS1) (RescaledClockS cl2 rescaleS2) = do
+      (runningSchedule, initTime ) <- initSchedule cl1 cl2
       (rescaling1     , initTime') <- rescaleS1 initTime
       (rescaling2     , _        ) <- rescaleS2 initTime
       let runningSchedule'
@@ -111,7 +111,7 @@ readerSchedule
   -> Schedule (ReaderT r m) cl1 cl2
 readerSchedule Schedule {..}
   = Schedule $ \cl1 cl2 -> ReaderT $ \r -> first liftMSFTrans
-  <$> startSchedule
+  <$> initSchedule
         (HoistClock cl1 $ flip runReaderT r)
         (HoistClock cl2 $ flip runReaderT r)
 
@@ -136,8 +136,8 @@ instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (SequentialClock m cl1 cl2) where
   type Time (SequentialClock m cl1 cl2) = Time cl1
   type Tag  (SequentialClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  startClock SequentialClock {..}
-    = startSchedule sequentialSchedule sequentialCl1 sequentialCl2
+  initClock SequentialClock {..}
+    = initSchedule sequentialSchedule sequentialCl1 sequentialCl2
 
 
 -- | Two clocks can be combined with a schedule as a clock
@@ -157,8 +157,8 @@ instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (ParallelClock m cl1 cl2) where
   type Time (ParallelClock m cl1 cl2) = Time cl1
   type Tag  (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  startClock ParallelClock {..}
-    = startSchedule parallelSchedule parallelCl1 parallelCl2
+  initClock ParallelClock {..}
+    = initSchedule parallelSchedule parallelCl1 parallelCl2
 
 
 -- * Navigating the clock tree

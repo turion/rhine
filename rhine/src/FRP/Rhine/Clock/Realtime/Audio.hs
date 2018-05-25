@@ -93,7 +93,7 @@ instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
   type Time (AudioClock rate bufferSize) = UTCTime
   type Tag  (AudioClock rate bufferSize) = Maybe Double
 
-  startClock audioClock = do
+  initClock audioClock = do
     let
       step       = picosecondsToDiffTime -- The only sufficiently precise conversion function
                      $ round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
@@ -139,7 +139,7 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
   type Time (PureAudioClock rate) = Double
   type Tag  (PureAudioClock rate) = ()
 
-  startClock audioClock = return
+  initClock audioClock = return
     ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
     , 0
     )

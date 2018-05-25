@@ -38,7 +38,7 @@ data GlossEventClock = GlossEventClock
 instance Clock m GlossEventClock where
   type Time GlossEventClock = ()
   type Tag  GlossEventClock = Event
-  startClock _ = error errMsg
+  initClock _ = error errMsg
 
 -- | The clock that ticks for every @gloss@ simulation step,
 --   but only shows the time delta in the tag.
@@ -48,7 +48,7 @@ data GlossSimulationClock_ = GlossSimulationClock_
 instance Clock m GlossSimulationClock_ where
   type Time GlossSimulationClock_ = ()
   type Tag  GlossSimulationClock_ = Float
-  startClock _ = error errMsg
+  initClock _ = error errMsg
 
 -- | The clock that ticks for every @gloss@ simulation step.
 --   Use 'withProperSimClock' to transform to 'GlossSimulationClock_'.
@@ -57,7 +57,7 @@ data GlossSimulationClock = GlossSimulationClock
 instance Clock m GlossSimulationClock where
   type Time GlossSimulationClock = Float
   type Tag  GlossSimulationClock = ()
-  startClock _ = error errMsg
+  initClock _ = error errMsg
 
 -- | To use all features of the 'ClSF' framework,
 --   write your synchronous stream function on the 'GlossSimulationClock'
@@ -82,7 +82,7 @@ data GlossGraphicsClock = GlossGraphicsClock
 instance Clock m GlossGraphicsClock where
   type Time GlossGraphicsClock = ()
   type Tag  GlossGraphicsClock = ()
-  startClock _ = error errMsg
+  initClock _ = error errMsg
 
 -- | A schedule you can't actually use, for internal purposes.
 glossSchedule :: Schedule Identity (SelectClock GlossEventClock a) GlossSimulationClock_

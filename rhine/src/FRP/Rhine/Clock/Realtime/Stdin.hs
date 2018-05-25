@@ -22,7 +22,7 @@ instance MonadIO m => Clock m StdinClock where
   type Time StdinClock = UTCTime
   type Tag  StdinClock = String
 
-  startClock _ = do
+  initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
       (     arrM_ (liftIO getCurrentTime)
