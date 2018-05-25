@@ -57,11 +57,10 @@ tagS :: Monad m => ClSF m cl a (Tag cl)
 tagS = timeInfoOf tag
 
 -- | Calculate the time passed since the 'ClSF' was instantiated.
-timeSinceSimStart :: (Monad m, TimeDomain td) => BehaviourF m td a (Diff td)
-timeSinceSimStart = proc _ -> do
-  time      <- timeInfoOf absolute -< ()
-  startTime <- keepFirst           -< time
-  returnA                          -< time `diffTime` startTime
+timeSinceSimStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
+timeSinceSimStart = absoluteS >>> proc time -> do
+  startTime <- keepFirst -< time
+  returnA                -< time `diffTime` startTime
 
 
 -- * Useful aliases
