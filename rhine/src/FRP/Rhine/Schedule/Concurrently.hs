@@ -78,7 +78,7 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
 concurrentlyExcept
   :: ( Clock (ExceptT e IO) cl1
      , Clock (ExceptT e IO) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule (ExceptT e IO) cl1 cl2
 concurrentlyExcept = Schedule $ \cl1 cl2 -> do
@@ -102,8 +102,8 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
     return (runningSchedule, initTime)
   where
     launchSubThread cl leftright iMVar mvar errorref = forkIO $ do
-      started <- runExceptT $ startClock cl
-      case started of
+      initialised <- runExceptT $ initClock cl
+      case initialised of
         Right (runningClock, initTime) -> do
           putMVar iMVar $ Right initTime
           Left e <- runExceptT $ reactimate $ runningClock >>> proc (td, tag2) -> do
@@ -113,7 +113,7 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
             returnA -< ()
           putMVar mvar $ Left e -- Either throw own exception or acknowledge the exception from the other clock
         Left e -> void $ putMVar iMVar $ Left e
-    catchAndDrain mvar startScheduleAction = catchE startScheduleAction $ \e -> do
+    catchAndDrain mvar initScheduleAction = catchE initScheduleAction $ \e -> do
       _ <- reactimate $ (arrM_ $ ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
       throwE e
 
@@ -121,10 +121,10 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
 concurrentlyMaybe
   :: ( Clock (MaybeT IO) cl1
      , Clock (MaybeT IO) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule (MaybeT IO) cl1 cl2
-concurrentlyMaybe = Schedule $ \cl1 cl2 -> startSchedule
+concurrentlyMaybe = Schedule $ \cl1 cl2 -> initSchedule
   (hoistSchedule exceptTIOToMaybeTIO concurrentlyExcept)
     (HoistClock cl1 maybeTIOToExceptTIO)
     (HoistClock cl2 maybeTIOToExceptTIO)
