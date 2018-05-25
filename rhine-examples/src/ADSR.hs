@@ -114,7 +114,7 @@ linearly
   -> Diff time -- ^ How far overdue the interpolation already is
   -> Behaviour (ExceptT (Diff time) m) time amplitude
 linearly timeSpan initialAmplitude finalAmplitude overdue = proc _ -> do
-  time <- (overdue +) ^<< timeSinceSimStart -< ()
+  time <- (overdue +) ^<< sinceStart -< ()
   let
     remainingTime = timeSpan - time
     currentLevel  = ( initialAmplitude * remainingTime

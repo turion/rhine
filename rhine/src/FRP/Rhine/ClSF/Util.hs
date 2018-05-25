@@ -57,8 +57,8 @@ tagS :: Monad m => ClSF m cl a (Tag cl)
 tagS = timeInfoOf tag
 
 -- | Calculate the time passed since the 'ClSF' was instantiated.
-timeSinceSimStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
-timeSinceSimStart = absoluteS >>> proc time -> do
+sinceStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
+sinceStart = absoluteS >>> proc time -> do
   startTime <- keepFirst -< time
   returnA                -< time `diffTime` startTime
 
@@ -228,9 +228,9 @@ timer
   => Diff td
   -> BehaviorF (ExceptT () m) td a (Diff td)
 timer diff = proc _ -> do
-  sinceSimStart <- timeSinceSimStart -< ()
-  _             <- throwOn ()        -< sinceSimStart > diff
-  returnA                            -< sinceSimStart
+  time <- sinceStart -< ()
+  _    <- throwOn () -< time > diff
+  returnA            -< time
 
 -- | Like 'timer_', but doesn't output the remaining time at all.
 timer_
