@@ -141,7 +141,7 @@ data RescaledClock cl time = RescaledClock
 instance (Monad m, TimeDomain time, Clock m cl)
       => Clock m (RescaledClock cl time) where
   type Time (RescaledClock cl time) = time
-  type Tag          (RescaledClock cl time) = Tag cl
+  type Tag  (RescaledClock cl time) = Tag cl
   initClock (RescaledClock cl f) = do
     (runningClock, initTime) <- initClock cl
     return
@@ -161,7 +161,7 @@ data RescaledClockM m cl time = RescaledClockM
 instance (Monad m, TimeDomain time, Clock m cl)
       => Clock m (RescaledClockM m cl time) where
   type Time (RescaledClockM m cl time) = time
-  type Tag          (RescaledClockM m cl time) = Tag cl
+  type Tag  (RescaledClockM m cl time) = Tag cl
   initClock RescaledClockM {..} = do
     (runningClock, initTime) <- initClock unscaledClockM
     rescaledInitTime         <- rescaleM initTime
@@ -191,7 +191,7 @@ data RescaledClockS m cl time tag = RescaledClockS
 instance (Monad m, TimeDomain time, Clock m cl)
       => Clock m (RescaledClockS m cl time tag) where
   type Time (RescaledClockS m cl time tag) = time
-  type Tag          (RescaledClockS m cl time tag) = tag
+  type Tag  (RescaledClockS m cl time tag) = tag
   initClock RescaledClockS {..} = do
     (runningClock, initTime) <- initClock unscaledClockS
     (rescaling, rescaledInitTime) <- rescaleS initTime
@@ -224,7 +224,7 @@ data HoistClock m1 m2 cl = HoistClock
 instance (Monad m1, Monad m2, Clock m1 cl)
       => Clock m2 (HoistClock m1 m2 cl) where
   type Time (HoistClock m1 m2 cl) = Time cl
-  type Tag          (HoistClock m1 m2 cl) = Tag          cl
+  type Tag  (HoistClock m1 m2 cl) = Tag  cl
   initClock HoistClock {..} = do
     (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
     let hoistMSF = liftMSFPurer
