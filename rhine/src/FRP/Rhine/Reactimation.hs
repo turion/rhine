@@ -10,11 +10,11 @@ import Data.MonadicStreamFunction
 import FRP.Rhine.Clock
 import FRP.Rhine.Reactimation.Tick
 import FRP.Rhine.Schedule
-import FRP.Rhine.SF
+import FRP.Rhine.SN
 
 
 {- |
-An 'SF' together with a clock of matching type 'cl',
+An 'SN' together with a clock of matching type 'cl',
 A 'Rhine' is a reactive program, possibly with open inputs and outputs.
 If the input and output types 'a' and 'b' are both '()',
 that is, the 'Rhine' is "closed",
@@ -22,7 +22,7 @@ then it is a standalone reactive program
 that can be run with the function 'flow'.
 -}
 data Rhine m cl a b = Rhine
-  { sf    :: SF m cl a b
+  { sn    :: SN m cl a b
   , clock :: cl
   }
 
@@ -38,16 +38,16 @@ in a monad 'm'.
 Basic usage (synchronous case):
 
 @
-sensor :: SyncSF MyMonad MyClock () a
-sensor = arrMSync_ produceData
+sensor :: ClSF MyMonad MyClock () a
+sensor = constMCl produceData
 
-processing :: SyncSF MyMonad MyClock a b
+processing :: ClSF MyMonad MyClock a b
 processing = ...
 
-actuator :: SyncSF MyMonad MyClock b ()
-actuator = arrMSync consumeData
+actuator :: ClSF MyMonad MyClock b ()
+actuator = arrMCl consumeData
 
-mainSF :: SyncSF MyMonad MyClock () ()
+mainSF :: ClSF MyMonad MyClock () ()
 mainSF = sensor >-> processing >-> actuator
 
 main :: MyMonad ()
@@ -57,16 +57,16 @@ main = flow $ mainSF @@ clock
 -- TODO Can we chuck the constraints into Clock m cl?
 flow
   :: ( Monad m, Clock m cl
-     , TimeDomainOf cl ~ TimeDomainOf (Leftmost  cl)
-     , TimeDomainOf cl ~ TimeDomainOf (Rightmost cl)
+     , Time cl ~ Time (Leftmost  cl)
+     , Time cl ~ Time (Rightmost cl)
      )
   => Rhine m cl () () -> m ()
 flow Rhine {..} = do
-  (runningClock, initTime) <- startClock clock
+  (runningClock, initTime) <- initClock clock
   -- Run the main loop
   flow' runningClock $ createTickable
     (trivialResamplingBuffer clock)
-    sf
+    sn
     (trivialResamplingBuffer clock)
     initTime
     where

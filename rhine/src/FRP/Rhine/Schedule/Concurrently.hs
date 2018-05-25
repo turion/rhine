@@ -26,7 +26,7 @@ import FRP.Rhine hiding (try, once_, throwMaybe)
 --   (since data processing and scheduling are separated concerns).
 concurrently
   :: ( Clock IO cl1, Clock IO cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule IO cl1 cl2
 concurrently = Schedule $ \cl1 cl2 -> do
@@ -39,7 +39,7 @@ concurrently = Schedule $ \cl1 cl2 -> do
   return (arrM_ $ takeMVar mvar, initTime)
   where
     launchSubthread cl leftright iMVar mvar = forkIO $ do
-      (runningClock, initTime) <- startClock cl
+      (runningClock, initTime) <- initClock cl
       putMVar iMVar initTime
       reactimate $ runningClock >>> second (arr leftright) >>> arrM (putMVar mvar)
 -- TODO These threads can't be killed from outside easily since we've lost their ids
@@ -49,7 +49,7 @@ concurrentlyWriter
   :: ( Monoid w
      , Clock (WriterT w IO) cl1
      , Clock (WriterT w IO) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule (WriterT w IO) cl1 cl2
 concurrentlyWriter = Schedule $ \cl1 cl2 -> do
@@ -66,11 +66,10 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
   return (arrM_ (WriterT $ takeMVar mvar), initTime)
   where
     launchSubthread cl leftright iMVar mvar = lift $ forkIO $ do
-      ((runningClock, initTime), w) <- runWriterT $ startClock cl
+      ((runningClock, initTime), w) <- runWriterT $ initClock cl
       putMVar iMVar (initTime, w)
-      reactimate $ proc _ -> do
-        (w', (td, tag_)) <- runWriterS runningClock -< ()
-        arrM (putMVar mvar)                        -< ((td, leftright tag_), w')
+      reactimate $ runWriterS runningClock >>> proc (w', (time, tag_)) ->
+        arrM (putMVar mvar) -< ((time, leftright tag_), w')
 
 -- | Schedule in the @ExceptT e IO@ monad.
 --   Whenever one clock encounters an exception in 'ExceptT',
@@ -79,7 +78,7 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
 concurrentlyExcept
   :: ( Clock (ExceptT e IO) cl1
      , Clock (ExceptT e IO) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule (ExceptT e IO) cl1 cl2
 concurrentlyExcept = Schedule $ \cl1 cl2 -> do
@@ -103,8 +102,8 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
     return (runningSchedule, initTime)
   where
     launchSubThread cl leftright iMVar mvar errorref = forkIO $ do
-      started <- runExceptT $ startClock cl
-      case started of
+      initialised <- runExceptT $ initClock cl
+      case initialised of
         Right (runningClock, initTime) -> do
           putMVar iMVar $ Right initTime
           Left e <- runExceptT $ reactimate $ runningClock >>> proc (td, tag2) -> do
@@ -114,7 +113,7 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
             returnA -< ()
           putMVar mvar $ Left e -- Either throw own exception or acknowledge the exception from the other clock
         Left e -> void $ putMVar iMVar $ Left e
-    catchAndDrain mvar startScheduleAction = catchE startScheduleAction $ \e -> do
+    catchAndDrain mvar initScheduleAction = catchE initScheduleAction $ \e -> do
       _ <- reactimate $ (arrM_ $ ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
       throwE e
 
@@ -122,10 +121,10 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
 concurrentlyMaybe
   :: ( Clock (MaybeT IO) cl1
      , Clock (MaybeT IO) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule (MaybeT IO) cl1 cl2
-concurrentlyMaybe = Schedule $ \cl1 cl2 -> startSchedule
+concurrentlyMaybe = Schedule $ \cl1 cl2 -> initSchedule
   (hoistSchedule exceptTIOToMaybeTIO concurrentlyExcept)
     (HoistClock cl1 maybeTIOToExceptTIO)
     (HoistClock cl2 maybeTIOToExceptTIO)

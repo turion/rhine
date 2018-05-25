@@ -5,7 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
-module FRP.Rhine.Clock.Step where
+module FRP.Rhine.Clock.FixedStep where
 
 
 -- base
@@ -23,31 +23,32 @@ import FRP.Rhine
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
 
--- | A pure (side effect free) clock ticking at multiples of 'n'.
+-- | A pure (side effect free) clock with fixed step size,
+--   i.e. ticking at multiples of 'n'.
 --   The tick rate is in the type signature,
 --   which prevents composition of signals at different rates.
-data Step (n :: Nat) where
-  Step :: KnownNat n => Step n -- TODO Does the constraint bring any benefit?
+data FixedStep (n :: Nat) where
+  FixedStep :: KnownNat n => FixedStep n -- TODO Does the constraint bring any benefit?
 
 -- | Extract the type-level natural number as an integer.
-stepsize :: Step n -> Integer
-stepsize step@Step = natVal step
+stepsize :: FixedStep n -> Integer
+stepsize fixedStep@FixedStep = natVal fixedStep
 
-instance Monad m => Clock m (Step n) where
-  type TimeDomainOf (Step n) = Integer
-  type Tag          (Step n) = ()
-  startClock cl = return
+instance Monad m => Clock m (FixedStep n) where
+  type Time (FixedStep n) = Integer
+  type Tag  (FixedStep n) = ()
+  initClock cl = return
     ( count >>> arr (* stepsize cl)
       &&& arr (const ())
     , 0
     )
 
 
--- | Two 'Step' clocks can always be scheduled without side effects.
-scheduleStep
+-- | Two 'FixedStep' clocks can always be scheduled without side effects.
+scheduleFixedStep
   :: Monad m
-  => Schedule m (Step n1) (Step n2)
-scheduleStep = Schedule f where
+  => Schedule m (FixedStep n1) (FixedStep n2)
+scheduleFixedStep = Schedule f where
   f cl1 cl2 = return (msf, 0)
     where
       n1 = stepsize cl1
@@ -59,15 +60,15 @@ scheduleStep = Schedule f where
 
 -- TODO The problem is that the schedule doesn't give a guarantee where in the n ticks of the first clock the second clock will tick.
 -- For this to work, it has to be the last.
--- With scheduleStep, this works,
+-- With scheduleFixedStep, this works,
 -- but the user might implement an incorrect schedule.
-downsampleStep
+downsampleFixedStep
   :: (KnownNat n, Monad m)
-  => ResamplingBuffer m (Step k) (Step (n * k)) a (Vector n a)
-downsampleStep = collect >>-^ arr (fromList >>> assumeSize)
+  => ResamplingBuffer m (FixedStep k) (FixedStep (n * k)) a (Vector n a)
+downsampleFixedStep = collect >>-^ arr (fromList >>> assumeSize)
   where
     assumeSize = fromMaybe $ error $ unwords
       [ "You are using an incorrectly implemented schedule"
-      , "for two Step clocks."
-      , "Use a correct schedule like downsampleStep."
+      , "for two FixedStep clocks."
+      , "Use a correct schedule like downsampleFixedStep."
       ]

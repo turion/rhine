@@ -19,10 +19,10 @@ outputting the entered line as its |Tag|.
 data StdinClock = StdinClock
 
 instance MonadIO m => Clock m StdinClock where
-  type TimeDomainOf StdinClock = UTCTime
-  type Tag          StdinClock = String
+  type Time StdinClock = UTCTime
+  type Tag  StdinClock = String
 
-  startClock _ = do
+  initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
       (     arrM_ (liftIO getCurrentTime)
