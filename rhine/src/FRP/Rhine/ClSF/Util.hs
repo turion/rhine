@@ -56,7 +56,25 @@ absoluteS = timeInfoOf absolute
 tagS :: Monad m => ClSF m cl a (Tag cl)
 tagS = timeInfoOf tag
 
--- | Calculate the time passed since the 'ClSF' was instantiated.
+{- |
+Calculate the time passed since this 'ClSF' was instantiated.
+This is _not_ the same as 'sinceInitS',
+which measures the time since clock initialisation.
+
+For example, the following gives a sawtooth signal:
+
+@
+sawtooth = safely $ do
+  try $ sinceStart >>> proc time -> do
+    throwOn () -< time > 1
+    returnA    -< time
+  safe sawtooth
+@
+
+If you replace 'sinceStart' by 'sinceInitS',
+it will usually hang after one second,
+since it doesn't reset after restarting the sawtooth.
+-}
 sinceStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
 sinceStart = absoluteS >>> proc time -> do
   startTime <- keepFirst -< time

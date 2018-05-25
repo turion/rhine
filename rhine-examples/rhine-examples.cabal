@@ -55,3 +55,11 @@ executable EventClock
                      , rhine        == 0.5.*
                      , random       == 1.1.*
   default-language:    Haskell2010
+
+executable Sawtooth
+  hs-source-dirs:      src
+  main-is:             Sawtooth.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base  >= 4.9
+                     , rhine        == 0.5.*
+  default-language:    Haskell2010
