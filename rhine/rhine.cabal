@@ -63,7 +63,7 @@ library
     FRP.Rhine.Clock.Realtime.Millisecond
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
-    FRP.Rhine.Clock.Step
+    FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.Tick
     FRP.Rhine.ResamplingBuffer
