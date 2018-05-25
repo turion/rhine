@@ -42,13 +42,13 @@ and `(>>=)` is exception handling.
 type ClSFExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
 
 {- | A clock polymorphic 'ClSFExcept'.
-Any clock with time domain @td@ may occur.
+Any clock with time domain @time@ may occur.
 -}
-type BehaviourFExcept m td a b e
-  = forall cl. td ~ Time cl => ClSFExcept m cl a b e
+type BehaviourFExcept m time a b e
+  = forall cl. time ~ Time cl => ClSFExcept m cl a b e
 
 -- | Compatibility to U.S. american spelling.
-type BehaviorFExcept m td a b e = BehaviourFExcept m td a b e
+type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
 
 
 

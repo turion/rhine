@@ -45,13 +45,13 @@ would be:
   --   for each tick of the clock.
   --   Since 'createMessage' works for arbitrary clocks (and doesn't need further input data),
   --   it is a 'Behaviour'.
-  --   @td@ is the 'TimeDomain' of any clock used to sample,
+  --   @time@ is the 'TimeDomain' of any clock used to sample,
   --   and it needs to be constrained in order for time differences
   --   to have a 'Show' instance.
   createMessage
-    :: (Monad m, Show (Diff td))
+    :: (Monad m, Show (Diff time))
     => String
-    -> Behaviour m td String
+    -> Behaviour m time String
   createMessage str
     =   timeInfoOf sinceInit >-> arr show
     >-> arr (("Clock " ++ str ++ " has ticked at: ") ++)

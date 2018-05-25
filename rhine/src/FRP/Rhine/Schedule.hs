@@ -70,7 +70,7 @@ flipSchedule Schedule {..} = Schedule initSchedule_
 rescaledSchedule
   :: Monad m
   => Schedule m cl1 cl2
-  -> Schedule m (RescaledClock cl1 td) (RescaledClock cl2 td)
+  -> Schedule m (RescaledClock cl1 time) (RescaledClock cl2 time)
 rescaledSchedule schedule = Schedule $ initSchedule'
   where
     initSchedule' cl1 cl2 = initSchedule (rescaledScheduleS schedule) (rescaledClockToS cl1) (rescaledClockToS cl2)
@@ -79,7 +79,7 @@ rescaledSchedule schedule = Schedule $ initSchedule'
 rescaledScheduleS
   :: Monad m
   => Schedule m cl1 cl2
-  -> Schedule m (RescaledClockS m cl1 td tag1) (RescaledClockS m cl2 td tag2)
+  -> Schedule m (RescaledClockS m cl1 time tag1) (RescaledClockS m cl2 time tag2)
 rescaledScheduleS Schedule {..} = Schedule initSchedule'
   where
     initSchedule' (RescaledClockS cl1 rescaleS1) (RescaledClockS cl2 rescaleS2) = do

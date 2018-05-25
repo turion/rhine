@@ -50,16 +50,16 @@ schedule = Schedule {..}
       raceResult <- race (unMSF rc1 ()) (unMSF rc2 ())
       case raceResult of
         -- The first clock ticks first...
-        Left  (((td, tag1), rc1'), cont2) -> return
+        Left  (((time, tag1), rc1'), cont2) -> return
           -- so we can emit its time stamp...
-          ( (td, Left tag1)
+          ( (time, Left tag1)
           -- and continue.
           , runningSchedule cl1 cl2 rc1' (MSF $ const cont2)
           )
         -- The second clock ticks first...
-        Right (cont1, ((td, tag2), rc2')) -> return
+        Right (cont1, ((time, tag2), rc2')) -> return
           -- so we can emit its time stamp...
-          ( (td, Right tag2)
+          ( (time, Right tag2)
           -- and continue.
           , runningSchedule cl1 cl2 (MSF $ const cont1) rc2'
           )

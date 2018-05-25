@@ -38,19 +38,19 @@ type ClSignal m cl a = forall arbitrary . ClSF m cl arbitrary a
 
 -- | A (side-effectful) behaviour is a time-aware stream
 --   that doesn't depend on a particular clock.
---   @td@ denotes the 'TimeDomain'.
-type Behaviour m td a = forall cl. td ~ Time cl => ClSignal m cl a
+--   @time@ denotes the 'TimeDomain'.
+type Behaviour m time a = forall cl. time ~ Time cl => ClSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
-type Behavior  m td a = Behaviour m td a
+type Behavior  m time a = Behaviour m time a
 
 -- | A (side-effectful) behaviour function is a time-aware synchronous stream
 --   function that doesn't depend on a particular clock.
---   @td@ denotes the 'TimeDomain'.
-type BehaviourF m td a b = forall cl. td ~ Time cl => ClSF m cl a b
+--   @time@ denotes the 'TimeDomain'.
+type BehaviourF m time a b = forall cl. time ~ Time cl => ClSF m cl a b
 
 -- | Compatibility to U.S. american spelling.
-type BehaviorF  m td a b = BehaviourF m td a b
+type BehaviorF  m time a b = BehaviourF m time a b
 
 -- * Utilities to create 'ClSF's from simpler data
 

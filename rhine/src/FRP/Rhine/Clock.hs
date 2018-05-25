@@ -105,43 +105,43 @@ genTimeInfo _ initialTime = proc (absolute, tag) -> do
 -- ** Rescalings of time domains
 
 -- | A pure morphism of time domains is just a function.
-type Rescaling cl td = Time cl -> td
+type Rescaling cl time = Time cl -> time
 
 -- | An effectful morphism of time domains is a Kleisli arrow.
 --   It can use a side effect to rescale a point in one time domain
 --   into another one.
-type RescalingM m cl td = Time cl -> m td
+type RescalingM m cl time = Time cl -> m time
 
 -- | An effectful, stateful morphism of time domains is an 'MSF'
 --   that uses side effects to rescale a point in one time domain
 --   into another one.
-type RescalingS m cl td tag = MSF m (Time cl, Tag cl) (td, tag)
+type RescalingS m cl time tag = MSF m (Time cl, Tag cl) (time, tag)
 
 -- | Like 'RescalingS', but allows for an initialisation
 --   of the rescaling morphism, together with the initial time.
-type RescalingSInit m cl td tag = Time cl -> m (RescalingS m cl td tag, td)
+type RescalingSInit m cl time tag = Time cl -> m (RescalingS m cl time tag, time)
 
 -- | Convert an effectful morphism of time domains into a stateful one with initialisation.
---   Think of its type as @RescalingM m cl td -> RescalingSInit m cl td tag@,
+--   Think of its type as @RescalingM m cl time -> RescalingSInit m cl time tag@,
 --   although this type is ambiguous.
 rescaleMToSInit
   :: Monad m
-  => (td1 -> m td2) -> td1 -> m (MSF m (td1, tag) (td2, tag), td2)
-rescaleMToSInit rescaling td1 = (arrM rescaling *** Category.id, ) <$> rescaling td1
+  => (time1 -> m time2) -> time1 -> m (MSF m (time1, tag) (time2, tag), time2)
+rescaleMToSInit rescaling time1 = (arrM rescaling *** Category.id, ) <$> rescaling time1
 
 -- ** Applying rescalings to clocks
 
 -- | Applying a morphism of time domains yields a new clock.
-data RescaledClock cl td = RescaledClock
+data RescaledClock cl time = RescaledClock
   { unscaledClock :: cl
-  , rescale       :: Rescaling cl td
+  , rescale       :: Rescaling cl time
   }
 
 
-instance (Monad m, TimeDomain td, Clock m cl)
-      => Clock m (RescaledClock cl td) where
-  type Time (RescaledClock cl td) = td
-  type Tag          (RescaledClock cl td) = Tag cl
+instance (Monad m, TimeDomain time, Clock m cl)
+      => Clock m (RescaledClock cl time) where
+  type Time (RescaledClock cl time) = time
+  type Tag          (RescaledClock cl time) = Tag cl
   initClock (RescaledClock cl f) = do
     (runningClock, initTime) <- initClock cl
     return
@@ -151,17 +151,17 @@ instance (Monad m, TimeDomain td, Clock m cl)
 
 -- | Instead of a mere function as morphism of time domains,
 --   we can transform one time domain into the other with an effectful morphism.
-data RescaledClockM m cl td = RescaledClockM
+data RescaledClockM m cl time = RescaledClockM
   { unscaledClockM :: cl
   -- ^ The clock before the rescaling
-  , rescaleM       :: RescalingM m cl td
+  , rescaleM       :: RescalingM m cl time
   -- ^ Computing the new time effectfully from the old time
   }
 
-instance (Monad m, TimeDomain td, Clock m cl)
-      => Clock m (RescaledClockM m cl td) where
-  type Time (RescaledClockM m cl td) = td
-  type Tag          (RescaledClockM m cl td) = Tag cl
+instance (Monad m, TimeDomain time, Clock m cl)
+      => Clock m (RescaledClockM m cl time) where
+  type Time (RescaledClockM m cl time) = time
+  type Tag          (RescaledClockM m cl time) = Tag cl
   initClock RescaledClockM {..} = do
     (runningClock, initTime) <- initClock unscaledClockM
     rescaledInitTime         <- rescaleM initTime
@@ -171,7 +171,7 @@ instance (Monad m, TimeDomain td, Clock m cl)
       )
 
 -- | A 'RescaledClock' is trivially a 'RescaledClockM'.
-rescaledClockToM :: Monad m => RescaledClock cl td -> RescaledClockM m cl td
+rescaledClockToM :: Monad m => RescaledClock cl time -> RescaledClockM m cl time
 rescaledClockToM RescaledClock {..} = RescaledClockM
   { unscaledClockM = unscaledClock
   , rescaleM       = return . rescale
@@ -180,18 +180,18 @@ rescaledClockToM RescaledClock {..} = RescaledClockM
 
 -- | Instead of a mere function as morphism of time domains,
 --   we can transform one time domain into the other with a monadic stream function.
-data RescaledClockS m cl td tag = RescaledClockS
+data RescaledClockS m cl time tag = RescaledClockS
   { unscaledClockS :: cl
   -- ^ The clock before the rescaling
-  , rescaleS       :: RescalingSInit m cl td tag
+  , rescaleS       :: RescalingSInit m cl time tag
   -- ^ The rescaling stream function, and rescaled initial time,
   --   depending on the initial time before rescaling
   }
 
-instance (Monad m, TimeDomain td, Clock m cl)
-      => Clock m (RescaledClockS m cl td tag) where
-  type Time (RescaledClockS m cl td tag) = td
-  type Tag          (RescaledClockS m cl td tag) = tag
+instance (Monad m, TimeDomain time, Clock m cl)
+      => Clock m (RescaledClockS m cl time tag) where
+  type Time (RescaledClockS m cl time tag) = time
+  type Tag          (RescaledClockS m cl time tag) = tag
   initClock RescaledClockS {..} = do
     (runningClock, initTime) <- initClock unscaledClockS
     (rescaling, rescaledInitTime) <- rescaleS initTime
@@ -203,7 +203,7 @@ instance (Monad m, TimeDomain td, Clock m cl)
 -- | A 'RescaledClockM' is trivially a 'RescaledClockS'.
 rescaledClockMToS
   :: Monad m
-  => RescaledClockM m cl td -> RescaledClockS m cl td (Tag cl)
+  => RescaledClockM m cl time -> RescaledClockS m cl time (Tag cl)
 rescaledClockMToS RescaledClockM {..} = RescaledClockS
   { unscaledClockS = unscaledClockM
   , rescaleS       = rescaleMToSInit rescaleM
@@ -212,7 +212,7 @@ rescaledClockMToS RescaledClockM {..} = RescaledClockS
 -- | A 'RescaledClock' is trivially a 'RescaledClockS'.
 rescaledClockToS
   :: Monad m
-  => RescaledClock cl td -> RescaledClockS m cl td (Tag cl)
+  => RescaledClock cl time -> RescaledClockS m cl time (Tag cl)
 rescaledClockToS = rescaledClockMToS . rescaledClockToM
 
 -- | Applying a monad morphism yields a new clock.

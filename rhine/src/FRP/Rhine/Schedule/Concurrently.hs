@@ -64,6 +64,5 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
     launchSubthread cl leftright iMVar mvar = lift $ forkIO $ do
       ((runningClock, initTime), w) <- runWriterT $ initClock cl
       putMVar iMVar (initTime, w)
-      reactimate $ proc _ -> do
-        (w', (td, tag_)) <- runWriterS runningClock -< ()
-        arrM (putMVar mvar)                        -< ((td, leftright tag_), w')
+      reactimate $ runWriterS runningClock >>> proc (w', (time, tag_)) ->
+        arrM (putMVar mvar) -< ((time, leftright tag_), w')
