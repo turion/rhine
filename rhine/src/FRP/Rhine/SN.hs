@@ -28,7 +28,7 @@ data SN m cl a b where
   Synchronous
     :: ( cl ~ Leftmost cl, cl ~ Rightmost cl)
     => ClSF m cl a b
-    -> SN     m cl a b
+    -> SN   m cl a b
   -- | Two 'SN's may be sequentially composed if there is a matching 'ResamplingBuffer' between them.
   Sequential
     :: ( Clock m clab, Clock m clcd
