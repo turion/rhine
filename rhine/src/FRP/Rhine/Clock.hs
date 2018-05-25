@@ -43,7 +43,7 @@ and a running clock is returned.
 type RunningClockInit m time tag = m (RunningClock m time tag, time)
 
 {- |
-Since we want to leverage Haskell's type system to annotate signal functions by their clocks,
+Since we want to leverage Haskell's type system to annotate signal networks by their clocks,
 each clock must be an own type, 'cl'.
 Different values of the same clock type should tick at the same speed,
 and only differ in implementation details.

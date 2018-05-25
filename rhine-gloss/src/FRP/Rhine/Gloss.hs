@@ -41,7 +41,7 @@ import FRP.Rhine.Gloss.Internals
 -- TODO Consider generalising to IO
 
 
--- | The overall clock of a valid @rhine@ 'SF' that can be run by @gloss@.
+-- | The overall clock of a valid @rhine@ 'SN' that can be run by @gloss@.
 --   @a@ is the type of subevents that are selected.
 type GlossClock a
   = SequentialClock Identity
@@ -69,7 +69,7 @@ buildGlossRhine select clsfSim
   >-- collect -@- glossSchedule
   --> withProperSimClock clsfSim @@ GlossSimulationClock_
 
--- | The main function that will start the @gloss@ backend and run the 'SF'.
+-- | The main function that will start the @gloss@ backend and run the 'SN'.
 flowGloss
   :: Display      -- ^ Display mode (e.g. 'InWindow' or 'FullScreen').
   -> Color        -- ^ Background color.
@@ -84,7 +84,7 @@ flowGloss display color n Rhine {..}
            GlossSimulationClock_ GlossGraphicsClock
            Picture               Picture
     graphicsBuffer = keepLast Blank
-    world = createTickable (trivialResamplingBuffer clock) sf graphicsBuffer ()
+    world = createTickable (trivialResamplingBuffer clock) sn graphicsBuffer ()
     getPic Tickable { buffer2 } = fst $ runIdentity $ get buffer2 $ TimeInfo () () () ()
     handleEvent event tickable = case select (sequentialCl1 clock) event of
       Just a  -> runIdentity $ tick tickable () $ Left a -- Event is relevant

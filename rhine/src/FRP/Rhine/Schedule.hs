@@ -120,7 +120,7 @@ readerSchedule Schedule {..}
 
 
 -- | Two clocks can be combined with a schedule as a clock
---   for an asynchronous sequential composition of signal functions.
+--   for an asynchronous sequential composition of signal networks.
 data SequentialClock m cl1 cl2
   = Time cl1 ~ Time cl2
   => SequentialClock
@@ -141,7 +141,7 @@ instance (Monad m, Clock m cl1, Clock m cl2)
 
 
 -- | Two clocks can be combined with a schedule as a clock
---   for an asynchronous parallel composition of signal functions.
+--   for an asynchronous parallel composition of signal networks.
 data ParallelClock m cl1 cl2
   = Time cl1 ~ Time cl2
   => ParallelClock

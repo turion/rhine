@@ -78,8 +78,8 @@ library
     FRP.Rhine.Schedule
     FRP.Rhine.Schedule.Concurrently
     FRP.Rhine.Schedule.Trans
-    FRP.Rhine.SF
-    FRP.Rhine.SF.Combinators
+    FRP.Rhine.SN
+    FRP.Rhine.SN.Combinators
     FRP.Rhine.ClSF
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except

@@ -4,12 +4,12 @@
 
 {- | General mnemonic for combinators:
 
-* @ annotates a data processing unit such as a signal function or a buffer
+* @ annotates a data processing unit such as a signal function, network or buffer
   with temporal information like a clock or a schedule.
 * @*@ composes parallely.
 * @>@ composes sequentially.
 -}
-module FRP.Rhine.SF.Combinators where
+module FRP.Rhine.SN.Combinators where
 
 
 -- rhine
@@ -17,15 +17,15 @@ import FRP.Rhine.Clock
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Reactimation
 import FRP.Rhine.Schedule
-import FRP.Rhine.SF
+import FRP.Rhine.SN
 import FRP.Rhine.ClSF
 
 
--- * Combinators and syntactic sugar for high-level composition of signal functions.
+-- * Combinators and syntactic sugar for high-level composition of signal networks.
 
 
 infix 5 @@
--- | Create a synchronous 'Rhine' by combining a synchronous SF with a matching clock.
+-- | Create a synchronous 'Rhine' by combining a clocked signal function with a matching clock.
 --   Synchronicity is ensured by requiring that data enters (@Leftmost cl@)
 --   and leaves (@Rightmost cl@) the system at the same as it is processed (@cl@).
 (@@) :: ( cl ~ Leftmost cl
@@ -35,7 +35,7 @@ infix 5 @@
 
 
 -- | A point at which sequential asynchronous composition
---   ("resampling") of signal functions can happen.
+--   ("resampling") of signal networks can happen.
 data ResamplingPoint m cla clb a b = ResamplingPoint
   (ResamplingBuffer m (Rightmost cla) (Leftmost clb) a b)
   (Schedule m cla clb)
@@ -94,8 +94,8 @@ infixr 1 -->
       => RhineAndResamplingPoint   m cl1 cl2  a b
       -> Rhine m                         cl2    b c
       -> Rhine m  (SequentialClock m cl1 cl2) a   c
-RhineAndResamplingPoint (Rhine sf1 cl1) (ResamplingPoint rb cc) --> (Rhine sf2 cl2)
- = Rhine (Sequential sf1 rb sf2) (SequentialClock cl1 cl2 cc)
+RhineAndResamplingPoint (Rhine sn1 cl1) (ResamplingPoint rb cc) --> (Rhine sn2 cl2)
+ = Rhine (Sequential sn1 rb sn2) (SequentialClock cl1 cl2 cc)
 
 -- | A purely syntactical convenience construction
 --   allowing for ternary syntax for parallel composition, described below.
@@ -137,5 +137,5 @@ infix 3 @**
        => RhineParallelAndSchedule m cl1 cl2 a b
        -> Rhine m cl2 a b
        -> Rhine m (ParallelClock m cl1 cl2) a b
-RhineParallelAndSchedule (Rhine sf1 cl1) schedule @** (Rhine sf2 cl2)
-  = Rhine (Parallel sf1 sf2) (ParallelClock cl1 cl2 schedule)
+RhineParallelAndSchedule (Rhine sn1 cl1) schedule @** (Rhine sn2 cl2)
+  = Rhine (Parallel sn1 sn2) (ParallelClock cl1 cl2 schedule)
