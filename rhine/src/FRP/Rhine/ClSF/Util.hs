@@ -44,7 +44,7 @@ timeInfoOf f = arrM_ $ asks f
 sinceTickS :: Monad m => ClSF m cl a (Diff (Time cl))
 sinceTickS = timeInfoOf sinceTick
 
--- | Continuously return the time difference since the start of the program.
+-- | Continuously return the time difference since clock initialisation.
 sinceInitS :: Monad m => ClSF m cl a (Diff (Time cl))
 sinceInitS = timeInfoOf sinceInit
 

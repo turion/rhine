@@ -41,7 +41,7 @@ which can be run as `cd rhine-examples/ && cabal run Demonstration`,
 would be:
 
 ```haskell
-  -- | Create a simple message containing the time stamp since program start,
+  -- | Create a simple message containing the time stamp since initialisation,
   --   for each tick of the clock.
   --   Since 'createMessage' works for arbitrary clocks (and doesn't need further input data),
   --   it is a 'Behaviour'.

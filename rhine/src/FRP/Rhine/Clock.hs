@@ -36,11 +36,11 @@ that cause the environment to wait until the specified time is reached.
 type RunningClock m time tag = MSF m () (time, tag)
 
 {- |
-When starting a clock, the initial time is measured
+When initialising a clock, the initial time is measured
 (typically by means of a side effect),
 and a running clock is returned.
 -}
-type RunningClockStarter m time tag = m (RunningClock m time tag, time)
+type RunningClockInit m time tag = m (RunningClock m time tag, time)
 
 {- |
 Since we want to leverage Haskell's type system to annotate signal functions by their clocks,
@@ -60,7 +60,7 @@ class TimeDomain (Time cl) => Clock m cl where
   --   i.e. an effectful stream of tagged time stamps together with an initialisation time.
   initClock
     :: cl -- ^ The clock value, containing e.g. settings or device parameters
-    -> RunningClockStarter m (Time cl) (Tag cl) -- ^ The stream of time stamps, and the initial time
+    -> RunningClockInit m (Time cl) (Tag cl) -- ^ The stream of time stamps, and the initial time
 
 
 -- * Auxiliary definitions and utilities
