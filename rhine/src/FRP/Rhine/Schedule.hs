@@ -129,6 +129,8 @@ data SequentialClock m cl1 cl2
     , sequentialSchedule :: Schedule m cl1 cl2
     }
 
+-- | Abbrevation synonym.
+type SeqClock m cl1 cl2 = SequentialClock m cl1 cl2
 
 instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (SequentialClock m cl1 cl2) where
@@ -147,6 +149,9 @@ data ParallelClock m cl1 cl2
     , parallelCl2      :: cl2
     , parallelSchedule :: Schedule m cl1 cl2
     }
+
+-- | Abbrevation synonym.
+type ParClock m cl1 cl2 = ParallelClock m cl1 cl2
 
 instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (ParallelClock m cl1 cl2) where
