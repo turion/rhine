@@ -201,11 +201,11 @@ till
   -> ClSF (ExceptT  e     m) cl a   c
   -> ClSF (ExceptT (e, b) m) cl a b
 till clsf clsfe = proc a -> do
-  b <- liftClSF clsf   -< a
-  _ <- runClSFExcept synce -< (b, a)
+  b <- liftClSF clsf                -< a
+  _ <- runClSFExcept clsfeAndOutput -< (b, a)
   returnA -< b
     where
-      synce = do
+      clsfeAndOutput = do
         e      <- try $ clsfe <<< arr snd
         (b, _) <- currentInput
         return (e, b)

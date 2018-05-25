@@ -22,7 +22,7 @@ linear
   -> v -- ^ The initial position
   -> ResamplingBuffer m cl1 cl2 v v
 linear initVelocity initPosition
-  =    (derivativeFrom initPosition &&& syncId) &&& timeInfoOf sinceInit
+  =    (derivativeFrom initPosition &&& clId) &&& timeInfoOf sinceInit
   ^->> keepLast ((initVelocity, initPosition), 0)
   >>-^ proc ((velocity, lastPosition), sinceInit1) -> do
     sinceInit2 <- timeInfoOf sinceInit -< ()

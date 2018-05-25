@@ -118,8 +118,8 @@ arr_ = arr . const
 
 
 -- | The identity synchronous stream function.
-syncId :: Monad m => ClSF m cl a a
-syncId = Control.Category.id
+clId :: Monad m => ClSF m cl a a
+clId = Control.Category.id
 
 
 -- * Basic signal processing components
