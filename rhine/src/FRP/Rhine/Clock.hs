@@ -68,13 +68,13 @@ class TimeDomain (Time cl) => Clock m cl where
 -- | An annotated, rich time stamp.
 data TimeInfo cl = TimeInfo
   { -- | Time passed since the last tick
-    sinceTick  :: Diff (Time cl)
+    sinceTick :: Diff (Time cl)
     -- | Time passed since the initialisation of the clock
   , sinceInit :: Diff (Time cl)
     -- | The absolute time of the current tick
-  , absolute   :: Time cl
+  , absolute  :: Time cl
     -- | The tag annotation of the current tick
-  , tag        :: Tag cl
+  , tag       :: Tag cl
   }
 
 -- | A utility that changes the tag of a 'TimeInfo'.
