@@ -7,16 +7,16 @@ import Control.Monad.IO.Class
 -- rhine
 import Control.Monad.Schedule
 import FRP.Rhine
-import FRP.Rhine.Clock.Cycle
+import FRP.Rhine.Clock.Periodic
 
-type MyClock = CycleClock '[500, 1000]
+type MyClock = Periodic '[500, 1000]
 
 everyNowAndThen :: Monad m => ClSF m MyClock arbitrary String
 everyNowAndThen = sinceInitS >>> proc time ->
   returnA -< unwords ["It's now", show time, "o'clock."]
 
 mainRhine :: MonadIO m => Rhine (ScheduleT Integer m) MyClock () ()
-mainRhine = everyNowAndThen >-> arrMCl (liftIO . putStrLn) @@ CycleClock
+mainRhine = everyNowAndThen >-> arrMCl (liftIO . putStrLn) @@ Periodic
 
 main :: IO ()
 main = runScheduleIO $ flow mainRhine

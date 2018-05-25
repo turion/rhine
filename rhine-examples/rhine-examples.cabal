@@ -38,9 +38,9 @@ executable ADSR
   build-depends:       base         >= 4.9
                      , rhine        == 0.5.*
 
-executable CycleClock
+executable Periodic
   hs-source-dirs:      src
-  main-is:             CycleClock.hs
+  main-is:             Periodic.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base  >= 4.9
                      , rhine        == 0.5.*
