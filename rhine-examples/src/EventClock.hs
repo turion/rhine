@@ -44,7 +44,7 @@ randomNumbers = constMCl $ liftIO $ do
 -- | Each time an event arrives, this function is called.
 --   It simply outputs the event on the console.
 handleEvents :: (MonadIO m, Tag cl ~ String) => ClSF m cl () ()
-handleEvents = theTag >>> arrMCl (putStrLn >>> liftIO)
+handleEvents = tagS >>> arrMCl (putStrLn >>> liftIO)
 
 -- * Running the subsystems in the same thread, or in separate threads
 

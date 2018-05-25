@@ -40,16 +40,28 @@ printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
 timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = arrM_ $ asks f
 
+-- | Continuously return the time difference since the last tick.
+sinceTickS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceTickS = timeInfoOf sinceTick
+
+-- | Continuously return the time difference since the start of the program.
+sinceStartS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceStartS = timeInfoOf sinceStart
+
+-- | Continuously return the absolute time.
+absoluteS :: Monad m => ClSF m cl a (Time cl)
+absoluteS = timeInfoOf absolute
+
+-- | Continuously return the tag of the current tick.
+tagS :: Monad m => ClSF m cl a (Tag cl)
+tagS = timeInfoOf tag
+
 -- | Calculate the time passed since the 'ClSF' was instantiated.
 timeSinceSimStart :: (Monad m, TimeDomain td) => BehaviourF m td a (Diff td)
 timeSinceSimStart = proc _ -> do
   time      <- timeInfoOf absolute -< ()
   startTime <- keepFirst           -< time
   returnA                          -< time `diffTime` startTime
-
--- | Continuously return the tag of the current tick.
-theTag :: Monad m => ClSF m cl a (Tag cl)
-theTag = timeInfoOf tag
 
 
 -- * Useful aliases
