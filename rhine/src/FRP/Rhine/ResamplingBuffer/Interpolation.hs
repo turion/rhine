@@ -22,9 +22,9 @@ linear
   -> v -- ^ The initial position
   -> ResamplingBuffer m cl1 cl2 v v
 linear initVelocity initPosition
-  =    (derivativeFrom initPosition &&& syncId) &&& timeInfoOf sinceStart
+  =    (derivativeFrom initPosition &&& syncId) &&& timeInfoOf sinceInit
   ^->> keepLast ((initVelocity, initPosition), 0)
-  >>-^ proc ((velocity, lastPosition), sinceStart1) -> do
-    sinceStart2 <- timeInfoOf sinceStart -< ()
-    let diff = sinceStart2 - sinceStart1
+  >>-^ proc ((velocity, lastPosition), sinceInit1) -> do
+    sinceInit2 <- timeInfoOf sinceInit -< ()
+    let diff = sinceInit2 - sinceInit1
     returnA -< lastPosition ^+^ velocity ^* diff

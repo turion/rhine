@@ -72,7 +72,7 @@ threadsExample = do
 --   as a computationally expensive one.
 responsive :: ClSF IO (Millisecond 100) () ()
 responsive = timeInfo >>> proc TimeInfo {..} -> do
-  arrMCl putStrLn -< "Current time: " ++ show sinceStart
+  arrMCl putStrLn -< "Current time: " ++ show sinceInit
   arrMCl putStrLn -< "Real time " ++ (if tag then "" else "UN") ++ "successful"
 
 

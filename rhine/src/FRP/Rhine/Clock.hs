@@ -70,7 +70,7 @@ data TimeInfo cl = TimeInfo
   { -- | Time passed since the last tick
     sinceTick  :: Diff (Time cl)
     -- | Time passed since the initialisation of the clock
-  , sinceStart :: Diff (Time cl)
+  , sinceInit :: Diff (Time cl)
     -- | The absolute time of the current tick
   , absolute   :: Time cl
     -- | The tag annotation of the current tick
@@ -95,7 +95,7 @@ genTimeInfo _ initialTime = proc (absolute, tag) -> do
   lastTime <- iPre initialTime -< absolute
   returnA                      -< TimeInfo
     { sinceTick  = absolute `diffTime` lastTime
-    , sinceStart = absolute `diffTime` initialTime
+    , sinceInit = absolute `diffTime` initialTime
     , ..
     }
 

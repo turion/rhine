@@ -45,8 +45,8 @@ sinceTickS :: Monad m => ClSF m cl a (Diff (Time cl))
 sinceTickS = timeInfoOf sinceTick
 
 -- | Continuously return the time difference since the start of the program.
-sinceStartS :: Monad m => ClSF m cl a (Diff (Time cl))
-sinceStartS = timeInfoOf sinceStart
+sinceInitS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceInitS = timeInfoOf sinceInit
 
 -- | Continuously return the absolute time.
 absoluteS :: Monad m => ClSF m cl a (Time cl)

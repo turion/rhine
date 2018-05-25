@@ -73,7 +73,7 @@ withProperSimClock clsf = readerS
     intermingle = proc TimeInfo {tag} -> do
       let sinceTick = tag
       absolute <- sumS -< sinceTick
-      let sinceStart = absolute
+      let sinceInit = absolute
       returnA          -< TimeInfo { tag = (), .. }
 
 -- | The clock that ticks for every @gloss@ graphics output.

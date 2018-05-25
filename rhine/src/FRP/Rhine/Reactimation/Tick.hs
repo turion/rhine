@@ -106,10 +106,10 @@ tick Tickable
   , .. } now tag = do
     let
       ti = TimeInfo
-        { sinceTick  = diffTime now lastTime
-        , sinceStart = diffTime now initTime
-        , absolute   = now
-        , tag        = tag
+        { sinceTick = diffTime now lastTime
+        , sinceInit = diffTime now initTime
+        , absolute  = now
+        , tag       = tag
         }
     -- Get an input value from the left buffer
     (b, buffer1') <- get buffer1 $ retag (parClockTagInclusion parClockInL) ti

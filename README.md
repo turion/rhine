@@ -53,7 +53,7 @@ would be:
     => String
     -> Behaviour m td String
   createMessage str
-    =   timeInfoOf sinceStart >-> arr show
+    =   timeInfoOf sinceInit >-> arr show
     >-> arr (("Clock " ++ str ++ " has ticked at: ") ++)
 
   -- | Output a message /every second/ (= every 1000 milliseconds).

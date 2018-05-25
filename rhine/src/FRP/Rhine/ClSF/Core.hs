@@ -102,9 +102,9 @@ constMCl = timeless . arrM_
 
 Caution: This will not change the time differences since the last tick.
 For example,
-while @integrate 1@ is approximately the same as @timeInfoOf sinceStart@,
+while @integrate 1@ is approximately the same as @timeInfoOf sinceInit@,
 @mapMaybe $ integrate 1@ is very different from
-@mapMaybe $ timeInfoOf sinceStart@.
+@mapMaybe $ timeInfoOf sinceInit@.
 The former only integrates when the input is @Just 1@,
 whereas the latter always returns the correct time since start of the program.
 -}

@@ -18,7 +18,7 @@ gears angle = color green $ pictures
 
 -- | Rotate the gear with a constant angular velocity.
 mainClSF :: GlossClSF a
-mainClSF = timeInfoOf sinceStart >>> arr (* 50) >>> arr gears
+mainClSF = timeInfoOf sinceInit >>> arr (* 50) >>> arr gears
 
 main :: IO ()
 main = flowGloss (InWindow "rhine-gloss-gears" (400, 400) (10, 10)) (greyN 0.3) 30

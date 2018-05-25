@@ -20,7 +20,7 @@ createMessage
   => String
   -> Behaviour m td String
 createMessage str
-  =   timeInfoOf sinceStart >-> arr show
+  =   timeInfoOf sinceInit >-> arr show
   >-> arr (("Clock " ++ str ++ " has ticked at: ") ++)
 
 -- | Specialise 'createMessage' to a specific clock,
