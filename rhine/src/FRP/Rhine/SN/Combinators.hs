@@ -14,11 +14,11 @@ module FRP.Rhine.SN.Combinators where
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Reactimation
 import FRP.Rhine.Schedule
 import FRP.Rhine.SN
-import FRP.Rhine.ClSF
 
 
 -- * Combinators and syntactic sugar for high-level composition of signal networks.

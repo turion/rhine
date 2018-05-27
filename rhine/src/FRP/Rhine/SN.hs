@@ -5,9 +5,9 @@ module FRP.Rhine.SN where
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
-import FRP.Rhine.ClSF
 
 
 {- | An 'SN' is a side-effectful asynchronous /__s__ignal __n__etwork/,
