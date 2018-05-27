@@ -24,7 +24,7 @@ import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except
 import FRP.Rhine.Reactimation (flow)
 import FRP.Rhine.Schedule (In, Out)
-import FRP.Rhine.SN.Combinators ((@@))
+import FRP.Rhine.Reactimation.Combinators ((@@))
 
 
 -- * Read time information

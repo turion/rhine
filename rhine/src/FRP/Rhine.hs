@@ -18,10 +18,11 @@ module FRP.Rhine (module X) where
 import Data.MonadicStreamFunction as X
 
 -- rhine
-import FRP.Rhine.Clock            as X
-import FRP.Rhine.ClSF             as X
-import FRP.Rhine.Reactimation     as X
-import FRP.Rhine.ResamplingBuffer as X
-import FRP.Rhine.Schedule         as X
-import FRP.Rhine.SN               as X
-import FRP.Rhine.SN.Combinators   as X
+import FRP.Rhine.Clock                    as X
+import FRP.Rhine.ClSF                     as X
+import FRP.Rhine.Reactimation             as X
+import FRP.Rhine.Reactimation.Combinators as X
+import FRP.Rhine.ResamplingBuffer         as X
+import FRP.Rhine.Schedule                 as X
+import FRP.Rhine.SN                       as X
+import FRP.Rhine.SN.Combinators           as X
