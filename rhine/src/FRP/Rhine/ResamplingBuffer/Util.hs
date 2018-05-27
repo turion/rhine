@@ -5,7 +5,9 @@ module FRP.Rhine.ResamplingBuffer.Util where
 import Control.Monad.Trans.Reader (runReaderT)
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.Clock
+import FRP.Rhine.ClSF
+import FRP.Rhine.ResamplingBuffer
 
 -- * Utilities to build 'ResamplingBuffer's from smaller components
 
