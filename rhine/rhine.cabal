@@ -64,6 +64,11 @@ library
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
     FRP.Rhine.Clock.FixedStep
+    FRP.Rhine.ClSF
+    FRP.Rhine.ClSF.Core
+    FRP.Rhine.ClSF.Except
+    FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.Tick
     FRP.Rhine.Reactimation.Combinators
@@ -81,11 +86,6 @@ library
     FRP.Rhine.Schedule.Trans
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
-    FRP.Rhine.ClSF
-    FRP.Rhine.ClSF.Core
-    FRP.Rhine.ClSF.Except
-    FRP.Rhine.ClSF.Reader
-    FRP.Rhine.ClSF.Util
     FRP.Rhine.TimeDomain
 
   other-modules:
