@@ -107,9 +107,9 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
         Right (runningClock, initTime) -> do
           putMVar iMVar $ Right initTime
           Left e <- runExceptT $ reactimate $ runningClock >>> proc (td, tag2) -> do
-            arrM (lift . putMVar mvar)            -< Right (td, leftright tag2)
+            arrM (lift . putMVar mvar)              -< Right (td, leftright tag2)
             me <- arrM_ (lift $ readIORef errorref) -< ()
-            _  <- throwMaybe               -< me
+            _  <- throwMaybe                        -< me
             returnA -< ()
           putMVar mvar $ Left e -- Either throw own exception or acknowledge the exception from the other clock
         Left e -> void $ putMVar iMVar $ Left e
