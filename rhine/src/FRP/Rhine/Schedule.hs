@@ -164,16 +164,16 @@ instance (Monad m, Clock m cl1, Clock m cl2)
 -- * Navigating the clock tree
 
 -- | The clock that represents the rate at which data enters the system.
-type family Leftmost cl where
-  Leftmost (SequentialClock m cl1 cl2) = Leftmost cl1
-  Leftmost (ParallelClock   m cl1 cl2) = ParallelClock m (Leftmost cl1) (Leftmost cl2)
-  Leftmost cl                          = cl
+type family In cl where
+  In (SequentialClock m cl1 cl2) = In cl1
+  In (ParallelClock   m cl1 cl2) = ParallelClock m (In cl1) (In cl2)
+  In cl                          = cl
 
 -- | The clock that represents the rate at which data leaves the system.
-type family Rightmost cl where
-  Rightmost (SequentialClock m cl1 cl2) = Rightmost cl2
-  Rightmost (ParallelClock   m cl1 cl2) = ParallelClock m (Rightmost cl1) (Rightmost cl2)
-  Rightmost cl                          = cl
+type family Out cl where
+  Out (SequentialClock m cl1 cl2) = Out cl2
+  Out (ParallelClock   m cl1 cl2) = ParallelClock m (Out cl1) (Out cl2)
+  Out cl                          = cl
 
 
 -- | A tree representing possible last times to which
