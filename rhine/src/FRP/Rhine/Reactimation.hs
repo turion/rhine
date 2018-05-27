@@ -57,8 +57,8 @@ main = flow $ mainSF @@ clock
 -- TODO Can we chuck the constraints into Clock m cl?
 flow
   :: ( Monad m, Clock m cl
-     , Time cl ~ Time (Leftmost  cl)
-     , Time cl ~ Time (Rightmost cl)
+     , Time cl ~ Time (In  cl)
+     , Time cl ~ Time (Out cl)
      )
   => Rhine m cl () () -> m ()
 flow Rhine {..} = do

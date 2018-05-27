@@ -23,7 +23,7 @@ import Data.VectorSpace
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except
 import FRP.Rhine.Reactimation (flow)
-import FRP.Rhine.Schedule (Leftmost, Rightmost)
+import FRP.Rhine.Schedule (In, Out)
 import FRP.Rhine.SN.Combinators ((@@))
 
 
@@ -280,7 +280,7 @@ scaledTimer diff = timer diff >>> arr (/ diff)
 --   similar to Yampa's, or Dunai's, 'reactimate'.
 reactimateCl
   :: ( Monad m, Clock m cl
-     , cl ~ Leftmost  cl, cl ~ Rightmost cl
+     , cl ~ In  cl, cl ~ Out cl
      )
   => cl -> ClSF m cl () () -> m ()
 reactimateCl cl clsf = flow $ clsf @@ cl

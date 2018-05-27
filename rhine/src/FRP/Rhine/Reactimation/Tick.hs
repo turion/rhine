@@ -42,11 +42,11 @@ data Tickable m cla clb cl clc cld a b c d = Tickable
   , buffer2     :: ResamplingBuffer m          clc cld     c d
     -- | The leftmost clock of the signal network, 'cl',
     --   may be a parallel subclock of the buffer clock.
-    --   'parClockInL' specifies in which position 'Leftmost cl'
+    --   'parClockIn' specifies in which position 'In cl'
     --   is a parallel subclock of 'clb'.
-  , parClockInL :: ParClockInclusion (Leftmost  cl) clb
+  , parClockIn  :: ParClockInclusion (In  cl) clb
     -- | The same on the output side.
-  , parClockInR :: ParClockInclusion (Rightmost cl) clc
+  , parClockOut :: ParClockInclusion (Out cl) clc
     -- | The last times when the different parts of the signal tree have ticked.
   , lastTime    :: LastTime cl
     -- | The time when the whole clock was initialised.
@@ -69,14 +69,14 @@ initLastTime (Parallel sn1 sn2)     initTime =
 -- | Initialise a 'Tickable' from a signal network,
 --   two matching enclosing resampling buffers and an initial time.
 createTickable
-  :: ResamplingBuffer m cla (Leftmost cl)                       a b
-  -> SN               m                   cl                      b c
-  -> ResamplingBuffer m                      (Rightmost cl) cld     c d
+  :: ResamplingBuffer m cla (In cl)                 a b
+  -> SN               m         cl                      b c
+  -> ResamplingBuffer m                (Out cl) cld     c d
   -> Time cl
-  -> Tickable         m cla (Leftmost cl) cl (Rightmost cl) cld a b c d
+  -> Tickable         m cla (In cl) cl (Out cl) cld a b c d
 createTickable buffer1 ticksn buffer2 initTime = Tickable
-  { parClockInL = ParClockRefl
-  , parClockInR = ParClockRefl
+  { parClockIn  = ParClockRefl
+  , parClockOut = ParClockRefl
   , lastTime    = initLastTime ticksn initTime
   , ..
   }
@@ -92,8 +92,8 @@ tick :: ( Monad m, Clock m cl
         , Time clb ~ Time cl
         , Time clc ~ Time cl
         , Time cld ~ Time cl
-        , Time (Leftmost  cl) ~ Time cl
-        , Time (Rightmost cl) ~ Time cl
+        , Time (In  cl) ~ Time cl
+        , Time (Out cl) ~ Time cl
         )
      => Tickable    m cla clb cl clc cld a b c d
      -> Time cl -- ^ Timestamp of the present tick
@@ -112,11 +112,11 @@ tick Tickable
         , tag       = tag
         }
     -- Get an input value from the left buffer
-    (b, buffer1') <- get buffer1 $ retag (parClockTagInclusion parClockInL) ti
+    (b, buffer1') <- get buffer1 $ retag (parClockTagInclusion parClockIn ) ti
     -- Run it through the signal function
     (c, clsf')  <- unMSF clsf b `runReaderT` ti
     -- Put the output into the right buffer
-    buffer2'      <- put buffer2 (retag (parClockTagInclusion parClockInR) ti) c
+    buffer2'      <- put buffer2 (retag (parClockTagInclusion parClockOut) ti) c
     return Tickable
       { buffer1  = buffer1'
       , ticksn   = Synchronous clsf'
@@ -128,14 +128,14 @@ tick tickable@Tickable
   { ticksn   = Sequential sn1 bufferMiddle sn2
   , lastTime = SequentialLastTime lastTimeL lastTimeR
   , initTime
-  , parClockInL
+  , parClockIn
   } now (Left tag) = do
     leftTickable <- tick Tickable
       { buffer1     = buffer1 tickable
       , ticksn      = sn1
       , buffer2     = bufferMiddle
-      , parClockInL = parClockInL
-      , parClockInR = ParClockRefl
+      , parClockIn  = parClockIn
+      , parClockOut = ParClockRefl
       , lastTime    = lastTimeL
       , initTime    = initTime
       } now tag
@@ -149,14 +149,14 @@ tick tickable@Tickable
   { ticksn   = Sequential sn1 bufferMiddle sn2
   , lastTime = SequentialLastTime lastTimeL lastTimeR
   , initTime
-  , parClockInR
+  , parClockOut
   } now (Right tag) = do
     rightTickable <- tick Tickable
       { buffer1     = bufferMiddle
       , ticksn      = sn2
       , buffer2     = buffer2 tickable
-      , parClockInL = ParClockRefl
-      , parClockInR = parClockInR
+      , parClockIn  = ParClockRefl
+      , parClockOut = parClockOut
       , lastTime    = lastTimeR
       , initTime    = initTime
       } now tag
@@ -170,16 +170,16 @@ tick tickable@Tickable
   { ticksn   = Parallel snA snB
   , lastTime = ParallelLastTime lastTimeA lastTimeB
   , initTime
-  , parClockInL
-  , parClockInR
+  , parClockIn
+  , parClockOut
   } now tag = case tag of
     Left tagL -> do
       leftTickable <- tick Tickable
         { buffer1     = buffer1 tickable
         , ticksn      = snA
         , buffer2     = buffer2 tickable
-        , parClockInL = ParClockInL parClockInL
-        , parClockInR = ParClockInL parClockInR
+        , parClockIn  = ParClockInL parClockIn
+        , parClockOut = ParClockInL parClockOut
         , lastTime    = lastTimeA
         , initTime    = initTime
         } now tagL
@@ -194,8 +194,8 @@ tick tickable@Tickable
         { buffer1     = buffer1 tickable
         , ticksn      = snB
         , buffer2     = buffer2 tickable
-        , parClockInL = ParClockInR parClockInL
-        , parClockInR = ParClockInR parClockInR
+        , parClockIn  = ParClockInR parClockIn
+        , parClockOut = ParClockInR parClockOut
         , lastTime    = lastTimeB
         , initTime    = initTime
         } now tagR
@@ -217,7 +217,7 @@ that additionally unifies the clock types in a way needed for the tick implement
 -}
 trivialResamplingBuffer
   :: Monad m => cl
-  -> ResamplingBuffer m (Rightmost cl) (Leftmost cl) () ()
+  -> ResamplingBuffer m (Out cl) (In cl) () ()
 trivialResamplingBuffer _ = go
   where
     go  = ResamplingBuffer {..}
