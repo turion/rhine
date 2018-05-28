@@ -4,7 +4,7 @@
 {-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE TypeFamilies     #-}
 
-module FRP.Rhine.SyncSF.Util where
+module FRP.Rhine.ClSF.Util where
 
 
 -- base
@@ -20,36 +20,65 @@ import Data.MonadicStreamFunction (arrM_, sumFrom, delay, feedback)
 import Data.VectorSpace
 
 -- rhine
-import FRP.Rhine.SyncSF.Core
-import FRP.Rhine.SyncSF.Except
+import FRP.Rhine.ClSF.Core
+import FRP.Rhine.ClSF.Except
 
 
 -- * Read time information
 
 -- | Read the environment variable, i.e. the 'TimeInfo'.
-timeInfo :: Monad m => SyncSF m cl a (TimeInfo cl)
+timeInfo :: Monad m => ClSF m cl a (TimeInfo cl)
 timeInfo = arrM_ ask
 
 {- | Utility to apply functions to the current 'TimeInfo',
 such as record selectors:
 @
-printAbsoluteTime :: SyncSF IO cl () ()
-printAbsoluteTime = timeInfoOf absolute >>> arrMSync print
+printAbsoluteTime :: ClSF IO cl () ()
+printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
 @
 -}
-timeInfoOf :: Monad m => (TimeInfo cl -> b) -> SyncSF m cl a b
+timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = arrM_ $ asks f
 
--- | Calculate the time passed since the 'SyncSF' was instantiated.
-timeSinceSimStart :: (Monad m, TimeDomain td) => BehaviourF m td a (Diff td)
-timeSinceSimStart = proc _ -> do
-  time      <- timeInfoOf absolute -< ()
-  startTime <- keepFirst           -< time
-  returnA                          -< time `diffTime` startTime
+-- | Continuously return the time difference since the last tick.
+sinceTickS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceTickS = timeInfoOf sinceTick
+
+-- | Continuously return the time difference since clock initialisation.
+sinceInitS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceInitS = timeInfoOf sinceInit
+
+-- | Continuously return the absolute time.
+absoluteS :: Monad m => ClSF m cl a (Time cl)
+absoluteS = timeInfoOf absolute
 
 -- | Continuously return the tag of the current tick.
-theTag :: Monad m => SyncSF m cl a (Tag cl)
-theTag = timeInfoOf tag
+tagS :: Monad m => ClSF m cl a (Tag cl)
+tagS = timeInfoOf tag
+
+{- |
+Calculate the time passed since this 'ClSF' was instantiated.
+This is _not_ the same as 'sinceInitS',
+which measures the time since clock initialisation.
+
+For example, the following gives a sawtooth signal:
+
+@
+sawtooth = safely $ do
+  try $ sinceStart >>> proc time -> do
+    throwOn () -< time > 1
+    returnA    -< time
+  safe sawtooth
+@
+
+If you replace 'sinceStart' by 'sinceInitS',
+it will usually hang after one second,
+since it doesn't reset after restarting the sawtooth.
+-}
+sinceStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
+sinceStart = absoluteS >>> proc time -> do
+  startTime <- keepFirst -< time
+  returnA                -< time `diffTime` startTime
 
 
 -- * Useful aliases
@@ -58,11 +87,11 @@ theTag = timeInfoOf tag
 {- | Alias for 'Control.Category.>>>' (sequential composition)
 with higher operator precedence, designed to work with the other operators, e.g.:
 
-> syncsf1 >-> syncsf2 @@ clA **@ sched @** syncsf3 >-> syncsf4 @@ clB
+> clsf1 >-> clsf2 @@ clA ||@ sched @|| clsf3 >-> clsf4 @@ clB
 
 The type signature specialises e.g. to
 
-> (>->) :: Monad m => SyncSF m cl a b -> SyncSF m cl b c -> SyncSF m cl a c
+> (>->) :: Monad m => ClSF m cl a b -> ClSF m cl b c -> ClSF m cl a c
 -}
 infixr 6 >->
 (>->) :: Category cat
@@ -82,15 +111,15 @@ infixl 6 <-<
 {- | Output a constant value.
 Specialises e.g. to this type signature:
 
-> arr_ :: Monad m => b -> SyncSF m cl a b
+> arr_ :: Monad m => b -> ClSF m cl a b
 -}
 arr_ :: Arrow a => b -> a c b
 arr_ = arr . const
 
 
 -- | The identity synchronous stream function.
-syncId :: Monad m => SyncSF m cl a a
-syncId = Control.Category.id
+clId :: Monad m => ClSF m cl a a
+clId = Control.Category.id
 
 
 -- * Basic signal processing components
@@ -200,7 +229,7 @@ averageLin
 averageLin = averageLinFrom zeroVector
 
 -- | Remembers and indefinitely outputs ("holds") the first input value.
-keepFirst :: Monad m => SyncSF m cl a a
+keepFirst :: Monad m => ClSF m cl a a
 keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
@@ -217,9 +246,9 @@ timer
   => Diff td
   -> BehaviorF (ExceptT () m) td a (Diff td)
 timer diff = proc _ -> do
-  sinceSimStart <- timeSinceSimStart -< ()
-  _             <- throwOn ()        -< sinceSimStart > diff
-  returnA                            -< sinceSimStart
+  time <- sinceStart -< ()
+  _    <- throwOn () -< time > diff
+  returnA            -< time
 
 -- | Like 'timer_', but doesn't output the remaining time at all.
 timer_

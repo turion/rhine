@@ -26,10 +26,10 @@ data SelectClock cl a = SelectClock
 
 
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
-  type TimeDomainOf (SelectClock cl a) = TimeDomainOf cl
-  type Tag          (SelectClock cl a) = a
-  startClock SelectClock {..} = do
-    (runningClock, initialTime) <- startClock mainClock
+  type Time (SelectClock cl a) = Time cl
+  type Tag  (SelectClock cl a) = a
+  initClock SelectClock {..} = do
+    (runningClock, initialTime) <- initClock mainClock
     let
       runningSelectClock = filterS $ proc _ -> do
         (time, tag) <- runningClock -< ()
@@ -44,8 +44,8 @@ schedSelectClocks
   => Schedule m (SelectClock cl a) (SelectClock cl b)
 schedSelectClocks = Schedule {..}
   where
-    startSchedule subClock1 subClock2 = do
-      (runningClock, initialTime) <- startClock
+    initSchedule subClock1 subClock2 = do
+      (runningClock, initialTime) <- initClock
         $ mainClock subClock1 `mappend` mainClock subClock2
       let
         runningSelectClocks = concatS $ proc _ -> do
@@ -54,6 +54,23 @@ schedSelectClocks = Schedule {..}
             [ (time, ) . Left  <$> select subClock1 tag
             , (time, ) . Right <$> select subClock2 tag ]
       return (runningSelectClocks, initialTime)
+
+-- | A universal schedule for a subclock and its main clock.
+schedSelectClockAndMain
+  :: (Monad m, Monoid cl, Clock m cl)
+  => Schedule m cl (SelectClock cl a)
+schedSelectClockAndMain = Schedule {..}
+  where
+    initSchedule mainClock' SelectClock {..} = do
+      (runningClock, initialTime) <- initClock
+        $ mainClock' `mappend` mainClock
+      let
+        runningSelectClock = concatS $ proc _ -> do
+          (time, tag) <- runningClock -< ()
+          returnA                     -< catMaybes
+            [ Just (time, Left tag)
+            , (time, ) . Right <$> select tag ]
+      return (runningSelectClock, initialTime)
 
 
 -- | Helper function that runs an 'MSF' with 'Maybe' output

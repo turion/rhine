@@ -39,8 +39,8 @@ rb'''' = timelessResamplingBuffer AsyncMealy
 rb''''' :: (Monad m, Num a) => ResamplingBuffer m cla clb a a
 rb''''' = foldBuffer (+) 0
 
-thing1 = timeInfoOf sinceStart >>> arr sin
+thing1 = sinceInitS >>> arr sin
 
 main = do
   putStrLn "Press return to force the buffer"
-  flow $ thing1 @@ Busy >-- rb''''' -@- concurrently --> arrMSync print @@ StdinClock
+  flow $ thing1 @@ Busy >-- rb''''' -@- concurrently --> arrMCl print @@ StdinClock

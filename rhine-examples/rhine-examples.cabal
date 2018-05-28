@@ -35,14 +35,15 @@ executable ADSR
   hs-source-dirs:      src
   main-is:             ADSR.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.7     && <5
+  build-depends:       base         >= 4.9
                      , rhine        == 0.5.*
+  default-language:    Haskell2010
 
-executable CycleClock
+executable Periodic
   hs-source-dirs:      src
-  main-is:             CycleClock.hs
+  main-is:             Periodic.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base  >= 4.7     && <5
+  build-depends:       base  >= 4.9
                      , rhine        == 0.5.*
                      , transformers == 0.5.*
   default-language:    Haskell2010
@@ -52,5 +53,22 @@ executable SpaceLeak
   main-is:             SpaceLeak.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base  >= 4.7     && <5
+                     , rhine        == 0.5.*
+  default-language:    Haskell2010
+
+executable EventClock
+  hs-source-dirs:      src
+  main-is:             EventClock.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base  >= 4.9
+                     , rhine        == 0.5.*
+                     , random       == 1.1.*
+  default-language:    Haskell2010
+
+executable Sawtooth
+  hs-source-dirs:      src
+  main-is:             Sawtooth.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base  >= 4.9
                      , rhine        == 0.5.*
   default-language:    Haskell2010

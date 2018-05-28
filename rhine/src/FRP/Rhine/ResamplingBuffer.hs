@@ -11,10 +11,10 @@ import FRP.Rhine.Clock
 import Control.Arrow (second)
 
 -- A quick note on naming conventions, to whoever cares:
--- . Call a single clock cl.
--- . Call several clocks cl1, cl2 etc. in most situations.
--- . Call it cla, clb etc. when they are Leftmost or Rightmost clocks,
--- i.e. associated to particular boundary types a, b etc.,
+-- . Call a single clock @cl@.
+-- . Call several clocks @cl1@, @cl2@ etc. in most situations.
+-- . Call it @cla@, @clb@ etc. when they are 'In' or 'Out' clocks,
+-- i.e. associated to particular boundary types @a@, @b@ etc.,
 
 {- | A stateful buffer from which one may 'get' a value,
 or to which one may 'put' a value,

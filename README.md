@@ -41,34 +41,34 @@ which can be run as `cd rhine-examples/ && cabal run Demonstration`,
 would be:
 
 ```haskell
-  -- | Create a simple message containing the time stamp since program start,
+  -- | Create a simple message containing the time stamp since initialisation,
   --   for each tick of the clock.
   --   Since 'createMessage' works for arbitrary clocks (and doesn't need further input data),
   --   it is a 'Behaviour'.
-  --   @td@ is the 'TimeDomain' of any clock used to sample,
+  --   @time@ is the 'TimeDomain' of any clock used to sample,
   --   and it needs to be constrained in order for time differences
   --   to have a 'Show' instance.
   createMessage
-    :: (Monad m, Show (Diff td))
+    :: (Monad m, Show (Diff time))
     => String
-    -> Behaviour m td String
+    -> Behaviour m time String
   createMessage str
-    =   timeInfoOf sinceStart >-> arr show
+    =   timeInfoOf sinceInit >-> arr show
     >-> arr (("Clock " ++ str ++ " has ticked at: ") ++)
 
   -- | Output a message /every second/ (= every 1000 milliseconds).
   --   Let us assume we want to assure that 'printEverySecond'
   --   is only called every second,
   --   then we constrain its type signature with the clock @Millisecond 1000@.
-  printEverySecond :: Show a => SyncSF IO (Millisecond 1000) a ()
-  printEverySecond = arrMSync print
+  printEverySecond :: Show a => ClSF IO (Millisecond 1000) a ()
+  printEverySecond = arrMCl print
 
   -- | Specialise 'createMessage' to a specific clock.
-  ms500 :: SyncSF IO (Millisecond 500) () String
+  ms500 :: ClSF IO (Millisecond 500) () String
   ms500 = createMessage "500 MS"
 
 
-  ms1200 :: SyncSF IO (Millisecond 1200) () String
+  ms1200 :: ClSF IO (Millisecond 1200) () String
   ms1200 = createMessage "1200 MS"
 
   -- | Create messages every 500 ms and every 1200 ms,
@@ -76,7 +76,7 @@ would be:
   --   which is output every second.
   main :: IO ()
   main = flow $
-    ms500 @@ waitClock **@ concurrently @** ms1200 @@ waitClock
+    ms500 @@ waitClock ||@ concurrently @|| ms1200 @@ waitClock
     >-- collect -@- concurrently -->
     printEverySecond @@ waitClock
 

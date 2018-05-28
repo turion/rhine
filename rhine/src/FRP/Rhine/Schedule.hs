@@ -24,11 +24,11 @@ import FRP.Rhine.Clock
 --   It outputs a time stamp and an 'Either' value,
 --   which specifies which of the two subclocks has ticked.
 data Schedule m cl1 cl2
-  = (TimeDomainOf cl1 ~ TimeDomainOf cl2)
+  = (Time cl1 ~ Time cl2)
   => Schedule
-    { startSchedule
+    { initSchedule
         :: cl1 -> cl2
-        -> RunningClockStarter m (TimeDomainOf cl1) (Either (Tag cl1) (Tag cl2))
+        -> RunningClockInit m (Time cl1) (Either (Tag cl1) (Tag cl2))
     }
 -- The type constraint in the constructor is actually useful when pattern matching on 'Schedule',
 -- which is interesting since a constraint like 'Monad m' is useful.
@@ -44,10 +44,10 @@ hoistSchedule
   => (forall a . m1 a -> m2 a)
   -> Schedule m1 cl1 cl2
   -> Schedule m2 cl1 cl2
-hoistSchedule hoist Schedule {..} = Schedule startSchedule'
+hoistSchedule hoist Schedule {..} = Schedule initSchedule'
   where
-    startSchedule' cl1 cl2 = hoist
-      $ first (hoistMSF hoist) <$> startSchedule cl1 cl2
+    initSchedule' cl1 cl2 = hoist
+      $ first (hoistMSF hoist) <$> initSchedule cl1 cl2
     hoistMSF = liftMSFPurer
     -- TODO This should be a dunai issue
 
@@ -56,9 +56,9 @@ flipSchedule
   :: Monad m
   => Schedule m cl1 cl2
   -> Schedule m cl2 cl1
-flipSchedule Schedule {..} = Schedule startSchedule_
+flipSchedule Schedule {..} = Schedule initSchedule_
   where
-    startSchedule_ cl2 cl1 = first (arr (second swapEither) <<<) <$> startSchedule cl1 cl2
+    initSchedule_ cl2 cl1 = first (arr (second swapEither) <<<) <$> initSchedule cl1 cl2
     swapEither :: Either a b -> Either b a -- TODO Why is stuff like this not in base? Maybe send pull request...
     swapEither (Left  a) = Right a
     swapEither (Right b) = Left  b
@@ -70,20 +70,20 @@ flipSchedule Schedule {..} = Schedule startSchedule_
 rescaledSchedule
   :: Monad m
   => Schedule m cl1 cl2
-  -> Schedule m (RescaledClock cl1 td) (RescaledClock cl2 td)
-rescaledSchedule schedule = Schedule $ startSchedule'
+  -> Schedule m (RescaledClock cl1 time) (RescaledClock cl2 time)
+rescaledSchedule schedule = Schedule $ initSchedule'
   where
-    startSchedule' cl1 cl2 = startSchedule (rescaledScheduleS schedule) (rescaledClockToS cl1) (rescaledClockToS cl2)
+    initSchedule' cl1 cl2 = initSchedule (rescaledScheduleS schedule) (rescaledClockToS cl1) (rescaledClockToS cl2)
 
 -- | As 'rescaledSchedule', with a stateful rescaling
 rescaledScheduleS
   :: Monad m
   => Schedule m cl1 cl2
-  -> Schedule m (RescaledClockS m cl1 td tag1) (RescaledClockS m cl2 td tag2)
-rescaledScheduleS Schedule {..} = Schedule startSchedule'
+  -> Schedule m (RescaledClockS m cl1 time tag1) (RescaledClockS m cl2 time tag2)
+rescaledScheduleS Schedule {..} = Schedule initSchedule'
   where
-    startSchedule' (RescaledClockS cl1 rescaleS1) (RescaledClockS cl2 rescaleS2) = do
-      (runningSchedule, initTime ) <- startSchedule cl1 cl2
+    initSchedule' (RescaledClockS cl1 rescaleS1) (RescaledClockS cl2 rescaleS2) = do
+      (runningSchedule, initTime ) <- initSchedule cl1 cl2
       (rescaling1     , initTime') <- rescaleS1 initTime
       (rescaling2     , _        ) <- rescaleS2 initTime
       let runningSchedule'
@@ -104,14 +104,14 @@ rescaledScheduleS Schedule {..} = Schedule startSchedule'
 readerSchedule
   :: ( Monad m
      , Clock (ReaderT r m) cl1, Clock (ReaderT r m) cl2
-     , TimeDomainOf cl1 ~ TimeDomainOf cl2
+     , Time cl1 ~ Time cl2
      )
   => Schedule m
        (HoistClock (ReaderT r m) m cl1) (HoistClock (ReaderT r m) m cl2)
   -> Schedule (ReaderT r m) cl1 cl2
 readerSchedule Schedule {..}
   = Schedule $ \cl1 cl2 -> ReaderT $ \r -> first liftMSFTrans
-  <$> startSchedule
+  <$> initSchedule
         (HoistClock cl1 $ flip runReaderT r)
         (HoistClock cl2 $ flip runReaderT r)
 
@@ -120,55 +120,60 @@ readerSchedule Schedule {..}
 
 
 -- | Two clocks can be combined with a schedule as a clock
---   for an asynchronous sequential composition of signal functions.
+--   for an asynchronous sequential composition of signal networks.
 data SequentialClock m cl1 cl2
-  = TimeDomainOf cl1 ~ TimeDomainOf cl2
+  = Time cl1 ~ Time cl2
   => SequentialClock
     { sequentialCl1      :: cl1
     , sequentialCl2      :: cl2
     , sequentialSchedule :: Schedule m cl1 cl2
     }
 
+-- | Abbrevation synonym.
+type SeqClock m cl1 cl2 = SequentialClock m cl1 cl2
 
 instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (SequentialClock m cl1 cl2) where
-  type TimeDomainOf (SequentialClock m cl1 cl2) = TimeDomainOf cl1
-  type Tag          (SequentialClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  startClock SequentialClock {..}
-    = startSchedule sequentialSchedule sequentialCl1 sequentialCl2
+  type Time (SequentialClock m cl1 cl2) = Time cl1
+  type Tag  (SequentialClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
+  initClock SequentialClock {..}
+    = initSchedule sequentialSchedule sequentialCl1 sequentialCl2
 
 
 -- | Two clocks can be combined with a schedule as a clock
---   for an asynchronous parallel composition of signal functions.
+--   for an asynchronous parallel composition of signal networks.
 data ParallelClock m cl1 cl2
-  = TimeDomainOf cl1 ~ TimeDomainOf cl2
+  = Time cl1 ~ Time cl2
   => ParallelClock
     { parallelCl1      :: cl1
     , parallelCl2      :: cl2
     , parallelSchedule :: Schedule m cl1 cl2
     }
 
+-- | Abbrevation synonym.
+type ParClock m cl1 cl2 = ParallelClock m cl1 cl2
+
 instance (Monad m, Clock m cl1, Clock m cl2)
       => Clock m (ParallelClock m cl1 cl2) where
-  type TimeDomainOf (ParallelClock m cl1 cl2) = TimeDomainOf cl1
-  type Tag          (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  startClock ParallelClock {..}
-    = startSchedule parallelSchedule parallelCl1 parallelCl2
+  type Time (ParallelClock m cl1 cl2) = Time cl1
+  type Tag  (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
+  initClock ParallelClock {..}
+    = initSchedule parallelSchedule parallelCl1 parallelCl2
 
 
 -- * Navigating the clock tree
 
 -- | The clock that represents the rate at which data enters the system.
-type family Leftmost cl where
-  Leftmost (SequentialClock m cl1 cl2) = Leftmost cl1
-  Leftmost (ParallelClock   m cl1 cl2) = ParallelClock m (Leftmost cl1) (Leftmost cl2)
-  Leftmost cl                          = cl
+type family In cl where
+  In (SequentialClock m cl1 cl2) = In cl1
+  In (ParallelClock   m cl1 cl2) = ParallelClock m (In cl1) (In cl2)
+  In cl                          = cl
 
 -- | The clock that represents the rate at which data leaves the system.
-type family Rightmost cl where
-  Rightmost (SequentialClock m cl1 cl2) = Rightmost cl2
-  Rightmost (ParallelClock   m cl1 cl2) = ParallelClock m (Rightmost cl1) (Rightmost cl2)
-  Rightmost cl                          = cl
+type family Out cl where
+  Out (SequentialClock m cl1 cl2) = Out cl2
+  Out (ParallelClock   m cl1 cl2) = ParallelClock m (Out cl1) (Out cl2)
+  Out cl                          = cl
 
 
 -- | A tree representing possible last times to which
@@ -180,7 +185,7 @@ data LastTime cl where
   ParallelLastTime
     :: LastTime cl1 -> LastTime cl2
     -> LastTime (ParallelClock   m cl1 cl2)
-  LeafLastTime :: TimeDomainOf cl -> LastTime cl
+  LeafLastTime :: Time cl -> LastTime cl
 
 
 -- | An inclusion of a clock into a tree of parallel compositions of clocks.
