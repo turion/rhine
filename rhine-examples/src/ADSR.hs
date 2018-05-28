@@ -39,11 +39,11 @@ import FRP.Rhine.Schedule.Concurrently
 
 -- | Collects the parameters an ADSR hull depends on.
 --   An ADSR is specified by three time spans, and a number between 0 and 1.
-data ADSR td s = ADSR
-  { a :: Diff td -- ^ The attack time (for how long the level increases)
-  , d :: Diff td -- ^ The decay time (for how long the level decreases)
-  , s :: s       -- ^ The sustain level (a 'Fractional' between 0 and 1)
-  , r :: Diff td -- ^ The release time (how long the level needs to decay)
+data ADSR time s = ADSR
+  { a :: Diff time -- ^ The attack time (for how long the level increases)
+  , d :: Diff time -- ^ The decay time (for how long the level decreases)
+  , s :: s         -- ^ The sustain level (a 'Fractional' between 0 and 1)
+  , r :: Diff time -- ^ The release time (how long the level needs to decay)
   }
 
 -- | Some sample settings for an 'ADSR'.
@@ -81,9 +81,9 @@ as follows:
   The system then returns to the initial zero amplitude state.
 -}
 runADSR
-  :: ( Monad m, TimeDomain td
-     , Ord amplitude, Fractional amplitude, Diff td ~ amplitude )
-  => ADSR td amplitude -> BehaviourF m td Bool amplitude
+  :: ( Monad m, TimeDomain time
+     , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
+  => ADSR time amplitude -> BehaviourF m time Bool amplitude
 runADSR ADSR {..} = safely $ do
   _ <- try $ sustain 0 `till` keyPressed
   adsrFrom 0
@@ -106,15 +106,15 @@ runADSR ADSR {..} = safely $ do
 --   The exception contains the "overdue" time,
 --   i.e. how long before the tick the time was up.
 linearly
-  :: ( Monad m, TimeDomain td
-     , Ord amplitude, Fractional amplitude, Diff td ~ amplitude )
-  => Diff td -- ^ The time span, in which the amplitude will interpolate
+  :: ( Monad m, TimeDomain time
+     , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
+  => Diff time -- ^ The time span, in which the amplitude will interpolate
   -> amplitude -- ^ The initial amplitude
   -> amplitude -- ^ The final amplitude
-  -> Diff td -- ^ How far overdue the interpolation already is
-  -> Behaviour (ExceptT (Diff td) m) td amplitude
+  -> Diff time -- ^ How far overdue the interpolation already is
+  -> Behaviour (ExceptT (Diff time) m) time amplitude
 linearly timeSpan initialAmplitude finalAmplitude overdue = proc _ -> do
-  time <- (overdue +) ^<< timeSinceSimStart -< ()
+  time <- (overdue +) ^<< sinceStart -< ()
   let
     remainingTime = timeSpan - time
     currentLevel  = ( initialAmplitude * remainingTime
@@ -127,36 +127,36 @@ linearly timeSpan initialAmplitude finalAmplitude overdue = proc _ -> do
 -- | The period in which the amplitude rises initially from 0 to 1,
 --   and then an exception is thrown.
 attack
-  :: ( Monad m, TimeDomain td
-     , Ord amplitude, Fractional amplitude, Diff td ~ amplitude )
-  => Diff td -- ^ The attack time, in which the amplitude will rise from 0 to 1.
+  :: ( Monad m, TimeDomain time
+     , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
+  => Diff time -- ^ The attack time, in which the amplitude will rise from 0 to 1.
   -> amplitude -- ^ The initial amplitude
-  -> Behaviour (ExceptT (Diff td) m) td amplitude
+  -> Behaviour (ExceptT (Diff time) m) time amplitude
 attack a amplitude = linearly a amplitude 1 0
 
 -- | The period in which the amplitude falls from 1 to the sustain level,
 --   and then an exception is thrown.
 decay
-  :: ( Monad m, TimeDomain td
-     , Ord amplitude, Fractional amplitude, Diff td ~ amplitude )
-  => Diff td -- ^ The decay time, in which the amplitude will fall from 1 to...
+  :: ( Monad m, TimeDomain time
+     , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
+  => Diff time -- ^ The decay time, in which the amplitude will fall from 1 to...
   -> amplitude -- ^ ...the sustain level.
-  -> Diff td -- ^ How far overdue the decay period already is.
-  -> Behaviour (ExceptT (Diff td) m) td amplitude
+  -> Diff time -- ^ How far overdue the decay period already is.
+  -> Behaviour (ExceptT (Diff time) m) time amplitude
 decay d = linearly d 1
 
 -- | A period in which a given amplitude is sustained indefinitely.
-sustain :: Monad m => amplitude -> Behaviour m td amplitude
+sustain :: Monad m => amplitude -> Behaviour m time amplitude
 sustain = arr . const
 
 -- | The period in which the level falls from the sustain level to 0.
 --   and then an exception is thrown.
 release
-  :: ( Monad m, TimeDomain td
-     , Ord amplitude, Fractional amplitude, Diff td ~ amplitude )
-  => Diff td -- ^ The release time, in which the amplitude will fall from...
+  :: ( Monad m, TimeDomain time
+     , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
+  => Diff time -- ^ The release time, in which the amplitude will fall from...
   -> amplitude -- ^ ...the sustain level to 0.
-  -> Behaviour (ExceptT (Diff td) m) td amplitude
+  -> Behaviour (ExceptT (Diff time) m) time amplitude
 release r s = linearly r s 0 0
 
 
@@ -169,7 +169,7 @@ key = (count >>^ odd) @@ StdinClock
 -- | Output the current amplitude of the ADSR hull on the console,
 --   every 0.03 seconds.
 consoleADSR :: Rhine IO (Millisecond 30) Bool ()
-consoleADSR = runADSR myADSR >-> arrMSync print @@ waitClock
+consoleADSR = runADSR myADSR >-> arrMCl print @@ waitClock
 
 -- | Runs the main program, where you have the choice between console output
 --   and pulse output.
@@ -181,31 +181,31 @@ main = flow $ key >-- keepLast False -@- concurrently --> consoleADSR
 
 -- | Raises an exception when the input becomes 'True',
 --   i.e. the key is pressed.
-keyPressed :: Monad m => BehaviourF (ExceptT () m) td Bool ()
+keyPressed :: Monad m => BehaviourF (ExceptT () m) time Bool ()
 keyPressed = throwOn ()
 
 -- | Raises an exception when the input becomes 'False',
 --   i.e. the key isn't pressed anymore.
-keyReleased :: Monad m => BehaviourF (ExceptT () m) td Bool ()
+keyReleased :: Monad m => BehaviourF (ExceptT () m) time Bool ()
 keyReleased = arr not >>> keyPressed
 
 
--- | Executes the first 'SyncSF' in parallel with a second 'SyncSF',
+-- | Executes the first 'ClSF' in parallel with a second 'ClSF',
 --   only forwarding the output of the first,
 --   until the second one raises an exception.
 --   That exception is returned,
---   together with the current output of the first 'SyncSF'.
+--   together with the current output of the first 'ClSF'.
 till
   :: Monad m
-  => SyncSF                 m  cl a b
-  -> SyncSF (ExceptT  e     m) cl a   c
-  -> SyncSF (ExceptT (e, b) m) cl a b
-till syncsf syncsfe = proc a -> do
-  b <- liftSyncSF syncsf   -< a
-  _ <- runSyncExcept synce -< (b, a)
+  => ClSF                 m  cl a b
+  -> ClSF (ExceptT  e     m) cl a   c
+  -> ClSF (ExceptT (e, b) m) cl a b
+till clsf clsfe = proc a -> do
+  b <- liftClSF clsf                -< a
+  _ <- runClSFExcept clsfeAndOutput -< (b, a)
   returnA -< b
     where
-      synce = do
-        e      <- try $ syncsfe <<< arr snd
+      clsfeAndOutput = do
+        e      <- try $ clsfe <<< arr snd
         (b, _) <- currentInput
         return (e, b)

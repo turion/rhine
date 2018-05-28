@@ -18,7 +18,7 @@ description:
   several standard scheduling and resampling solutions are implemented.
   Own schedules and resampling buffers can be implemented in a reusable fashion.
   A (synchronous) program outputting "Hello World!" every tenth of a second looks like this:
-  @flow $ arrMSync_ (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)@
+  @flow $ constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)@
 
 
 license:             BSD3
@@ -55,7 +55,7 @@ library
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.Count
-    FRP.Rhine.Clock.Cycle
+    FRP.Rhine.Clock.Periodic
     FRP.Rhine.Clock.FixedRate
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
@@ -63,9 +63,15 @@ library
     FRP.Rhine.Clock.Realtime.Millisecond
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
-    FRP.Rhine.Clock.Step
+    FRP.Rhine.Clock.FixedStep
+    FRP.Rhine.ClSF
+    FRP.Rhine.ClSF.Core
+    FRP.Rhine.ClSF.Except
+    FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.Tick
+    FRP.Rhine.Reactimation.Combinators
     FRP.Rhine.ResamplingBuffer
     FRP.Rhine.ResamplingBuffer.Collect
     FRP.Rhine.ResamplingBuffer.FIFO
@@ -78,17 +84,13 @@ library
     FRP.Rhine.Schedule
     FRP.Rhine.Schedule.Concurrently
     FRP.Rhine.Schedule.Trans
-    FRP.Rhine.SF
-    FRP.Rhine.SF.Combinators
-    FRP.Rhine.SyncSF
-    FRP.Rhine.SyncSF.Core
-    FRP.Rhine.SyncSF.Except
-    FRP.Rhine.SyncSF.Reader
-    FRP.Rhine.SyncSF.Util
+    FRP.Rhine.SN
+    FRP.Rhine.SN.Combinators
     FRP.Rhine.TimeDomain
+    FRP.Rhine.Type
 
   other-modules:
-    FRP.Rhine.SyncSF.Except.Util
+    FRP.Rhine.ClSF.Except.Util
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -101,6 +103,7 @@ library
                     ,  free         == 5.0.*
                     ,  containers   == 0.5.*
                     ,  vector-sized == 0.6.*
+                    ,  deepseq      == 1.4.*
 
   -- Directories containing source files.
   hs-source-dirs:      src
