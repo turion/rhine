@@ -76,7 +76,7 @@ would be:
   --   which is output every second.
   main :: IO ()
   main = flow $
-    ms500 @@ waitClock **@ concurrently @** ms1200 @@ waitClock
+    ms500 @@ waitClock ||@ concurrently @|| ms1200 @@ waitClock
     >-- collect -@- concurrently -->
     printEverySecond @@ waitClock
 

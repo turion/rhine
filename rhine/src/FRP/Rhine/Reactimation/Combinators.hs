@@ -141,3 +141,40 @@ infix 3 @++
        -> Rhine m (ParallelClock   m clL clR) a (Either b c)
 RhineParallelAndSchedule (Rhine sn1 clL) schedule @++ (Rhine sn2 clR)
   = Rhine (sn1 ++++ sn2) (ParallelClock clL clR schedule)
+
+-- | Further syntactic sugar for 'RhineParallelAndSchedule'.
+infix 4 ||@
+(||@)
+  :: Rhine                    m clL     a b
+  -> Schedule                 m clL clR
+  -> RhineParallelAndSchedule m clL clR a b
+(||@) = RhineParallelAndSchedule
+
+{- | The combinators for parallel composition allow for the following syntax:
+
+@
+rh1   :: Rhine    m                clL      a b
+rh1   =  ...
+
+rh2   :: Rhine    m                    clR  a b
+rh2   =  ...
+
+sched :: Schedule m                clL clR
+sched =  ...
+
+rh    :: Rhine    m (ParallelClock clL clR) a b
+rh    =  rh1 ++\@ sched \@++ rh2
+@
+-}
+infix 3 @||
+(@||)
+  :: ( Monad m, Clock m clL, Clock m clR
+     , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
+     , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
+     , Time clL ~ Time clR
+     )
+       => RhineParallelAndSchedule m clL clR  a b
+       -> Rhine                    m     clR  a b
+       -> Rhine m (ParallelClock   m clL clR) a b
+RhineParallelAndSchedule (Rhine sn1 clL) schedule @|| (Rhine sn2 clR)
+  = Rhine (sn1 |||| sn2) (ParallelClock clL clR schedule)

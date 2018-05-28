@@ -53,6 +53,22 @@ _ **** _ = error "Impossible pattern in ****"
 -- | Compose two signal networks on different clocks in clock-parallel.
 --   At one tick of @ParClock m cl1 cl2@, one of the networks is stepped,
 --   dependent on which constituent clock has ticked.
+--
+--   Note: This is essentially an infix synonym of 'Parallel'
+(||||)
+  :: ( Monad m, Clock m clL, Clock m clR
+     , Time clL ~ Time clR
+     , Time clL ~ Time (Out clL), Time clL ~ Time (In clL)
+     , Time clR ~ Time (Out clR), Time clR ~ Time (In clR)
+     )
+  => SN m             clL      a b
+  -> SN m                 clR  a b
+  -> SN m (ParClock m clL clR) a b
+(||||) = Parallel
+
+-- | Compose two signal networks on different clocks in clock-parallel.
+--   At one tick of @ParClock m cl1 cl2@, one of the networks is stepped,
+--   dependent on which constituent clock has ticked.
 (++++)
   :: ( Monad m, Clock m clL, Clock m clR
      , Time clL ~ Time clR
@@ -62,4 +78,4 @@ _ **** _ = error "Impossible pattern in ****"
   => SN m             clL      a         b
   -> SN m                 clR  a           c
   -> SN m (ParClock m clL clR) a (Either b c)
-snL ++++ snR = Parallel (snL >>>^ Left) (snR >>>^ Right)
+snL ++++ snR = (snL >>>^ Left) |||| (snR >>>^ Right)
