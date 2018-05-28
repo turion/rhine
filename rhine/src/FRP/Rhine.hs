@@ -15,7 +15,7 @@ main = flow $ constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 10
 module FRP.Rhine (module X) where
 
 -- dunai
-import Data.MonadicStreamFunction as X
+import Data.MonadicStreamFunction         as X hiding ((>>>^), (^>>>))
 
 -- rhine
 import FRP.Rhine.Clock                    as X
@@ -27,3 +27,4 @@ import FRP.Rhine.ResamplingBuffer.Util    as X
 import FRP.Rhine.Schedule                 as X
 import FRP.Rhine.SN                       as X
 import FRP.Rhine.SN.Combinators           as X
+import FRP.Rhine.Type                     as X

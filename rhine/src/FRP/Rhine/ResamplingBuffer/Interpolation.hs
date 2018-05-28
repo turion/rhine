@@ -9,7 +9,6 @@ import Data.VectorSpace
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.ResamplingBuffer.KeepLast
-import FRP.Rhine.ResamplingBuffer.Util
 
 -- | A simple linear interpolation based on the last calculated position and velocity.
 linear

@@ -21,7 +21,6 @@ import Data.MonadicStreamFunction.Async (concatS)
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.ResamplingBuffer.Collect
-import FRP.Rhine.ResamplingBuffer.Util
 
 -- | A pure (side effect free) clock with fixed step size,
 --   i.e. ticking at multiples of 'n'.

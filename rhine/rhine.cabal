@@ -87,6 +87,7 @@ library
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
     FRP.Rhine.TimeDomain
+    FRP.Rhine.Type
 
   other-modules:
     FRP.Rhine.ClSF.Except.Util

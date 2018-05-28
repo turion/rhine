@@ -8,23 +8,12 @@ import Data.MonadicStreamFunction
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Reactimation.Tick
+import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
-import FRP.Rhine.SN
+import FRP.Rhine.Type
 
-
-{- |
-An 'SN' together with a clock of matching type 'cl',
-A 'Rhine' is a reactive program, possibly with open inputs and outputs.
-If the input and output types 'a' and 'b' are both '()',
-that is, the 'Rhine' is "closed",
-then it is a standalone reactive program
-that can be run with the function 'flow'.
--}
-data Rhine m cl a b = Rhine
-  { sn    :: SN m cl a b
-  , clock :: cl
-  }
 
 
 -- * Running a Rhine
@@ -77,3 +66,13 @@ flow Rhine {..} = do
         tickable' <- tick tickable now tag
         -- Loop
         flow' runningClock' tickable'
+
+
+-- | Run a synchronous 'ClSF' with its clock as a main loop,
+--   similar to Yampa's, or Dunai's, 'reactimate'.
+reactimateCl
+  :: ( Monad m, Clock m cl
+     , cl ~ In  cl, cl ~ Out cl
+     )
+  => cl -> ClSF m cl () () -> m ()
+reactimateCl cl clsf = flow $ clsf @@ cl

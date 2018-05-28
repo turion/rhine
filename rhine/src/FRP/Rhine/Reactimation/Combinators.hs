@@ -16,9 +16,10 @@ module FRP.Rhine.Reactimation.Combinators where
 import FRP.Rhine.Clock
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
-import FRP.Rhine.Reactimation
 import FRP.Rhine.Schedule
 import FRP.Rhine.SN
+import FRP.Rhine.SN.Combinators
+import FRP.Rhine.Type
 
 
 -- * Combinators and syntactic sugar for high-level composition of signal networks.
@@ -101,43 +102,42 @@ RhineAndResamplingPoint (Rhine sn1 cl1) (ResamplingPoint rb cc) --> (Rhine sn2 c
 
 -- | A purely syntactical convenience construction
 --   allowing for ternary syntax for parallel composition, described below.
-data RhineParallelAndSchedule m cl1 cl2 a b = RhineParallelAndSchedule (Rhine m cl1 a b) (Schedule m cl1 cl2)
+data RhineParallelAndSchedule m clL clR a b
+  = RhineParallelAndSchedule (Rhine m clL a b) (Schedule m clL clR)
 
 -- | Syntactic sugar for 'RhineParallelAndSchedule'.
-infix 4 **@
-(**@)
-  :: Rhine                    m cl1     a b
-  -> Schedule                 m cl1 cl2
-  -> RhineParallelAndSchedule m cl1 cl2 a b
-(**@) = RhineParallelAndSchedule
+infix 4 ++@
+(++@)
+  :: Rhine                    m clL     a b
+  -> Schedule                 m clL clR
+  -> RhineParallelAndSchedule m clL clR a b
+(++@) = RhineParallelAndSchedule
 
 {- | The combinators for parallel composition allow for the following syntax:
 
 @
-rh1   :: Rhine    m                cl1      a b
+rh1   :: Rhine    m                clL      a         b
 rh1   =  ...
 
-rh2   :: Rhine    m                    cl2  a b
+rh2   :: Rhine    m                    clR  a           c
 rh2   =  ...
 
-sched :: Schedule m                cl1 cl2
+sched :: Schedule m                clL clR
 sched =  ...
 
-rh    :: Rhine    m (ParallelClock cl1 cl2) a b
-rh    =  rh1 **\@ sched \@** rh2
+rh    :: Rhine    m (ParallelClock clL clR) a (Either b c)
+rh    =  rh1 ++\@ sched \@++ rh2
 @
 -}
-infix 3 @**
-(@**) :: ( Clock m cl1
-          , Clock m cl2
-          , Time cl1 ~ Time (Out cl1)
-          , Time cl2 ~ Time (Out cl2)
-          , Time cl1 ~ Time (In cl1)
-          , Time cl2 ~ Time (In cl2)
-          , Time cl1 ~ Time cl2
-          )
-       => RhineParallelAndSchedule m cl1 cl2  a b
-       -> Rhine                    m     cl2  a b
-       -> Rhine m (ParallelClock   m cl1 cl2) a b
-RhineParallelAndSchedule (Rhine sn1 cl1) schedule @** (Rhine sn2 cl2)
-  = Rhine (Parallel sn1 sn2) (ParallelClock cl1 cl2 schedule)
+infix 3 @++
+(@++)
+  :: ( Monad m, Clock m clL, Clock m clR
+     , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
+     , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
+     , Time clL ~ Time clR
+     )
+       => RhineParallelAndSchedule m clL clR  a b
+       -> Rhine                    m     clR  a c
+       -> Rhine m (ParallelClock   m clL clR) a (Either b c)
+RhineParallelAndSchedule (Rhine sn1 clL) schedule @++ (Rhine sn2 clR)
+  = Rhine (sn1 ++++ sn2) (ParallelClock clL clR schedule)

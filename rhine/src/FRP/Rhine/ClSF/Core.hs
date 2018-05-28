@@ -3,10 +3,8 @@
 {-# LANGUAGE TypeFamilies     #-}
 module FRP.Rhine.ClSF.Core
   ( module FRP.Rhine.ClSF.Core
-  , module FRP.Rhine.Clock
-  , module FRP.Rhine.TimeDomain
   , module Control.Arrow
-  , module Data.MonadicStreamFunction
+  , module X
   )
   where
 
@@ -19,10 +17,10 @@ import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 
 -- dunai
 import Data.MonadicStreamFunction (MSF, arrM, arrM_, liftMSFPurer, liftMSFTrans)
+import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
 
 -- rhine
-import FRP.Rhine.Clock
-import FRP.Rhine.TimeDomain
+import FRP.Rhine.Clock      as X
 
 
 -- * Clocked signal functions and behaviours

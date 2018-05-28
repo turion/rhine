@@ -8,8 +8,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 module FRP.Rhine.Clock
   ( module FRP.Rhine.Clock
-  , module FRP.Rhine.TimeDomain
-  , module Data.MonadicStreamFunction
+  , module X
   )
 where
 
@@ -21,10 +20,10 @@ import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Trans.Class (lift, MonadTrans)
 
 -- dunai
-import Data.MonadicStreamFunction
+import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
 
 -- rhine
-import FRP.Rhine.TimeDomain
+import FRP.Rhine.TimeDomain as X
 
 -- * The 'Clock' type class
 

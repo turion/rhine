@@ -19,7 +19,6 @@ import Data.Vector.Sized (Vector, fromList)
 import FRP.Rhine
 import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.ResamplingBuffer.Collect
-import FRP.Rhine.ResamplingBuffer.Util
 
 {- |
 A clock ticking every 'n' milliseconds,
