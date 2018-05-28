@@ -43,4 +43,4 @@ thing1 = sinceInitS >>> arr sin
 
 main = do
   putStrLn "Press return to force the buffer"
-  flow $ thing1 @@ Busy >-- rb''''' -@- concurrently --> arrMCl print @@ StdinClock
+  flow $ thing1 @@ Busy >-- rb' -@- concurrently --> arrMCl print @@ StdinClock

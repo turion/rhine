@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.Timeless where
 
@@ -26,7 +27,9 @@ timelessResamplingBuffer AsyncMealy {..} = go
   where
     go s =
       let
-        put _ a = go <$> amPut s a
+        put _ a = do
+          !s' <- amPut s a
+          return $ go s'
         get _   = do
           (b, s') <- amGet s
           return (b, go s')
