@@ -11,6 +11,7 @@ import Control.Monad.IO.Class
 
 -- rhine
 import FRP.Rhine
+import Data.Semigroup
 
 {- |
 A clock that ticks for every line entered on the console,
@@ -30,6 +31,5 @@ instance MonadIO m => Clock m StdinClock where
       , initialTime
       )
 
-instance Monoid StdinClock where
-  mempty      = StdinClock
-  mappend _ _ = StdinClock
+instance Semigroup StdinClock where
+  (<>) _ _ = StdinClock
