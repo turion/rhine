@@ -39,7 +39,7 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
 
 
 -- | A universal schedule for two subclocks of the same main clock.
---   The main clock must be a Semigroup (e.g. a singleton).
+--   The main clock must be a 'Semigroup' (e.g. a singleton).
 schedSelectClocks
   :: (Monad m, Semigroup cl, Clock m cl)
   => Schedule m (SelectClock cl a) (SelectClock cl b)
