@@ -14,6 +14,7 @@ import Data.MonadicStreamFunction.Async (concatS)
 
 -- base
 import Data.Maybe (catMaybes, maybeToList)
+import Data.Semigroup
 
 -- | A clock that selects certain subevents of type 'a',
 --   from the tag of a main clock.
@@ -38,15 +39,15 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
 
 
 -- | A universal schedule for two subclocks of the same main clock.
---   The main clock must be a monoid (e.g. a singleton).
+--   The main clock must be a Semigroup (e.g. a singleton).
 schedSelectClocks
-  :: (Monad m, Monoid cl, Clock m cl)
+  :: (Monad m, Semigroup cl, Clock m cl)
   => Schedule m (SelectClock cl a) (SelectClock cl b)
 schedSelectClocks = Schedule {..}
   where
     initSchedule subClock1 subClock2 = do
       (runningClock, initialTime) <- initClock
-        $ mainClock subClock1 `mappend` mainClock subClock2
+        $ mainClock subClock1 <> mainClock subClock2
       let
         runningSelectClocks = concatS $ proc _ -> do
           (time, tag) <- runningClock -< ()
@@ -57,13 +58,13 @@ schedSelectClocks = Schedule {..}
 
 -- | A universal schedule for a subclock and its main clock.
 schedSelectClockAndMain
-  :: (Monad m, Monoid cl, Clock m cl)
+  :: (Monad m, Semigroup cl, Clock m cl)
   => Schedule m cl (SelectClock cl a)
 schedSelectClockAndMain = Schedule {..}
   where
     initSchedule mainClock' SelectClock {..} = do
       (runningClock, initialTime) <- initClock
-        $ mainClock' `mappend` mainClock
+        $ mainClock' <> mainClock
       let
         runningSelectClock = concatS $ proc _ -> do
           (time, tag) <- runningClock -< ()

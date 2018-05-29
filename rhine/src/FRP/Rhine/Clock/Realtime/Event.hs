@@ -30,6 +30,7 @@ module FRP.Rhine.Clock.Realtime.Event
 -- base
 import Control.Concurrent.Chan
 import Data.Time.Clock
+import Data.Semigroup
 
 -- deepseq
 import Control.DeepSeq
@@ -139,9 +140,8 @@ emitSMaybe' = mapMaybe emitS' >>> arr (const ())
 --   use 'eventClockOn'.
 data EventClock event = EventClock
 
-instance Monoid (EventClock event) where
-  mempty      = EventClock
-  mappend _ _ = EventClock
+instance Semigroup (EventClock event) where
+  (<>) _ _ = EventClock
 
 instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime
