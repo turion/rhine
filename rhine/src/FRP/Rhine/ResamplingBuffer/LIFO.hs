@@ -28,7 +28,7 @@ lifo = timelessResamplingBuffer AsyncMealy {..} empty
 boundedLifo :: Monad m => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
 boundedLifo threshold = timelessResamplingBuffer AsyncMealy {..} empty
   where
-    amPut as a = return $ take threshold (a <| as)
+    amPut as a = return $ take threshold $ a <| as
     amGet as = case viewl as of
       EmptyL   -> return (Nothing, empty)
       a :< as' -> return (Just a , as'  )
