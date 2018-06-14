@@ -28,12 +28,10 @@ fifo = timelessResamplingBuffer AsyncMealy {..} empty
 boundedFifo :: Monad m => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
 boundedFifo threshold = timelessResamplingBuffer AsyncMealy {..} empty
   where
-    amPut as a
-      | (length as) >= threshold = return $ a <| (take threshold as)
-      | otherwise = return $ a <| as
+    amPut as a = return $ take threshold (a <| as)
     amGet as = case viewr as of
-      EmptyR     -> return (Nothing, empty)
-      as' :>  a  -> return (Just a , as'  )
+      EmptyR   -> return (Nothing, empty)
+      as' :> a -> return (Just a , as'  )
 
 -- | An unbounded FIFO buffer that also returns its current size.
 fifoWatch :: Monad m => ResamplingBuffer m cl1 cl2 a (Maybe a, Int)
