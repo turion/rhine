@@ -54,9 +54,7 @@ library
     Control.Monad.Schedule
     FRP.Rhine
     FRP.Rhine.Clock
-    FRP.Rhine.Clock.Count
     FRP.Rhine.Clock.Periodic
-    FRP.Rhine.Clock.FixedRate
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Event
