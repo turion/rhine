@@ -1,7 +1,11 @@
 {-# LANGUAGE Arrows       #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.ResamplingBuffer.Interpolation where
 
+-- containers
+import Data.Sequence
 
 -- dunai
 import Data.VectorSpace
@@ -27,3 +31,35 @@ linear initVelocity initPosition
     sinceInit2 <- timeInfoOf sinceInit -< ()
     let diff = sinceInit2 - sinceInit1
     returnA -< lastPosition ^+^ velocity ^* diff
+
+{- |
+sinc-Interpolation, or Whittaker-Shannon-Interpolation.
+
+The incoming signal is strictly bandlimited
+by the frequency at which @cl1@ ticks.
+Each incoming value is hulled in a sinc function,
+these are added and sampled at @cl2@'s ticks.
+In order not to produce a space leak,
+the buffer only remembers the past values within a given window,
+which should be chosen much larger than the average time between @cl1@'s ticks.
+-}
+sinc
+  :: ( Monad m, Clock m cl1, Clock m cl2
+     , VectorSpace v
+     , Ord (Groundfield v)
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff (Time cl1)
+     , Groundfield v ~ Diff (Time cl2)
+     )
+  -- | The size of the interpolation window
+  --   (for how long in the past to remember incoming values)
+  => Groundfield v
+  -> ResamplingBuffer m cl1 cl2 v v
+sinc windowSize = historySince windowSize ^->> keepLast empty >>-^ proc as -> do
+  sinceInit2 <- sinceInitS -< ()
+  returnA                  -< vectorSum $ mkSinc sinceInit2 <$> as
+  where
+    mkSinc sinceInit2 (TimeInfo {..}, as)
+      = let t = pi * (sinceInit2 - sinceInit) / sinceTick
+        in  as ^* (sin t / t)
+    vectorSum = foldr (^+^) zeroVector
