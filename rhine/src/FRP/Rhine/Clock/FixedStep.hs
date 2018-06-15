@@ -42,6 +42,8 @@ instance Monad m => Clock m (FixedStep n) where
     , 0
     )
 
+-- | A singleton clock that counts the ticks.
+type Count = FixedStep 1
 
 -- | Two 'FixedStep' clocks can always be scheduled without side effects.
 scheduleFixedStep
