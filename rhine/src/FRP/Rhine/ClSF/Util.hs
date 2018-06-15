@@ -11,11 +11,17 @@ module FRP.Rhine.ClSF.Util where
 import Control.Arrow
 import Control.Category (Category)
 import qualified Control.Category (id)
+import Data.Maybe (fromJust)
+import Data.Monoid (Last (Last), getLast)
+
+-- containers
+import Data.Sequence
 
 -- transformers
 import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
+import Control.Monad.Trans.MSF.Reader (readerS)
 import Data.MonadicStreamFunction (arrM_, sumFrom, delay, feedback)
 import Data.VectorSpace
 
@@ -234,6 +240,30 @@ keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
 
+-- * Delays
+
+-- | Remembers all input values that arrived within a given time window.
+--   New values are appended left.
+historySince
+  :: (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl))
+  => Diff (Time cl) -- ^ The size of the time window
+  -> ClSF m cl a (Seq (TimeInfo cl, a))
+historySince dTime = readerS $ accumulateWith appendValue empty
+  where
+    appendValue (ti, a) tias  = takeWhileL (recentlySince ti) $ (ti, a) <| tias
+    recentlySince ti (ti', _) = diffTime (absolute ti) (absolute ti') < dTime
+
+-- | Delay a signal by certain time span.
+delayBy
+  :: (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl))
+  => Diff (Time cl) -- ^ The time span to delay the signal
+  -> ClSF m cl a a
+delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefined >>> arr snd
+  where
+    safeHead EmptyR   = Nothing
+    safeHead (_ :> a) = Just a
+-- TODO Think about how to do it without undefined (maybe exceptions)
+
 -- * Timers
 
 -- | Throws an exception after the specified time difference,
@@ -270,3 +300,11 @@ scaledTimer
   => Diff td
   -> BehaviorF (ExceptT () m) td a (Diff td)
 scaledTimer diff = timer diff >>> arr (/ diff)
+
+
+-- * To be ported to Dunai
+
+-- | Remembers the last 'Just' value,
+--   defaulting to the given initialisation value.
+lastS :: Monad m => a -> MSF m (Maybe a) a
+lastS a = arr Last >>> mappendFrom (Last (Just a)) >>> arr (getLast >>> fromJust)
