@@ -40,8 +40,6 @@ instance Clock IO (Millisecond n) where
   initClock (Millisecond cl) = initClock cl
 
 
--- TODO Test whether realtime detection really works here,
---  e.g. with a getLine signal
 -- | A more sophisticated implementation that measures the time after each tick,
 --   and waits for the remaining time until the next tick.
 --   If the next tick should already have occurred,
