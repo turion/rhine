@@ -210,7 +210,8 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
 
 -- | An exponential moving average, or low pass.
 --   It will average out, or filter,
---   all features below a given time scale.
+--   all features below a given time constant @t@.
+--   (Equivalently, it filters out frequencies above @1 / (2 * pi * t)@.)
 averageFrom
   :: ( Monad m, VectorSpace v
      , Floating (Groundfield v)
