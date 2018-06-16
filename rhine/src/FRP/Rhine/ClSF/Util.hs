@@ -130,6 +130,8 @@ clId = Control.Category.id
 
 -- * Basic signal processing components
 
+-- ** Integration and differentiation
+
 -- | The output of @integralFrom v0@ is the numerical Euler integral
 --   of the input, with initial offset @v0@.
 integralFrom
@@ -166,6 +168,28 @@ derivative
      , Groundfield v ~ Diff td)
   => BehaviorF m td v v
 derivative = derivativeFrom zeroVector
+
+-- | Like 'derivativeFrom', but uses three samples to compute the derivative.
+--   Consequently, it is delayed by one sample.
+threePointDerivativeFrom
+  :: ( Monad m, VectorSpace v
+     , Groundfield v ~ Diff td)
+  => v -- ^ The initial position
+  -> BehaviorF m td v v
+threePointDerivativeFrom v0 = proc v -> do
+  dv  <- derivativeFrom v0 -< v
+  dv' <- delay zeroVector  -< dv
+  returnA                  -< (dv ^+^ dv') ^/ 2
+
+-- | Like 'threePointDerivativeFrom',
+--   but with the initial position initialised to 'zeroVector'.
+threePointDerivative
+  :: ( Monad m, VectorSpace v
+     , Groundfield v ~ Diff td)
+  => BehaviorF m td v v
+threePointDerivative = threePointDerivativeFrom zeroVector
+
+-- ** Averaging and filters
 
 -- | A weighted moving average signal function.
 --   The output is the average of the first input,
