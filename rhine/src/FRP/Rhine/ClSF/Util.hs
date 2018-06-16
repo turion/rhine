@@ -258,13 +258,13 @@ averageLin
   -> BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
 
+-- * Delays
+
 -- | Remembers and indefinitely outputs ("holds") the first input value.
 keepFirst :: Monad m => ClSF m cl a a
 keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
-
--- * Delays
 
 -- | Remembers all input values that arrived within a given time window.
 --   New values are appended left.
