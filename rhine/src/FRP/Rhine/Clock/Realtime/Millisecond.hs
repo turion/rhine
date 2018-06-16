@@ -40,25 +40,6 @@ instance Clock IO (Millisecond n) where
   initClock (Millisecond cl) = initClock cl
 
 
--- | This clock simply sleeps 'n' milliseconds after each tick.
---   The current time is measured, but no adjustment is made.
---   Consequently, the tag is constantly 'False',
---   since the clock will accumulate the computation time as lag.
-sleepClock :: KnownNat n => Millisecond n
-sleepClock = sleepClock_ FixedStep
-  where
-    sleepClock_ :: FixedStep n -> Millisecond n
-    sleepClock_ cl = Millisecond $ RescaledClockS cl $ const $ do
-      now <- getCurrentTime
-      let ticks = arrM_ $ do
-            threadDelay $ fromInteger $ stepsize cl * 1000
-            getCurrentTime
-      return
-        ( ticks *** arr (const False)
-        , now
-        )
-
-
 -- TODO Test whether realtime detection really works here,
 --  e.g. with a getLine signal
 -- | A more sophisticated implementation that measures the time after each tick,
