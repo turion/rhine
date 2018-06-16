@@ -12,11 +12,13 @@ module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
 import Control.Monad (forever)
+import Data.List.NonEmpty hiding (unfold)
+import Data.Maybe (fromMaybe)
 import GHC.TypeLits (Nat, KnownNat, natVal)
 
 -- dunai
 import Control.Monad.Trans.MSF.Except
-import Control.Monad.Trans.MSF.Maybe (listToMaybeS)
+import Control.Monad.Trans.MSF.Maybe (listToMaybeS, runMaybeT)
 import Data.MonadicStreamFunction
 
 -- rhine
@@ -55,22 +57,22 @@ tailCl :: Periodic (n1 : n2 : ns) -> Periodic (n2 : ns)
 tailCl Periodic = Periodic
 
 class NonemptyNatList (v :: [Nat]) where
-  theList :: Periodic v -> [Integer]
+  theList :: Periodic v -> NonEmpty Integer
 
 instance KnownNat n => NonemptyNatList '[n] where
-  theList cl = [headCl cl]
+  theList cl = headCl cl :| []
 
 instance (KnownNat n1, KnownNat n2, NonemptyNatList (n2 : ns))
       => NonemptyNatList (n1 : n2 : ns) where
-  theList cl = headCl cl : theList (tailCl cl)
+  theList cl = headCl cl <| theList (tailCl cl)
 
 
 -- * Utilities
 
 -- TODO Port back to dunai when naming issues are resolved
 -- | Repeatedly outputs the values of a given list, in order.
-cycleS :: Monad m => [a] -> MSF m arbitrary a
-cycleS = safely . forever . try . maybeToExceptS . listToMaybeS
+cycleS :: Monad m => NonEmpty a -> MSF m () a
+cycleS as = unfold (second (fromMaybe as) . uncons) as
 
 {-
 -- TODO Port back to dunai when naming issues are resolved
