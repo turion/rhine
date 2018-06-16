@@ -9,6 +9,7 @@ import Data.Sequence
 
 -- dunai
 import Data.VectorSpace
+import Data.VectorSpace.Tuples
 
 -- rhine
 import FRP.Rhine
@@ -63,3 +64,33 @@ sinc windowSize = historySince windowSize ^->> keepLast empty >>-^ proc as -> do
       = let t = pi * (sinceInit2 - sinceInit) / sinceTick
         in  as ^* (sin t / t)
     vectorSum = foldr (^+^) zeroVector
+
+-- TODO Do we want to give initial values?
+-- | Interpolates the signal with Hermite splines,
+--   using 'threePointDerivative'.
+--
+--   Caution: In order to calculate the derivatives of the incoming signal,
+--   it has to be delayed by two ticks of @cl1@.
+--   In a non-realtime situation, a higher quality is achieved
+--   if the ticks of @cl2@ are delayed by two ticks of @cl1@.
+cubic
+  :: ( Monad m
+     , VectorSpace v
+     , Groundfield v ~ Diff (Time cl1)
+     , Groundfield v ~ Diff (Time cl2)
+     )
+  => ResamplingBuffer m cl1 cl2 v v
+cubic = ((delay zeroVector &&& threePointDerivative) &&& (sinceInitS >-> delay 0))
+    >-> (clId &&& delay (zeroVector, 0))
+   ^->> keepLast ((zeroVector, 0), (zeroVector, 0))
+   >>-^ proc (((dv, v), t1), ((dv', v'), t1')) -> do
+     t2 <- sinceInitS -< ()
+     let
+       t        = (t1 - t1') / (t2 - t1')
+       tsquared = t ^ 2
+       tcubed   = t ^ 3
+       vInter   = ( 2 * tcubed - 3 * tsquared     + 1) *^  v'
+              ^+^ (     tcubed - 2 * tsquared + t    ) *^ dv'
+              ^+^ (-2 * tcubed + 3 * tsquared        ) *^  v
+              ^+^ (     tcubed -     tsquared        ) *^ dv
+     returnA -< vInter
