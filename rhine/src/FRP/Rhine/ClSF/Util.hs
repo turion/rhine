@@ -23,6 +23,7 @@ import Control.Monad.Trans.Reader (ask, asks)
 -- dunai
 import Control.Monad.Trans.MSF.Reader (readerS)
 import Data.MonadicStreamFunction (arrM_, sumFrom, delay, feedback)
+import Data.MonadicStreamFunction.Instances.VectorSpace ()
 import Data.VectorSpace
 
 -- rhine
@@ -258,6 +259,46 @@ averageLin
   => Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
+
+-- *** First-order filters
+
+-- | Alias for 'average'.
+lowPass
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td
+  -> BehaviourF m td v v
+lowPass = average
+
+-- | Filters out frequencies below @1 / (2 * pi * t)@.
+highPass
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time constant @t@
+  -> BehaviourF m td v v
+highPass t = clId ^-^ lowPass t
+
+-- | Filters out frequencies other than @1 / (2 * pi * t)@.
+bandPass
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time constant @t@
+  -> BehaviourF m td v v
+bandPass t = lowPass t >>> highPass t
+
+-- | Filters out the frequency @1 / (2 * pi * t)@.
+bandStop
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time constant @t@
+  -> BehaviourF m td v v
+bandStop t = clId ^-^ bandPass t
+
+
 
 -- * Delays
 
