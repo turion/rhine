@@ -5,6 +5,7 @@ module FRP.Rhine.Clock.Realtime.Stdin where
 
 -- base
 import Data.Time.Clock
+import Data.Semigroup
 
 -- transformers
 import Control.Monad.IO.Class
@@ -29,6 +30,9 @@ instance MonadIO m => Clock m StdinClock where
         &&& arrM_ (liftIO getLine)
       , initialTime
       )
+
+instance Semigroup StdinClock where
+  _ <> _ = StdinClock
 
 instance Monoid StdinClock where
   mempty      = StdinClock

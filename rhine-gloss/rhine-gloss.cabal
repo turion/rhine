@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-gloss
-version:             0.4.0.0
+version:             0.4.0.1
 -- synopsis:
 description:         Wrapper to run reactive programs written in Rhine
                      with Gloss as backend
@@ -16,10 +16,20 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.18
 
+source-repository head
+  type:     git
+  location: git@github.com:turion/rhine.git
+
+source-repository this
+  type:     git
+  location: git@github.com:turion/rhine.git
+  tag:      v0.4.0.1
+
+
 library
   exposed-modules:     FRP.Rhine.Gloss
   other-modules:       FRP.Rhine.Gloss.Internals
-  build-depends:       base  >= 4.7    && < 5
+  build-depends:       base  >= 4.9
                      , rhine == 0.4.*
                      , dunai == 0.4.*
                      , gloss == 1.11.*
@@ -29,6 +39,6 @@ library
 executable rhine-gloss-gears
   main-is:             Main.hs
   ghc-options:         -threaded
-  build-depends:       base        >= 4.7    && < 5
+  build-depends:       base        >= 4.9
                      , rhine-gloss
   default-language:    Haskell2010
