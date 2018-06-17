@@ -5,6 +5,7 @@ module FRP.Rhine.Clock.Realtime.Stdin where
 
 -- base
 import Data.Time.Clock
+import Data.Semigroup
 
 -- transformers
 import Control.Monad.IO.Class
