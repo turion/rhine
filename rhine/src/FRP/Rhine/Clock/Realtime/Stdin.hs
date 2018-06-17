@@ -11,6 +11,7 @@ import Control.Monad.IO.Class
 
 -- rhine
 import FRP.Rhine
+import Data.Semigroup
 
 {- |
 A clock that ticks for every line entered on the console,
@@ -19,10 +20,10 @@ outputting the entered line as its |Tag|.
 data StdinClock = StdinClock
 
 instance MonadIO m => Clock m StdinClock where
-  type TimeDomainOf StdinClock = UTCTime
-  type Tag          StdinClock = String
+  type Time StdinClock = UTCTime
+  type Tag  StdinClock = String
 
-  startClock _ = do
+  initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
       (     arrM_ (liftIO getCurrentTime)
@@ -30,6 +31,5 @@ instance MonadIO m => Clock m StdinClock where
       , initialTime
       )
 
-instance Monoid StdinClock where
-  mempty      = StdinClock
-  mappend _ _ = StdinClock
+instance Semigroup StdinClock where
+  (<>) _ _ = StdinClock

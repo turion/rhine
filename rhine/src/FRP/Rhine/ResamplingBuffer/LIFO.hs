@@ -2,7 +2,7 @@
 module FRP.Rhine.ResamplingBuffer.LIFO where
 
 -- base
-import Prelude hiding (length)
+import Prelude hiding (length, take)
 
 -- containers
 import Data.Sequence
@@ -23,6 +23,15 @@ lifo = timelessResamplingBuffer AsyncMealy {..} empty
       EmptyL   -> return (Nothing, empty)
       a :< as' -> return (Just a , as'  )
 
+-- |  A bounded LIFO buffer that forgets the oldest values when the size is above a given threshold.
+--   If the buffer is empty, it will return 'Nothing'.
+boundedLifo :: Monad m => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
+boundedLifo threshold = timelessResamplingBuffer AsyncMealy {..} empty
+  where
+    amPut as a = return $ take threshold $ a <| as
+    amGet as = case viewl as of
+      EmptyL   -> return (Nothing, empty)
+      a :< as' -> return (Just a , as'  )
 
 -- | An unbounded LIFO buffer that also returns its current size.
 lifoWatch :: Monad m => ResamplingBuffer m cl1 cl2 a (Maybe a, Int)

@@ -4,6 +4,11 @@ The version numbering follows the package `dunai`.
 Since `rhine` reexports modules from `dunai`,
 every major version in `dunai` triggers a major version in `rhine`.
 
+## 0.5.0.0
+
+* Deprecated GHC 7.*
+* Big module reorganisation
+
 ## 0.4.0.0 -- 2017.12.04
 
 * Documentation typos fixed
@@ -24,7 +29,7 @@ every major version in `dunai` triggers a major version in `rhine`.
 
 * Added `FRP.Rhine.Clock.Realtime.Stdin` (console keyboard event clock)
 * Added `FRP.Rhine.Clock.Select` (event selection clock)
-* Added `FRP.Rhine.SyncSF.Except` (synchronous exception handling)
+* Added `FRP.Rhine.ClSF.Except` (synchronous exception handling)
 
 ## 0.1.0.0
 

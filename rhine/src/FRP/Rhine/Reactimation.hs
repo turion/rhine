@@ -8,23 +8,12 @@ import Data.MonadicStreamFunction
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Reactimation.Tick
+import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
-import FRP.Rhine.SF
+import FRP.Rhine.Type
 
-
-{- |
-An 'SF' together with a clock of matching type 'cl',
-A 'Rhine' is a reactive program, possibly with open inputs and outputs.
-If the input and output types 'a' and 'b' are both '()',
-that is, the 'Rhine' is "closed",
-then it is a standalone reactive program
-that can be run with the function 'flow'.
--}
-data Rhine m cl a b = Rhine
-  { sf    :: SF m cl a b
-  , clock :: cl
-  }
 
 
 -- * Running a Rhine
@@ -38,16 +27,16 @@ in a monad 'm'.
 Basic usage (synchronous case):
 
 @
-sensor :: SyncSF MyMonad MyClock () a
-sensor = arrMSync_ produceData
+sensor :: ClSF MyMonad MyClock () a
+sensor = constMCl produceData
 
-processing :: SyncSF MyMonad MyClock a b
+processing :: ClSF MyMonad MyClock a b
 processing = ...
 
-actuator :: SyncSF MyMonad MyClock b ()
-actuator = arrMSync consumeData
+actuator :: ClSF MyMonad MyClock b ()
+actuator = arrMCl consumeData
 
-mainSF :: SyncSF MyMonad MyClock () ()
+mainSF :: ClSF MyMonad MyClock () ()
 mainSF = sensor >-> processing >-> actuator
 
 main :: MyMonad ()
@@ -57,16 +46,16 @@ main = flow $ mainSF @@ clock
 -- TODO Can we chuck the constraints into Clock m cl?
 flow
   :: ( Monad m, Clock m cl
-     , TimeDomainOf cl ~ TimeDomainOf (Leftmost  cl)
-     , TimeDomainOf cl ~ TimeDomainOf (Rightmost cl)
+     , Time cl ~ Time (In  cl)
+     , Time cl ~ Time (Out cl)
      )
   => Rhine m cl () () -> m ()
 flow Rhine {..} = do
-  (runningClock, initTime) <- startClock clock
+  (runningClock, initTime) <- initClock clock
   -- Run the main loop
   flow' runningClock $ createTickable
     (trivialResamplingBuffer clock)
-    sf
+    sn
     (trivialResamplingBuffer clock)
     initTime
     where
@@ -77,3 +66,13 @@ flow Rhine {..} = do
         tickable' <- tick tickable now tag
         -- Loop
         flow' runningClock' tickable'
+
+
+-- | Run a synchronous 'ClSF' with its clock as a main loop,
+--   similar to Yampa's, or Dunai's, 'reactimate'.
+reactimateCl
+  :: ( Monad m, Clock m cl
+     , cl ~ In  cl, cl ~ Out cl
+     )
+  => cl -> ClSF m cl () () -> m ()
+reactimateCl cl clsf = flow $ clsf @@ cl
