@@ -89,8 +89,8 @@ library
   build-depends:       base         >= 4.7   && < 5
                     ,  dunai        == 0.4.0.*
                     ,  transformers >= 0.4   && < 0.6
-                    ,  time         >= 1.6   && < 1.7
-                    ,  free         >= 4.12  && < 4.13
+                    ,  time         == 1.8.*
+                    ,  free         == 5.0.*
                     ,  containers   >= 0.5   && < 0.6
 
   -- Directories containing source files.

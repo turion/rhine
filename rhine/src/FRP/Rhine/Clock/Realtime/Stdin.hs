@@ -30,6 +30,9 @@ instance MonadIO m => Clock m StdinClock where
       , initialTime
       )
 
+instance Semigroup StdinClock where
+  _ <> _ = StdinClock
+
 instance Monoid StdinClock where
   mempty      = StdinClock
   mappend _ _ = StdinClock
