@@ -100,7 +100,7 @@ library
                     ,  time         == 1.8.*
                     ,  free         == 5.0.*
                     ,  containers   == 0.5.*
-                    ,  vector-sized == 0.6.*
+                    ,  vector-sized >= 0.6    && < 1.1
                     ,  deepseq      == 1.4.*
 
   -- Directories containing source files.
