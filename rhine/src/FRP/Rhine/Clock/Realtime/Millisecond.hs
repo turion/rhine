@@ -1,6 +1,7 @@
-{- | Provides two implementations of a clock that ticks
-at every multiple of a fixed number of milliseconds.
+{- |
+Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 -}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
@@ -43,7 +44,7 @@ instance Clock IO (Millisecond n) where
   initClock (Millisecond cl) = initClock cl
 
 
--- | A more sophisticated implementation that measures the time after each tick,
+-- | This implementation measures the time after each tick,
 --   and waits for the remaining time until the next tick.
 --   If the next tick should already have occurred,
 --   the tag is set to 'False', representing a failed real time attempt.

@@ -1,6 +1,8 @@
-{- | This module contains internals needed for the reactimation of signal functions.
+{- |
+This module contains internals needed for the reactimation of signal functions.
 None of it should be relevant for a typical user of this library.
 -}
+
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}

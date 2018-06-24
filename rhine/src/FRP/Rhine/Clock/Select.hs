@@ -1,9 +1,11 @@
-{- | In the Rhine philosophy, _event sources are clocks_.
+{- |
+In the Rhine philosophy, _event sources are clocks_.
 Often, we want to extract certain subevents from event sources,
-e.g. single out only keystrokes from all input device events.
+e.g. single out only left mouse button clicks from all input device events.
 This module provides a general purpose selection clock
 that ticks only on certain subevents.
 -}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}

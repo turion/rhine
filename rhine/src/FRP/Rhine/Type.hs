@@ -1,3 +1,8 @@
+{- |
+The type of a complete Rhine program:
+A signal network together with a matching clock value.
+-}
+
 module FRP.Rhine.Type where
 
 import FRP.Rhine.SN

@@ -1,4 +1,5 @@
-{- | Resampling buffers from asynchronous Mealy machines.
+{- |
+Resampling buffers from asynchronous Mealy machines.
 These are used in many other modules implementing 'ResamplingBuffer's.
 -}
 

@@ -1,6 +1,8 @@
-{- | Provides several clocks to use for audio processing,
-both realtime and batch/file based.
+{- |
+Provides several clocks to use for audio processing,
+for realtime as well as for batch/file processing.
 -}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}

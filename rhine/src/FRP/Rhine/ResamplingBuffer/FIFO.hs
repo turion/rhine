@@ -1,4 +1,7 @@
-{- | Different implementations of FIFO buffers. -}
+{- |
+Different implementations of FIFO buffers.
+-}
+
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.FIFO where
 

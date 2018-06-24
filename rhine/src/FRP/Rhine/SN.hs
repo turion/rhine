@@ -1,3 +1,12 @@
+{- |
+Asynchronous signal networks are combinations of clocked signal functions ('ClSF's)
+and matching 'ResamplingBuffer's,
+all satisfying the appropriate clock type constraints.
+
+This module defines the 'SN' type,
+combinators are found in a submodule.
+-}
+
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 module FRP.Rhine.SN where

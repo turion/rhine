@@ -1,3 +1,7 @@
+{- |
+Different implementations of LIFO buffers.
+-}
+
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.LIFO where
 

@@ -1,3 +1,10 @@
+{- |
+The core functionality of clocked signal functions,
+supplying the type of clocked signal functions itself ('ClSF'),
+behaviours (clock-independent/polymorphic signal functions),
+and basic constructions of 'ClSF's that may use awareness of time as an effect.
+-}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}

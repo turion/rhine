@@ -1,6 +1,8 @@
-{- | This module provides the API to run signal functions
-together with matching clocks as a main loop.
+{- |
+Run closed 'Rhine's (which are signal functions together with matching clocks)
+as main loops.
 -}
+
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation where

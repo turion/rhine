@@ -1,5 +1,7 @@
-{- | Create and remove 'ReaderT' layers in 'ClSF's.
+{- |
+Create and remove 'ReaderT' layers in 'ClSF's.
 -}
+
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}

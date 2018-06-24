@@ -1,5 +1,7 @@
-{- | Interpolation buffers.
+{- |
+Interpolation buffers.
 -}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -54,9 +56,9 @@ sinc
      , Groundfield v ~ Diff (Time cl1)
      , Groundfield v ~ Diff (Time cl2)
      )
-  -- | The size of the interpolation window
-  --   (for how long in the past to remember incoming values)
   => Groundfield v
+  -- ^ The size of the interpolation window
+  --   (for how long in the past to remember incoming values)
   -> ResamplingBuffer m cl1 cl2 v v
 sinc windowSize = historySince windowSize ^->> keepLast empty >>-^ proc as -> do
   sinceInit2 <- sinceInitS -< ()

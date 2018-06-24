@@ -10,7 +10,10 @@ i.e. it is possible (and encouraged) to emit events from signals
 on a different clock than the event clock.
 This is in line with the Rhine philosophy that _event sources are clocks_.
 
-A simple example using events can be found in rhine-examples.
+Events even work well across separate threads,
+and constitute the recommended way of communication between threads in Rhine.
+
+A simple example using events and threads can be found in rhine-examples.
 -}
 
 {-# LANGUAGE DataKinds #-}

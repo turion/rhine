@@ -1,4 +1,6 @@
--- | Several utilities to create 'ResamplingBuffer's.
+{- |
+Several utilities to create 'ResamplingBuffer's.
+-}
 
 {-# LANGUAGE RankNTypes #-}
 module FRP.Rhine.ResamplingBuffer.Util where

@@ -1,4 +1,5 @@
-{- | This module supplies a general purpose monad transformer
+{- |
+This module supplies a general purpose monad transformer
 that adds a syntactical "delay", or "waiting" side effect.
 
 This allows for universal and deterministic scheduling of clocks

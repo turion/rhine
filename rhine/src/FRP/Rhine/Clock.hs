@@ -1,4 +1,9 @@
-{- | This module provides the 'Clock' type class, several utilities,
+{- |
+'Clock's are the central new notion in Rhine.
+There are clock types (instances of the 'Clock' type class)
+and their values.
+
+This module provides the 'Clock' type class, several utilities,
 and certain general constructions of 'Clock's,
 such as clocks lifted along monad morphisms or time rescalings.
 -}
