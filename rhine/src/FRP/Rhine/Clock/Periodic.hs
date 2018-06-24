@@ -1,3 +1,9 @@
+{- |
+Periodic clocks are defined by a stream of ticks with periodic time differences.
+They model subclocks of a fixed reference clock.
+The time differences are supplied at the type level.
+-}
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}

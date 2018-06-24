@@ -1,3 +1,8 @@
+{- |
+Clocks implemented in the 'ScheduleT' monad transformer
+can always be scheduled (by construction).
+-}
+
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}

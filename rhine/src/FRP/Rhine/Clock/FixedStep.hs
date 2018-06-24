@@ -1,3 +1,9 @@
+{- |
+Implements pure clocks ticking at
+every multiple of a fixed number of steps,
+and a deterministic schedule for such clocks.
+-}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}

@@ -1,3 +1,8 @@
+{- |
+Run closed 'Rhine's (which are signal functions together with matching clocks)
+as main loops.
+-}
+
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation where
@@ -21,8 +26,10 @@ import FRP.Rhine.Type
 {- |
 Takes a closed 'Rhine' (with trivial input and output),
 and runs it indefinitely.
-All input is created, and all output is consumed by means of side effects
-in a monad 'm'.
+This is typically the main loop.
+
+All input has to be created, and all output has to be consumed
+by means of side effects in a monad 'm'.
 
 Basic usage (synchronous case):
 

@@ -1,3 +1,8 @@
+{- |
+Resampling buffers from asynchronous Mealy machines.
+These are used in many other modules implementing 'ResamplingBuffer's.
+-}
+
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.Timeless where
 

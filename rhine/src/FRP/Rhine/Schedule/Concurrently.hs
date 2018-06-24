@@ -1,3 +1,12 @@
+{- |
+Many clocks tick at nondeterministic times
+(such as event sources),
+and it is thus impossible to schedule them deterministically
+with most other clocks.
+Using concurrency, they can still be scheduled with all clocks in 'IO',
+by running the clocks in separate threads.
+-}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -45,6 +54,11 @@ concurrently = Schedule $ \cl1 cl2 -> do
 -- TODO These threads can't be killed from outside easily since we've lost their ids
 -- => make a MaybeT or ExceptT variant
 
+-- TODO Test whether signal networks also share the writer and except effects correctly with these schedules
+
+-- | As 'concurrently', but in the @WriterT w IO@ monad.
+--   Both background threads share a joint variable with the foreground
+--   to which the writer effect writes.
 concurrentlyWriter
   :: ( Monoid w
      , Clock (WriterT w IO) cl1

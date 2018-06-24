@@ -1,3 +1,10 @@
+{- |
+Utilities to create 'ClSF's.
+The fundamental effect that 'ClSF's have is
+reading the time information of the clock.
+It can be used for many purposes, for example digital signal processing.
+-}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}

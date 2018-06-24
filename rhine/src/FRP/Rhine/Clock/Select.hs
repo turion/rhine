@@ -1,3 +1,11 @@
+{- |
+In the Rhine philosophy, _event sources are clocks_.
+Often, we want to extract certain subevents from event sources,
+e.g. single out only left mouse button clicks from all input device events.
+This module provides a general purpose selection clock
+that ticks only on certain subevents.
+-}
+
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -18,6 +26,10 @@ import Data.Semigroup
 
 -- | A clock that selects certain subevents of type 'a',
 --   from the tag of a main clock.
+--
+--   If two 'SelectClock's would tick on the same type of subevents,
+--   but should not have the same type,
+--   one should @newtype@ the subevent.
 data SelectClock cl a = SelectClock
   { mainClock :: cl -- ^ The main clock
   -- | Return 'Nothing' if no tick of the subclock is required,

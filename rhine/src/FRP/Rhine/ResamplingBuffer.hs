@@ -1,3 +1,11 @@
+{- |
+This module introduces 'ResamplingBuffer's,
+which are primitives that consume and produce data at different rates.
+Just as schedules form the boundaries between different clocks,
+(resampling) buffers form the boundaries between
+synchronous signal functions ticking at different speeds.
+-}
+
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}

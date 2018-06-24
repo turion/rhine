@@ -1,3 +1,9 @@
+{- |
+In Rhine, event sources are clocks, and so is the console.
+If this clock is used,
+every input line on the console triggers one tick of the 'StdinClock'.
+-}
+
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}

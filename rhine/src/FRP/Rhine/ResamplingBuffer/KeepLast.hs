@@ -1,3 +1,7 @@
+{- |
+A buffer keeping the last value, or zero-order hold.
+-}
+
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.KeepLast where
 
