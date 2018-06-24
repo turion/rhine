@@ -106,7 +106,7 @@ tick Tickable
   , .. } now tag = do
     let
       ti = TimeInfo
-        { sinceTick = diffTime now lastTime
+        { sinceLast = diffTime now lastTime
         , sinceInit = diffTime now initTime
         , absolute  = now
         , tag       = tag

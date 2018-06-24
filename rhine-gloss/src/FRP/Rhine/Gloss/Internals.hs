@@ -71,8 +71,8 @@ withProperSimClock clsf = readerS
   where
     intermingle :: Monad m => MSF m (TimeInfo GlossSimulationClock_) (TimeInfo GlossSimulationClock)
     intermingle = proc TimeInfo {tag} -> do
-      let sinceTick = tag
-      absolute <- sumS -< sinceTick
+      let sinceLast = tag
+      absolute <- sumS -< sinceLast
       let sinceInit = absolute
       returnA          -< TimeInfo { tag = (), .. }
 

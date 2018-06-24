@@ -48,8 +48,8 @@ timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = arrM_ $ asks f
 
 -- | Continuously return the time difference since the last tick.
-sinceTickS :: Monad m => ClSF m cl a (Diff (Time cl))
-sinceTickS = timeInfoOf sinceTick
+sinceLastS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceLastS = timeInfoOf sinceLast
 
 -- | Continuously return the time difference since clock initialisation.
 sinceInitS :: Monad m => ClSF m cl a (Diff (Time cl))
@@ -140,8 +140,8 @@ integralFrom
      , Groundfield v ~ Diff td)
   => v -> BehaviorF m td v v
 integralFrom v0 = proc v -> do
-  _sinceTick <- timeInfoOf sinceTick -< ()
-  sumFrom v0                         -< _sinceTick *^ v
+  _sinceLast <- timeInfoOf sinceLast -< ()
+  sumFrom v0                         -< _sinceLast *^ v
 
 -- | Euler integration, with zero initial offset.
 integral
@@ -161,7 +161,7 @@ derivativeFrom
 derivativeFrom v0 = proc v -> do
   vLast         <- delay v0 -< v
   TimeInfo {..} <- timeInfo -< ()
-  returnA                   -< (v ^-^ vLast) ^/ sinceTick
+  returnA                   -< (v ^-^ vLast) ^/ sinceLast
 
 -- | Numerical derivative with input initialised to zero.
 derivative
@@ -223,7 +223,7 @@ averageFrom
 averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = exp $ - (sinceTick / t)
+    weight = exp $ - (sinceLast / t)
   weightedAverageFrom v0    -< (v, weight)
 
 
@@ -249,7 +249,7 @@ averageLinFrom
 averageLinFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = t / (sinceTick + t)
+    weight = t / (sinceLast + t)
   weightedAverageFrom v0    -< (v, weight)
 
 -- | Linearised version of 'average'.

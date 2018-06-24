@@ -61,7 +61,7 @@ sinc windowSize = historySince windowSize ^->> keepLast empty >>-^ proc as -> do
   returnA                  -< vectorSum $ mkSinc sinceInit2 <$> as
   where
     mkSinc sinceInit2 (TimeInfo {..}, as)
-      = let t = pi * (sinceInit2 - sinceInit) / sinceTick
+      = let t = pi * (sinceInit2 - sinceInit) / sinceLast
         in  as ^* (sin t / t)
     vectorSum = foldr (^+^) zeroVector
 

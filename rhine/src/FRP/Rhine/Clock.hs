@@ -67,7 +67,7 @@ class TimeDomain (Time cl) => Clock m cl where
 -- | An annotated, rich time stamp.
 data TimeInfo cl = TimeInfo
   { -- | Time passed since the last tick
-    sinceTick :: Diff (Time cl)
+    sinceLast :: Diff (Time cl)
     -- | Time passed since the initialisation of the clock
   , sinceInit :: Diff (Time cl)
     -- | The absolute time of the current tick
@@ -93,7 +93,7 @@ genTimeInfo
 genTimeInfo _ initialTime = proc (absolute, tag) -> do
   lastTime <- iPre initialTime -< absolute
   returnA                      -< TimeInfo
-    { sinceTick  = absolute `diffTime` lastTime
+    { sinceLast = absolute `diffTime` lastTime
     , sinceInit = absolute `diffTime` initialTime
     , ..
     }
