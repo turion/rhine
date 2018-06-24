@@ -6,9 +6,9 @@ since the @gloss@ API only offers callbacks.
 In order to run such a reactive program, you have to use 'flowGloss'.
 -}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
-{-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Gloss
   ( module FRP.Rhine.Gloss
   , module X
@@ -32,8 +32,8 @@ import FRP.Rhine.Reactimation.Tick
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.KeepLast
 
-import qualified FRP.Rhine        as X
-import qualified FRP.Rhine.SyncSF as X
+import qualified FRP.Rhine      as X
+import qualified FRP.Rhine.ClSF as X
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Internals
@@ -41,7 +41,7 @@ import FRP.Rhine.Gloss.Internals
 -- TODO Consider generalising to IO
 
 
--- | The overall clock of a valid @rhine@ 'SF' that can be run by @gloss@.
+-- | The overall clock of a valid @rhine@ 'SN' that can be run by @gloss@.
 --   @a@ is the type of subevents that are selected.
 type GlossClock a
   = SequentialClock Identity
@@ -52,24 +52,24 @@ type GlossClock a
 --   @a@ is the type of subevents that are selected.
 type GlossRhine a = Rhine Identity (GlossClock a) () Picture
 
--- | The type of a 'SyncSF' that you have to implement to get a @gloss@ app.
-type GlossSyncSF a = SyncSF Identity GlossSimulationClock [a] Picture
+-- | The type of a 'ClSF' that you have to implement to get a @gloss@ app.
+type GlossClSF a = ClSF Identity GlossSimulationClock [a] Picture
 
 {- | For most applications, it is sufficient to implement
-a single synchronous signal function
+a single signal function
 that is called with a list of all relevant events
 that occurred in the last tick.
 -}
 buildGlossRhine
   :: (Event -> Maybe a) -- ^ The event selector
-  -> GlossSyncSF a      -- ^ The 'SyncSF' representing the game loop.
+  -> GlossClSF a        -- ^ The 'ClSF' representing the game loop.
   -> GlossRhine a
-buildGlossRhine select syncsfSim
+buildGlossRhine select clsfSim
   =   timeInfoOf tag @@  SelectClock { mainClock = GlossEventClock, .. }
   >-- collect -@- glossSchedule
-  --> withProperSimClock syncsfSim @@ GlossSimulationClock_
+  --> withProperSimClock clsfSim @@ GlossSimulationClock_
 
--- | The main function that will start the @gloss@ backend and run the 'SF'.
+-- | The main function that will start the @gloss@ backend and run the 'SN'.
 flowGloss
   :: Display      -- ^ Display mode (e.g. 'InWindow' or 'FullScreen').
   -> Color        -- ^ Background color.
@@ -84,7 +84,7 @@ flowGloss display color n Rhine {..}
            GlossSimulationClock_ GlossGraphicsClock
            Picture               Picture
     graphicsBuffer = keepLast Blank
-    world = createTickable (trivialResamplingBuffer clock) sf graphicsBuffer ()
+    world = createTickable (trivialResamplingBuffer clock) sn graphicsBuffer ()
     getPic Tickable { buffer2 } = fst $ runIdentity $ get buffer2 $ TimeInfo () () () ()
     handleEvent event tickable = case select (sequentialCl1 clock) event of
       Just a  -> runIdentity $ tick tickable () $ Left a -- Event is relevant

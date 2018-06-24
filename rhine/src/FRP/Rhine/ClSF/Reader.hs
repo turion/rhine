@@ -1,10 +1,9 @@
-{- | Create and remove 'ReaderT' layers in 'SyncSF's.
+{- | Create and remove 'ReaderT' layers in 'ClSF's.
 -}
-
-{-# LANGUAGE RankNTypes    #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeFamilies  #-}
-module FRP.Rhine.SyncSF.Reader where
+{-# LANGUAGE TypeFamilies #-}
+module FRP.Rhine.ClSF.Reader where
 
 -- base
 import Data.Tuple (swap)
@@ -16,7 +15,7 @@ import Control.Monad.Trans.Reader
 import qualified Control.Monad.Trans.MSF.Reader as MSF
 
 -- rhine
-import FRP.Rhine.SyncSF.Core
+import FRP.Rhine.ClSF.Core
 
 
 -- | Commute two 'ReaderT' transformer layers past each other
@@ -29,7 +28,7 @@ commuteReaders a
 --   by passing the original behaviour the extra @r@ input.
 readerS
   :: Monad m
-  => SyncSF m cl (a, r) b -> SyncSF (ReaderT r m) cl a b
+  => ClSF m cl (a, r) b -> ClSF (ReaderT r m) cl a b
 readerS behaviour
   = liftMSFPurer commuteReaders $ MSF.readerS $ arr swap >>> behaviour
 
@@ -37,12 +36,12 @@ readerS behaviour
 --   by making it an explicit input to the behaviour.
 runReaderS
   :: Monad m
-  => SyncSF (ReaderT r m) cl a b -> SyncSF m cl (a, r) b
+  => ClSF (ReaderT r m) cl a b -> ClSF m cl (a, r) b
 runReaderS behaviour
   = arr swap >>> (MSF.runReaderS $ liftMSFPurer commuteReaders behaviour)
 
 -- | Remove a 'ReaderT' layer by passing the readonly environment explicitly.
 runReaderS_
   :: Monad m
-  => SyncSF (ReaderT r m) cl a b -> r -> SyncSF m cl a b
+  => ClSF (ReaderT r m) cl a b -> r -> ClSF m cl a b
 runReaderS_ behaviour r = arr (, r) >>> runReaderS behaviour

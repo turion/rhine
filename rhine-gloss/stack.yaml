@@ -4,4 +4,4 @@ extra-deps:
   - ../rhine
 nix:
   enable: true
-  packages: [mesa freeglut]
+  packages: [libGL libGLU]

@@ -4,12 +4,12 @@ e.g. single out only keystrokes from all input device events.
 This module provides a general purpose selection clock
 that ticks only on certain subevents.
 -}
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Clock.Select where
 
 -- rhine
@@ -20,6 +20,7 @@ import Data.MonadicStreamFunction.Async (concatS)
 
 -- base
 import Data.Maybe (catMaybes, maybeToList)
+import Data.Semigroup
 
 -- | A clock that selects certain subevents of type 'a',
 --   from the tag of a main clock.
@@ -36,10 +37,10 @@ data SelectClock cl a = SelectClock
 
 
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
-  type TimeDomainOf (SelectClock cl a) = TimeDomainOf cl
-  type Tag          (SelectClock cl a) = a
-  startClock SelectClock {..} = do
-    (runningClock, initialTime) <- startClock mainClock
+  type Time (SelectClock cl a) = Time cl
+  type Tag  (SelectClock cl a) = a
+  initClock SelectClock {..} = do
+    (runningClock, initialTime) <- initClock mainClock
     let
       runningSelectClock = filterS $ proc _ -> do
         (time, tag) <- runningClock -< ()
@@ -48,15 +49,15 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
 
 
 -- | A universal schedule for two subclocks of the same main clock.
---   The main clock must be a monoid (e.g. a singleton).
+--   The main clock must be a 'Semigroup' (e.g. a singleton).
 schedSelectClocks
-  :: (Monad m, Monoid cl, Clock m cl)
+  :: (Monad m, Semigroup cl, Clock m cl)
   => Schedule m (SelectClock cl a) (SelectClock cl b)
 schedSelectClocks = Schedule {..}
   where
-    startSchedule subClock1 subClock2 = do
-      (runningClock, initialTime) <- startClock
-        $ mainClock subClock1 `mappend` mainClock subClock2
+    initSchedule subClock1 subClock2 = do
+      (runningClock, initialTime) <- initClock
+        $ mainClock subClock1 <> mainClock subClock2
       let
         runningSelectClocks = concatS $ proc _ -> do
           (time, tag) <- runningClock -< ()
@@ -64,6 +65,23 @@ schedSelectClocks = Schedule {..}
             [ (time, ) . Left  <$> select subClock1 tag
             , (time, ) . Right <$> select subClock2 tag ]
       return (runningSelectClocks, initialTime)
+
+-- | A universal schedule for a subclock and its main clock.
+schedSelectClockAndMain
+  :: (Monad m, Semigroup cl, Clock m cl)
+  => Schedule m cl (SelectClock cl a)
+schedSelectClockAndMain = Schedule {..}
+  where
+    initSchedule mainClock' SelectClock {..} = do
+      (runningClock, initialTime) <- initClock
+        $ mainClock' <> mainClock
+      let
+        runningSelectClock = concatS $ proc _ -> do
+          (time, tag) <- runningClock -< ()
+          returnA                     -< catMaybes
+            [ Just (time, Left tag)
+            , (time, ) . Right <$> select tag ]
+      return (runningSelectClock, initialTime)
 
 
 -- | Helper function that runs an 'MSF' with 'Maybe' output

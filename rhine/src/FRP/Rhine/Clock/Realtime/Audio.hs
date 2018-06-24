@@ -1,13 +1,12 @@
 {- | Provides several clocks to use for audio processing,
 both realtime and batch/file based.
 -}
-
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -- TODO Find out exact version of cabal? GHC? that have a problem with this
@@ -16,7 +15,7 @@ module FRP.Rhine.Clock.Realtime.Audio
   ( AudioClock (..)
   , AudioRate (..)
   , PureAudioClock (..)
-  , PureAudioClockF (..)
+  , PureAudioClockF
   , pureAudioClockF
   )
   where
@@ -94,10 +93,10 @@ theBufferSize = fromInteger . natVal
 
 instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
       => Clock m (AudioClock rate bufferSize) where
-  type TimeDomainOf (AudioClock rate bufferSize) = UTCTime
-  type Tag          (AudioClock rate bufferSize) = Maybe Double
+  type Time (AudioClock rate bufferSize) = UTCTime
+  type Tag  (AudioClock rate bufferSize) = Maybe Double
 
-  startClock audioClock = do
+  initClock audioClock = do
     let
       step       = picosecondsToDiffTime -- The only sufficiently precise conversion function
                      $ round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
@@ -140,10 +139,10 @@ class PureAudioClockRate (rate :: AudioRate) where
 
 
 instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) where
-  type TimeDomainOf (PureAudioClock rate) = Double
-  type Tag          (PureAudioClock rate) = ()
+  type Time (PureAudioClock rate) = Double
+  type Tag  (PureAudioClock rate) = ()
 
-  startClock audioClock = return
+  initClock audioClock = return
     ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
     , 0
     )

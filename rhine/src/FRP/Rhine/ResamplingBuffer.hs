@@ -5,9 +5,9 @@ Just as schedules form the boundaries between different clocks,
 synchronous signal functions ticking at different speeds.
 -}
 
-{-# LANGUAGE RankNTypes      #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.ResamplingBuffer where
 
 -- rhine
@@ -18,10 +18,10 @@ import FRP.Rhine.Clock
 import Control.Arrow (second)
 
 -- A quick note on naming conventions, to whoever cares:
--- . Call a single clock cl.
--- . Call several clocks cl1, cl2 etc. in most situations.
--- . Call it cla, clb etc. when they are Leftmost or Rightmost clocks,
--- i.e. associated to particular boundary types a, b etc.,
+-- . Call a single clock @cl@.
+-- . Call several clocks @cl1@, @cl2@ etc. in most situations.
+-- . Call it @cla@, @clb@ etc. when they are 'In' or 'Out' clocks,
+-- i.e. associated to particular boundary types @a@, @b@ etc.,
 
 {- | A stateful buffer from which one may 'get' a value,
 or to which one may 'put' a value,
@@ -48,6 +48,9 @@ data ResamplingBuffer m cla clb a b = ResamplingBuffer
     -- ^ Retrieve one output value of type 'b' at a given time stamp,
     --   and a continuation.
   }
+
+-- | A type synonym to allow for abbreviation.
+type ResBuf m cla clb a b = ResamplingBuffer m cla clb a b
 
 
 -- | Hoist a 'ResamplingBuffer' along a monad morphism.

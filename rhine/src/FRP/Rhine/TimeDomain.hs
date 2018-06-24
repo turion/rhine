@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.TimeDomain
   ( module FRP.Rhine.TimeDomain
   , UTCTime
@@ -16,9 +16,9 @@ import Data.VectorSpace.Specific ()
 
 -- | A time domain is an affine space representing a notion of time,
 --   such as real time, simulated time, steps, or a completely different notion.
-class TimeDomain td where
-  type Diff td
-  diffTime :: td -> td -> Diff td
+class TimeDomain time where
+  type Diff time
+  diffTime :: time -> time -> Diff time
 
 
 instance TimeDomain UTCTime where
