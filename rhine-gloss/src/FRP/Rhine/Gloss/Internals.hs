@@ -1,12 +1,12 @@
 {- | Internals for 'FRP.Rhine.Gloss'.
 You probably won't need this module.
 -}
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module FRP.Rhine.Gloss.Internals where
 

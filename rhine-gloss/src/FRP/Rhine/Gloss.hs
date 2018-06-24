@@ -6,9 +6,9 @@ since the @gloss@ API only offers callbacks.
 In order to run such a reactive program, you have to use 'flowGloss'.
 -}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
-{-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Gloss
   ( module FRP.Rhine.Gloss
   , module X

@@ -1,5 +1,5 @@
-{-# LANGUAGE GADTs           #-}
-{-# LANGUAGE NamedFieldPuns  #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation.Tick where
 

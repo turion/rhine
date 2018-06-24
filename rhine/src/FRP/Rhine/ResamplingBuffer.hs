@@ -1,6 +1,6 @@
-{-# LANGUAGE RankNTypes      #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.ResamplingBuffer where
 
 -- rhine

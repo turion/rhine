@@ -1,6 +1,6 @@
 {-# LANGUAGE Arrows #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.ClSF.Core
   ( module FRP.Rhine.ClSF.Core
   , module Control.Arrow

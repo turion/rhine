@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns    #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.Collect where
 

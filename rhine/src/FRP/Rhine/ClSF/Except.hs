@@ -1,5 +1,5 @@
-{-# LANGUAGE Arrows       #-}
-{-# LANGUAGE RankNTypes   #-}
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module FRP.Rhine.ClSF.Except

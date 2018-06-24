@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs           #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation where
 

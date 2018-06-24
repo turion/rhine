@@ -1,6 +1,6 @@
-{-# LANGUAGE Arrows           #-}
+{-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Schedule.Concurrently where
 
 -- base

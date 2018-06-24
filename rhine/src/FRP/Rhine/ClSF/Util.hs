@@ -1,8 +1,8 @@
-{-# LANGUAGE Arrows           #-}
+{-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module FRP.Rhine.ClSF.Util where
 

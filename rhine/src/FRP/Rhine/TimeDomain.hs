@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.TimeDomain
   ( module FRP.Rhine.TimeDomain
   , UTCTime

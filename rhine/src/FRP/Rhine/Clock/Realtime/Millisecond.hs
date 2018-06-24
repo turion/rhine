@@ -1,8 +1,8 @@
-{-# LANGUAGE Arrows         #-}
-{-# LANGUAGE DataKinds      #-}
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 module FRP.Rhine.Clock.Realtime.Millisecond where
 

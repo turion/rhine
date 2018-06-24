@@ -1,7 +1,7 @@
-{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 import FRP.Rhine
 import FRP.Rhine.Clock.Realtime.Millisecond

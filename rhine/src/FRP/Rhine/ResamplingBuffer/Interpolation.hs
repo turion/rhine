@@ -1,4 +1,4 @@
-{-# LANGUAGE Arrows       #-}
+{-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}

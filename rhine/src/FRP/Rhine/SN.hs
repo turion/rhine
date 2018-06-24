@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs      #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 module FRP.Rhine.SN where
 

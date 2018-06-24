@@ -1,6 +1,6 @@
-{-# LANGUAGE RankNTypes    #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.ClSF.Reader where
 
 -- base
