@@ -37,7 +37,7 @@ extra-source-files:  ChangeLog.md
 
 extra-doc-files:     README.md
 
-cabal-version:       >=1.18
+cabal-version:       1.18
 
 source-repository head
   type:     git
