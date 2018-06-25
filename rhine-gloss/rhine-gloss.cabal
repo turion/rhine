@@ -3,7 +3,7 @@
 
 name:                rhine-gloss
 version:             0.4.0.1
--- synopsis:
+synopsis:            Gloss backend for Rhine
 description:         Wrapper to run reactive programs written in Rhine
                      with Gloss as backend
 license:             BSD3
