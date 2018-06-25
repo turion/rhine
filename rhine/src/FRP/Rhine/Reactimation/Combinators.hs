@@ -170,7 +170,7 @@ sched :: Schedule m                clL clR
 sched =  ...
 
 rh    :: Rhine    m (ParallelClock clL clR) a b
-rh    =  rh1 ++\@ sched \@++ rh2
+rh    =  rh1 ||\@ sched \@|| rh2
 @
 -}
 infix 3 @||
