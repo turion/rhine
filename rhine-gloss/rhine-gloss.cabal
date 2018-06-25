@@ -20,6 +20,16 @@ extra-source-files:  ChangeLog.md
 extra-doc-files:     README.md
 cabal-version:       >=1.18
 
+source-repository head
+  type:     git
+  location: git@github.com:turion/rhine.git
+
+source-repository this
+  type:     git
+  location: git@github.com:turion/rhine.git
+  tag:      v0.4.0.1
+
+
 library
   exposed-modules:     FRP.Rhine.Gloss
   other-modules:       FRP.Rhine.Gloss.Internals
