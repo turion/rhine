@@ -55,7 +55,7 @@ type BehaviourFExcept m time a b e
   = forall cl. time ~ Time cl => ClSFExcept m cl a b e
 
 -- | Compatibility to U.S. american spelling.
-type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
+type BehaviorFExcept = BehaviourFExcept
 
 
 -- | Commute a 'ReaderT' layer past an 'ExceptT' layer.

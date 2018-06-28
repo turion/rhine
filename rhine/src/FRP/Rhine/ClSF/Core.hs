@@ -47,7 +47,7 @@ type ClSignal m cl a = forall arbitrary . ClSF m cl arbitrary a
 type Behaviour m time a = forall cl. time ~ Time cl => ClSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
-type Behavior  m time a = Behaviour m time a
+type Behavior = Behaviour
 
 -- | A (side-effectful) behaviour function is a time-aware synchronous stream
 --   function that doesn't depend on a particular clock.
@@ -55,7 +55,7 @@ type Behavior  m time a = Behaviour m time a
 type BehaviourF m time a b = forall cl. time ~ Time cl => ClSF m cl a b
 
 -- | Compatibility to U.S. american spelling.
-type BehaviorF  m time a b = BehaviourF m time a b
+type BehaviorF = BehaviourF
 
 -- * Utilities to create 'ClSF's from simpler data
 
