@@ -21,7 +21,7 @@ msfBuffer
   --   and outputs a single value.
   --   The list will contain the /newest/ element in the head.
   -> ResamplingBuffer m cl1 cl2 a b
-msfBuffer msf = msfBuffer' msf []
+msfBuffer sf = msfBuffer' sf []
   where
     msfBuffer'
       :: Monad m
