@@ -1,11 +1,23 @@
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
+{- |
+'Schedule's are the compatibility mechanism between two different clocks.
+A schedule' implements the the universal clocks such that those two given clocks
+are its subclocks.
+
+This module defines the 'Schedule' type and certain general constructions of schedules,
+such as lifting along monad morphisms or time domain morphisms.
+It also supplies (sequential and parallel) compositions of clocks.
+
+Specific implementations of schedules are found in submodules.
+-}
+
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module FRP.Rhine.Schedule where
 

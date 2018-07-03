@@ -1,8 +1,15 @@
-{-# LANGUAGE Arrows           #-}
+{- |
+Utilities to create 'ClSF's.
+The fundamental effect that 'ClSF's have is
+reading the time information of the clock.
+It can be used for many purposes, for example digital signal processing.
+-}
+
+{-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module FRP.Rhine.ClSF.Util where
 
@@ -11,12 +18,19 @@ module FRP.Rhine.ClSF.Util where
 import Control.Arrow
 import Control.Category (Category)
 import qualified Control.Category (id)
+import Data.Maybe (fromJust)
+import Data.Monoid (Last (Last), getLast)
+
+-- containers
+import Data.Sequence
 
 -- transformers
 import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
+import Control.Monad.Trans.MSF.Reader (readerS)
 import Data.MonadicStreamFunction (arrM_, sumFrom, delay, feedback)
+import Data.MonadicStreamFunction.Instances.VectorSpace ()
 import Data.VectorSpace
 
 -- rhine
@@ -41,8 +55,8 @@ timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = arrM_ $ asks f
 
 -- | Continuously return the time difference since the last tick.
-sinceTickS :: Monad m => ClSF m cl a (Diff (Time cl))
-sinceTickS = timeInfoOf sinceTick
+sinceLastS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceLastS = timeInfoOf sinceLast
 
 -- | Continuously return the time difference since clock initialisation.
 sinceInitS :: Monad m => ClSF m cl a (Diff (Time cl))
@@ -124,6 +138,8 @@ clId = Control.Category.id
 
 -- * Basic signal processing components
 
+-- ** Integration and differentiation
+
 -- | The output of @integralFrom v0@ is the numerical Euler integral
 --   of the input, with initial offset @v0@.
 integralFrom
@@ -131,8 +147,8 @@ integralFrom
      , Groundfield v ~ Diff td)
   => v -> BehaviorF m td v v
 integralFrom v0 = proc v -> do
-  _sinceTick <- timeInfoOf sinceTick -< ()
-  sumFrom v0                         -< _sinceTick *^ v
+  _sinceLast <- timeInfoOf sinceLast -< ()
+  sumFrom v0                         -< _sinceLast *^ v
 
 -- | Euler integration, with zero initial offset.
 integral
@@ -152,7 +168,7 @@ derivativeFrom
 derivativeFrom v0 = proc v -> do
   vLast         <- delay v0 -< v
   TimeInfo {..} <- timeInfo -< ()
-  returnA                   -< (v ^-^ vLast) ^/ sinceTick
+  returnA                   -< (v ^-^ vLast) ^/ sinceLast
 
 -- | Numerical derivative with input initialised to zero.
 derivative
@@ -160,6 +176,28 @@ derivative
      , Groundfield v ~ Diff td)
   => BehaviorF m td v v
 derivative = derivativeFrom zeroVector
+
+-- | Like 'derivativeFrom', but uses three samples to compute the derivative.
+--   Consequently, it is delayed by one sample.
+threePointDerivativeFrom
+  :: ( Monad m, VectorSpace v
+     , Groundfield v ~ Diff td)
+  => v -- ^ The initial position
+  -> BehaviorF m td v v
+threePointDerivativeFrom v0 = proc v -> do
+  dv  <- derivativeFrom v0 -< v
+  dv' <- delay zeroVector  -< dv
+  returnA                  -< (dv ^+^ dv') ^/ 2
+
+-- | Like 'threePointDerivativeFrom',
+--   but with the initial position initialised to 'zeroVector'.
+threePointDerivative
+  :: ( Monad m, VectorSpace v
+     , Groundfield v ~ Diff td)
+  => BehaviorF m td v v
+threePointDerivative = threePointDerivativeFrom zeroVector
+
+-- ** Averaging and filters
 
 -- | A weighted moving average signal function.
 --   The output is the average of the first input,
@@ -180,7 +218,8 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
 
 -- | An exponential moving average, or low pass.
 --   It will average out, or filter,
---   all features below a given time scale.
+--   all features below a given time constant @t@.
+--   (Equivalently, it filters out frequencies above @1 / (2 * pi * t)@.)
 averageFrom
   :: ( Monad m, VectorSpace v
      , Floating (Groundfield v)
@@ -191,7 +230,7 @@ averageFrom
 averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = exp $ - (sinceTick / t)
+    weight = exp $ - (sinceLast / t)
   weightedAverageFrom v0    -< (v, weight)
 
 
@@ -217,7 +256,7 @@ averageLinFrom
 averageLinFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = t / (sinceTick + t)
+    weight = t / (sinceLast + t)
   weightedAverageFrom v0    -< (v, weight)
 
 -- | Linearised version of 'average'.
@@ -228,11 +267,75 @@ averageLin
   -> BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
 
+-- *** First-order filters
+
+-- | Alias for 'average'.
+lowPass
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td
+  -> BehaviourF m td v v
+lowPass = average
+
+-- | Filters out frequencies below @1 / (2 * pi * t)@.
+highPass
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time constant @t@
+  -> BehaviourF m td v v
+highPass t = clId ^-^ lowPass t
+
+-- | Filters out frequencies other than @1 / (2 * pi * t)@.
+bandPass
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time constant @t@
+  -> BehaviourF m td v v
+bandPass t = lowPass t >>> highPass t
+
+-- | Filters out the frequency @1 / (2 * pi * t)@.
+bandStop
+  :: ( Monad m, VectorSpace v
+     , Floating (Groundfield v)
+     , Groundfield v ~ Diff td)
+  => Diff td -- ^ The time constant @t@
+  -> BehaviourF m td v v
+bandStop t = clId ^-^ bandPass t
+
+
+
+-- * Delays
+
 -- | Remembers and indefinitely outputs ("holds") the first input value.
 keepFirst :: Monad m => ClSF m cl a a
 keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
+
+-- | Remembers all input values that arrived within a given time window.
+--   New values are appended left.
+historySince
+  :: (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl))
+  => Diff (Time cl) -- ^ The size of the time window
+  -> ClSF m cl a (Seq (TimeInfo cl, a))
+historySince dTime = readerS $ accumulateWith appendValue empty
+  where
+    appendValue (ti, a) tias  = takeWhileL (recentlySince ti) $ (ti, a) <| tias
+    recentlySince ti (ti', _) = diffTime (absolute ti) (absolute ti') < dTime
+
+-- | Delay a signal by certain time span.
+delayBy
+  :: (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl))
+  => Diff (Time cl) -- ^ The time span to delay the signal
+  -> ClSF m cl a a
+delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefined >>> arr snd
+  where
+    safeHead EmptyR   = Nothing
+    safeHead (_ :> a) = Just a
+-- TODO Think about how to do it without undefined (maybe exceptions)
 
 -- * Timers
 
@@ -270,3 +373,11 @@ scaledTimer
   => Diff td
   -> BehaviorF (ExceptT () m) td a (Diff td)
 scaledTimer diff = timer diff >>> arr (/ diff)
+
+
+-- * To be ported to Dunai
+
+-- | Remembers the last 'Just' value,
+--   defaulting to the given initialisation value.
+lastS :: Monad m => a -> MSF m (Maybe a) a
+lastS a = arr Last >>> mappendFrom (Last (Just a)) >>> arr (getLast >>> fromJust)

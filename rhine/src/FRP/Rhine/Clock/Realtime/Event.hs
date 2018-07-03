@@ -10,16 +10,19 @@ i.e. it is possible (and encouraged) to emit events from signals
 on a different clock than the event clock.
 This is in line with the Rhine philosophy that _event sources are clocks_.
 
-A simple example using events can be found in rhine-examples.
+Events even work well across separate threads,
+and constitute the recommended way of communication between threads in Rhine.
+
+A simple example using events and threads can be found in rhine-examples.
 -}
 
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module FRP.Rhine.Clock.Realtime.Event
   ( module FRP.Rhine.Clock.Realtime.Event
   , module Control.Monad.IO.Class
@@ -30,6 +33,7 @@ module FRP.Rhine.Clock.Realtime.Event
 -- base
 import Control.Concurrent.Chan
 import Data.Time.Clock
+import Data.Semigroup
 
 -- deepseq
 import Control.DeepSeq
@@ -139,9 +143,8 @@ emitSMaybe' = mapMaybe emitS' >>> arr (const ())
 --   use 'eventClockOn'.
 data EventClock event = EventClock
 
-instance Monoid (EventClock event) where
-  mempty      = EventClock
-  mappend _ _ = EventClock
+instance Semigroup (EventClock event) where
+  (<>) _ _ = EventClock
 
 instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime

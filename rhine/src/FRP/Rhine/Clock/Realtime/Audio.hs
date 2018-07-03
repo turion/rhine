@@ -1,9 +1,14 @@
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE KindSignatures        #-}
+{- |
+Provides several clocks to use for audio processing,
+for realtime as well as for batch/file processing.
+-}
+
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -- TODO Find out exact version of cabal? GHC? that have a problem with this
@@ -148,6 +153,9 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
 -- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float'.
 type PureAudioClockF (rate :: AudioRate) = RescaledClock (PureAudioClock rate) Float
 
+
+-- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float',
+--   using 'double2Float' to rescale.
 pureAudioClockF :: PureAudioClockF rate
 pureAudioClockF = RescaledClock
   { unscaledClock = PureAudioClock

@@ -1,3 +1,7 @@
+{- |
+Combinators for composing signal networks sequentially and parallely.
+-}
+
 {-# LANGUAGE GADTs #-}
 module FRP.Rhine.SN.Combinators where
 

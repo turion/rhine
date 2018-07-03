@@ -1,10 +1,16 @@
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
+{- |
+Implements pure clocks ticking at
+every multiple of a fixed number of steps,
+and a deterministic schedule for such clocks.
+-}
+
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 module FRP.Rhine.Clock.FixedStep where
 
 
@@ -42,6 +48,8 @@ instance Monad m => Clock m (FixedStep n) where
     , 0
     )
 
+-- | A singleton clock that counts the ticks.
+type Count = FixedStep 1
 
 -- | Two 'FixedStep' clocks can always be scheduled without side effects.
 scheduleFixedStep

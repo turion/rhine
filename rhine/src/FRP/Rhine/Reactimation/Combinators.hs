@@ -1,14 +1,21 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE TypeFamilies              #-}
+{- |
+Combinators to create 'Rhine's (main programs) from basic components
+such as 'ClSF's, clocks, 'ResamplingBuffer's and 'Schedule's.
 
-{- | General mnemonic for combinators:
+The combinator names are often mixed of the symbols @, @*@ and @>@,
+and several other symbols.
+The general mnemonic for combinator names is:
 
 * @ annotates a data processing unit such as a signal function, network or buffer
   with temporal information like a clock or a schedule.
 * @*@ composes parallely.
 * @>@ composes sequentially.
 -}
+
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module FRP.Rhine.Reactimation.Combinators where
 
 

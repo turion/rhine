@@ -1,12 +1,12 @@
 {- | Internals for 'FRP.Rhine.Gloss'.
 You probably won't need this module.
 -}
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module FRP.Rhine.Gloss.Internals where
 
@@ -71,8 +71,8 @@ withProperSimClock clsf = readerS
   where
     intermingle :: Monad m => MSF m (TimeInfo GlossSimulationClock_) (TimeInfo GlossSimulationClock)
     intermingle = proc TimeInfo {tag} -> do
-      let sinceTick = tag
-      absolute <- sumS -< sinceTick
+      let sinceLast = tag
+      absolute <- sumS -< sinceLast
       let sinceInit = absolute
       returnA          -< TimeInfo { tag = (), .. }
 

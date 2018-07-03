@@ -1,5 +1,7 @@
+{- | A "'Busy'" clock that ticks without waiting. -}
+
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Clock.Realtime.Busy where
 
 -- base

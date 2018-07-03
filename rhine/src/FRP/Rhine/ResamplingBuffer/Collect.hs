@@ -1,4 +1,9 @@
-{-# LANGUAGE BangPatterns    #-}
+{- |
+Resampling buffers that collect the incoming data in some data structure
+and release all of it on output.
+-}
+
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.Collect where
 

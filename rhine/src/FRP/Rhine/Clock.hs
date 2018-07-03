@@ -1,11 +1,20 @@
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{- |
+'Clock's are the central new notion in Rhine.
+There are clock types (instances of the 'Clock' type class)
+and their values.
+
+This module provides the 'Clock' type class, several utilities,
+and certain general constructions of 'Clock's,
+such as clocks lifted along monad morphisms or time rescalings.
+-}
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Clock
   ( module FRP.Rhine.Clock
   , module X
@@ -67,7 +76,7 @@ class TimeDomain (Time cl) => Clock m cl where
 -- | An annotated, rich time stamp.
 data TimeInfo cl = TimeInfo
   { -- | Time passed since the last tick
-    sinceTick :: Diff (Time cl)
+    sinceLast :: Diff (Time cl)
     -- | Time passed since the initialisation of the clock
   , sinceInit :: Diff (Time cl)
     -- | The absolute time of the current tick
@@ -93,7 +102,7 @@ genTimeInfo
 genTimeInfo _ initialTime = proc (absolute, tag) -> do
   lastTime <- iPre initialTime -< absolute
   returnA                      -< TimeInfo
-    { sinceTick  = absolute `diffTime` lastTime
+    { sinceLast = absolute `diffTime` lastTime
     , sinceInit = absolute `diffTime` initialTime
     , ..
     }
@@ -233,16 +242,21 @@ instance (Monad m1, Monad m2, Clock m1 cl)
       , initialTime
       )
 
+
+-- | Lift a clock type into a monad transformer.
 type LiftClock m t cl = HoistClock m (t m) cl
 
+-- | Lift a clock value into a monad transformer.
 liftClock :: (Monad m, MonadTrans t) => cl -> LiftClock m t cl
 liftClock unhoistedClock = HoistClock
   { monadMorphism = lift
   , ..
   }
 
+-- | Lift a clock type into 'MonadIO'.
 type IOClock m cl = HoistClock IO m cl
 
+-- | Lift a clock value into 'MonadIO'.
 ioClock :: MonadIO m => cl -> IOClock m cl
 ioClock unhoistedClock = HoistClock
   { monadMorphism = liftIO

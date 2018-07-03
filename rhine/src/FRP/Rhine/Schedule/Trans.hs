@@ -1,6 +1,11 @@
+{- |
+Clocks implemented in the 'ScheduleT' monad transformer
+can always be scheduled (by construction).
+-}
+
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Schedule.Trans where
 
 -- rhine

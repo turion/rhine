@@ -1,6 +1,12 @@
-{-# LANGUAGE FlexibleInstances          #-}
+{- |
+This module defines the 'TimeDomain' class.
+Its instances model time.
+Several instances such as 'UTCTime', 'Double' and 'Integer' are supplied here.
+-}
+
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.TimeDomain
   ( module FRP.Rhine.TimeDomain
   , UTCTime

@@ -1,6 +1,12 @@
+{- |
+The type of a complete Rhine program:
+A signal network together with a matching clock value.
+-}
+
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module FRP.Rhine.Type where
 
 -- transformers
