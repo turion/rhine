@@ -21,14 +21,14 @@ msfBuffer
   --   and outputs a single value.
   --   The list will contain the /newest/ element in the head.
   -> ResamplingBuffer m cl1 cl2 a b
-msfBuffer sf = msfBuffer' sf []
+msfBuffer = msfBuffer' []
   where
     msfBuffer'
       :: Monad m
-      => MSF m (TimeInfo cl2, [(TimeInfo cl1, a)]) b
-      -> [(TimeInfo cl1, a)]
+      => [(TimeInfo cl1, a)]
+      -> MSF m (TimeInfo cl2, [(TimeInfo cl1, a)]) b
       -> ResamplingBuffer m cl1 cl2 a b
-    msfBuffer' msf as = ResamplingBuffer {..}
+    msfBuffer' as msf = ResamplingBuffer {..}
       where
         put ti1 a = return $ msfBuffer' msf $ (ti1, a) : as
         get ti2   = do
