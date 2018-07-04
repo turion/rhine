@@ -30,7 +30,7 @@ msfBuffer = msfBuffer' []
       -> ResamplingBuffer m cl1 cl2 a b
     msfBuffer' as msf = ResamplingBuffer {..}
       where
-        put ti1 a = return $ msfBuffer' msf $ (ti1, a) : as
+        put ti1 a = return $ msfBuffer' ((ti1, a) : as) msf
         get ti2   = do
           (b, msf') <- unMSF msf (ti2, as)
           return (b, msfBuffer msf')
