@@ -22,5 +22,5 @@ deploy:
   on:
     condition:
       - $PACKAGE =~ ^rhine|rhine-gloss$
-      - $TRAVIS_HASKELL_VERSION=8.2.2
+      - $TRAVIS_HASKELL_VERSION = 8.2.2
     tags: true
