@@ -107,7 +107,6 @@ library
   hs-source-dirs:      src
 
   ghc-options:         -Wall
-                       -Wno-unused-imports
                        -Wno-unticked-promoted-constructors
                        -Wno-type-defaults
 
