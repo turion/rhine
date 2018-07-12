@@ -86,7 +86,7 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base         >= 4.9
+  build-depends:       base         >= 4.9   && < 4.12
                     ,  dunai        == 0.4.0.*
                     ,  transformers >= 0.4   && < 0.6
                     ,  time         == 1.8.*
@@ -106,7 +106,7 @@ executable HelloWorld
   hs-source-dirs:      examples
   main-is:             HelloWorld.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base  >= 4.9
+  build-depends:       base  >= 4.9 && < 4.12
                      , rhine
   default-language:    Haskell2010
 
@@ -114,6 +114,6 @@ executable Demonstration
   hs-source-dirs:      examples
   main-is:             Demonstration.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base  >= 4.9
+  build-depends:       base  >= 4.9 && < 4.12
                      , rhine
   default-language:    Haskell2010
