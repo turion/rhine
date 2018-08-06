@@ -98,7 +98,7 @@ library
                     ,  dunai        == 0.4.0.*
                     ,  transformers == 0.5.*
                     ,  time         == 1.8.*
-                    ,  free         == 5.0.*
+                    ,  free         == 5.1.*
                     ,  containers   == 0.5.*
                     ,  vector-sized >= 0.6      && < 1.1
                     ,  deepseq      == 1.4.*
@@ -107,7 +107,6 @@ library
   hs-source-dirs:      src
 
   ghc-options:         -Wall
-                       -Wno-unused-imports
                        -Wno-unticked-promoted-constructors
                        -Wno-type-defaults
 
