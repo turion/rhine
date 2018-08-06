@@ -22,7 +22,7 @@ import Data.Semigroup
 
 {- |
 A clock that ticks for every line entered on the console,
-outputting the entered line as its |Tag|.
+outputting the entered line as its 'Tag'.
 -}
 data StdinClock = StdinClock
 
