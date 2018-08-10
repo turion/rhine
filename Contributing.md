@@ -27,7 +27,7 @@
   Currently, Rhine builds on GHC versions 8.0, 8.2 and 8.4,
   but this may change in the future.
 * The default GHC version is the one that comes with the stackage resolver,
-  specified in `stack.yaml`. This is currently 8.2, but may change.
+  specified in `stack.yaml`. This is currently 8.4, but may change.
   Rhine aims to build without warnings for the default version,
   but not necessarily for all supported versions.
 

@@ -1,6 +1,5 @@
-resolver: lts-11.7
+resolver: lts-12.5
 extra-deps:
-  - dunai-0.4.0.0
   - ../rhine
 nix:
   enable: true
