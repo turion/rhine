@@ -67,7 +67,7 @@ runClSFExcept :: Monad m => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
 runClSFExcept = liftMSFPurer commuteExceptReader . runMSFExcept
 
 -- | Enter the monad context in the exception
---   for |ClSF|s in the |ExceptT| monad.
+--   for 'ClSF's in the 'ExceptT' monad.
 --   The 'ClSF' will be run until it encounters an exception.
 try :: Monad m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
 try = MSFE.try . liftMSFPurer commuteReaderExcept
@@ -77,7 +77,7 @@ try = MSFE.try . liftMSFPurer commuteReaderExcept
 once :: Monad m => (a -> m e) -> ClSFExcept m cl a b e
 once f = MSFE.once $ lift . f
 
--- | A variant of |once| without input.
+-- | A variant of 'once' without input.
 once_ :: Monad m => m e -> ClSFExcept m cl a b e
 once_ = once . const
 

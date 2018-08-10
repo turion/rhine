@@ -68,7 +68,7 @@ infix 4 &-&
       => ResamplingBuffer m cl1 cl2  a  b
       -> ResamplingBuffer m cl1 cl2  a     c
       -> ResamplingBuffer m cl1 cl2  a (b, c)
-resBuf1 &-& resBuf2 = arr dup ^->> resBuf1 *-* resBuf2
+resBuf1 &-& resBuf2 = arr (\a -> (a, a)) ^->> resBuf1 *-* resBuf2
 
 
 -- | Given a 'ResamplingBuffer' where the output type depends on the input type polymorphically,
