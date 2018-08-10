@@ -23,6 +23,7 @@
 ### GHC, cabal, stack
 
 * Rhine should be compilable with `cabal` and `stack`.
+  If in doubt, use `stack`.
 * Rhine does not make an effort to support old GHC versions.
   Currently, Rhine builds on GHC versions 8.0, 8.2 and 8.4,
   but this may change in the future.
@@ -54,4 +55,5 @@ Thanks go to:
 * https://github.com/ivanperez-keera/
 * https://github.com/ggreif/
 * https://github.com/fphh/
+* https://github.com/SolviQorda/
 * https://github.com/alexpeits/
