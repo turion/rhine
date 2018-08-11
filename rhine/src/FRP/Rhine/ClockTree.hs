@@ -34,15 +34,15 @@ type family Rightmost' (cto :: ClockTopology) :: * where -- :: ClockTopology -> 
   Rightmost' (TParallel cto1 cto2) = TParallel (Rightmost' cto1) (Rightmost' cto2)
 -}
 
-leftmost :: ClockTopology -> ClockTopology
-leftmost (TLeaf cl) = TLeaf cl
-leftmost (TSequential cto _) = cto
-leftmost (TParallel cto1 cto2) = TParallel (leftmost cto1) (leftmost cto2)
+inCl :: ClockTopology -> ClockTopology
+inCl (TLeaf cl) = TLeaf cl
+inCl (TSequential cto _) = cto
+inCl (TParallel cto1 cto2) = TParallel (inCl cto1) (inCl cto2)
 
-rightmost :: ClockTopology -> ClockTopology
-rightmost (TLeaf cl) = TLeaf cl
-rightmost (TSequential _ cto) = cto
-rightmost (TParallel cto1 cto2) = TParallel (rightmost cto1) (rightmost cto2)
+outCl :: ClockTopology -> ClockTopology
+outCl (TLeaf cl) = TLeaf cl
+outCl (TSequential _ cto) = cto
+outCl (TParallel cto1 cto2) = TParallel (outCl cto1) (outCl cto2)
 
 -- TODO Possibly add constraints on TimeDomains (and Clock) here? Or somehow up in the topology?
 data ClockTree m (cto :: ClockTopology) where
