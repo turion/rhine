@@ -176,9 +176,7 @@ rh    =  rh1 ||\@ sched \@|| rh2
 infix 3 @||
 (@||)
   :: ( Monad m, Clock m clL, Clock m clR
-     , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
-     , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
-     , Time clL ~ Time clR
+     , InOutSameTimeDomain (ParallelClock m clL clR)
      )
        => RhineParallelAndSchedule m clL clR  a b
        -> Rhine                    m     clR  a b

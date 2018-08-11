@@ -187,6 +187,18 @@ type family Out cl where
   Out (ParallelClock   m cl1 cl2) = ParallelClock m (Out cl1) (Out cl2)
   Out cl                          = cl
 
+-- | A type class to track the constraints that the 'In' and 'Out' clocks
+--   have the same time domain as the whole clock.
+--   This is typically satisfied, but not possible to prove in Haskell.
+class (Time cl ~ Time (In cl), Time cl ~ Time (Out cl))
+   => InOutSameTimeDomain cl where
+
+instance (Time cl1 ~ Time cl2, InOutSameTimeDomain cl1, InOutSameTimeDomain cl2)
+      => InOutSameTimeDomain (SequentialClock m cl1 cl2) where
+
+instance (Time cl1 ~ Time cl2, InOutSameTimeDomain cl1, InOutSameTimeDomain cl2)
+      => InOutSameTimeDomain (ParallelClock m cl1 cl2) where
+
 
 -- | A tree representing possible last times to which
 --   the constituents of a clock may have ticked.
