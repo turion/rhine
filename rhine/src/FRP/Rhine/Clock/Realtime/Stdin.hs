@@ -11,6 +11,7 @@ module FRP.Rhine.Clock.Realtime.Stdin where
 
 -- base
 import Data.Time.Clock
+import Data.Semigroup
 
 -- transformers
 import Control.Monad.IO.Class
@@ -21,7 +22,7 @@ import Data.Semigroup
 
 {- |
 A clock that ticks for every line entered on the console,
-outputting the entered line as its |Tag|.
+outputting the entered line as its 'Tag'.
 -}
 data StdinClock = StdinClock
 
@@ -32,10 +33,12 @@ instance MonadIO m => Clock m StdinClock where
   initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
-      (     arrM_ (liftIO getCurrentTime)
-        &&& arrM_ (liftIO getLine)
+      ( arrM_ $ liftIO $ do
+          line <- getLine
+          time <- getCurrentTime
+          return (time, line)
       , initialTime
       )
 
 instance Semigroup StdinClock where
-  (<>) _ _ = StdinClock
+  _ <> _ = StdinClock

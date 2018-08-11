@@ -18,7 +18,7 @@ description:
   several standard scheduling and resampling solutions are implemented.
   Own schedules and resampling buffers can be implemented in a reusable fashion.
   A (synchronous) program outputting "Hello World!" every tenth of a second looks like this:
-  @flow $ constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)@
+  @flow $ constMCl (putStrLn "Hello World!") \@\@ (waitClock :: Millisecond 100)@
 
 
 license:             BSD3
@@ -37,7 +37,7 @@ extra-source-files:  ChangeLog.md
 
 extra-doc-files:     README.md
 
-cabal-version:       >=1.18
+cabal-version:       1.18
 
 source-repository head
   type:     git
@@ -107,6 +107,8 @@ library
   hs-source-dirs:      src
 
   ghc-options:         -Wall
+                       -Wno-unticked-promoted-constructors
+                       -Wno-type-defaults
 
   -- Base language which the package is written in.
   default-language:    Haskell2010

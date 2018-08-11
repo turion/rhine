@@ -13,7 +13,7 @@ maintainer:          programming@manuelbaerenz.de
 category:            FRP
 build-type:          Simple
 extra-source-files:  ChangeLog.md
-cabal-version:       >=1.18
+cabal-version:       1.18
 
 executable HelloWorld
   hs-source-dirs:      src

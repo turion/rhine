@@ -62,6 +62,15 @@ resBuf1 *-* resBuf2 = ResamplingBuffer put_ get_
       (d, resBuf2') <- get resBuf2 theTimeInfo
       return ((b, d), resBuf1' *-* resBuf2')
 
+infix 4 &-&
+-- | Parallely compose two 'ResamplingBuffer's, duplicating the input.
+(&-&) :: Monad m
+      => ResamplingBuffer m cl1 cl2  a  b
+      -> ResamplingBuffer m cl1 cl2  a     c
+      -> ResamplingBuffer m cl1 cl2  a (b, c)
+resBuf1 &-& resBuf2 = arr (\a -> (a, a)) ^->> resBuf1 *-* resBuf2
+
+
 -- | Given a 'ResamplingBuffer' where the output type depends on the input type polymorphically,
 --   we can produce a timestamped version that simply annotates every input value
 --   with the 'TimeInfo' when it arrived.
