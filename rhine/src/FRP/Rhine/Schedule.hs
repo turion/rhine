@@ -21,6 +21,9 @@ Specific implementations of schedules are found in submodules.
 
 module FRP.Rhine.Schedule where
 
+-- base
+import Data.Semigroup
+
 -- transformers
 import Control.Monad.Trans.Reader
 
