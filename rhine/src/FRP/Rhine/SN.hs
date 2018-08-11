@@ -7,13 +7,16 @@ This module defines the 'SN' type,
 combinators are found in a submodule.
 -}
 
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 module FRP.Rhine.SN where
 
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.ClockTree
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
@@ -31,6 +34,20 @@ The type parameters are:
 * 'a': The input type. Input arrives at the rate @In cl@.
 * 'b': The output type. Output arrives at the rate @Out cl@.
 -}
+data SN m (cto :: ClockTopology) a b where
+  Synchronous
+    :: ClSF m cl a b
+    -> SN m (TLeaf cl) a b
+  Sequential
+    :: SN m cto1 a b
+    -> ResamplingBuffer m (inCl cto1) (outCl cto2) b c
+    -> SN m cto2 c d
+    -> SN m (TSequential cto1 cto2) a d
+  Parallel
+    :: SN m cto1 a b
+    -> SN m cto2 a b
+    -> SN m (TParallel cto1 cto2) a b
+{-
 data SN m cl a b where
   -- | A synchronous monadic stream function is the basic building block.
   --   For such an 'SN', data enters and leaves the system at the same rate as it is processed.
@@ -61,3 +78,4 @@ data SN m cl a b where
     => SN m                  cl1      a b
     -> SN m                      cl2  a b
     -> SN m (ParallelClock m cl1 cl2) a b
+-}

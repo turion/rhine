@@ -52,11 +52,9 @@ main = flow $ mainSF @@ clock
 -}
 -- TODO Can we chuck the constraints into Clock m cl?
 flow
-  :: ( Monad m, Clock m cl
-     , Time cl ~ Time (In  cl)
-     , Time cl ~ Time (Out cl)
+  :: ( Monad m
      )
-  => Rhine m cl () () -> m ()
+  => Rhine m cto () () -> m ()
 flow Rhine {..} = do
   (runningClock, initTime) <- initClock clock
   -- Run the main loop
@@ -78,8 +76,7 @@ flow Rhine {..} = do
 -- | Run a synchronous 'ClSF' with its clock as a main loop,
 --   similar to Yampa's, or Dunai's, 'reactimate'.
 reactimateCl
-  :: ( Monad m, Clock m cl
-     , cl ~ In  cl, cl ~ Out cl
+  :: ( Monad m
      )
-  => cl -> ClSF m cl () () -> m ()
+  => ClockTree cto -> ClSF m cto () () -> m ()
 reactimateCl cl clsf = flow $ clsf @@ cl

@@ -62,6 +62,7 @@ library
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
     FRP.Rhine.Clock.FixedStep
+    FRP.Rhine.ClockTree
     FRP.Rhine.ClSF
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except
