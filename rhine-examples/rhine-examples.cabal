@@ -71,4 +71,7 @@ executable Interpolation
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9   && < 4.12
                      , rhine        == 0.5.*
+                     , rhine-gloss  == 0.5.*
+                     , dunai        == 0.4.*
+                     , random       == 1.1.*
   default-language:    Haskell2010

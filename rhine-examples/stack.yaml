@@ -2,3 +2,6 @@ resolver: lts-12.5
 extra-deps:
   - ../rhine
   - ../rhine-gloss
+nix:
+  enable: true
+  packages: [libGL libGLU]

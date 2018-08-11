@@ -10,22 +10,49 @@
 --   followed by the interpolated signals in clockwise order. 
 
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 
+-- base
+import Control.Monad.IO.Class
+
+-- random
+import System.Random (randomRIO)
+
+-- rhine
+import Control.Monad.Schedule
 import FRP.Rhine
+import FRP.Rhine.Clock.Periodic
 import FRP.Rhine.ResamplingBuffer.Interpolation
+import FRP.Rhine.ResamplingBuffer.KeepLast
+import FRP.Rhine.Schedule.Trans
+
+
+-- rhine-gloss
+import FRP.Rhine.Gloss
+
+-- dunai
+import Data.VectorSpace
 
 -- | Time intervals chosen by fair dice roll. Guaranteed to be random.
-type RandomWalkClock = PeriodicClock [ 300, 500, 200, 700, 400, 900 ]
+type RandomWalkClock = RescaledClock (Periodic [ 300, 500, 200, 700, 400, 900 ]) Float
+
+randomWalkClock :: RandomWalkClock
+randomWalkClock = RescaledClock
+  { unscaledClock = Periodic
+  , rescale       = (* 0.001) . fromIntegral
+  }
+
 
 -- | Produce random velocities and integrate them to random motion.
 --   Additionally, a displacement velocity is added to keep the position
 --   from moving too far from the origin.
-randomWalk :: ClSF IO RandomWalkClock () Point
-randomWalk = feedback ((), 0) $ proc (_, x) -> do
-  [randomVx, randomVy] <- constMCl $ randomRIO (-1, 1) -< ()
+randomWalk :: MonadIO m => ClSF m RandomWalkClock () Point
+randomWalk = feedback zeroVector $ proc (_, x) -> do
+  [randomVx, randomVy] <- constMCl $ liftIO $ randomRIO (-1, 1) -< ()
   let velocity = (randomVx, randomVy) ^-^ x ^* 1
-  x'                   <- integrate                    -< velocity
-  return (x', x')
+  x' <- integral -< velocity
+  returnA        -< (x', x')
 
 markerShape = circle 10
 offset = 200
@@ -46,8 +73,11 @@ display (((imgOrig, imgLinear), imgCubic), imgSinc) = pictures
   ]
 
 -- | Resample the random walk in four different ways.
+allBuffers
+  :: Diff (Time cl) ~ Float
+  => ResamplingBuffer m RandomWalkClock cl Point (((Point, Point), Point), Point)
 allBuffers = keepLast zeroVector
-         &-& linear zeroVector veroVector
+         &-& linear zeroVector zeroVector
          &-& cubic
          &-& sinc 100 
 
@@ -56,5 +86,5 @@ allBuffers = keepLast zeroVector
 --   2. Create the four interpolations
 --   3. Display them
 main :: IO ()
-main = flow
-  $ randomWalk @@ waitClock >-- allBuffers -@- schedule --> display @@ waitClock
+main = runScheduleIO $ flow
+  $ randomWalk @@ randomWalkClock >-- allBuffers -@- schedule --> arr display @@ _
