@@ -5,6 +5,7 @@ Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -43,6 +44,7 @@ instance Clock IO (Millisecond n) where
   type Tag  (Millisecond n) = Bool
   initClock (Millisecond cl) = initClock cl
 
+instance HoistableClock IO m (Millisecond n) where
 
 -- | This implementation measures the time after each tick,
 --   and waits for the remaining time until the next tick.

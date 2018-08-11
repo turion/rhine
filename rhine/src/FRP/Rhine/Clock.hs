@@ -8,6 +8,7 @@ and certain general constructions of 'Clock's,
 such as clocks lifted along monad morphisms or time rescalings.
 -}
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -225,7 +226,7 @@ rescaledClockToS = rescaledClockMToS . rescaledClockToM
 
 -- | Applying a monad morphism yields a new clock.
 data HoistClock m1 m2 cl = HoistClock
-  { unhoistedClock :: cl
+  { unhoistClock :: cl
   , monadMorphism  :: forall a . m1 a -> m2 a
   }
 
@@ -242,6 +243,48 @@ instance (Monad m1, Monad m2, Clock m1 cl)
       , initialTime
       )
 
+{- |
+A general type class to hoist a clock @cl@
+along a monad morphism from @m1@ to @m2@.
+
+'HoistClock' is the default implementation
+and can be instantiated for any user-defined clock type
+by the following one line of boiler plate:
+
+@
+instance HoistableClock m1 m2 MyClock where
+@
+
+In some cases (for example, composite clocks), 
+a different instance is desirable,
+and this type class allows to override it.
+So in general, it is advisable to use 'hoistClock'
+instead of 'HoistClock'.
+-}
+class HoistableClock m1 m2 cl where
+  type HoistedClock m1 m2 cl
+  type HoistedClock m1 m2 cl = HoistClock m1 m2 cl
+
+  -- | Hoist a clock along a monad morphism
+  hoistedClock
+    :: cl -- ^ The unhoisted clock
+    -> (forall a . m1 a -> m2 a) -- ^ The monad morphism
+    -> HoistedClock m1 m2 cl
+  default hoistedClock
+    :: HoistedClock m1 m2 cl ~ HoistClock m1 m2 cl
+    => cl -> (forall a . m1 a -> m2 a)
+    -> HoistedClock m1 m2 cl
+  hoistedClock = HoistClock
+
+	-- | Recover the original clock
+  unhoistedClock
+    :: HoistedClock m1 m2 cl
+    -> cl
+  default unhoistedClock
+    :: HoistedClock m1 m2 cl ~ HoistClock m1 m2 cl
+    => HoistedClock m1 m2 cl
+    -> cl
+  unhoistedClock = unhoistClock
 
 -- | Lift a clock type into a monad transformer.
 type LiftClock m t cl = HoistClock m (t m) cl
