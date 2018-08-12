@@ -65,7 +65,9 @@ library
     FRP.Rhine.ClSF
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except
+    FRP.Rhine.ClSF.Random
     FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.Tick
@@ -102,6 +104,7 @@ library
                     ,  containers   == 0.5.*
                     ,  vector-sized >= 0.6      && < 1.1
                     ,  deepseq      == 1.4.*
+                    ,  MonadRandom  == 0.5.*
 
   -- Directories containing source files.
   hs-source-dirs:      src

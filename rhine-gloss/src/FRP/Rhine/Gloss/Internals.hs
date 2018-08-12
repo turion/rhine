@@ -27,10 +27,13 @@ import FRP.Rhine.Clock.Select
 
 -- * Clocks
 
--- | The error message that gets thrown when you try to start a @gloss@ app with 'flow'.
+-- | The error message that gets thrown when you try to start a pure @rhine-gloss@ app with 'flow'.
 errMsg :: String
-errMsg =  "You cannot start gloss apps with FRP.Rhine.flow. "
-       ++ "Use FRP.Rhine.Gloss.flowGloss instead."
+errMsg = unwords
+  [ "You cannot start pure rhine-gloss apps with FRP.Rhine.flow,"
+  , "since gloss has its own main loop."
+  , "Use FRP.Rhine.Gloss.flowGloss instead."
+  ]
 
 -- | The clock that ticks whenever a @gloss@ event occurs.
 data GlossEventClock = GlossEventClock
@@ -41,7 +44,7 @@ instance Clock m GlossEventClock where
   initClock _ = error errMsg
 
 -- | The clock that ticks for every @gloss@ simulation step,
---   but only shows the time delta in the tag.
+--   but only shows the time /differences/ in the tag.
 --   Usually, you don't need this clock, but rather 'GlossSimulationClock'.
 data GlossSimulationClock_ = GlossSimulationClock_
 
