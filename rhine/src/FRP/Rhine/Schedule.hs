@@ -21,6 +21,9 @@ Specific implementations of schedules are found in submodules.
 
 module FRP.Rhine.Schedule where
 
+-- base
+import Data.Semigroup
+
 -- transformers
 import Control.Monad.Trans.Reader
 
@@ -29,6 +32,7 @@ import Data.MonadicStreamFunction
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Schedule.Util
 
 -- * The schedule type
 
@@ -71,9 +75,6 @@ flipSchedule
 flipSchedule Schedule {..} = Schedule initSchedule_
   where
     initSchedule_ cl2 cl1 = first (arr (second swapEither) <<<) <$> initSchedule cl1 cl2
-    swapEither :: Either a b -> Either b a -- TODO Why is stuff like this not in base? Maybe send pull request...
-    swapEither (Left  a) = Right a
-    swapEither (Right b) = Left  b
 
 -- TODO I originally wanted to rescale a schedule and its clocks at the same time.
 -- That's rescaleSequentialClock.
@@ -130,6 +131,7 @@ readerSchedule Schedule {..}
 
 -- * Composite clocks
 
+-- ** Sequentially combined clocks
 
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous sequential composition of signal networks.
@@ -151,6 +153,30 @@ instance (Monad m, Clock m cl1, Clock m cl2)
   initClock SequentialClock {..}
     = initSchedule sequentialSchedule sequentialCl1 sequentialCl2
 
+-- | @cl1@ is a subclock of @SequentialClock m cl1 cl2@,
+--   therefore it is always possible to schedule these two clocks deterministically.
+--   The left subclock of the combined clock always ticks instantly after @cl1@.
+schedSeq1 :: (Monad m, Semigroup cl1) => Schedule m cl1 (SequentialClock m cl1 cl2)
+schedSeq1 = Schedule $ \cl1 SequentialClock { sequentialSchedule = Schedule {..}, .. } -> do
+  (runningClock, initTime) <- initSchedule (cl1 <> sequentialCl1) sequentialCl2
+  return (duplicateSubtick runningClock, initTime)
+
+-- | As 'schedSeq1', but for the right subclock.
+--   The right subclock of the combined clock always ticks instantly before @cl2@.
+schedSeq2 :: (Monad m, Semigroup cl2, Time cl1 ~ Time cl2) => Schedule m (SequentialClock m cl1 cl2) cl2
+schedSeq2 = Schedule $ \SequentialClock { sequentialSchedule = Schedule {..}, .. } cl2 -> do
+  (runningClock, initTime) <- initSchedule sequentialCl1 (sequentialCl2 <> cl2)
+  return (duplicateSubtick (runningClock >>> second (arr swapEither)) >>> second (arr remap), initTime)
+    where
+      remap (Left tag2)          = Left $ Right tag2
+      remap (Right (Left tag2))  = Right tag2
+      remap (Right (Right tag1)) = Left $ Left tag1
+-- TODO Why did I need the constraint on the time domains here, but not in schedSeq1?
+--      Same for schedPar2
+
+
+-- ** Parallelly combined clocks
+
 
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous parallel composition of signal networks.
@@ -171,6 +197,47 @@ instance (Monad m, Clock m cl1, Clock m cl2)
   type Tag  (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
   initClock ParallelClock {..}
     = initSchedule parallelSchedule parallelCl1 parallelCl2
+
+
+-- | Like 'schedSeq1', but for parallel clocks.
+--   The left subclock of the combined clock always ticks instantly after @cl1@.
+schedPar1 :: (Monad m, Semigroup cl1) => Schedule m cl1 (ParallelClock m cl1 cl2)
+schedPar1 = Schedule $ \cl1 ParallelClock { parallelSchedule = Schedule {..}, .. } -> do
+  (runningClock, initTime) <- initSchedule (cl1 <> parallelCl1) parallelCl2
+  return (duplicateSubtick runningClock, initTime)
+
+-- | Like 'schedPar1',
+--   but the left subclock of the combined clock always ticks instantly /before/ @cl1@.
+schedPar1' :: (Monad m, Semigroup cl1) => Schedule m cl1 (ParallelClock m cl1 cl2)
+schedPar1' = Schedule $ \cl1 ParallelClock { parallelSchedule = Schedule {..}, .. } -> do
+  (runningClock, initTime) <- initSchedule (parallelCl1 <> cl1) parallelCl2
+  return (duplicateSubtick runningClock >>> arr (second remap), initTime)
+    where
+      remap (Left tag1)         = Right $ Left tag1
+      remap (Right (Left tag1)) = Left tag1
+      remap tag                 = tag
+
+-- | Like 'schedPar1', but for the right subclock.
+--   The right subclock of the combined clock always ticks instantly before @cl2@.
+schedPar2 :: (Monad m, Semigroup cl2, Time cl1 ~ Time cl2) => Schedule m (ParallelClock m cl1 cl2) cl2
+schedPar2 = Schedule $ \ParallelClock { parallelSchedule = Schedule {..}, .. } cl2 -> do
+  (runningClock, initTime) <- initSchedule parallelCl1 (parallelCl2 <> cl2)
+  return (duplicateSubtick (runningClock >>> second (arr swapEither)) >>> second (arr remap), initTime)
+    where
+      remap (Left tag2)          = Left $ Right tag2
+      remap (Right (Left tag2))  = Right tag2
+      remap (Right (Right tag1)) = Left $ Left tag1
+
+-- | Like 'schedPar1',
+--   but the right subclock of the combined clock always ticks instantly /after/ @cl2@.
+schedPar2' :: (Monad m, Semigroup cl2, Time cl1 ~ Time cl2) => Schedule m (ParallelClock m cl1 cl2) cl2
+schedPar2' = Schedule $ \ParallelClock { parallelSchedule = Schedule {..}, .. } cl2 -> do
+  (runningClock, initTime) <- initSchedule parallelCl1 (parallelCl2 <> cl2)
+  return (duplicateSubtick (runningClock >>> second (arr swapEither)) >>> second (arr remap), initTime)
+    where
+      remap (Left tag2)          = Right tag2
+      remap (Right (Left tag2))  = Left $ Right tag2
+      remap (Right (Right tag1)) = Left $ Left tag1
 
 
 -- * Navigating the clock tree

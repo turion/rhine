@@ -90,6 +90,7 @@ library
 
   other-modules:
     FRP.Rhine.ClSF.Except.Util
+    FRP.Rhine.Schedule.Util
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
