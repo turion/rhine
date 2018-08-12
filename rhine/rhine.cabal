@@ -66,6 +66,7 @@ library
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except
     FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.Tick
