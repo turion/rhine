@@ -45,7 +45,7 @@ clsf ^->> resBuf = ResamplingBuffer put_ get_
     get_ theTimeInfo   = second (clsf ^->>) <$> get resBuf theTimeInfo
 
 
-infix 4 *-*
+infixl 4 *-*
 -- | Parallely compose two 'ResamplingBuffer's.
 (*-*) :: Monad m
       => ResamplingBuffer m cl1 cl2  a      b
@@ -62,7 +62,7 @@ resBuf1 *-* resBuf2 = ResamplingBuffer put_ get_
       (d, resBuf2') <- get resBuf2 theTimeInfo
       return ((b, d), resBuf1' *-* resBuf2')
 
-infix 4 &-&
+infixl 4 &-&
 -- | Parallely compose two 'ResamplingBuffer's, duplicating the input.
 (&-&) :: Monad m
       => ResamplingBuffer m cl1 cl2  a  b
