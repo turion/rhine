@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-gloss
-version:             0.4.0.1
+version:             0.4.0.4
 synopsis:            Gloss backend for Rhine
 description:         Wrapper to run reactive programs written in Rhine
                      with Gloss as backend
@@ -23,7 +23,7 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.4.0.1
+  tag:      v0.4.0.4
 
 
 library
