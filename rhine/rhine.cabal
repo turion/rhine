@@ -1,6 +1,6 @@
 name:                rhine
 
-version:             0.4.0.3
+version:             0.4.0.4
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -44,7 +44,7 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.4.0.3
+  tag:      v0.4.0.4
 
 
 library
