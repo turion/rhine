@@ -48,12 +48,30 @@ executable Periodic
                      , transformers == 0.5.*
   default-language:    Haskell2010
 
+executable PeriodicSchedule
+  hs-source-dirs:      src
+  main-is:             PeriodicSchedule.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base  >= 4.9
+                     , rhine        == 0.5.*
+  default-language:    Haskell2010
+
 executable EventClock
   hs-source-dirs:      src
   main-is:             EventClock.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9   && < 4.12
                      , rhine        == 0.5.*
+                     , random       == 1.1.*
+  default-language:    Haskell2010
+
+executable RandomClock
+  hs-source-dirs:      src
+  main-is:             RandomClock.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base  >= 4.9
+                     , rhine        == 0.5.*
+                     , transformers == 0.5.*
                      , random       == 1.1.*
   default-language:    Haskell2010
 

@@ -9,7 +9,7 @@ import Control.Monad.Schedule
 import FRP.Rhine
 import FRP.Rhine.Clock.Periodic
 
-type MyClock = Periodic '[500, 1000]
+type MyClock = Periodic '[5, 10]
 
 everyNowAndThen :: Monad m => ClSF m MyClock arbitrary String
 everyNowAndThen = sinceInitS >>> proc time ->

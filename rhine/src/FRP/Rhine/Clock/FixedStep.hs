@@ -43,7 +43,8 @@ instance Monad m => Clock m (FixedStep n) where
   type Time (FixedStep n) = Integer
   type Tag  (FixedStep n) = ()
   initClock cl = return
-    ( count >>> arr (* stepsize cl)
+    --( count >>> arr (* stepsize cl)
+    ( arr (const $ stepsize cl) >>> sumS
       &&& arr (const ())
     , 0
     )

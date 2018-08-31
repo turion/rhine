@@ -39,3 +39,7 @@ all messages are collected and output on the console.
 To see how clock safety is enforced in Rhine via the type checker,
 you can uncomment the last (deliberately incorrect) line in this example,
 and witness the type error.
+
+### `EventClock`
+
+This shows how Rhine's `Event` clock can be used,

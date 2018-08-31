@@ -27,10 +27,12 @@ module FRP.Rhine.Clock.Realtime.Event
   ( module FRP.Rhine.Clock.Realtime.Event
   , module Control.Monad.IO.Class
   , newChan
+  , forkIO
   )
   where
 
 -- base
+import Control.Concurrent
 import Control.Concurrent.Chan
 import Data.Time.Clock
 import Data.Semigroup

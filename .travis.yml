@@ -14,6 +14,10 @@ before_install:
   - cd ${PACKAGE}
   - cabal sandbox init
   - cabal sandbox add-source ../rhine
+cache:
+  directories:
+    - rhine/.cabal-sandbox
+    - ${PACKAGE}/.cabal-sandbox
 
 deploy:
   provider: hackage
