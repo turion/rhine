@@ -49,9 +49,7 @@ class Monad m => MonadWait diff m where
     wait :: diff -> m ()
     wait diff = return ()
 
-instance Monad m => MonadWait diff (ScheduleT diff m) where
-    -- | The side effect that waits for a specified amount.
-    wait diff = FreeT $ return $ Free $ Wait diff $ return ()
+instance Monad m => MonadWait diff (ScheduleT diff m)
 
 -- class (MonadWait diff m) => MonadSchedule diff m | m -> diff where
 
@@ -60,6 +58,7 @@ instance Monad m => MonadWait diff (ScheduleT diff m) where
 --   and returns the first one that yields a value
 --   (defaulting to the first argument),
 --   and a continuation for the other value.
+
 
 race
   :: (Ord diff, Num diff, Monad m)
