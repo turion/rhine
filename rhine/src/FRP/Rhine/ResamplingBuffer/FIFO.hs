@@ -19,8 +19,8 @@ import FRP.Rhine.ResamplingBuffer.Timeless
 
 -- | An unbounded FIFO buffer.
 --   If the buffer is empty, it will return 'Nothing'.
-fifo :: Monad m => ResamplingBuffer m cl1 cl2 a (Maybe a)
-fifo = timelessResamplingBuffer AsyncMealy {..} empty
+fifoUnbounded :: Monad m => ResamplingBuffer m cl1 cl2 a (Maybe a)
+fifoUnbounded = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as
     amGet as   = case viewr as of
@@ -29,8 +29,8 @@ fifo = timelessResamplingBuffer AsyncMealy {..} empty
 
 -- |  A bounded FIFO buffer that forgets the oldest values when the size is above a given threshold.
 --   If the buffer is empty, it will return 'Nothing'.
-boundedFifo :: Monad m => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
-boundedFifo threshold = timelessResamplingBuffer AsyncMealy {..} empty
+fifoBounded :: Monad m => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
+fifoBounded threshold = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ take threshold $ a <| as
     amGet as = case viewr as of
