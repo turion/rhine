@@ -7,9 +7,12 @@ that implement their waiting actions in 'ScheduleT'.
 See 'FRP.Rhine.Schedule.Trans' for more details.
 -}
 
-{-# LANGUAGE DeriveFunctor #-}
-module Control.Monad.Schedule where
+{-# LANGUAGE DeriveFunctor          #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances      #-}
 
+module Control.Monad.Schedule where
 
 -- base
 import Control.Concurrent
@@ -37,31 +40,26 @@ Values in @ScheduleT diff m@ are delayed computations with side effects in 'm'.
 Delays can occur between any two side effects, with lengths specified by a 'diff' value.
 These delays don't have any semantics, it can be given to them with 'runScheduleT'.
 -}
+
 type ScheduleT diff = FreeT (Wait diff)
 
+--  Implement type class MonadWait with method wait
+class Monad m => MonadWait diff m where
+    wait :: diff -> m ()
+    wait diff = return ()
 
--- | The side effect that waits for a specified amount.
-wait :: Monad m => diff -> ScheduleT diff m ()
-wait diff = FreeT $ return $ Free $ Wait diff $ return ()
+instance Monad m => MonadWait diff (ScheduleT diff m) where
+    -- | The side effect that waits for a specified amount.
+    wait diff = FreeT $ return $ Free $ Wait diff $ return ()
 
--- | Supply a semantic meaning to 'Wait'.
---   For every occurrence of @Wait diff@ in the @ScheduleT diff m a@ value,
---   a waiting action is executed, depending on 'diff'.
-runScheduleT :: Monad m => (diff -> m ()) -> ScheduleT diff m a -> m a
-runScheduleT waitAction = iterT $ \(Wait n ma) -> waitAction n >> ma
+-- class (MonadWait diff m) => MonadSchedule diff m | m -> diff where
 
--- | Run a 'ScheduleT' value in a 'MonadIO',
---   interpreting the times as milliseconds.
-runScheduleIO
-  :: (MonadIO m, Integral n)
-  => ScheduleT n m a -> m a
-runScheduleIO = runScheduleT $ liftIO . threadDelay . (* 1000) . fromIntegral
-
--- TODO The definition and type signature are both a mouthful. Is there a simpler concept?
+--TODO The definition and type signature are both a mouthful. Is there a simpler concept?
 -- | Runs two values in 'ScheduleT' concurrently
 --   and returns the first one that yields a value
 --   (defaulting to the first argument),
 --   and a continuation for the other value.
+
 race
   :: (Ord diff, Num diff, Monad m)
   => ScheduleT    diff m a -> ScheduleT diff m b
@@ -92,6 +90,19 @@ race (FreeT ma) (FreeT mb) = FreeT $ do
         else runFreeT $ do
           wait bDiff
           race (wait (aDiff - bDiff) >> aCont) bCont
+
+-- | Supply a semantic meaning to 'Wait'.
+--   For every occurrence of @Wait diff@ in the @ScheduleT diff m a@ value,
+--   a waiting action is executed, depending on 'diff'.
+runScheduleT :: Monad m => (diff -> m ()) -> ScheduleT diff m a -> m a
+runScheduleT waitAction = iterT $ \(Wait n ma) -> waitAction n >> ma
+
+-- | Run a 'ScheduleT' value in a 'MonadIO',
+--   interpreting the times as milliseconds.
+runScheduleIO
+  :: (MonadIO m, Integral n)
+  => ScheduleT n m a -> m a
+runScheduleIO = runScheduleT $ liftIO . threadDelay . (* 1000) . fromIntegral
 
 -- | Runs both schedules concurrently and returns their results at the end.
 async
