@@ -28,10 +28,7 @@ import qualified Graphics.Gloss as X
 
 -- rhine
 import FRP.Rhine
-import FRP.Rhine.Clock.Select
 import FRP.Rhine.Reactimation.Tick
-import FRP.Rhine.ResamplingBuffer.Collect
-import FRP.Rhine.ResamplingBuffer.KeepLast
 
 import qualified FRP.Rhine      as X
 import qualified FRP.Rhine.ClSF as X

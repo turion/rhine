@@ -16,7 +16,9 @@ import Data.VectorSpace
 import Data.VectorSpace.Tuples
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.ClSF
+import FRP.Rhine.ResamplingBuffer
+import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.ResamplingBuffer.KeepLast
 
 -- | A simple linear interpolation based on the last calculated position and velocity.

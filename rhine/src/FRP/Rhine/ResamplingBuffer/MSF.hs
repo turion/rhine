@@ -6,7 +6,7 @@ Collect and process all incoming values statefully and with time stamps.
 module FRP.Rhine.ResamplingBuffer.MSF where
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.ResamplingBuffer
 
 -- | Given a monadic stream function that accepts
 --   a varying number of inputs (a list),

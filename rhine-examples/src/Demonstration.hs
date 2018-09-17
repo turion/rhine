@@ -4,9 +4,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
 import FRP.Rhine
-import FRP.Rhine.Clock.Realtime.Millisecond
-import FRP.Rhine.Schedule.Concurrently
-import FRP.Rhine.ResamplingBuffer.Collect
 
 -- | Create a simple message containing the time stamp since initialisation,
 --   for each tick of the clock.

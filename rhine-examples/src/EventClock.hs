@@ -17,10 +17,6 @@ import System.Random
 
 -- rhine
 import FRP.Rhine
-import FRP.Rhine.Schedule.Concurrently
-import FRP.Rhine.Clock.Realtime.Busy
-import FRP.Rhine.Clock.Realtime.Event
-import FRP.Rhine.Clock.Realtime.Millisecond
 
 -- * Subsystems
 

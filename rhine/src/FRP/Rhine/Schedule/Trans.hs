@@ -10,7 +10,8 @@ module FRP.Rhine.Schedule.Trans where
 
 -- rhine
 import Control.Monad.Schedule
-import FRP.Rhine
+import FRP.Rhine.Clock
+import FRP.Rhine.Schedule
 
 
 -- * Universal schedule for the 'ScheduleT' monad transformer
