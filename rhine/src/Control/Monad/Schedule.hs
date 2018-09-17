@@ -47,9 +47,10 @@ type ScheduleT diff = FreeT (Wait diff)
 --  Implement type class MonadWait with method wait
 class Monad m => MonadWait diff m where
     wait :: diff -> m ()
-    wait diff = return ()
 
-instance Monad m => MonadWait diff (ScheduleT diff m)
+instance Monad m => MonadWait diff (ScheduleT diff m) where
+    wait diff = FreeT $ return $ Free $ Wait diff $ return ()
+
 
 -- class (MonadWait diff m) => MonadSchedule diff m | m -> diff where
 
