@@ -28,7 +28,7 @@ fifoUnbounded = timelessResamplingBuffer AsyncMealy {..} empty
       as' :> a -> return (Just a , as'  )
 
 -- |  A bounded FIFO buffer that forgets the oldest values when the size is above a given threshold.
---   If the buffer is empty, it will return 'Nothing'.
+--    If the buffer is empty, it will return 'Nothing'.
 fifoBounded :: Monad m => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
 fifoBounded threshold = timelessResamplingBuffer AsyncMealy {..} empty
   where
