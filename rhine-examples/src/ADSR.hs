@@ -30,10 +30,6 @@ when the user stops pressing the key.
 
 -- rhine
 import FRP.Rhine
-import FRP.Rhine.Clock.Realtime.Millisecond
-import FRP.Rhine.Clock.Realtime.Stdin
-import FRP.Rhine.ResamplingBuffer.KeepLast
-import FRP.Rhine.Schedule.Concurrently
 
 -- * The definition of an ADSR
 

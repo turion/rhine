@@ -15,7 +15,8 @@ that ticks only on certain subevents.
 module FRP.Rhine.Clock.Select where
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.Clock
+import FRP.Rhine.Schedule
 
 -- dunai
 import Data.MonadicStreamFunction.Async (concatS)
