@@ -26,7 +26,7 @@ import Graphics.Gloss.Interface.Pure.Game
 import qualified Graphics.Gloss as X
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (trivialResamplingBuffer)
 import FRP.Rhine.Reactimation.Tick
 
 import qualified FRP.Rhine      as X
