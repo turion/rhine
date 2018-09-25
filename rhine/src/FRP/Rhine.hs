@@ -16,6 +16,9 @@ module FRP.Rhine (module X) where
 
 -- dunai
 import Data.MonadicStreamFunction         as X hiding ((>>>^), (^>>>))
+import Data.VectorSpace                   as X
+import Data.VectorSpace.Specific ()
+import Data.VectorSpace.Tuples ()
 
 -- rhine
 import FRP.Rhine.Clock                    as X
