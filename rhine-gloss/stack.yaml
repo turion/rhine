@@ -1,4 +1,4 @@
-resolver: lts-12.5
+resolver: lts-12.10
 extra-deps:
   - ../rhine
 nix:
