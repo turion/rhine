@@ -1,6 +1,6 @@
-resolver: lts-12.5
+resolver: nightly-2018-09-26
 extra-deps:
   - ../rhine
 nix:
   enable: true
-  packages: [libGL libGLU]
+  packages: [libGL libGLU freeglut]
