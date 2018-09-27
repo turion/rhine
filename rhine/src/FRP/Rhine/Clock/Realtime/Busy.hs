@@ -8,7 +8,7 @@ module FRP.Rhine.Clock.Realtime.Busy where
 import Data.Time.Clock
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.Clock
 
 {- |
 A clock that ticks without waiting.

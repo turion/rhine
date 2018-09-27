@@ -20,8 +20,11 @@ import GHC.TypeLits
 import Data.Vector.Sized (Vector, fromList)
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.Clock
 import FRP.Rhine.Clock.FixedStep
+import FRP.Rhine.Schedule
+import FRP.Rhine.ResamplingBuffer
+import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.ResamplingBuffer.Collect
 
 {- |

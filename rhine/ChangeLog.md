@@ -7,7 +7,17 @@ every major version in `dunai` triggers a major version in `rhine`.
 ## 0.5.0.0
 
 * Deprecated GHC 7.*
-* Big module reorganisation
+* Big module reorganisation:
+  * Renamed `SyncSF` to `ClSF` and many other renames
+    (https://github.com/turion/rhine/issues/45)
+  * `FRP.Rhine` by default exports all components
+    (signal functions, clocks, schedules, resampling buffers)
+* Refactored some fixed step clocks
+* Added interpolation buffers
+
+Note that this is the first release that is not in sync
+with `dunai`'s version numbers.
+`rhine-0.5` depends on `dunai-0.4`.
 
 ## 0.4.0.0 -- 2017.12.04
 
