@@ -18,8 +18,8 @@ import FRP.Rhine.Schedule
 import FRP.Rhine.SN
 
 {- |
-An 'SN' together with a clock of matching type 'cl',
-A 'Rhine' is a reactive program, possibly with open inputs and outputs.
+A 'Rhine' consists of un 'SN' together with a clock of matching type 'cl'.
+It is a reactive program, possibly with open inputs and outputs.
 If the input and output types 'a' and 'b' are both '()',
 that is, the 'Rhine' is "closed",
 then it is a standalone reactive program

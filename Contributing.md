@@ -9,12 +9,13 @@
 * Support requests are also very welcome, as github issues.
 * If you have written an application using Rhine,
   you are welcome to ask for a code review here, as an issue.
+* Bindings to other frameworks and backends are always a good idea to contribute.
 
 ## Development model
 
 ### Version numbering
 
-* The big version numbers (i.e. `N.n.*.*`) follow the
+* The big version numbers (i.e. `N.n.*.*`) usually follow the
   [Dunai](https://github.com/ivanperez-keera/dunai) version numbering,
   since every API change in Dunai can result in an API change for Rhine.
 * The small version numbers (i.e. `*.*.n.n`) conform to the

@@ -7,7 +7,6 @@ import Control.Monad.IO.Class
 -- rhine
 import Control.Monad.Schedule
 import FRP.Rhine
-import FRP.Rhine.Clock.Periodic
 
 type MyClock = Periodic '[500, 1000]
 

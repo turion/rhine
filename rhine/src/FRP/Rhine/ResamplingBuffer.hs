@@ -9,7 +9,11 @@ synchronous signal functions ticking at different speeds.
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
-module FRP.Rhine.ResamplingBuffer where
+module FRP.Rhine.ResamplingBuffer
+  ( module FRP.Rhine.ResamplingBuffer
+  , module FRP.Rhine.Clock
+  )
+  where
 
 -- rhine
 import FRP.Rhine.Clock

@@ -1,6 +1,6 @@
 name:                rhine
 
-version:             0.5.0.0
+version:             0.5.0.1
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -46,7 +46,7 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.5.0.0
+  tag:      v0.5.0.1
 
 
 library
@@ -66,6 +66,7 @@ library
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except
     FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.Tick
@@ -89,6 +90,7 @@ library
 
   other-modules:
     FRP.Rhine.ClSF.Except.Util
+    FRP.Rhine.Schedule.Util
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -98,7 +100,7 @@ library
                     ,  dunai        == 0.4.0.*
                     ,  transformers == 0.5.*
                     ,  time         == 1.8.*
-                    ,  free         == 5.0.*
+                    ,  free         == 5.1.*
                     ,  containers   == 0.5.*
                     ,  vector-sized >= 0.6      && < 1.1
                     ,  deepseq      == 1.4.*
