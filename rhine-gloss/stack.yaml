@@ -3,4 +3,4 @@ extra-deps:
   - ../rhine
 nix:
   enable: true
-  packages: [libGL libGLU]
+  packages: [libGL libGLU freeglut]
