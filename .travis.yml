@@ -1,11 +1,13 @@
+if: branch IN (master, develop)
 language: haskell
 ghc:
-- '8.2'
-- '8.0'
+  - '8.4.3'
+  - '8.2.2'
+  - '8.0.2'
 env:
-- PACKAGE="rhine"
-- PACKAGE="rhine-gloss"
-- PACKAGE="rhine-examples"
+  - PACKAGE=rhine
+  - PACKAGE=rhine-gloss
+  - PACKAGE=rhine-examples
 before_install:
   - cd rhine
   - cabal sandbox init
@@ -22,4 +24,6 @@ deploy:
   on:
     repo: turion/rhine
     tags: true
-    condition: "$PACKAGE =~ ^(rhine|rhine-gloss)$"
+    condition:
+      - $PACKAGE =~ ^rhine|rhine-gloss$
+      - $TRAVIS_HASKELL_VERSION = 8.2.2

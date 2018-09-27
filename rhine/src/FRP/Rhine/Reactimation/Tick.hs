@@ -1,5 +1,10 @@
-{-# LANGUAGE GADTs           #-}
-{-# LANGUAGE NamedFieldPuns  #-}
+{- |
+This module contains internals needed for the reactimation of signal functions.
+None of it should be relevant for a typical user of this library.
+-}
+
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation.Tick where
 
@@ -13,195 +18,195 @@ import Data.MonadicStreamFunction
 import FRP.Rhine.Clock
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
-import FRP.Rhine.SF
+import FRP.Rhine.SN
 
 
-{- | A signal function ('SF') enclosed by matching 'ResamplingBuffer's and further auxiliary data,
+{- | A signal network ('SN') enclosed by matching 'ResamplingBuffer's and further auxiliary data,
 such that it can be stepped with each arriving tick from a clock 'cl'.
 They play a similar role like 'ReactHandle's in dunai.
 
 The type parameters:
 
-* 'm': The monad in which the 'SF' and the 'ResamplingBuffer's produce side effects
+* 'm': The monad in which the 'SN' and the 'ResamplingBuffer's produce side effects
 * 'cla': The (irrelevant) input clock of the left 'ResamplingBuffer'
 * 'clb': The clock at which the left 'ResamplingBuffer' produces output
-* 'cl': The clock at which the 'SF' ticks
+* 'cl': The clock at which the 'SN' ticks
 * 'clc': The clock at which the right 'ResamplingBuffer' accepts input
 * 'cld': The (irrelevant) output clock of the right 'ResamplingBuffer'
 * 'a': The (irrelevant) input type of the left 'ResamplingBuffer'
-* 'b': The input type of the 'SF'
-* 'c': The output type of the 'SF'
+* 'b': The input type of the 'SN'
+* 'c': The output type of the 'SN'
 * 'd': The (irrelevant) output type of the right 'ResamplingBuffer'
 -}
 data Tickable m cla clb cl clc cld a b c d = Tickable
   { -- | The left buffer from which the input is taken.
     buffer1     :: ResamplingBuffer m cla clb          a b
-    -- | The signal function that will process the data.
-  , ticksf      :: SF               m        cl          b c
+    -- | The signal network that will process the data.
+  , ticksn      :: SN               m        cl          b c
     -- | The right buffer in which the output is stored.
   , buffer2     :: ResamplingBuffer m          clc cld     c d
-    -- | The leftmost clock of the signal function, 'cl',
+    -- | The leftmost clock of the signal network, 'cl',
     --   may be a parallel subclock of the buffer clock.
-    --   'parClockInL' specifies in which position 'Leftmost cl'
+    --   'parClockIn' specifies in which position 'In cl'
     --   is a parallel subclock of 'clb'.
-  , parClockInL :: ParClockInclusion (Leftmost  cl) clb
+  , parClockIn  :: ParClockInclusion (In  cl) clb
     -- | The same on the output side.
-  , parClockInR :: ParClockInclusion (Rightmost cl) clc
+  , parClockOut :: ParClockInclusion (Out cl) clc
     -- | The last times when the different parts of the signal tree have ticked.
   , lastTime    :: LastTime cl
     -- | The time when the whole clock was initialised.
-  , initTime    :: TimeDomainOf cl
+  , initTime    :: Time cl
   }
 
 
 -- | Initialise the tree of last tick times.
-initLastTime :: SF m cl a b -> TimeDomainOf cl -> LastTime cl
+initLastTime :: SN m cl a b -> Time cl -> LastTime cl
 initLastTime (Synchronous _)        initTime = LeafLastTime initTime
-initLastTime (Sequential sf1 _ sf2) initTime =
+initLastTime (Sequential sn1 _ sn2) initTime =
   SequentialLastTime
-    (initLastTime sf1 initTime)
-    (initLastTime sf2 initTime)
-initLastTime (Parallel sf1 sf2)     initTime =
+    (initLastTime sn1 initTime)
+    (initLastTime sn2 initTime)
+initLastTime (Parallel sn1 sn2)     initTime =
   ParallelLastTime
-    (initLastTime sf1 initTime)
-    (initLastTime sf2 initTime)
+    (initLastTime sn1 initTime)
+    (initLastTime sn2 initTime)
 
--- | Initialise a 'Tickable' from a signal function,
+-- | Initialise a 'Tickable' from a signal network,
 --   two matching enclosing resampling buffers and an initial time.
 createTickable
-  :: ResamplingBuffer m cla (Leftmost cl)                       a b
-  -> SF               m                   cl                      b c
-  -> ResamplingBuffer m                      (Rightmost cl) cld     c d
-  -> TimeDomainOf cl
-  -> Tickable         m cla (Leftmost cl) cl (Rightmost cl) cld a b c d
-createTickable buffer1 ticksf buffer2 initTime = Tickable
-  { parClockInL = ParClockRefl
-  , parClockInR = ParClockRefl
-  , lastTime    = initLastTime ticksf initTime
+  :: ResamplingBuffer m cla (In cl)                 a b
+  -> SN               m         cl                      b c
+  -> ResamplingBuffer m                (Out cl) cld     c d
+  -> Time cl
+  -> Tickable         m cla (In cl) cl (Out cl) cld a b c d
+createTickable buffer1 ticksn buffer2 initTime = Tickable
+  { parClockIn  = ParClockRefl
+  , parClockOut = ParClockRefl
+  , lastTime    = initLastTime ticksn initTime
   , ..
   }
 
-{- | In this function, one tick, or step of an asynchronous signal function happens.
+{- | In this function, one tick, or step of an asynchronous signal network happens.
 The 'TimeInfo' holds the information which part of the signal tree will tick.
 This information is encoded in the 'Tag' of the 'TimeInfo',
 which is of type 'Either tag1 tag2' in case of a 'SequentialClock' or a 'ParallelClock',
 encoding either a tick for the left clock or the right clock.
 -}
 tick :: ( Monad m, Clock m cl
-        , TimeDomainOf cla ~ TimeDomainOf cl
-        , TimeDomainOf clb ~ TimeDomainOf cl
-        , TimeDomainOf clc ~ TimeDomainOf cl
-        , TimeDomainOf cld ~ TimeDomainOf cl
-        , TimeDomainOf (Leftmost  cl) ~ TimeDomainOf cl
-        , TimeDomainOf (Rightmost cl) ~ TimeDomainOf cl
+        , Time cla ~ Time cl
+        , Time clb ~ Time cl
+        , Time clc ~ Time cl
+        , Time cld ~ Time cl
+        , Time (In  cl) ~ Time cl
+        , Time (Out cl) ~ Time cl
         )
      => Tickable    m cla clb cl clc cld a b c d
-     -> TimeDomainOf cl -- ^ Timestamp of the present tick
+     -> Time cl -- ^ Timestamp of the present tick
      -> Tag cl -- ^ 'Tag' of the overall clock; contains the information which subsystem will become active
      -> m (Tickable m cla clb cl clc cld a b c d)
 -- Only if we have reached a leaf of the tree, data is actually processed.
 tick Tickable
-  { ticksf   = Synchronous syncsf
+  { ticksn   = Synchronous clsf
   , lastTime = LeafLastTime lastTime
   , .. } now tag = do
     let
       ti = TimeInfo
-        { sinceTick  = diffTime now lastTime
-        , sinceStart = diffTime now initTime
-        , absolute   = now
-        , tag        = tag
+        { sinceLast = diffTime now lastTime
+        , sinceInit = diffTime now initTime
+        , absolute  = now
+        , tag       = tag
         }
     -- Get an input value from the left buffer
-    (b, buffer1') <- get buffer1 $ retag (parClockTagInclusion parClockInL) ti
-    -- Run it through the synchronous signal function
-    (c, syncsf')  <- unMSF syncsf b `runReaderT` ti
+    (b, buffer1') <- get buffer1 $ retag (parClockTagInclusion parClockIn ) ti
+    -- Run it through the signal function
+    (c, clsf')  <- unMSF clsf b `runReaderT` ti
     -- Put the output into the right buffer
-    buffer2'      <- put buffer2 (retag (parClockTagInclusion parClockInR) ti) c
+    buffer2'      <- put buffer2 (retag (parClockTagInclusion parClockOut) ti) c
     return Tickable
       { buffer1  = buffer1'
-      , ticksf   = Synchronous syncsf'
+      , ticksn   = Synchronous clsf'
       , buffer2  = buffer2'
       , lastTime = LeafLastTime now
       , .. }
 -- The left part of a sequential composition is stepped.
 tick tickable@Tickable
-  { ticksf   = Sequential sf1 bufferMiddle sf2
+  { ticksn   = Sequential sn1 bufferMiddle sn2
   , lastTime = SequentialLastTime lastTimeL lastTimeR
   , initTime
-  , parClockInL
+  , parClockIn
   } now (Left tag) = do
     leftTickable <- tick Tickable
       { buffer1     = buffer1 tickable
-      , ticksf      = sf1
+      , ticksn      = sn1
       , buffer2     = bufferMiddle
-      , parClockInL = parClockInL
-      , parClockInR = ParClockRefl
+      , parClockIn  = parClockIn
+      , parClockOut = ParClockRefl
       , lastTime    = lastTimeL
       , initTime    = initTime
       } now tag
     return $ tickable
       { buffer1  = buffer1 leftTickable
-      , ticksf   = Sequential (ticksf leftTickable) (buffer2 leftTickable) sf2
+      , ticksn   = Sequential (ticksn leftTickable) (buffer2 leftTickable) sn2
       , lastTime = SequentialLastTime (lastTime leftTickable) lastTimeR
       }
 -- The right part of a sequential composition is stepped.
 tick tickable@Tickable
-  { ticksf   = Sequential sf1 bufferMiddle sf2
+  { ticksn   = Sequential sn1 bufferMiddle sn2
   , lastTime = SequentialLastTime lastTimeL lastTimeR
   , initTime
-  , parClockInR
+  , parClockOut
   } now (Right tag) = do
     rightTickable <- tick Tickable
       { buffer1     = bufferMiddle
-      , ticksf      = sf2
+      , ticksn      = sn2
       , buffer2     = buffer2 tickable
-      , parClockInL = ParClockRefl
-      , parClockInR = parClockInR
+      , parClockIn  = ParClockRefl
+      , parClockOut = parClockOut
       , lastTime    = lastTimeR
       , initTime    = initTime
       } now tag
     return $ tickable
       { buffer2  = buffer2 rightTickable
-      , ticksf   = Sequential sf1 (buffer1 rightTickable) (ticksf rightTickable)
+      , ticksn   = Sequential sn1 (buffer1 rightTickable) (ticksn rightTickable)
       , lastTime = SequentialLastTime lastTimeL (lastTime rightTickable)
       }
 -- A parallel composition is stepped.
 tick tickable@Tickable
-  { ticksf   = Parallel sfA sfB
+  { ticksn   = Parallel snA snB
   , lastTime = ParallelLastTime lastTimeA lastTimeB
   , initTime
-  , parClockInL
-  , parClockInR
+  , parClockIn
+  , parClockOut
   } now tag = case tag of
     Left tagL -> do
       leftTickable <- tick Tickable
         { buffer1     = buffer1 tickable
-        , ticksf      = sfA
+        , ticksn      = snA
         , buffer2     = buffer2 tickable
-        , parClockInL = ParClockInL parClockInL
-        , parClockInR = ParClockInL parClockInR
+        , parClockIn  = ParClockInL parClockIn
+        , parClockOut = ParClockInL parClockOut
         , lastTime    = lastTimeA
         , initTime    = initTime
         } now tagL
       return $ tickable
         { buffer1  = buffer1 leftTickable
-        , ticksf   = Parallel (ticksf leftTickable) sfB
+        , ticksn   = Parallel (ticksn leftTickable) snB
         , buffer2  = buffer2 leftTickable
         , lastTime = ParallelLastTime (lastTime leftTickable) lastTimeB
         }
     Right tagR -> do
       rightTickable <- tick Tickable
         { buffer1     = buffer1 tickable
-        , ticksf      = sfB
+        , ticksn      = snB
         , buffer2     = buffer2 tickable
-        , parClockInL = ParClockInR parClockInL
-        , parClockInR = ParClockInR parClockInR
+        , parClockIn  = ParClockInR parClockIn
+        , parClockOut = ParClockInR parClockOut
         , lastTime    = lastTimeB
         , initTime    = initTime
         } now tagR
       return $ tickable
         { buffer1  = buffer1 rightTickable
-        , ticksf   = Parallel sfA (ticksf rightTickable)
+        , ticksn   = Parallel snA (ticksn rightTickable)
         , buffer2  = buffer2 rightTickable
         , lastTime = ParallelLastTime lastTimeA (lastTime rightTickable)
         }
@@ -217,7 +222,7 @@ that additionally unifies the clock types in a way needed for the tick implement
 -}
 trivialResamplingBuffer
   :: Monad m => cl
-  -> ResamplingBuffer m (Rightmost cl) (Leftmost cl) () ()
+  -> ResamplingBuffer m (Out cl) (In cl) () ()
 trivialResamplingBuffer _ = go
   where
     go  = ResamplingBuffer {..}

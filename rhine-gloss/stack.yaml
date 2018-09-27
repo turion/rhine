@@ -1,7 +1,6 @@
-resolver: lts-11.7
+resolver: nightly-2018-09-26
 extra-deps:
-  - dunai-0.4.0.0
   - ../rhine
 nix:
   enable: true
-  packages: [mesa freeglut]
+  packages: [libGL libGLU freeglut]
