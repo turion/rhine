@@ -90,6 +90,7 @@ library
     FRP.Rhine.Type
 
   other-modules:
+    FRP.Rhine.ClSF.Random.Util
     FRP.Rhine.ClSF.Except.Util
     FRP.Rhine.Schedule.Util
 
@@ -105,6 +106,7 @@ library
                     ,  containers   == 0.5.*
                     ,  vector-sized >= 0.6      && < 1.1
                     ,  deepseq      == 1.4.*
+                    ,  random       == 1.1.*
                     ,  MonadRandom  == 0.5.*
 
   -- Directories containing source files.
