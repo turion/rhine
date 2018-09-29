@@ -1,0 +1,6 @@
+resolver: nightly-2018-09-26
+extra-deps:
+  - ../rhine
+nix:
+  enable: true
+  packages: [mesa_noglu.drivers freeglut]
