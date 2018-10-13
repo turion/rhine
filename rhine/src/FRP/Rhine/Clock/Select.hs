@@ -23,7 +23,6 @@ import Data.MonadicStreamFunction.Async (concatS)
 
 -- base
 import Data.Maybe (catMaybes, maybeToList)
-import Data.Semigroup
 
 -- | A clock that selects certain subevents of type 'a',
 --   from the tag of a main clock.

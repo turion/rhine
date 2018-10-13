@@ -33,7 +33,6 @@ module FRP.Rhine.Clock.Realtime.Event
 -- base
 import Control.Concurrent.Chan
 import Data.Time.Clock
-import Data.Semigroup
 
 -- deepseq
 import Control.DeepSeq
@@ -44,7 +43,6 @@ import Control.Monad.Trans.Reader
 
 -- rhine
 import FRP.Rhine.ClSF
-import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 import FRP.Rhine.Schedule.Concurrently
 

@@ -30,6 +30,7 @@ when the user stops pressing the key.
 
 -- rhine
 import FRP.Rhine
+import Control.Monad.Fail
 
 -- * The definition of an ADSR
 
@@ -77,7 +78,7 @@ as follows:
   The system then returns to the initial zero amplitude state.
 -}
 runADSR
-  :: ( Monad m, TimeDomain time
+  :: ( MonadFail m, TimeDomain time
      , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
   => ADSR time amplitude -> BehaviourF m time Bool amplitude
 runADSR ADSR {..} = safely $ do
@@ -102,7 +103,7 @@ runADSR ADSR {..} = safely $ do
 --   The exception contains the "overdue" time,
 --   i.e. how long before the tick the time was up.
 linearly
-  :: ( Monad m, TimeDomain time
+  :: ( MonadFail m, TimeDomain time
      , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
   => Diff time -- ^ The time span, in which the amplitude will interpolate
   -> amplitude -- ^ The initial amplitude
@@ -123,7 +124,7 @@ linearly timeSpan initialAmplitude finalAmplitude overdue = proc _ -> do
 -- | The period in which the amplitude rises initially from 0 to 1,
 --   and then an exception is thrown.
 attack
-  :: ( Monad m, TimeDomain time
+  :: ( MonadFail m, TimeDomain time
      , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
   => Diff time -- ^ The attack time, in which the amplitude will rise from 0 to 1.
   -> amplitude -- ^ The initial amplitude
@@ -133,7 +134,7 @@ attack a amplitude = linearly a amplitude 1 0
 -- | The period in which the amplitude falls from 1 to the sustain level,
 --   and then an exception is thrown.
 decay
-  :: ( Monad m, TimeDomain time
+  :: ( MonadFail m, TimeDomain time
      , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
   => Diff time -- ^ The decay time, in which the amplitude will fall from 1 to...
   -> amplitude -- ^ ...the sustain level.
@@ -142,13 +143,13 @@ decay
 decay d = linearly d 1
 
 -- | A period in which a given amplitude is sustained indefinitely.
-sustain :: Monad m => amplitude -> Behaviour m time amplitude
+sustain :: MonadFail m => amplitude -> Behaviour m time amplitude
 sustain = arr . const
 
 -- | The period in which the level falls from the sustain level to 0.
 --   and then an exception is thrown.
 release
-  :: ( Monad m, TimeDomain time
+  :: ( MonadFail m, TimeDomain time
      , Ord amplitude, Fractional amplitude, Diff time ~ amplitude )
   => Diff time -- ^ The release time, in which the amplitude will fall from...
   -> amplitude -- ^ ...the sustain level to 0.
@@ -177,12 +178,12 @@ main = flow $ key >-- keepLast False -@- concurrently --> consoleADSR
 
 -- | Raises an exception when the input becomes 'True',
 --   i.e. the key is pressed.
-keyPressed :: Monad m => BehaviourF (ExceptT () m) time Bool ()
+keyPressed :: MonadFail m => BehaviourF (ExceptT () m) time Bool ()
 keyPressed = throwOn ()
 
 -- | Raises an exception when the input becomes 'False',
 --   i.e. the key isn't pressed anymore.
-keyReleased :: Monad m => BehaviourF (ExceptT () m) time Bool ()
+keyReleased :: MonadFail m => BehaviourF (ExceptT () m) time Bool ()
 keyReleased = arr not >>> keyPressed
 
 
@@ -192,7 +193,7 @@ keyReleased = arr not >>> keyPressed
 --   That exception is returned,
 --   together with the current output of the first 'ClSF'.
 till
-  :: Monad m
+  :: MonadFail m
   => ClSF                 m  cl a b
   -> ClSF (ExceptT  e     m) cl a   c
   -> ClSF (ExceptT (e, b) m) cl a b

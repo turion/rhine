@@ -11,6 +11,8 @@ and a deterministic schedule for such clocks.
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE NoStarIsType #-}
+
 module FRP.Rhine.Clock.FixedStep where
 
 
@@ -30,6 +32,8 @@ import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.Schedule
+
+
 
 -- | A pure (side effect free) clock with fixed step size,
 --   i.e. ticking at multiples of 'n'.

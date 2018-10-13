@@ -13,7 +13,7 @@ import Data.Sequence
 
 -- dunai
 import Data.VectorSpace
-import Data.VectorSpace.Tuples
+--import Data.VectorSpace.Tuples
 
 -- rhine
 import FRP.Rhine.ClSF

@@ -21,6 +21,7 @@ import qualified Control.Category (id)
 import Data.Maybe (fromJust)
 import Data.Monoid (Last (Last), getLast)
 
+
 -- containers
 import Data.Sequence
 
@@ -32,6 +33,7 @@ import Control.Monad.Trans.MSF.Reader (readerS)
 import Data.MonadicStreamFunction (arrM_, sumFrom, delay, feedback)
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
 import Data.VectorSpace
+import Control.Monad.Fail
 
 -- rhine
 import FRP.Rhine.ClSF.Core
@@ -89,7 +91,7 @@ If you replace 'sinceStart' by 'sinceInitS',
 it will usually hang after one second,
 since it doesn't reset after restarting the sawtooth.
 -}
-sinceStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
+sinceStart :: (MonadFail m, TimeDomain time) => BehaviourF m time a (Diff time)
 sinceStart = absoluteS >>> proc time -> do
   startTime <- keepFirst -< time
   returnA                -< time `diffTime` startTime
@@ -310,7 +312,7 @@ bandStop t = clId ^-^ bandPass t
 -- * Delays
 
 -- | Remembers and indefinitely outputs ("holds") the first input value.
-keepFirst :: Monad m => ClSF m cl a a
+keepFirst :: MonadFail m => ClSF m cl a a
 keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
@@ -342,7 +344,7 @@ delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefi
 -- | Throws an exception after the specified time difference,
 --   outputting the time passed since the 'timer' was instantiated.
 timer
-  :: ( Monad m
+  :: ( MonadFail m
      , TimeDomain td
      , Ord (Diff td)
      )
@@ -355,7 +357,7 @@ timer diff = proc _ -> do
 
 -- | Like 'timer_', but doesn't output the remaining time at all.
 timer_
-  :: ( Monad m
+  :: ( MonadFail m
      , TimeDomain td
      , Ord (Diff td)
      )
@@ -365,7 +367,7 @@ timer_ diff = timer diff >>> arr (const ())
 
 -- | Like 'timer', but divides the remaining time by the total time.
 scaledTimer
-  :: ( Monad m
+  :: ( MonadFail m
      , TimeDomain td
      , Fractional (Diff td)
      , Ord        (Diff td)

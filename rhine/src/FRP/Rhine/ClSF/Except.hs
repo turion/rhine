@@ -23,6 +23,7 @@ import qualified Control.Category as Category
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except as X
 import Control.Monad.Trans.Reader
+import Control.Monad.Fail
 
 -- dunai
 import Data.MonadicStreamFunction
@@ -107,28 +108,26 @@ type BehaviourFExcept m time a b e
 -- | Compatibility to U.S. american spelling.
 type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
 
-
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
-runClSFExcept :: Monad m => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
+runClSFExcept :: MonadFail m => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
 runClSFExcept = liftMSFPurer commuteExceptReader . runMSFExcept
 
 -- | Enter the monad context in the exception
 --   for 'ClSF's in the 'ExceptT' monad.
 --   The 'ClSF' will be run until it encounters an exception.
-try :: Monad m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
+try :: MonadFail m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
 try = MSFE.try . liftMSFPurer commuteReaderExcept
 
 -- | Within the same tick, perform a monadic action,
 --   and immediately throw the value as an exception.
-once :: Monad m => (a -> m e) -> ClSFExcept m cl a b e
+once :: MonadFail m => (a -> m e) -> ClSFExcept m cl a b e
 once f = MSFE.once $ lift . f
 
 -- | A variant of 'once' without input.
-once_ :: Monad m => m e -> ClSFExcept m cl a b e
+once_ :: MonadFail m => m e -> ClSFExcept m cl a b e
 once_ = once . const
-
 
 -- | Advances a single tick with the given Kleisli arrow,
 --   and then throws an exception.
-step :: Monad m => (a -> m (b, e)) -> ClSFExcept m cl a b e
+step :: MonadFail m => (a -> m (b, e)) -> ClSFExcept m cl a b e
 step f = MSFE.step $ lift . f

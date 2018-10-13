@@ -29,7 +29,7 @@ import Data.Time.Clock
 
 -- transformers
 import Control.Monad.IO.Class
-
+import Control.Monad.Fail
 
 -- dunai
 import Control.Monad.Trans.MSF.Except hiding (step)
@@ -93,7 +93,7 @@ theBufferSize
 theBufferSize = fromInteger . natVal
 
 
-instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
+instance (MonadIO m, MonadFail m, KnownNat bufferSize, AudioClockRate rate)
       => Clock m (AudioClock rate bufferSize) where
   type Time (AudioClock rate bufferSize) = UTCTime
   type Tag  (AudioClock rate bufferSize) = Maybe Double
@@ -104,7 +104,7 @@ instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
                      $ round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
       bufferSize = theBufferSize audioClock
 
-      runningClock :: MonadIO m => UTCTime -> Maybe Double -> MSF m () (UTCTime, Maybe Double)
+      runningClock :: (MonadIO m, MonadFail m) => UTCTime -> Maybe Double -> MSF m () (UTCTime, Maybe Double)
       runningClock initialTime maybeWasLate = safely $ do
         bufferFullTime <- try $ proc () -> do
           n <- count    -< ()

@@ -14,6 +14,7 @@ module FRP.Rhine.ClSF.Random
 
 -- transformers
 import Control.Monad.IO.Class
+import Control.Monad.Fail
 
 -- random
 import System.Random (newStdGen)
@@ -68,7 +69,7 @@ evalRandIOS clsf = do
 
 -- | Evaluates the random computation by using the global random generator on the first tick.
 evalRandIOS'
-  :: MonadIO m
+  :: (MonadIO m, MonadFail m)
   => ClSF (RandT StdGen m) cl a b
   -> ClSF               m  cl a b
 evalRandIOS' = performOnFirstSample . liftIO . evalRandIOS

@@ -11,14 +11,12 @@ module FRP.Rhine.Clock.Realtime.Stdin where
 
 -- base
 import Data.Time.Clock
-import Data.Semigroup
 
 -- transformers
 import Control.Monad.IO.Class
 
 -- rhine
 import FRP.Rhine.Clock
-import Data.Semigroup
 
 {- |
 A clock that ticks for every line entered on the console,

@@ -98,16 +98,17 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base         >= 4.9      && < 4.12
+  build-depends:       base         >= 4.9
                     ,  dunai        == 0.4.0.*
                     ,  transformers == 0.5.*
                     ,  time         == 1.8.*
                     ,  free         == 5.1.*
                     ,  containers   == 0.5.*
-                    ,  vector-sized >= 0.6      && < 1.1
+                    ,  vector-sized >= 0.6
                     ,  deepseq      == 1.4.*
                     ,  random       == 1.1.*
                     ,  MonadRandom  == 0.5.*
+                    ,  fail
 
   -- Directories containing source files.
   hs-source-dirs:      src

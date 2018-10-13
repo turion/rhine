@@ -8,6 +8,8 @@ Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE NoStarIsType #-}
+
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
