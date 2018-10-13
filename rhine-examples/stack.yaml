@@ -1,4 +1,5 @@
-resolver: nightly-2018-10-12
+#resolver: nightly-2018-10-12
+resolver: lts-12.11
 extra-deps:
 - ../rhine
 - git: https://github.com/0xCM/dunai.git

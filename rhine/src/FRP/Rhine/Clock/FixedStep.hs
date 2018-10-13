@@ -11,8 +11,12 @@ and a deterministic schedule for such clocks.
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE CPP #-}
 
+#if MIN_VERSION_base(4, 12, 0)
+  {-# LANGUAGE NoStarIsType #-}  
+#endif
+  
 module FRP.Rhine.Clock.FixedStep where
 
 

@@ -1,6 +1,12 @@
-resolver: nightly-2018-09-26
+resolver: nightly-2018-10-12
 extra-deps:
-  - ../rhine
+- ../rhine
+- git: https://github.com/0xCM/dunai.git
+  commit: 4e64e5404f3d1d384d2430824cc497ccfa7e6825
+- git: https://github.com/expipiplus1/vector-sized.git
+  commit: f80e3ce774d255ee4ba25fcb12a81a76f600e0b0 
+- finite-typelits-0.1.4.2@sha256:d243523297c0526d32e9b7de98e04b79a4227577ddb25d3fecd7981439de243c
+- indexed-list-literals-0.2.1.2@sha256:0760e2a86605b5557af7180d4d50e317d75a5a92ca12aaabb6948ce97b7a94ac
 nix:
   enable: true
   packages: [libGL libGLU freeglut]
