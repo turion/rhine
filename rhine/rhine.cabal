@@ -99,11 +99,11 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base         >= 4.9
-                    ,  dunai        == 0.4.0.*
+                    ,  dunai
                     ,  transformers == 0.5.*
                     ,  time         == 1.8.*
                     ,  free         == 5.1.*
-                    ,  containers   == 0.5.*
+                    ,  containers
                     ,  vector-sized >= 0.6
                     ,  deepseq      == 1.4.*
                     ,  random       == 1.1.*
