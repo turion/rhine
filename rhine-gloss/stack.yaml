@@ -1,8 +1,8 @@
-resolver: nightly-2018-10-12
+resolver: lts-12.11
 extra-deps:
 - ../rhine
 - git: https://github.com/0xCM/dunai.git
-  commit: 4e64e5404f3d1d384d2430824cc497ccfa7e6825
+  commit: 5505a15b2009e13e233cca8328d520442d3045c6
 - git: https://github.com/expipiplus1/vector-sized.git
   commit: f80e3ce774d255ee4ba25fcb12a81a76f600e0b0 
 - finite-typelits-0.1.4.2@sha256:d243523297c0526d32e9b7de98e04b79a4227577ddb25d3fecd7981439de243c
