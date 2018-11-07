@@ -38,7 +38,7 @@ runRandS
   => ClSF (RandT g m) cl a     b
   -> g -- ^ The initial random seed
   -> ClSF          m  cl a (g, b)
-runRandS clsf g = MSF.runRandS (liftMSFPurer commuteReaderRand clsf) g
+runRandS clsf g = MSF.runRandS (morphS commuteReaderRand clsf) g
 
 -- | Updates the generator every step but discards the generator.
 evalRandS

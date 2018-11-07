@@ -16,10 +16,6 @@ module FRP.Rhine.TimeDomain
 -- time
 import Data.Time.Clock (UTCTime, diffUTCTime)
 
--- dunai
-import Data.VectorSpace.Specific ()
-
-
 -- | A time domain is an affine space representing a notion of time,
 --   such as real time, simulated time, steps, or a completely different notion.
 class TimeDomain time where

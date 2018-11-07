@@ -13,6 +13,7 @@ import Control.Monad.Trans.Reader
 
 -- dunai
 import Data.MonadicStreamFunction
+import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
 import FRP.Rhine.Clock

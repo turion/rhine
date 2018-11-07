@@ -68,7 +68,7 @@ Ideally, this action is run _outside_ of 'flow',
 e.g. @runEventChanT $ flow myRhine@.
 This way, exactly one channel is created.
 
-Caution: Don't use this with 'liftMSFPurer',
+Caution: Don't use this with 'morphS',
 since it would create a new channel every tick.
 Instead, create one @chan :: Chan c@, e.g. with 'newChan',
 and then use 'withChanS'.
@@ -154,7 +154,7 @@ instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
   initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
-      ( arrM_ $ do
+      ( constM $ do
           chan  <- ask
           event <- liftIO $ readChan chan
           time  <- liftIO $ getCurrentTime

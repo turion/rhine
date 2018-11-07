@@ -64,7 +64,7 @@ hoistSchedule hoist Schedule {..} = Schedule initSchedule'
   where
     initSchedule' cl1 cl2 = hoist
       $ first (hoistMSF hoist) <$> initSchedule cl1 cl2
-    hoistMSF = liftMSFPurer
+    hoistMSF = morphS
     -- TODO This should be a dunai issue
 
 -- | Swaps the clocks for a given schedule.
@@ -123,7 +123,7 @@ readerSchedule
        (HoistClock (ReaderT r m) m cl1) (HoistClock (ReaderT r m) m cl2)
   -> Schedule (ReaderT r m) cl1 cl2
 readerSchedule Schedule {..}
-  = Schedule $ \cl1 cl2 -> ReaderT $ \r -> first liftMSFTrans
+  = Schedule $ \cl1 cl2 -> ReaderT $ \r -> first liftTransS
   <$> initSchedule
         (HoistClock cl1 $ flip runReaderT r)
         (HoistClock cl2 $ flip runReaderT r)

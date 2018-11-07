@@ -23,7 +23,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 
 -- dunai
-import Data.MonadicStreamFunction (MSF, arrM, arrM_, liftMSFPurer, liftMSFTrans)
+import Data.MonadicStreamFunction (MSF, arrM, constM, morphS, liftTransS)
 import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
 
 -- rhine
@@ -65,7 +65,7 @@ hoistClSF
   => (forall c. m1 c -> m2 c)
   -> ClSF m1 cl a b
   -> ClSF m2 cl a b
-hoistClSF hoist = liftMSFPurer $ mapReaderT hoist
+hoistClSF hoist = morphS $ mapReaderT hoist
 
 -- | Hoist a 'ClSF' and its clock along a monad morphism.
 hoistClSFAndClock
@@ -74,7 +74,7 @@ hoistClSFAndClock
   -> ClSF m1 cl a b
   -> ClSF m2 (HoistClock m1 m2 cl) a b
 hoistClSFAndClock hoist
-  = liftMSFPurer $ withReaderT (retag id) . mapReaderT hoist
+  = morphS $ withReaderT (retag id) . mapReaderT hoist
 
 -- | Lift a 'ClSF' into a monad transformer.
 liftClSF
@@ -93,7 +93,7 @@ liftClSFAndClock = hoistClSFAndClock lift
 -- | A monadic stream function without dependency on time
 --   is a 'ClSF' for any clock.
 timeless :: Monad m => MSF m a b -> ClSF m cl a b
-timeless = liftMSFTrans
+timeless = liftTransS
 
 -- | Utility to lift Kleisli arrows directly to 'ClSF's.
 arrMCl :: Monad m => (a -> m b) -> ClSF m cl a b
@@ -101,7 +101,7 @@ arrMCl = timeless . arrM
 
 -- | Version without input.
 constMCl :: Monad m => m b -> ClSF m cl a b
-constMCl = timeless . arrM_
+constMCl = timeless . constM
 
 {- | Call a 'ClSF' every time the input is 'Just a'.
 

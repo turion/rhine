@@ -13,7 +13,6 @@ import Data.Sequence
 
 -- dunai
 import Data.VectorSpace
-import Data.VectorSpace.Tuples
 
 -- rhine
 import FRP.Rhine.ClSF
@@ -86,8 +85,8 @@ cubic
      , Groundfield v ~ Diff (Time cl2)
      )
   => ResamplingBuffer m cl1 cl2 v v
-cubic = ((delay zeroVector &&& threePointDerivative) &&& (sinceInitS >-> delay 0))
-    >-> (clId &&& delay (zeroVector, 0))
+cubic = ((iPre zeroVector &&& threePointDerivative) &&& (sinceInitS >-> iPre 0))
+    >-> (clId &&& iPre (zeroVector, 0))
    ^->> keepLast ((zeroVector, 0), (zeroVector, 0))
    >>-^ proc (((dv, v), t1), ((dv', v'), t1')) -> do
      t2 <- sinceInitS -< ()
