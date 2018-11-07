@@ -1,1 +1,3 @@
 resolver: nightly-2018-09-26
+extra-deps:
+  - dunai-0.5.1
