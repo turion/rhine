@@ -65,6 +65,7 @@ library
     FRP.Rhine.ClSF
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except
+    FRP.Rhine.ClSF.Random
     FRP.Rhine.ClSF.Reader
     FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
@@ -89,6 +90,7 @@ library
     FRP.Rhine.Type
 
   other-modules:
+    FRP.Rhine.ClSF.Random.Util
     FRP.Rhine.ClSF.Except.Util
     FRP.Rhine.Schedule.Util
 
@@ -104,6 +106,8 @@ library
                     ,  containers   == 0.5.*
                     ,  vector-sized >= 0.6      && < 1.1
                     ,  deepseq      == 1.4.*
+                    ,  random       == 1.1.*
+                    ,  MonadRandom  == 0.5.*
 
   -- Directories containing source files.
   hs-source-dirs:      src
