@@ -48,49 +48,52 @@ type ScheduleT diff = FreeT (Wait diff)
 class Monad m => MonadWait diff m where
     wait :: diff -> m ()
 
-instance Monad m => MonadWait diff (ScheduleT diff m) where
+
+class (MonadWait diff m) => MonadSchedule diff m where
+    --TODO The definition and type signature are both a mouthful. Is there a simpler concept?
+    -- | Runs two values in 'ScheduleT' concurrently
+    --   and returns the first one that yields a value
+    --   (defaulting to the first argument),
+    --   and a continuation for the other value.
+    race
+      :: (Ord diff, Num diff, MonadWait diff m)
+      => m a -> m b
+      -> m (Either (a, m b) (m a, b))
+
+instance (MonadWait diff m) => MonadSchedule diff (ScheduleT diff m) where
     wait diff = FreeT $ return $ Free $ Wait diff $ return ()
+    race
+      :: (Ord diff, Num diff, Monad m)
+      => ScheduleT    diff m a -> ScheduleT diff m b
+      -> ScheduleT    diff m (Either
+           (                 a,   ScheduleT diff m b)
+           (ScheduleT diff m a,                    b)
+         )
+    race (FreeT ma) (FreeT mb) = FreeT $ do
+      -- Perform the side effects to find out how long each 'ScheduleT' values need to wait.
+      aWait <- ma
+      bWait <- mb
+      case aWait of
+        -- 'a' doesn't need to wait. Return immediately and leave the continuation for 'b'.
+        Pure a -> return $ Pure $ Left (a, FreeT $ return bWait)
+        -- 'a' needs to wait, so we need to inspect 'b' as well and see which one needs to wait longer.
+        Free (Wait aDiff aCont) -> case bWait of
+        -- 'b' doesn't need to wait. Return immediately and leave the continuation for 'a'.
+          Pure b -> return $ Pure $ Right (wait aDiff >> aCont, b)
+          -- Both need to wait. Which one needs to wait longer?
+          Free (Wait bDiff bCont) -> if aDiff <= bDiff
+            -- 'a' yields first, or both are done simultaneously.
+            then runFreeT $ do
+              -- Perform the wait action that we've deconstructed
+              wait aDiff
+              -- Recurse, since more wait actions might be hidden in 'a' and 'b'. 'b' doesn't need to wait as long, since we've already waited for 'aDiff'.
+              race aCont $ wait (bDiff - aDiff) >> bCont
+            -- 'b' yields first. Analogously.
+            else runFreeT $ do
+              wait bDiff
+              race (wait (aDiff - bDiff) >> aCont) bCont
 
 
--- class (MonadWait diff m) => MonadSchedule diff m | m -> diff where
-
---TODO The definition and type signature are both a mouthful. Is there a simpler concept?
--- | Runs two values in 'ScheduleT' concurrently
---   and returns the first one that yields a value
---   (defaulting to the first argument),
---   and a continuation for the other value.
-
-
-race
-  :: (Ord diff, Num diff, Monad m)
-  => ScheduleT    diff m a -> ScheduleT diff m b
-  -> ScheduleT    diff m (Either
-       (                 a,   ScheduleT diff m b)
-       (ScheduleT diff m a,                    b)
-     )
-race (FreeT ma) (FreeT mb) = FreeT $ do
-  -- Perform the side effects to find out how long each 'ScheduleT' values need to wait.
-  aWait <- ma
-  bWait <- mb
-  case aWait of
-    -- 'a' doesn't need to wait. Return immediately and leave the continuation for 'b'.
-    Pure a -> return $ Pure $ Left (a, FreeT $ return bWait)
-    -- 'a' needs to wait, so we need to inspect 'b' as well and see which one needs to wait longer.
-    Free (Wait aDiff aCont) -> case bWait of
-    -- 'b' doesn't need to wait. Return immediately and leave the continuation for 'a'.
-      Pure b -> return $ Pure $ Right (wait aDiff >> aCont, b)
-      -- Both need to wait. Which one needs to wait longer?
-      Free (Wait bDiff bCont) -> if aDiff <= bDiff
-        -- 'a' yields first, or both are done simultaneously.
-        then runFreeT $ do
-          -- Perform the wait action that we've deconstructed
-          wait aDiff
-          -- Recurse, since more wait actions might be hidden in 'a' and 'b'. 'b' doesn't need to wait as long, since we've already waited for 'aDiff'.
-          race aCont $ wait (bDiff - aDiff) >> bCont
-        -- 'b' yields first. Analogously.
-        else runFreeT $ do
-          wait bDiff
-          race (wait (aDiff - bDiff) >> aCont) bCont
 
 -- | Supply a semantic meaning to 'Wait'.
 --   For every occurrence of @Wait diff@ in the @ScheduleT diff m a@ value,
