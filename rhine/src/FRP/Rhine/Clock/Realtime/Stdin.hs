@@ -17,7 +17,7 @@ import Data.Semigroup
 import Control.Monad.IO.Class
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.Clock
 import Data.Semigroup
 
 {- |

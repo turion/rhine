@@ -25,8 +25,11 @@ import Data.Vector.Sized (Vector, fromList)
 import Data.MonadicStreamFunction.Async (concatS)
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine.Clock
+import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
+import FRP.Rhine.ResamplingBuffer.Util
+import FRP.Rhine.Schedule
 
 -- | A pure (side effect free) clock with fixed step size,
 --   i.e. ticking at multiples of 'n'.

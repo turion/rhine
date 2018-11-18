@@ -26,7 +26,8 @@ import Control.Monad.Trans.MSF.Maybe
 import Control.Monad.Trans.MSF.Writer
 
 -- rhine
-import FRP.Rhine hiding (try, once_, throwMaybe)
+import FRP.Rhine.Clock
+import FRP.Rhine.Schedule
 
 
 -- | Runs two clocks in separate GHC threads

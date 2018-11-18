@@ -91,6 +91,20 @@ would be:
 * `rhine-gloss/`: A wrapper library to [gloss](https://hackage.haskell.org/package/gloss), a functional OpenGL library.
 * `rhine-examples/`: Different examples as a starting point to learn Rhine.
 
+## Development
+
+See [`Contributing.md`](./Contributing.md) for details.
+
+* Rhine usually follows up-to-date GHC versions.
+* Contributions are welcome!
+  There are always a few issues labelled `help needed`,
+  in case you're looking for an easy way to get started.
+* Rhine is a beginner-friendly Haskell project!
+  Even if you're new to Haskell and FRP, you can contribute.
+  This is a good place to start contributing to open-source projects.
+  Have a look at issues labelled `good first issue`.
+  If you have questions, don't hesitate to ask on Github.
+
 ## Related projects
 
 * https://github.com/turion/rhine-tutorial: Presentation and tutorial app

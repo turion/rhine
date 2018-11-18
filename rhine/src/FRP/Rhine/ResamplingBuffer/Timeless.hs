@@ -6,7 +6,7 @@ These are used in many other modules implementing 'ResamplingBuffer's.
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.Timeless where
 
-import FRP.Rhine
+import FRP.Rhine.ResamplingBuffer
 
 -- | An asynchronous, effectful Mealy machine description.
 --   (Input and output do not happen simultaneously.)
