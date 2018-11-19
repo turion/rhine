@@ -104,7 +104,7 @@ library
                     ,  time         == 1.8.*
                     ,  free         == 5.1.*
                     ,  containers   == 0.6.*
-                    ,  vector-sized >= 0.6      && < 1.1
+                    ,  vector-sized == 1.1.*
                     ,  deepseq      == 1.4.*
                     ,  random       == 1.1.*
                     ,  MonadRandom  == 0.5.*

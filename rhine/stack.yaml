@@ -1,8 +1,1 @@
-resolver: nightly-2018-11-07
-extra-deps:
-  - dunai-0.5.1 # Remove soon (https://github.com/commercialhaskell/stackage/pull/4109)
-  # Remove the following soon (https://github.com/expipiplus1/vector-sized/issues/52)
-  - git: https://github.com/expipiplus1/vector-sized.git
-    commit: f80e3ce774d255ee4ba25fcb12a81a76f600e0b0
-  - finite-typelits-0.1.4.2
-  - indexed-list-literals-0.2.1.2
+resolver: nightly-2018-11-16
