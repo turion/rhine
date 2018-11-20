@@ -61,3 +61,19 @@ data SN m cl a b where
     => SN m                  cl1      a b
     -> SN m                      cl2  a b
     -> SN m (ParallelClock m cl1 cl2) a b
+
+
+-- * Hoist 'SN's along monad morphisms
+hoistSeqSN
+  :: ( Monad m, Monad m'
+     , cl1 ~ In cl1, cl1 ~ Out cl1
+     , cl2 ~ In cl2, cl2 ~ Out cl2
+     )
+  => (forall x . m x -> m' x)
+  -> SN m (SequentialClock m cl1 cl2) a b
+  -> SN m' (SequentialClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)) a b
+hoistSeqSN monadMorphism (Sequential (Synchronous clsf1) rb (Synchronous clsf2)) =
+  Sequential
+    (Synchronous $ hoistClSFAndClock monadMorphism clsf1)
+    (hoistResamplingBufferAndClocks monadMorphism rb)
+    (Synchronous $ hoistClSFAndClock monadMorphism clsf2)

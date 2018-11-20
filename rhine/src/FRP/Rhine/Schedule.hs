@@ -55,17 +55,40 @@ data Schedule m cl1 cl2
 -- * Utilities to create new schedules from existing ones
 
 -- | Lift a schedule along a monad morphism.
+--   This is useful when @cl1@ and @cl2@ are polymorphic in their monads.
 hoistSchedule
-  :: (Monad m1, Monad m2)
-  => (forall a . m1 a -> m2 a)
-  -> Schedule m1 cl1 cl2
-  -> Schedule m2 cl1 cl2
-hoistSchedule hoist Schedule {..} = Schedule initSchedule'
+  :: (Monad m, Monad m')
+  => Schedule m  cl1 cl2
+  -> (forall a . m a -> m' a)
+  -> Schedule m' cl1 cl2
+hoistSchedule Schedule {..} morph = Schedule initSchedule'
   where
-    initSchedule' cl1 cl2 = hoist
-      $ first (hoistMSF hoist) <$> initSchedule cl1 cl2
+    initSchedule' cl1 cl2 = morph
+      $ first (hoistMSF morph) <$> initSchedule cl1 cl2
     hoistMSF = liftMSFPurer
     -- TODO This should be a dunai issue
+
+
+-- | Lifts a schedule and the scheduled clocks along a given monad morphism.
+--   (Disregards the monad morphisms along which
+--    the constituent clocks are lifted.
+--   )
+--   This is useful when @cl1@ or @cl2@ are not polymorphic in their monads.
+hoistedClockSchedule
+  :: ( Monad m, Monad m'
+     , HoistableClock m m' cl2
+     , HoistableClock m m' cl2
+     )
+  => Schedule m cl1 cl2
+  -> (forall a . m a -> m' a)
+  -> Schedule m' (HoistedClock m m' cl1) (HoistedClock m m' cl2)
+hoistedClockSchedule schedule@(Schedule {}) morph = Schedule initSchedule'
+  where
+    initSchedule' hoistedCl1 hoistdCl2
+      = initSchedule
+          (hoistSchedule schedule morph)
+          (unhoistedClock hoistedCl1)
+          (unhoistedClock hoistedCl2)
 
 -- | Swaps the clocks for a given schedule.
 flipSchedule
@@ -178,6 +201,36 @@ schedSeq2 = Schedule $ \SequentialClock { sequentialSchedule = Schedule {..}, ..
 -- ** Parallelly combined clocks
 
 
+-- | Hoist a sequential clock, preserving its decomposition.
+--   Hoists the individual clocks and the schedule.
+hoistedSeqClock
+  :: (Monad m, Monad m')
+  => (forall a . m a -> m' a)
+  -> SequentialClock m cl1 cl2
+  -> SequentialClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)
+hoistedSeqClock morph (SequentialClock {..}) = SequentialClock
+  { sequentialCl1      = HoistClock sequentialCl1 morph
+  , sequentialCl2      = HoistClock sequentialCl2 morph
+  , sequentialSchedule = hoistClockSchedule morph sequentialSchedule
+  }
+
+instance (HoistableClock m m' cl1, HoistableClock m m' cl2)
+      => HoistableClock m m' (SequentialClock m cl1 cl2)
+  type HoistedClock m m' (SequentialClock m cl1 cl2)
+    = SequentialClock m' (HoistedClock m m' cl1) (HoistedClock m m' cl2)
+  hoistedClock SequentialClock {..} morph = SequentialClock
+    { sequentialCl1      = hoistedClock sequentialCl1 morph
+    , sequentialCl2      = hoistedClock sequentialCl2 morph
+    , sequentialSchedule = hoistedClockSchedule sequentialSchedule morph
+    }
+	unhoistedClock SequentialClock {..} = SequentialClock
+    { sequentialCl1      = unhoistedClock sequentialCl1
+    , sequentialCl2      = unhoistedClock sequentialCl2
+    , sequentialSchedule = unhoistedClock sequentialCl1
+    }
+
+-- ** Parallelly composed clocks
+
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous parallel composition of signal networks.
 data ParallelClock m cl1 cl2
@@ -197,6 +250,19 @@ instance (Monad m, Clock m cl1, Clock m cl2)
   type Tag  (ParallelClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
   initClock ParallelClock {..}
     = initSchedule parallelSchedule parallelCl1 parallelCl2
+
+-- | Hoist a parallel clock, preserving its decomposition.
+--   Hoists the individual clocks and the schedule.
+hoistedParClock
+  :: (Monad m, Monad m')
+  => (forall a . m a -> m' a)
+  -> ParallelClock m cl1 cl2
+  -> ParallelClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)
+hoistedParClock morph (ParallelClock {..}) = ParallelClock
+  { parallelCl1      = HoistClock parallelCl1 morph
+  , parallelCl2      = HoistClock parallelCl2 morph
+  , parallelSchedule = hoistClockSchedule morph parallelSchedule
+  }
 
 
 -- | Like 'schedSeq1', but for parallel clocks.
@@ -283,3 +349,18 @@ parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left  tag
 parClockTagInclusion (ParClockInR parClockInR) tag = parClockTagInclusion parClockInR $ Right tag
 parClockTagInclusion ParClockRefl              tag = tag
+
+-- * Hoist composite clocks along monad morphisms
+
+type family HoistedClock m m' cl where
+  HoistedClock m m' (SequentialClock m cl1 cl2) = SequentialClock m' (HoistedClock m m' cl1)  (HoistedClock m m' cl2)
+  HoistedClock m m' (ParallelClock   m cl1 cl2) = ParallelClock   m' (HoistedClock m m' cl1)  (HoistedClock m m' cl2)
+  HoistedClock m m' cl = HoistClock m m' cl
+
+hoistedClock :: (forall a . m a -> m' a) -> cl -> HoistedClock m m' cl
+hoistedClock morph (SequentialClock {..}) = SequentialClock
+  { sequentialCl1      = hoistedClock  morph sequentialCl1
+  , sequentialCl2      = hoistedClock  morph sequentialCl1
+  , sequentialSchedule = hoistSchedule morph sequentialSchedule
+  }
+-}

@@ -5,8 +5,13 @@ as main loops.
 
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RankNTypes #-}
+
 module FRP.Rhine.Reactimation where
 
+
+-- transformers
+import Control.Monad.Trans.Class
 
 -- dunai
 import Data.MonadicStreamFunction
