@@ -93,9 +93,12 @@ would be:
 
 ## Documentation
 
+The best way to learn about Rhine is currently the article _Rhine: FRP with Type-Level Clocks_](https://dl.acm.org/authorize?N660626).
+
+### Additional documentation
+
 * [`stackage`](https://www.stackage.org/nightly-2018-09-28/package/rhine-0.5.0.1)
 * [`hackage`](https://hackage.haskell.org/package/rhine-0.5.0.1)
-* https://dl.acm.org/citation.cfm?id=3242757: Article about Rhine (sadly behind a paywall currently)
 * https://github.com/turion/rhine-tutorial: Presentation and tutorial app
 * https://github.com/turion/sonnendemo: Demo application (`rhine-0.4`)
 
