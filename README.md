@@ -91,6 +91,14 @@ would be:
 * `rhine-gloss/`: A wrapper library to [gloss](https://hackage.haskell.org/package/gloss), a functional OpenGL library.
 * `rhine-examples/`: Different examples as a starting point to learn Rhine.
 
+## Documentation
+
+* [`stackage`](https://www.stackage.org/nightly-2018-09-28/package/rhine-0.5.0.1)
+* [`hackage`](https://hackage.haskell.org/package/rhine-0.5.0.1)
+* https://dl.acm.org/citation.cfm?id=3242757: Article about Rhine (sadly behind a paywall currently)
+* https://github.com/turion/rhine-tutorial: Presentation and tutorial app
+* https://github.com/turion/sonnendemo: Demo application (`rhine-0.4`)
+
 ## Development
 
 See [`Contributing.md`](./Contributing.md) for details.
