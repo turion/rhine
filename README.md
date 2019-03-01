@@ -93,7 +93,8 @@ would be:
 
 ## Documentation
 
-The best way to learn about Rhine is currently the article [_Rhine: FRP with Type-Level Clocks_](https://dl.acm.org/authorize?N660626).
+The best way to learn about Rhine is currently the article _Rhine: FRP with Type-Level Clocks_.
+You can find a copy on [Iván Pérez' site](http://www.cs.nott.ac.uk/~psxip1/).
 
 ### Additional documentation
 
