@@ -3,8 +3,7 @@
 
 name:                rhine-gloss
 version:             0.5.0.1
-synopsis:            Wrapper to run reactive programs written in Rhine
-                     with Gloss as backend
+synopsis:            Gloss backend for Rhine
 description:
   This package provides a simple wrapper for the `gloss` library,
   or rather the function `Graphics.Gloss.play`,
