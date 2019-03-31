@@ -1,1 +1,4 @@
-resolver: nightly-2018-09-26
+resolver: lts-12.26
+nix:
+  enable: true
+  add-gc-roots: true
