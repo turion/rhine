@@ -235,7 +235,7 @@ instance (Monad m1, Monad m2, Clock m1 cl)
   type Tag  (HoistClock m1 m2 cl) = Tag  cl
   initClock HoistClock {..} = do
     (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
-    let hoistMSF = liftMSFPurer
+    let hoistMSF = morphS
     -- TODO Look out for API changes in dunai here
     return
       ( hoistMSF monadMorphism runningClock

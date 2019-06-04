@@ -43,7 +43,7 @@ throwS = arrMCl throwE
 
 -- | Immediately throw the given exception.
 throw :: Monad m => e -> MSF (ExceptT e m) a b
-throw = arrM_ . throwE
+throw = constM . throwE
 
 -- | Do not throw an exception.
 pass :: Monad m => MSF (ExceptT e m) a a
@@ -110,13 +110,13 @@ type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
 
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
 runClSFExcept :: Monad m => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
-runClSFExcept = liftMSFPurer commuteExceptReader . runMSFExcept
+runClSFExcept = morphS commuteExceptReader . runMSFExcept
 
 -- | Enter the monad context in the exception
 --   for 'ClSF's in the 'ExceptT' monad.
 --   The 'ClSF' will be run until it encounters an exception.
 try :: Monad m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
-try = MSFE.try . liftMSFPurer commuteReaderExcept
+try = MSFE.try . morphS commuteReaderExcept
 
 -- | Within the same tick, perform a monadic action,
 --   and immediately throw the value as an exception.

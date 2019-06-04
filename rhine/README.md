@@ -2,4 +2,4 @@
 --------
 
 This is the main library.
-For details, visit [[https://github.com/turion/rhine]].
+For details, visit [https://github.com/turion/rhine](https://github.com/turion/rhine).

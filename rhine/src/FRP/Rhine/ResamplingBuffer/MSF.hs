@@ -5,6 +5,9 @@ Collect and process all incoming values statefully and with time stamps.
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.ResamplingBuffer.MSF where
 
+-- dunai
+import Data.MonadicStreamFunction.InternalCore
+
 -- rhine
 import FRP.Rhine.ResamplingBuffer
 

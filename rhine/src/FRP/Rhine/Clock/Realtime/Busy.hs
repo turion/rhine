@@ -24,7 +24,7 @@ instance Clock IO Busy where
   initClock _ = do
     initialTime <- getCurrentTime
     return
-      ( arrM_ getCurrentTime
+      ( constM getCurrentTime
         &&& arr (const ())
       , initialTime
       )

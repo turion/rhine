@@ -1,6 +1,6 @@
 name:                rhine
 
-version:             0.5.0.1
+version:             0.5.1.0
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -46,7 +46,7 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.5.0.1
+  tag:      v0.5.1.0
 
 
 library
@@ -65,6 +65,7 @@ library
     FRP.Rhine.ClSF
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except
+    FRP.Rhine.ClSF.Random
     FRP.Rhine.ClSF.Reader
     FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
@@ -89,6 +90,7 @@ library
     FRP.Rhine.Type
 
   other-modules:
+    FRP.Rhine.ClSF.Random.Util
     FRP.Rhine.ClSF.Except.Util
     FRP.Rhine.Schedule.Util
 
@@ -96,14 +98,16 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base         >= 4.9      && < 4.12
-                    ,  dunai        == 0.4.0.*
+  build-depends:       base         >= 4.9      && < 4.13
+                    ,  dunai        == 0.5.1.*
                     ,  transformers == 0.5.*
                     ,  time         == 1.8.*
                     ,  free         == 5.1.*
-                    ,  containers   == 0.5.*
-                    ,  vector-sized >= 0.6      && < 1.1
+                    ,  containers   == 0.6.*
+                    ,  vector-sized == 1.1.*
                     ,  deepseq      == 1.4.*
+                    ,  random       == 1.1.*
+                    ,  MonadRandom  == 0.5.*
 
   -- Directories containing source files.
   hs-source-dirs:      src
@@ -111,6 +115,9 @@ library
   ghc-options:         -Wall
                        -Wno-unticked-promoted-constructors
                        -Wno-type-defaults
+
+  if impl(ghc >= 8.6)
+    default-extensions: NoStarIsType
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
