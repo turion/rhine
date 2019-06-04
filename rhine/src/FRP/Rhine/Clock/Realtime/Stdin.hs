@@ -33,7 +33,7 @@ instance MonadIO m => Clock m StdinClock where
   initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
-      ( arrM_ $ liftIO $ do
+      ( constM $ liftIO $ do
           line <- getLine
           time <- getCurrentTime
           return (time, line)

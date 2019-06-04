@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-examples
-version:             0.5.0.1
+version:             0.5.1.0
 -- synopsis:
 -- description:
 license:             BSD3
@@ -19,7 +19,7 @@ executable HelloWorld
   hs-source-dirs:      src
   main-is:             HelloWorld.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
   default-language:    Haskell2010
 
@@ -27,7 +27,7 @@ executable Demonstration
   hs-source-dirs:      src
   main-is:             Demonstration.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
   default-language:    Haskell2010
 
@@ -35,7 +35,7 @@ executable ADSR
   hs-source-dirs:      src
   main-is:             ADSR.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
   default-language:    Haskell2010
 
@@ -43,7 +43,7 @@ executable Periodic
   hs-source-dirs:      src
   main-is:             Periodic.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
                      , transformers == 0.5.*
   default-language:    Haskell2010
@@ -52,7 +52,7 @@ executable EventClock
   hs-source-dirs:      src
   main-is:             EventClock.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
                      , random       == 1.1.*
   default-language:    Haskell2010
@@ -61,6 +61,6 @@ executable Sawtooth
   hs-source-dirs:      src
   main-is:             Sawtooth.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
   default-language:    Haskell2010

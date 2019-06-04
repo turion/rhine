@@ -2,9 +2,8 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-gloss
-version:             0.5.0.1
-synopsis:            Wrapper to run reactive programs written in Rhine
-                     with Gloss as backend
+version:             0.5.1.0
+synopsis:            Gloss backend for Rhine
 description:
   This package provides a simple wrapper for the `gloss` library,
   or rather the function `Graphics.Gloss.play`,
@@ -27,15 +26,15 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.5.0.1
+  tag:      v0.5.1.0
 
 
 library
   exposed-modules:     FRP.Rhine.Gloss
   other-modules:       FRP.Rhine.Gloss.Internals
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
-                     , dunai        == 0.4.*
+                     , dunai        == 0.5.*
                      , gloss        >= 1.12  && < 1.14
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -43,6 +42,6 @@ library
 executable rhine-gloss-gears
   main-is:             Main.hs
   ghc-options:         -threaded
-  build-depends:       base         >= 4.9   && < 4.12
+  build-depends:       base         >= 4.9   && < 4.13
                      , rhine-gloss
   default-language:    Haskell2010

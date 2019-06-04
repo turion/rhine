@@ -46,7 +46,7 @@ concurrently = Schedule $ \cl1 cl2 -> do
   _ <- launchSubthread cl2 Right iMVar mvar
   initTime <- takeMVar iMVar -- The first clock to be initialised sets the first time stamp
   _        <- takeMVar iMVar -- Initialise the second clock
-  return (arrM_ $ takeMVar mvar, initTime)
+  return (constM $ takeMVar mvar, initTime)
   where
     launchSubthread cl leftright iMVar mvar = forkIO $ do
       (runningClock, initTime) <- initClock cl
@@ -78,7 +78,7 @@ concurrentlyWriter = Schedule $ \cl1 cl2 -> do
   (_       , w2) <- lift $ takeMVar iMVar
   tell w1
   tell w2
-  return (arrM_ (WriterT $ takeMVar mvar), initTime)
+  return (constM (WriterT $ takeMVar mvar), initTime)
   where
     launchSubthread cl leftright iMVar mvar = lift $ forkIO $ do
       ((runningClock, initTime), w) <- runWriterT $ initClock cl
@@ -107,7 +107,7 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
   catchAndDrain mvar $ do
     initTime <- ExceptT $ takeMVar iMVar -- The first clock to be initialised sets the first time stamp
     _        <- ExceptT $ takeMVar iMVar -- Initialise the second clock
-    let runningSchedule = arrM_ $ do
+    let runningSchedule = constM $ do
           eTick <- lift $ takeMVar mvar
           case eTick of
             Right tick -> return tick
@@ -122,14 +122,14 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
         Right (runningClock, initTime) -> do
           putMVar iMVar $ Right initTime
           Left e <- runExceptT $ reactimate $ runningClock >>> proc (td, tag2) -> do
-            arrM (lift . putMVar mvar)              -< Right (td, leftright tag2)
-            me <- arrM_ (lift $ readIORef errorref) -< ()
-            _  <- throwMaybe                        -< me
+            arrM (lift . putMVar mvar)               -< Right (td, leftright tag2)
+            me <- constM (lift $ readIORef errorref) -< ()
+            _  <- throwMaybe                         -< me
             returnA -< ()
           putMVar mvar $ Left e -- Either throw own exception or acknowledge the exception from the other clock
         Left e -> void $ putMVar iMVar $ Left e
     catchAndDrain mvar initScheduleAction = catchE initScheduleAction $ \e -> do
-      _ <- reactimate $ (arrM_ $ ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
+      _ <- reactimate $ (constM $ ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
       throwE e
 
 -- | As 'concurrentlyExcept', with a single possible exception value.

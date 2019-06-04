@@ -29,7 +29,7 @@ import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
 import Control.Monad.Trans.MSF.Reader (readerS)
-import Data.MonadicStreamFunction (arrM_, sumFrom, delay, feedback)
+import Data.MonadicStreamFunction (constM, sumFrom, iPre, feedback)
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
 import Data.VectorSpace
 
@@ -42,7 +42,7 @@ import FRP.Rhine.ClSF.Except
 
 -- | Read the environment variable, i.e. the 'TimeInfo'.
 timeInfo :: Monad m => ClSF m cl a (TimeInfo cl)
-timeInfo = arrM_ ask
+timeInfo = constM ask
 
 {- | Utility to apply functions to the current 'TimeInfo',
 such as record selectors:
@@ -52,7 +52,7 @@ printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
 @
 -}
 timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
-timeInfoOf f = arrM_ $ asks f
+timeInfoOf f = constM $ asks f
 
 -- | Continuously return the time difference since the last tick.
 sinceLastS :: Monad m => ClSF m cl a (Diff (Time cl))
@@ -166,7 +166,7 @@ derivativeFrom
      , Groundfield v ~ Diff td)
   => v -> BehaviorF m td v v
 derivativeFrom v0 = proc v -> do
-  vLast         <- delay v0 -< v
+  vLast         <- iPre v0  -< v
   TimeInfo {..} <- timeInfo -< ()
   returnA                   -< (v ^-^ vLast) ^/ sinceLast
 
@@ -186,7 +186,7 @@ threePointDerivativeFrom
   -> BehaviorF m td v v
 threePointDerivativeFrom v0 = proc v -> do
   dv  <- derivativeFrom v0 -< v
-  dv' <- delay zeroVector  -< dv
+  dv' <- iPre zeroVector   -< dv
   returnA                  -< (dv ^+^ dv') ^/ 2
 
 -- | Like 'threePointDerivativeFrom',

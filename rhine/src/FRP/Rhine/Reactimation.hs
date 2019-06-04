@@ -9,7 +9,7 @@ module FRP.Rhine.Reactimation where
 
 
 -- dunai
-import Data.MonadicStreamFunction
+import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
 import FRP.Rhine.Clock

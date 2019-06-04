@@ -23,8 +23,6 @@ import Data.Maybe (fromMaybe)
 import GHC.TypeLits (Nat, KnownNat, natVal)
 
 -- dunai
-import Control.Monad.Trans.MSF.Except
-import Control.Monad.Trans.MSF.Maybe (listToMaybeS, runMaybeT)
 import Data.MonadicStreamFunction
 
 -- rhine

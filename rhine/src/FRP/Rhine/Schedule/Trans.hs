@@ -8,6 +8,9 @@ can always be scheduled (by construction).
 {-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Schedule.Trans where
 
+-- dunai
+import Data.MonadicStreamFunction.InternalCore
+
 -- rhine
 import Control.Monad.Schedule
 import FRP.Rhine.Clock

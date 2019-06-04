@@ -1,6 +1,7 @@
 if: branch IN (master, develop)
 language: haskell
 ghc:
+  - '8.6'
   - '8.4.3'
   - '8.2.2'
   - '8.0.2'

@@ -8,6 +8,9 @@ module FRP.Rhine.ResamplingBuffer.Util where
 -- transformers
 import Control.Monad.Trans.Reader (runReaderT)
 
+-- dunai
+import Data.MonadicStreamFunction.InternalCore
+
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.ClSF
