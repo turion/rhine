@@ -55,11 +55,13 @@ library
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.Periodic
+    FRP.Rhine.Clock.Realtime
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Event
     FRP.Rhine.Clock.Realtime.Millisecond
     FRP.Rhine.Clock.Realtime.Stdin
+    FRP.Rhine.Clock.ScheduleT
     FRP.Rhine.Clock.Select
     FRP.Rhine.Clock.FixedStep
     FRP.Rhine.ClSF

@@ -46,6 +46,8 @@ instance Clock IO (Millisecond n) where
   type Tag  (Millisecond n) = Bool
   initClock (Millisecond cl) = initClock cl
 
+-- TODO Reimplement with RealtimeClock? And GeneralizedNewtypeDeriving?
+-- TODO Most types should be done as newtypes with GeneralizedNewtypeDeriving
 
 -- | This implementation measures the time after each tick,
 --   and waits for the remaining time until the next tick.
@@ -74,9 +76,8 @@ downsampleMillisecond
 downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
   where
     assumeSize = fromMaybe $ error $ unwords
-      [ "You are using an incorrectly implemented schedule"
-      , "for two Millisecond clocks."
-      , "Use a correct schedule like downsampleMillisecond."
+      [ "downsampleMillisecond has a bug."
+      , "Please report this to https://github.com/turion/rhine."
       ]
 
 -- | Two 'Millisecond' clocks can always be scheduled deterministically.

@@ -22,7 +22,7 @@ class TimeDomain time where
   type Diff time
   diffTime :: time -> time -> Diff time
 
-
+-- TODO Actually we'd want to have DiffTime here, but it's probably not Nummy enough?
 instance TimeDomain UTCTime where
   type Diff UTCTime = Double
   diffTime t1 t2 = realToFrac $ diffUTCTime t1 t2

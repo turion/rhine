@@ -64,3 +64,11 @@ executable Sawtooth
   build-depends:       base         >= 4.9   && < 4.13
                      , rhine        == 0.5.*
   default-language:    Haskell2010
+
+executable ScheduleTClock
+  hs-source-dirs:      src
+  main-is:             ScheduleTClock.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base         >= 4.9   && < 4.13
+                     , rhine        == 0.5.*
+  default-language:    Haskell2010

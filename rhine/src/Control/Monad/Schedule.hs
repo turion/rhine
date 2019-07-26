@@ -5,6 +5,8 @@ that adds a syntactical "delay", or "waiting" side effect.
 This allows for universal and deterministic scheduling of clocks
 that implement their waiting actions in 'ScheduleT'.
 See 'FRP.Rhine.Schedule.Trans' for more details.
+
+
 -}
 
 {-# LANGUAGE DeriveFunctor #-}
@@ -16,12 +18,15 @@ import Control.Concurrent
 
 -- transformers
 import Control.Monad.IO.Class
+import Control.Monad.Trans.State
 
 -- free
 import Control.Monad.Trans.Free
 
 
--- TODO Implement Time via StateT
+-- TODO Implement Time via StateT?
+-- Or maybe a simulation clock with StateT where the user can simulate the passage of time in costly actions/calculations.
+-- Possibly, all formal clocks could first be written with () as time domain and all the timing be derived from the ScheduleT
 
 {- |
 A functor implementing a syntactical "waiting" action.
@@ -55,7 +60,30 @@ runScheduleT waitAction = iterT $ \(Wait n ma) -> waitAction n >> ma
 runScheduleIO
   :: (MonadIO m, Integral n)
   => ScheduleT n m a -> m a
-runScheduleIO = runScheduleT $ liftIO . threadDelay . (* 1000) . fromIntegral
+runScheduleIO = runScheduleT waitIO
+
+-- | Wait for the given time in milliseconds.
+waitIO :: (MonadIO m, Integral n) => n -> m ()
+waitIO = liftIO . threadDelay . (* 1000) . fromIntegral
+
+-- TODO Make MonadState from it?
+-- | Run a 'ScheduleT' by simulating the current time as a global state.
+runScheduleState
+  :: (Num diff, Monad m)
+  => ScheduleT diff (StateT diff m) a -> StateT diff m a
+runScheduleState = runScheduleT waitState
+
+-- TODO Better name
+evalScheduleState
+  :: (Num diff, Monad m)
+  => ScheduleT diff (StateT diff m) a -> m (a, diff)
+evalScheduleState = flip runStateT 0 . runScheduleState
+
+waitState
+  :: (Num    diff, Monad m)
+  =>         diff
+  -> StateT  diff        m ()
+waitState = modify . (+)
 
 -- TODO The definition and type signature are both a mouthful. Is there a simpler concept?
 -- | Runs two values in 'ScheduleT' concurrently

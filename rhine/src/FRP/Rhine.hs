@@ -38,6 +38,7 @@ import FRP.Rhine.Clock.Realtime.Stdin as X
 import FRP.Rhine.Clock.Realtime.Audio as X
 import FRP.Rhine.Clock.Realtime.Busy as X
 import FRP.Rhine.Clock.Realtime.Millisecond as X
+import FRP.Rhine.Clock.ScheduleT as X
 import FRP.Rhine.Clock.Select as X
 
 import FRP.Rhine.ResamplingBuffer.Interpolation as X
