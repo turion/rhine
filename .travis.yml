@@ -11,7 +11,7 @@ env:
   - PACKAGE=rhine-examples
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install libgl1
+  - sudo apt-get install -qq libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
   - cd rhine
   - cabal sandbox init
   - cd ..
