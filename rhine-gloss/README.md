@@ -31,6 +31,7 @@ main = flowGloss (InWindow "rhine-gloss-gears" (400, 400) (10, 10)) (greyN 0.3) 
 Since `gloss` is based on `OpenGL`,
 you will need to install the same dependencies as for that.
 Typically, this are the `GL`, `GLU` and `GLUT` libraries.
+(On Debian-like systems, `sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev` should suffice.)
 
 When building with `stack`, it is assumed that you have `nix-shell` installed,
 which will automatically get these dependencies for you.
