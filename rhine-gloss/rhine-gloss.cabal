@@ -32,7 +32,7 @@ source-repository this
 library
   exposed-modules:     FRP.Rhine.Gloss
   other-modules:       FRP.Rhine.Gloss.Internals
-  build-depends:       base         >= 4.9   && < 4.13
+  build-depends:       base         >= 4.9
                      , rhine        == 0.5.*
                      , dunai        == 0.5.*
                      , gloss        >= 1.12  && < 1.14
