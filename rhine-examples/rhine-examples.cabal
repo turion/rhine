@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-examples
-version:             0.5.1.0
+version:             0.5.1.2
 -- synopsis:
 -- description:
 license:             BSD3

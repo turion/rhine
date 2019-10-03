@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-gloss
-version:             0.5.1.0
+version:             0.5.1.2
 synopsis:            Gloss backend for Rhine
 description:
   This package provides a simple wrapper for the `gloss` library,
