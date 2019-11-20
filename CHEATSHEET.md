@@ -9,9 +9,9 @@ If you miss something, feel free to open an issue or pull request.
 `m` is always the monad in which side effects can take place at every step.
 
 | Type                   | Long name               | Explanation                                                                                    |
------------------------------------------------------------------------------------------------------------------------------------------------------
+|------------------------|-------------------------|------------------------------------------------------------------------------------------------|
 | `ClSF m cl a b`        | Clocked Signal Function | Input signal `a` at rate `cl`, output signal `b` at the same rate                              |
-| `BehaviourF m td a b`  | Behaviour function      | A signal function that can run at any rate or clock.                                           |
+| `BehaviourF m td a b`  | Behaviour function      | A signal function that can run at any rate or clock, in a time domain `td`.                    |
 | `ResBuf m cl1 cl2 a b` | Resampling buffer       | Input signal `a` at rate `cl1`, output signal `b` at rate `cl2`                                |
 | `SN m cl a b`          | Signal network          | Process data internally at rate `cl`. Input `a` at rate `In cl`, and data `b` at rate `Out cl` |
 | `Rhine m cl a b`       | Rhine                   | Combination of a signal network and a type-matching clock value.                               |
@@ -27,12 +27,12 @@ If you miss something, feel free to open an issue or pull request.
 
 #### Sequential signal composition
 ```
-clsf @@ cl >-- resBuf -@- schedule --> rh
+clsf @@ cl >-- resBuf -@- schedule --> rh :: Rhine m (SequentialClock m cl cl') a b
 
 clsf    -- This is a clocked signal function.
      @@    -- Run the clocked signal function on...
         cl    -- ...this clock. Together, they form a "rhine".
-           >--    -- We're resampling the output...
+           >--    -- We're resampling the signal function's output...
                resBuf    -- ...with this buffer...
                       -@-    -- at the following schedule:
                           schedule    -- It decides when the two signal networks are activated.
@@ -43,23 +43,76 @@ clsf    -- This is a clocked signal function.
 #### Data-parallel signal composition
 
 ```
-sn1 **** sn2
+sn1 **** sn2 :: SN m cl (a, c) (b, d)
 
-sn1    -- This is a signal network with input `a` and output `b`, on some clock `cl`. (It is not a rhine, it has no clock value.)
-    **** sn2
+sn1    -- This is a signal network with input `a` and output `b`, on clock `cl`. (It is not a rhine, it has no clock value.)
+    ****    -- We are going to compose it with...
+         sn2    -- ...another signal function that runs at the same time, but with input `c` and output `d`.
 ```
 
 #### Time-parallel signal composition
-```
-rh1 ||@ schedule @|| rh2
 
-rh1    -- A rhine that inputs some data `a` and outputs some data `b`, on some clock `cl1`.
+```
+rhL ||@ schedule @|| rhR :: Rhine m (ParallelClock clL clR) a b
+
+rhL    -- A rhine that inputs some data `a` and outputs some data `b`, on some clock `clL`.
     ||@    -- We are going to execute the first rhine in parallel with another one.
         schedule    -- This schedule decides when which clock is activated.
                  @||    -- And now the other rhine:
-                     rh2    -- Here it is. It also inputs `a` and outputs `b`, but on another clock, e.g. `cl2`.
-
-
-
+                     rhR    -- Here it is. It also inputs `a` and outputs `b`, but on another clock, e.g. `clR`.
+```
 
 ## Common functions
+
+### Clocked signal functions (`ClSF`s)
+
+Stream functions in [`dunai`](http://hackage.haskell.org/package/dunai) are usually valid clocked signal functions.
+Here are some that are not in `dunai`.
+
+| Name         | Type (abbreviated)                                   | Meaning                                           |
+|--------------|------------------------------------------------------|---------------------------------------------------|
+| `arr`        | `(a -> b) -> ClSF m cl a b`                          | Perform pure function every tick                  |
+| `arrMCl`     | `(a -> m b) -> ClSF m cl a b`                        | Perform side effect every tick                    |
+| `integral`   | `VectorSpace v => BehaviorF m td v v`                | Numerical Euler integral                          |
+| `derivative` | `VectorSpace v => BehaviorF m td v v`                | Numerical Euler integral                          |
+| `timeInfo`   | `ClSF m cl a (TimeInfo cl)`                          | Find out what time it is                          |
+| `average`    | `VectorSpace v => Diff td -> BehaviourF m td v v`    | Average/low-pass a signal over a given time scale |
+| `timer`      | `Diff td -> BehaviorF (ExceptT () m) td a (Diff td)` | Throw an exception when time is up                |
+| `delayBy`    | `Diff td -> BehaviorF m td a a`                      | Delay a signal by a certain time                  |
+| `keepFirst`  | `ClSF m cl a a`                                      | Hold the first input value                        |
+
+### Signal networks and rhines
+
+| Name         | Type (abbreviated)                                   | Meaning                                           |
+|--------------|------------------------------------------------------|---------------------------------------------------|
+| `flow`       | `Rhine m cl () () -> m ()`                           | Initialise clock and run top-level rhine          |
+
+## Arrow syntax for clocked signal functions
+
+```
+clockedSignalFunction :: ClSF IO cl a b
+clockedSignalFunction = proc a -> do    -- `a` is the input to the clocked signal function
+  i <- anotherClSF  -< a + 23           -- Call other signal functions
+  _ <- arrMCl print -< i                -- Call a side effect in the monad
+  let b = i * 42                        -- Define local variable
+  if b > 100                            -- Transient control flow. `case` expressions work as well.
+    then returnA -< b                   -- Return output value
+    else returnA -< b * 2
+```
+
+## Monad interface for control flow
+
+```
+exceptionThrowingClSF :: ClSF (ExceptT String m) Integer Integer
+exceptionThrowingClSF = proc n -> do
+  if n < 1000                       -- Transient control flow: Switch between the two branches every tick.
+    then returnA -< 2 * n           -- Happy path. Value is output.
+    else throwS  -< "Too large!"    -- An exception is thrown. No value is output. The exception needs to be handled first.
+
+clockedSignalFunction :: ClSF m cl a b
+clockedSignalFunction = safely $ do    -- There are no exceptions left to handle.
+  e <- try $ clsf1                     -- `clsf1 :: ClSF (ExceptT e m) cl a b` threw an exception `e`.
+  x <- once someMonadicAction e        -- While handling the exception, produce some side effect.
+  try $ someHandler e x                -- `somehandler` produces a new clocked signal function, we switch to it _permanently_. It throws an exception `()`.
+  safe clsfFinal                       -- Switch to a signal function `clsfFinal` which does not throw exceptions.
+```
