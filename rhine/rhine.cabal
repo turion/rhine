@@ -36,6 +36,7 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 
 extra-doc-files:     README.md
+                   , CHEATSHEET.md
 
 cabal-version:       1.18
 
