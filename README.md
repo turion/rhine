@@ -96,6 +96,9 @@ would be:
 The best way to learn about Rhine is currently the article _Rhine: FRP with Type-Level Clocks_.
 You can find a copy on [Iván Pérez' site](http://www.cs.nott.ac.uk/~psxip1/).
 
+For a quick reference of the most important concepts,
+see the [cheatsheet](https://github.com/turion/rhine/blob/master/CHEATSHEET.md).
+
 ### Additional documentation
 
 * [`stackage`](https://www.stackage.org/nightly-2018-09-28/package/rhine-0.5.0.1)
