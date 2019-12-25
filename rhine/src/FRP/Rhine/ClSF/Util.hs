@@ -326,7 +326,8 @@ historySince dTime = readerS $ accumulateWith appendValue empty
     appendValue (ti, a) tias  = takeWhileL (recentlySince ti) $ (ti, a) <| tias
     recentlySince ti (ti', _) = diffTime (absolute ti) (absolute ti') < dTime
 
--- | Delay a signal by certain time span.
+-- | Delay a signal by certain time span,
+--   initialising with the first input.
 delayBy
   :: (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl))
   => Diff (Time cl) -- ^ The time span to delay the signal
@@ -335,7 +336,6 @@ delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefi
   where
     safeHead EmptyR   = Nothing
     safeHead (_ :> a) = Just a
--- TODO Think about how to do it without undefined (maybe exceptions)
 
 -- * Timers
 
