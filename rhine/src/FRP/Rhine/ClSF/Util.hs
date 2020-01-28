@@ -329,9 +329,9 @@ historySince dTime = readerS $ accumulateWith appendValue empty
 -- | Delay a signal by certain time span,
 --   initialising with the first input.
 delayBy
-  :: (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl))
-  => Diff (Time cl) -- ^ The time span to delay the signal
-  -> ClSF m cl a a
+  :: (Monad m, Ord (Diff td), TimeDomain td)
+  => Diff td            -- ^ The time span to delay the signal
+  -> BehaviorF m td a a
 delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefined >>> arr snd
   where
     safeHead EmptyR   = Nothing
