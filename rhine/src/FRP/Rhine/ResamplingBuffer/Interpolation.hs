@@ -11,7 +11,7 @@ module FRP.Rhine.ResamplingBuffer.Interpolation where
 -- containers
 import Data.Sequence
 
--- dunai
+-- simple-affine-space
 import Data.VectorSpace
 
 -- rhine
@@ -23,9 +23,9 @@ import FRP.Rhine.ResamplingBuffer.KeepLast
 -- | A simple linear interpolation based on the last calculated position and velocity.
 linear
   :: ( Monad m, Clock m cl1, Clock m cl2
-     , VectorSpace v
-     , Groundfield v ~ Diff (Time cl1)
-     , Groundfield v ~ Diff (Time cl2)
+     , VectorSpace v s
+     , s ~ Diff (Time cl1)
+     , s ~ Diff (Time cl2)
      )
   => v -- ^ The initial velocity (derivative of the signal)
   -> v -- ^ The initial position
@@ -36,7 +36,7 @@ linear initVelocity initPosition
   >>-^ proc ((velocity, lastPosition), sinceInit1) -> do
     sinceInit2 <- timeInfoOf sinceInit -< ()
     let diff = sinceInit2 - sinceInit1
-    returnA -< lastPosition ^+^ velocity ^* diff
+    returnA -< lastPosition ^+^ diff *^ velocity
 
 {- |
 sinc-Interpolation, or Whittaker-Shannon-Interpolation.
@@ -51,13 +51,13 @@ which should be chosen much larger than the average time between @cl1@'s ticks.
 -}
 sinc
   :: ( Monad m, Clock m cl1, Clock m cl2
-     , VectorSpace v
-     , Ord (Groundfield v)
-     , Floating (Groundfield v)
-     , Groundfield v ~ Diff (Time cl1)
-     , Groundfield v ~ Diff (Time cl2)
+     , VectorSpace v s
+     , Ord (s)
+     , Floating (s)
+     , s ~ Diff (Time cl1)
+     , s ~ Diff (Time cl2)
      )
-  => Groundfield v
+  => s
   -- ^ The size of the interpolation window
   --   (for how long in the past to remember incoming values)
   -> ResamplingBuffer m cl1 cl2 v v
@@ -67,7 +67,7 @@ sinc windowSize = historySince windowSize ^->> keepLast empty >>-^ proc as -> do
   where
     mkSinc sinceInit2 (TimeInfo {..}, as)
       = let t = pi * (sinceInit2 - sinceInit) / sinceLast
-        in  as ^* (sin t / t)
+        in  (sin t / t) *^ as
     vectorSum = foldr (^+^) zeroVector
 
 -- TODO Do we want to give initial values?
@@ -80,9 +80,10 @@ sinc windowSize = historySince windowSize ^->> keepLast empty >>-^ proc as -> do
 --   if the ticks of @cl2@ are delayed by two ticks of @cl1@.
 cubic
   :: ( Monad m
-     , VectorSpace v
-     , Groundfield v ~ Diff (Time cl1)
-     , Groundfield v ~ Diff (Time cl2)
+     , VectorSpace v s
+     , Floating v, Eq v
+     , s ~ Diff (Time cl1)
+     , s ~ Diff (Time cl2)
      )
   => ResamplingBuffer m cl1 cl2 v v
 cubic = ((iPre zeroVector &&& threePointDerivative) &&& (sinceInitS >-> iPre 0))
