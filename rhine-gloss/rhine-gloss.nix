@@ -1,12 +1,20 @@
-{ mkDerivation, base, dunai, gloss, rhine, stdenv }:
-mkDerivation {
-  pname = "rhine-gloss";
-  version = "0.6.0";
-  src = ./.;
-  isLibrary = true;
-  isExecutable = true;
-  libraryHaskellDepends = [ base dunai gloss rhine ];
-  executableHaskellDepends = [ base ];
-  description = "Gloss backend for Rhine";
-  license = stdenv.lib.licenses.bsd3;
+let
+  config = {
+    allowBroken = true;
+    packageOverrides = nixpkgs: rec {
+      haskellPackages = nixpkgs.haskellPackages.override {
+        overrides = self: super: rec {
+          rhine = self.callCabal2nix "rhine" ../rhine {};
+          simple-affine-space = self.callHackage "simple-affine-space" "0.1" {
+            mkDerivation = args: self.mkDerivation(args // { doCheck = false; });
+          };
+          rhine-gloss = self.callCabal2nix "rhine-gloss" ./. {};
+        };
+      };
+    };
+  };
+  nixpkgs = import <nixpkgs> { inherit config; };
+in
+{
+  rhine-gloss = nixpkgs.haskellPackages.rhine-gloss;
 }

@@ -1,14 +1,19 @@
-{ mkDerivation, base, containers, deepseq, dunai, free, MonadRandom
-, random, stdenv, time, transformers, vector-sized
-}:
-mkDerivation {
-  pname = "rhine";
-  version = "0.6.0";
-  src = ./.;
-  libraryHaskellDepends = [
-    base containers deepseq dunai free MonadRandom random time
-    transformers vector-sized
-  ];
-  description = "Functional Reactive Programming with type-level clocks";
-  license = stdenv.lib.licenses.bsd3;
+let
+  config = {
+    allowBroken = true;
+    packageOverrides = nixpkgs: rec {
+      haskellPackages = nixpkgs.haskellPackages.override {
+        overrides = self: super: rec {
+          simple-affine-space = self.callHackage "simple-affine-space" "0.1" {
+            mkDerivation = args: self.mkDerivation(args // { doCheck = false; });
+          };
+          rhine = self.callCabal2nix "rhine" ./. {};
+        };
+      };
+    };
+  };
+  nixpkgs = import <nixpkgs> { inherit config; };
+in
+{
+  rhine = nixpkgs.haskellPackages.rhine;
 }

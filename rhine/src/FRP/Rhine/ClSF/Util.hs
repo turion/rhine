@@ -224,7 +224,7 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
 --   (Equivalently, it filters out frequencies above @1 / (2 * pi * t)@.)
 averageFrom
   :: ( Monad m, VectorSpace v s
-     , Floating (s)
+     , Floating s
      , s ~ Diff td)
   => v -- ^ The initial position
   -> Diff td -- ^ The time scale on which the signal is averaged
@@ -239,7 +239,7 @@ averageFrom v0 t = proc v -> do
 -- | An average, or low pass, initialised to zero.
 average
   :: ( Monad m, VectorSpace v s
-     , Floating (s)
+     , Floating s
      , s ~ Diff td)
   => Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviourF m td v v
@@ -274,7 +274,7 @@ averageLin = averageLinFrom zeroVector
 -- | Alias for 'average'.
 lowPass
   :: ( Monad m, VectorSpace v s
-     , Floating (s)
+     , Floating s
      , s ~ Diff td)
   => Diff td
   -> BehaviourF m td v v
@@ -283,7 +283,7 @@ lowPass = average
 -- | Filters out frequencies below @1 / (2 * pi * t)@.
 highPass
   :: ( Monad m, VectorSpace v s
-     , Floating (s)
+     , Floating s
      , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
@@ -292,7 +292,7 @@ highPass t = clId ^-^ lowPass t
 -- | Filters out frequencies other than @1 / (2 * pi * t)@.
 bandPass
   :: ( Monad m, VectorSpace v s
-     , Floating (s)
+     , Floating s
      , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
@@ -301,7 +301,7 @@ bandPass t = lowPass t >>> highPass t
 -- | Filters out the frequency @1 / (2 * pi * t)@.
 bandStop
   :: ( Monad m, VectorSpace v s
-     , Floating (s)
+     , Floating s
      , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
