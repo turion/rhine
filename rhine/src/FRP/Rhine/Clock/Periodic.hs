@@ -45,7 +45,7 @@ instance (Monad m, NonemptyNatList v)
   type Time (Periodic v) = Integer
   type Tag  (Periodic v) = ()
   initClock cl = return
-    ( cycleS (theList cl) >>> withSideEffect wait >>> sumS &&& arr (const ())
+    ( cycleS (theList cl) >>> withSideEffect wait >>> (accumulateWith (+) 0) &&& arr (const ())
     , 0
     )
 

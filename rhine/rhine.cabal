@@ -1,6 +1,6 @@
 name:                rhine
 
-version:             0.5.1.1
+version:             0.6.0
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -36,7 +36,6 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 
 extra-doc-files:     README.md
-                   , CHEATSHEET.md
 
 cabal-version:       1.18
 
@@ -47,7 +46,7 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.5.1.1
+  tag:      v0.6.0
 
 
 library
@@ -100,15 +99,16 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base         >= 4.9
-                    ,  dunai        == 0.5.1.*
-                    ,  transformers == 0.5.*
-                    ,  time         == 1.8.*
-                    ,  free         == 5.1.*
-                    ,  containers   == 0.6.*
-                    ,  vector-sized == 1.4.*
-                    ,  deepseq      == 1.4.*
-                    ,  random       == 1.1.*
-                    ,  MonadRandom  == 0.5.*
+                     , dunai        >= 0.6
+                     , transformers == 0.5.*
+                     , time         >= 1.8
+                     , free         == 5.1.*
+                     , containers   == 0.6.*
+                     , vector-sized == 1.4.*
+                     , deepseq      == 1.4.*
+                     , random       == 1.1.*
+                     , MonadRandom  == 0.5.*
+                     , simple-affine-space
 
   -- Directories containing source files.
   hs-source-dirs:      src

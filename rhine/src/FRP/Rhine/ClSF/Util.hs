@@ -31,6 +31,8 @@ import Control.Monad.Trans.Reader (ask, asks)
 import Control.Monad.Trans.MSF.Reader (readerS)
 import Data.MonadicStreamFunction (constM, sumFrom, iPre, feedback)
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
+
+-- simple-affine-space
 import Data.VectorSpace
 
 -- rhine
@@ -143,8 +145,8 @@ clId = Control.Category.id
 -- | The output of @integralFrom v0@ is the numerical Euler integral
 --   of the input, with initial offset @v0@.
 integralFrom
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => v -> BehaviorF m td v v
 integralFrom v0 = proc v -> do
   _sinceLast <- timeInfoOf sinceLast -< ()
@@ -152,8 +154,8 @@ integralFrom v0 = proc v -> do
 
 -- | Euler integration, with zero initial offset.
 integral
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => BehaviorF m td v v
 integral = integralFrom zeroVector
 
@@ -162,8 +164,8 @@ integral = integralFrom zeroVector
 --   with a Newton difference quotient.
 --   The input is initialised with @v0@.
 derivativeFrom
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => v -> BehaviorF m td v v
 derivativeFrom v0 = proc v -> do
   vLast         <- iPre v0  -< v
@@ -172,16 +174,16 @@ derivativeFrom v0 = proc v -> do
 
 -- | Numerical derivative with input initialised to zero.
 derivative
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => BehaviorF m td v v
 derivative = derivativeFrom zeroVector
 
 -- | Like 'derivativeFrom', but uses three samples to compute the derivative.
 --   Consequently, it is delayed by one sample.
 threePointDerivativeFrom
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => v -- ^ The initial position
   -> BehaviorF m td v v
 threePointDerivativeFrom v0 = proc v -> do
@@ -192,8 +194,8 @@ threePointDerivativeFrom v0 = proc v -> do
 -- | Like 'threePointDerivativeFrom',
 --   but with the initial position initialised to 'zeroVector'.
 threePointDerivative
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
 
@@ -207,10 +209,10 @@ threePointDerivative = threePointDerivativeFrom zeroVector
 --   so a weight of 1 simply repeats the past value unchanged,
 --   whereas a weight of 0 outputs the current value.
 weightedAverageFrom
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => v -- ^ The initial position
-  -> BehaviorF m td (v, Groundfield v) v
+  -> BehaviorF m td (v, s) v
 weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
   let
     vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
@@ -221,9 +223,9 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
 --   all features below a given time constant @t@.
 --   (Equivalently, it filters out frequencies above @1 / (2 * pi * t)@.)
 averageFrom
-  :: ( Monad m, VectorSpace v
-     , Floating (Groundfield v)
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , Floating s
+     , s ~ Diff td)
   => v -- ^ The initial position
   -> Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviorF m td v v
@@ -236,9 +238,9 @@ averageFrom v0 t = proc v -> do
 
 -- | An average, or low pass, initialised to zero.
 average
-  :: ( Monad m, VectorSpace v
-     , Floating (Groundfield v)
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , Floating s
+     , s ~ Diff td)
   => Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviourF m td v v
 average = averageFrom zeroVector
@@ -248,8 +250,8 @@ average = averageFrom zeroVector
 --   if the supplied time scale is much bigger
 --   than the average time difference between two ticks.
 averageLinFrom
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => v -- ^ The initial position
   -> Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviourF m td v v
@@ -261,8 +263,8 @@ averageLinFrom v0 t = proc v -> do
 
 -- | Linearised version of 'average'.
 averageLin
-  :: ( Monad m, VectorSpace v
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , s ~ Diff td)
   => Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
@@ -271,36 +273,36 @@ averageLin = averageLinFrom zeroVector
 
 -- | Alias for 'average'.
 lowPass
-  :: ( Monad m, VectorSpace v
-     , Floating (Groundfield v)
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , Floating s
+     , s ~ Diff td)
   => Diff td
   -> BehaviourF m td v v
 lowPass = average
 
 -- | Filters out frequencies below @1 / (2 * pi * t)@.
 highPass
-  :: ( Monad m, VectorSpace v
-     , Floating (Groundfield v)
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , Floating s
+     , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
 highPass t = clId ^-^ lowPass t
 
 -- | Filters out frequencies other than @1 / (2 * pi * t)@.
 bandPass
-  :: ( Monad m, VectorSpace v
-     , Floating (Groundfield v)
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , Floating s
+     , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
 bandPass t = lowPass t >>> highPass t
 
 -- | Filters out the frequency @1 / (2 * pi * t)@.
 bandStop
-  :: ( Monad m, VectorSpace v
-     , Floating (Groundfield v)
-     , Groundfield v ~ Diff td)
+  :: ( Monad m, VectorSpace v s
+     , Floating s
+     , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
 bandStop t = clId ^-^ bandPass t
