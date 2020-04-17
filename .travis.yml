@@ -1,4 +1,3 @@
-if: branch IN (master, develop)
 language: haskell
 ghc:
   - '8.8'
