@@ -14,6 +14,4 @@ let
   };
   nixpkgs = import <nixpkgs> { inherit config; };
 in
-{
-  rhine = nixpkgs.haskellPackages.rhine;
-}
+nixpkgs.haskellPackages.rhine

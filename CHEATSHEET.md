@@ -4,8 +4,13 @@ The most common operators, functions and types,
 with short examples and explanations.
 If you miss something, feel free to open an issue or pull request.
 
-## Types
+## Architecture
+|              | Time          | Data               |
+|--------------|---------------|--------------------|
+| Synchronous  | Atomic clocks | Signal functions   |
+| Asynchronous | Schedules     | Resampling buffers |
 
+## Types
 `m` is always the monad in which side effects can take place at every step.
 
 | Type                   | Long name               | Explanation                                                                                    |
@@ -19,13 +24,44 @@ If you miss something, feel free to open an issue or pull request.
 ## Combinators
 
 ### General naming guideline
-
 * `@` means roughly "at this rate"
+* `*` means roughly "in data-parallel"
+* `|` roughly means "in time-parallel"
+* `+` is as `|`, but has the topology of a "fan-in", in analogy to [`Control.Arrow.ArrowChoice`](https://hackage.haskell.org/package/base-4.12.0.0/docs/Control-Arrow.html#v:-124--124--124-)
 * `>` and `-` are in the direction of data flow
+* `^` composes with a pure function
 
-### Common combinators in action
+### Common combinators
 
-#### Sequential signal composition
+#### SN composition
+
+##### Sequential composition
+| Operator        | Description                                                                                | Simplified Type Signature                                                |
+|-----------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `>>>` and `<<<` | Arrow composition                                                                          | `ClSF m cl a b -> ClSF m cl b c -> ClSF m cl a c`                        |
+| `>->` and `<-<` | Same as `>>>` and `<<<` but with higher operator precedence                                |                                                                          |
+| `^>>>`          | Precompose a signal network with a pure function                                           | `(a -> b) -> SN m cl b c -> SN m cl a c`                                 |
+| `>>>^`          | Postcompose a signal network with a pure function                                          | `SN m cl a b -> (b -> c) -> SN m cl a c`                                 |
+
+##### Parallel composition
+| Operator   | Clock Type | Input Type | Output Type | Resulting Type                             |
+|------------|------------|------------|-------------|--------------------------------------------|
+| `****`     | Same       | Different  | Different   | `SN m cl (a, c) (b, d)`                    |
+| `++++`     | Different  | Same       | Different   | `SN m (ParClock m clL clR) a (Either b c)` |
+| `\|\|\|\|` | Different  | Same       | Same        | `SN m (ParClock m clL clR) a b`            |
+
+##### Parallel rhine composition
+
+| Operator   | Resulting Type                                     |
+|------------|----------------------------------------------------|
+| `@\|\|`    | `Rhine m (ParallelClock m clL clR) a b`            |
+| `@++`      | `Rhine m (ParallelClock m clL clR) a (Either b c)` |
+
+For more information, see [docs/operators.md](docs/operators.md).
+
+#### Common combinators in action
+
+##### Sequential signal composition
 ```
 clsf @@ cl >-- resBuf -@- schedule --> rh :: Rhine m (SequentialClock m cl cl') a b
 
@@ -40,7 +76,7 @@ clsf    -- This is a clocked signal function.
                                        rh    -- ...another rhine.
 ```
 
-#### Data-parallel signal composition
+##### Data-parallel signal composition
 
 ```
 sn1 **** sn2 :: SN m cl (a, c) (b, d)
@@ -50,7 +86,7 @@ sn1    -- This is a signal network with input `a` and output `b`, on clock `cl`.
          sn2    -- ...another signal function that runs at the same time, but with input `c` and output `d`.
 ```
 
-#### Time-parallel signal composition
+##### Time-parallel signal composition
 
 ```
 rhL ||@ schedule @|| rhR :: Rhine m (ParallelClock clL clR) a b
