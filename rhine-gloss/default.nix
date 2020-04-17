@@ -15,6 +15,4 @@ let
   };
   nixpkgs = import <nixpkgs> { inherit config; };
 in
-{
-  rhine-gloss = nixpkgs.haskellPackages.rhine-gloss;
-}
+nixpkgs.haskellPackages.rhine-gloss
