@@ -21,17 +21,17 @@
 * The small version numbers (i.e. `*.*.n.n`) conform to the
   [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
-### GHC, cabal, stack
+### GHC, cabal, stack, nix
 
-* Rhine should be compilable with `cabal` and `stack`.
-  If in doubt, use `stack`.
-* Rhine does not make an effort to support old GHC versions.
-  Currently, Rhine builds on GHC versions 8.0, 8.2, 8.4 and 8.6,
-  but this may change in the future.
-* The default GHC version is the one that comes with the stackage resolver,
-  specified in `stack.yaml`. This is currently 8.6, but may change.
-  Rhine aims to build without warnings for the default version,
-  but not necessarily for all supported versions.
+* Rhine should be compilable with `cabal`, `nix` and `stack`.
+  If in doubt, use `cabal` and `nix`.
+* Rhine does not make an effort to support old GHC versions,
+  but it does make an effort to support _new_ versions.
+  Check `.travis.yml` for supported GHC versions.
+* The default GHC version is the newest officially released version.
+* Rhine aims to be available through [`stackage`](https://www.stackage.org/package/rhine) and [`nixpkgs`/Nixos](https://github.com/NixOS/nixpkgs/).
+  If you find that it is not available through these channels,
+  it's a bug and you are warmly welcome to report or even fix it.
 
 ### Code quality
 
@@ -43,35 +43,31 @@
 
 * At the moment, the `master` branch should always build,
   in all supported configurations.
-* All new contributions go to the `develop` branch.
-* New releases are prepared and tested on `release-N.n.n.n`-branches,
-  and tagged when merged and uploaded to hackage.
-* Rhine aims to follow this model:
-  http://nvie.com/posts/a-successful-git-branching-model/
+* All new contributions go through a PR onto the `master` branch.
+* New releases correspond to tags on the `master` branch when uploaded to hackage.
 
 ### Release checklist
 
-1. Create release-vx.x.x.x branch
+1. Optional: Create release-vx.x.x.x branch
 2. Bump versions (including tags)
 3. If possible, bump to latest stackage lts
 4. Check whether we could support a newer GHC (see below) and
    deprecate old GHCs in case they become a nuisance.
    Rule of thumb: If you'd have to use CPP precompiler blocks, rather deprecate old GHC.
 5. Diff with last version and edit `*/ChangeLog.md`
-6. Create pull request on github onto master
+6. If release branch: Create pull request on github onto master
 7. Wait for Travis to complete, fixing all build failures.
    Possibly repeat steps 4. and 5.
 8. Upload to hackage.
 9. Create tag `vx.x.x.x`.
-10. Merge into master.
+10. If applicable: Merge release branch into master.
 
 ### GHC changes checklist
 
 In a pull request, do the following:
 
-1. Increase base upper and lower version boundary tightly in all `*.cabal` files.
-2. Add new GHC to `.travis.yml`, remove old ones
-3. Update currently supported and default GHCs in this document
+1. Add new GHC to `.travis.yml`, remove old ones
+2. Update currently supported and default GHCs in this document
 
 ## Contributors
 
@@ -82,3 +78,5 @@ Thanks go to:
 * https://github.com/fphh/
 * https://github.com/SolviQorda/
 * https://github.com/alexpeits/
+* https://github.com/walseb/
+* https://github.com/smunix/
