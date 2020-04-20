@@ -5,19 +5,11 @@ ghc:
   - '8.4.3'
   - '8.2.2'
   - '8.0.2'
-env:
-  - PACKAGE=rhine
-  - PACKAGE=rhine-gloss
-  - PACKAGE=rhine-examples
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
-  - cd rhine
-  - cabal sandbox init
-  - cd ..
-  - cd ${PACKAGE}
-  - cabal sandbox init
-  - cabal sandbox add-source ../rhine
+script: cabal new-build all && cabal new-test all
+install: skip
 
 deploy:
   provider: hackage
@@ -28,5 +20,4 @@ deploy:
     repo: turion/rhine
     tags: true
     condition:
-      - $PACKAGE =~ ^rhine|rhine-gloss$
       - $TRAVIS_HASKELL_VERSION = 8.2.2
