@@ -100,10 +100,10 @@ see the [cheatsheet](https://github.com/turion/rhine/blob/master/CHEATSHEET.md).
 
 ### Additional documentation
 
-* [`stackage`](https://www.stackage.org/nightly-2018-09-28/package/rhine-0.5.0.1)
-* [`hackage`](https://hackage.haskell.org/package/rhine-0.5.0.1)
+* [`stackage`](https://www.stackage.org/package/rhine)
+* [`hackage`](https://hackage.haskell.org/package/rhine)
 * https://github.com/turion/rhine-tutorial: Presentation and tutorial app
-* https://github.com/turion/sonnendemo: Demo application (`rhine-0.4`)
+* https://github.com/turion/sonnendemo: Demo application
 
 ## Development
 
