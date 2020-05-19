@@ -1,5 +1,12 @@
+attrs@{ ... }:
+
+let
+  localPackages = import ./nix/localPackages.nix attrs;
+in
 {
-  rhine = import ./rhine;
-  rhine-examples = import ./rhine-examples;
-  rhine-gloss = import ./rhine-gloss;
+  inherit (localPackages)
+    rhine
+    rhine-gloss
+    rhine-examples
+  ;
 }
