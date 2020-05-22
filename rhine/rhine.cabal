@@ -54,6 +54,7 @@ library
     Control.Monad.Schedule
     FRP.Rhine
     FRP.Rhine.Clock
+    FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
     FRP.Rhine.Clock.Proxy
     FRP.Rhine.Clock.Realtime.Audio
@@ -62,7 +63,6 @@ library
     FRP.Rhine.Clock.Realtime.Millisecond
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
-    FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Util
     FRP.Rhine.ClSF
     FRP.Rhine.ClSF.Core

@@ -6,6 +6,7 @@ A signal network together with a matching clock value.
 {-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Type where
 
+-- rhine
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.SN
 

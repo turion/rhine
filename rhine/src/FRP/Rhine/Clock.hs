@@ -70,7 +70,6 @@ class TimeDomain (Time cl) => Clock m cl where
     :: cl -- ^ The clock value, containing e.g. settings or device parameters
     -> RunningClockInit m (Time cl) (Tag cl) -- ^ The stream of time stamps, and the initial time
 
-
 -- * Auxiliary definitions and utilities
 
 -- | An annotated, rich time stamp.
