@@ -164,4 +164,4 @@ pureAudioClockF :: PureAudioClockF rate
 pureAudioClockF = RescaledClock
   { unscaledClock = PureAudioClock
   , rescale       = double2Float
-}
+  }
