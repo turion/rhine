@@ -92,22 +92,6 @@ retag
   -> TimeInfo cl1 -> TimeInfo cl2
 retag f TimeInfo {..} = TimeInfo { tag = f tag, .. }
 
-
--- | Given a clock value and an initial time,
---   generate a stream of time stamps.
-genTimeInfo
-  :: (Monad m, Clock m cl)
-  => cl -> Time cl
-  -> MSF m (Time cl, Tag cl) (TimeInfo cl)
-genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- iPre initialTime -< absolute
-  returnA                      -< TimeInfo
-    { sinceLast = absolute `diffTime` lastTime
-    , sinceInit = absolute `diffTime` initialTime
-    , ..
-    }
-
-
 -- * Certain universal building blocks to produce new clocks from given ones
 
 -- ** Rescalings of time domains

@@ -21,6 +21,7 @@ import Data.VectorSpace                   as X
 -- rhine
 import FRP.Rhine.Clock                    as X
 import FRP.Rhine.Clock.Proxy              as X
+import FRP.Rhine.Clock.Util               as X
 import FRP.Rhine.ClSF                     as X
 import FRP.Rhine.Reactimation             as X
 import FRP.Rhine.Reactimation.Combinators as X
