@@ -73,7 +73,6 @@ library
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.ClockErasure
-    FRP.Rhine.Reactimation.Tick
     FRP.Rhine.Reactimation.Combinators
     FRP.Rhine.ResamplingBuffer
     FRP.Rhine.ResamplingBuffer.Collect

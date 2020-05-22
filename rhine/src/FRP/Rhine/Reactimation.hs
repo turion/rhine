@@ -3,18 +3,22 @@ Run closed 'Rhine's (which are signal functions together with matching clocks)
 as main loops.
 -}
 
+{-# LANGUAGE Arrows #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation where
 
+-- base
+import Data.Functor (void)
 
 -- dunai
 import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF.Core
-import FRP.Rhine.Reactimation.Tick
+import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type
@@ -53,6 +57,7 @@ main = flow $ mainSF @@ clock
 -- TODO Can we chuck the constraints into Clock m cl?
 flow
   :: ( Monad m, Clock m cl
+     , GetClockProxy cl
      , Time cl ~ Time (In  cl)
      , Time cl ~ Time (Out cl)
      )
@@ -60,25 +65,17 @@ flow
 flow Rhine {..} = do
   (runningClock, initTime) <- initClock clock
   -- Run the main loop
-  flow' runningClock $ createTickable
-    (trivialResamplingBuffer clock)
-    sn
-    (trivialResamplingBuffer clock)
-    initTime
-    where
-      flow' runningClock tickable = do
-        -- Fetch the next time stamp from the stream, wait if necessary
-        ((now, tag), runningClock') <- unMSF runningClock ()
-        -- Process the part of the signal network that is scheduled to run
-        tickable' <- tick tickable now tag
-        -- Loop
-        flow' runningClock' tickable'
+  reactimate $ proc () -> do
+    (time, tag) <- runningClock -< ()
+    eraseClockSN initTime sn -< (time, tag, void $ inTag (toClockProxy sn) tag)
+    returnA -< ()
 
 
 -- | Run a synchronous 'ClSF' with its clock as a main loop,
 --   similar to Yampa's, or Dunai's, 'reactimate'.
 reactimateCl
   :: ( Monad m, Clock m cl
+     , GetClockProxy cl
      , cl ~ In  cl, cl ~ Out cl
      )
   => cl -> ClSF m cl () () -> m ()
