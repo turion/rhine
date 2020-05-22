@@ -27,6 +27,7 @@ import Data.MonadicStreamFunction
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import Control.Monad.Schedule
 
 -- * The 'Periodic' clock
@@ -48,6 +49,8 @@ instance (Monad m, NonemptyNatList v)
     ( cycleS (theList cl) >>> withSideEffect wait >>> (accumulateWith (+) 0) &&& arr (const ())
     , 0
     )
+
+instance GetClockProxy (Periodic v)
 
 -- * Type-level trickery to extract the type value from the singleton
 
