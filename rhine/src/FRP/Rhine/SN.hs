@@ -9,11 +9,13 @@ combinators are found in a submodule.
 
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.SN where
 
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
@@ -61,3 +63,6 @@ data SN m cl a b where
     => SN m                  cl1      a b
     -> SN m                      cl2  a b
     -> SN m (ParallelClock m cl1 cl2) a b
+
+instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
+  type Cl (SN m cl a b) = cl

@@ -3,8 +3,10 @@ The type of a complete Rhine program:
 A signal network together with a matching clock value.
 -}
 
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Type where
 
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.SN
 
 {- |
@@ -19,3 +21,6 @@ data Rhine m cl a b = Rhine
   { sn    :: SN m cl a b
   , clock :: cl
   }
+
+instance GetClockProxy cl => ToClockProxy (Rhine m cl a b) where
+  type Cl (Rhine m cl a b) = cl
