@@ -21,6 +21,7 @@ module FRP.Rhine.Reactimation.Combinators where
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
@@ -98,8 +99,9 @@ infixr 1 -->
          , Time cl1 ~ Time cl2
          , Time (Out cl1) ~ Time cl1
          , Time (In  cl2) ~ Time cl2
-         , Clock m (Out cl1)
-         , Clock m (In  cl2)
+         , Clock m (Out cl1), Clock m (Out cl2)
+         , Clock m (In  cl1), Clock m (In  cl2)
+         , GetClockProxy cl1, GetClockProxy cl2
          )
       => RhineAndResamplingPoint   m cl1 cl2  a b
       -> Rhine m                         cl2    b c
@@ -139,6 +141,8 @@ rh    =  rh1 ++\@ sched \@++ rh2
 infix 3 @++
 (@++)
   :: ( Monad m, Clock m clL, Clock m clR
+     , Clock m (Out clL), Clock m (Out clR)
+     , GetClockProxy clL, GetClockProxy clR
      , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
      , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
      , Time clL ~ Time clR
@@ -176,6 +180,8 @@ rh    =  rh1 ||\@ sched \@|| rh2
 infix 3 @||
 (@||)
   :: ( Monad m, Clock m clL, Clock m clR
+     , Clock m (Out clL), Clock m (Out clR)
+     , GetClockProxy clL, GetClockProxy clR
      , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
      , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
      , Time clL ~ Time clR
