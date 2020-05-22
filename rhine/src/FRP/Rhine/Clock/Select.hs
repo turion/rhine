@@ -16,6 +16,7 @@ module FRP.Rhine.Clock.Select where
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Schedule
 
 -- dunai
@@ -50,6 +51,7 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
         returnA                     -< (time, ) <$> select tag
     return (runningSelectClock, initialTime)
 
+instance GetClockProxy (SelectClock cl a)
 
 -- | A universal schedule for two subclocks of the same main clock.
 --   The main clock must be a 'Semigroup' (e.g. a singleton).

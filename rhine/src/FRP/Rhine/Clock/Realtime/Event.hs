@@ -43,6 +43,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 
 -- rhine
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF
 import FRP.Rhine.Schedule
 import FRP.Rhine.Schedule.Concurrently
@@ -160,6 +161,8 @@ instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
           return (time, event)
       , initialTime
       )
+
+instance GetClockProxy (EventClock event)
 
 -- | Create an event clock that is bound to a specific event channel.
 --   This is usually only useful if you can't apply 'runEventChanT'

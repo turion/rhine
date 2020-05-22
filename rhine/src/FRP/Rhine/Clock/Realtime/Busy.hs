@@ -9,6 +9,7 @@ import Data.Time.Clock
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 
 {- |
 A clock that ticks without waiting.
@@ -28,3 +29,5 @@ instance Clock IO Busy where
         &&& arr (const ())
       , initialTime
       )
+
+instance GetClockProxy Busy

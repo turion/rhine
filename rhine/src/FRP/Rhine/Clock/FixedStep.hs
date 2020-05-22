@@ -26,6 +26,7 @@ import Data.MonadicStreamFunction.Async (concatS)
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
@@ -50,6 +51,8 @@ instance Monad m => Clock m (FixedStep n) where
       &&& arr (const ())
     , 0
     )
+
+instance GetClockProxy (FixedStep n)
 
 -- | A singleton clock that counts the ticks.
 type Count = FixedStep 1
