@@ -21,6 +21,7 @@ import Data.Vector.Sized (Vector, fromList)
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.Schedule
 import FRP.Rhine.ResamplingBuffer
@@ -46,6 +47,7 @@ instance Clock IO (Millisecond n) where
   type Tag  (Millisecond n) = Bool
   initClock (Millisecond cl) = initClock cl
 
+instance GetClockProxy (Millisecond n)
 
 -- | This implementation measures the time after each tick,
 --   and waits for the remaining time until the next tick.

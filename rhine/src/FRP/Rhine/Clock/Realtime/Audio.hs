@@ -36,6 +36,7 @@ import Control.Monad.Trans.MSF.Except hiding (step)
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 
 -- | Rates at which audio signals are typically sampled.
 data AudioRate
@@ -122,6 +123,8 @@ instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
       , initialTime
       )
 
+instance GetClockProxy (AudioClock rate bufferSize)
+
 {- |
 A side-effect free clock for audio synthesis and analysis.
 The sample rate is given by 'rate' (of type 'AudioRate').
@@ -149,6 +152,7 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
     , 0
     )
 
+instance GetClockProxy (PureAudioClock rate)
 
 -- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float'.
 type PureAudioClockF (rate :: AudioRate) = RescaledClock (PureAudioClock rate) Float
@@ -160,4 +164,4 @@ pureAudioClockF :: PureAudioClockF rate
 pureAudioClockF = RescaledClock
   { unscaledClock = PureAudioClock
   , rescale       = double2Float
-}
+  }

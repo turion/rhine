@@ -70,7 +70,6 @@ class TimeDomain (Time cl) => Clock m cl where
     :: cl -- ^ The clock value, containing e.g. settings or device parameters
     -> RunningClockInit m (Time cl) (Tag cl) -- ^ The stream of time stamps, and the initial time
 
-
 -- * Auxiliary definitions and utilities
 
 -- | An annotated, rich time stamp.
@@ -91,22 +90,6 @@ retag
   => (Tag cl1 -> Tag cl2)
   -> TimeInfo cl1 -> TimeInfo cl2
 retag f TimeInfo {..} = TimeInfo { tag = f tag, .. }
-
-
--- | Given a clock value and an initial time,
---   generate a stream of time stamps.
-genTimeInfo
-  :: (Monad m, Clock m cl)
-  => cl -> Time cl
-  -> MSF m (Time cl, Tag cl) (TimeInfo cl)
-genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- iPre initialTime -< absolute
-  returnA                      -< TimeInfo
-    { sinceLast = absolute `diffTime` lastTime
-    , sinceInit = absolute `diffTime` initialTime
-    , ..
-    }
-
 
 -- * Certain universal building blocks to produce new clocks from given ones
 

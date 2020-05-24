@@ -18,6 +18,7 @@ import Control.Monad.IO.Class
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import Data.Semigroup
 
 {- |
@@ -39,6 +40,8 @@ instance MonadIO m => Clock m StdinClock where
           return (time, line)
       , initialTime
       )
+
+instance GetClockProxy StdinClock
 
 instance Semigroup StdinClock where
   _ <> _ = StdinClock

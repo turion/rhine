@@ -54,14 +54,16 @@ library
     Control.Monad.Schedule
     FRP.Rhine
     FRP.Rhine.Clock
+    FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
+    FRP.Rhine.Clock.Proxy
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Event
     FRP.Rhine.Clock.Realtime.Millisecond
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
-    FRP.Rhine.Clock.FixedStep
+    FRP.Rhine.Clock.Util
     FRP.Rhine.ClSF
     FRP.Rhine.ClSF.Core
     FRP.Rhine.ClSF.Except
@@ -70,7 +72,7 @@ library
     FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
-    FRP.Rhine.Reactimation.Tick
+    FRP.Rhine.Reactimation.ClockErasure
     FRP.Rhine.Reactimation.Combinators
     FRP.Rhine.ResamplingBuffer
     FRP.Rhine.ResamplingBuffer.Collect

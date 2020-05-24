@@ -2,12 +2,14 @@
 Combinators for composing signal networks sequentially and parallely.
 -}
 
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 module FRP.Rhine.SN.Combinators where
 
 
 -- rhine
 import FRP.Rhine.ClSF.Core
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.Schedule
 import FRP.Rhine.SN
@@ -61,6 +63,8 @@ _ **** _ = error "Impossible pattern in ****"
 --   Note: This is essentially an infix synonym of 'Parallel'
 (||||)
   :: ( Monad m, Clock m clL, Clock m clR
+     , Clock m (Out clL), Clock m (Out clR)
+     , GetClockProxy clL, GetClockProxy clR
      , Time clL ~ Time clR
      , Time clL ~ Time (Out clL), Time clL ~ Time (In clL)
      , Time clR ~ Time (Out clR), Time clR ~ Time (In clR)
@@ -75,6 +79,8 @@ _ **** _ = error "Impossible pattern in ****"
 --   dependent on which constituent clock has ticked.
 (++++)
   :: ( Monad m, Clock m clL, Clock m clR
+     , Clock m (Out clL), Clock m (Out clR)
+     , GetClockProxy clL, GetClockProxy clR
      , Time clL ~ Time clR
      , Time clL ~ Time (Out clL), Time clL ~ Time (In clL)
      , Time clR ~ Time (Out clR), Time clR ~ Time (In clR)

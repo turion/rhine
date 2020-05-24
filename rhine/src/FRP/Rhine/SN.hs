@@ -7,13 +7,16 @@ This module defines the 'SN' type,
 combinators are found in a submodule.
 -}
 
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.SN where
 
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
@@ -41,6 +44,9 @@ data SN m cl a b where
   -- | Two 'SN's may be sequentially composed if there is a matching 'ResamplingBuffer' between them.
   Sequential
     :: ( Clock m clab, Clock m clcd
+       , Clock m (Out clab), Clock m (Out clcd)
+       , Clock m (In  clab), Clock m (In  clcd)
+       , GetClockProxy clab, GetClockProxy clcd
        , Time clab ~ Time clcd
        , Time clab ~ Time (Out clab)
        , Time clcd ~ Time (In  clcd)
@@ -52,6 +58,8 @@ data SN m cl a b where
   -- | Two 'SN's with the same input and output data may be parallely composed.
   Parallel
     :: ( Clock m cl1, Clock m cl2
+       , Clock m (Out cl1), Clock m (Out cl2)
+       , GetClockProxy cl1, GetClockProxy cl2
        , Time cl1 ~ Time (Out cl1)
        , Time cl2 ~ Time (Out cl2)
        , Time cl1 ~ Time cl2
@@ -61,3 +69,6 @@ data SN m cl a b where
     => SN m                  cl1      a b
     -> SN m                      cl2  a b
     -> SN m (ParallelClock m cl1 cl2) a b
+
+instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
+  type Cl (SN m cl a b) = cl

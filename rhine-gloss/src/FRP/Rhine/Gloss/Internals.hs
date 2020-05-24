@@ -22,6 +22,7 @@ import Graphics.Gloss.Interface.Pure.Game
 
 -- rhine
 import FRP.Rhine hiding (readerS, runReaderS)
+import FRP.Rhine.Clock.Proxy
 
 
 -- * Clocks
@@ -42,6 +43,8 @@ instance Clock m GlossEventClock where
   type Tag  GlossEventClock = Event
   initClock _ = error errMsg
 
+instance GetClockProxy GlossEventClock
+
 -- | The clock that ticks for every @gloss@ simulation step,
 --   but only shows the time /differences/ in the tag.
 --   Usually, you don't need this clock, but rather 'GlossSimulationClock'.
@@ -52,6 +55,8 @@ instance Clock m GlossSimulationClock_ where
   type Tag  GlossSimulationClock_ = Float
   initClock _ = error errMsg
 
+instance GetClockProxy GlossSimulationClock_
+
 -- | The clock that ticks for every @gloss@ simulation step.
 --   Use 'withProperSimClock' to transform to 'GlossSimulationClock_'.
 data GlossSimulationClock = GlossSimulationClock
@@ -60,6 +65,8 @@ instance Clock m GlossSimulationClock where
   type Time GlossSimulationClock = Float
   type Tag  GlossSimulationClock = ()
   initClock _ = error errMsg
+
+instance GetClockProxy GlossSimulationClock
 
 -- | To use all features of the 'ClSF' framework,
 --   write your synchronous stream function on the 'GlossSimulationClock'

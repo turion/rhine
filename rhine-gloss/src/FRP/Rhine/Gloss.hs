@@ -5,6 +5,7 @@ A Rhine app with the Gloss backend must use the 'GlossClock',
 since the @gloss@ API only offers callbacks.
 In order to run such a reactive program, you have to use 'flowGloss'.
 -}
+{-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -16,6 +17,7 @@ module FRP.Rhine.Gloss
   where
 
 -- base
+import Data.Maybe (fromMaybe)
 import Data.Functor.Identity (Identity, runIdentity)
 
 import qualified Control.Arrow as X
@@ -25,9 +27,12 @@ import Graphics.Gloss.Interface.Pure.Game
 
 import qualified Graphics.Gloss as X
 
+-- dunai
+import Data.MonadicStreamFunction.InternalCore
+
 -- rhine
-import FRP.Rhine hiding (trivialResamplingBuffer)
-import FRP.Rhine.Reactimation.Tick
+import FRP.Rhine
+import FRP.Rhine.Reactimation.ClockErasure
 
 import qualified FRP.Rhine      as X
 import qualified FRP.Rhine.ClSF as X
@@ -74,16 +79,17 @@ flowGloss
   -> GlossRhine a -- ^ The @gloss@-compatible 'Rhine'.
   -> IO ()
 flowGloss display color n Rhine {..}
-  = play display color n world getPic handleEvent simStep
+  = play display color n worldMSF getPic handleEvent simStep
   where
-    graphicsBuffer
-      :: ResamplingBuffer Identity
-           GlossSimulationClock_ GlossGraphicsClock
-           Picture               Picture
-    graphicsBuffer = keepLast Blank
-    world = createTickable (trivialResamplingBuffer clock) sn graphicsBuffer ()
-    getPic Tickable { buffer2 } = fst $ runIdentity $ get buffer2 $ TimeInfo () () () ()
-    handleEvent event tickable = case select (sequentialCl1 clock) event of
-      Just a  -> runIdentity $ tick tickable () $ Left a -- Event is relevant
-      Nothing -> tickable -- Event is irrelevant, state doesn't change
-    simStep diff tickable = runIdentity $ tick tickable () $ Right diff
+    worldMSF = feedback Blank $ proc (input, lastPic) -> do
+      case input of
+        Just usual -> do
+          maybeNewPic <- eraseClockSN () sn -< usual
+          let newPic = fromMaybe lastPic maybeNewPic
+          returnA -< (newPic, newPic)
+        Nothing -> returnA -< (lastPic, lastPic)
+    getPic msf = fst $ runIdentity $ unMSF msf Nothing
+    handleEvent event msf = case select (sequentialCl1 clock) event of
+      Just a  -> snd $ runIdentity $ unMSF msf $ Just ((), Left a, Just ()) -- Event is relevant
+      Nothing -> msf -- Event is irrelevant, state doesn't change
+    simStep diff msf = snd $ runIdentity $ unMSF msf $ Just ((), Right diff, Nothing)
