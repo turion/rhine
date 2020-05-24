@@ -4,6 +4,11 @@ The version numbering follows the package `dunai`.
 Since `rhine` reexports modules from `dunai`,
 every major version in `dunai` triggers a major version in `rhine`.
 
+## Upcoming
+
+* Replaced old reactimation mechanism by clock erasure
+* Dropped GHC support for < 8.4
+
 ## 0.6.0
 
 * Synced with `dunai` version numbers
