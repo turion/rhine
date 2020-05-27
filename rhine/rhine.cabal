@@ -48,6 +48,9 @@ source-repository this
   location: https://github.com/turion/rhine.git
   tag:      v0.8.1
 
+flag livecoding
+  description: Use the livecoding backend. See https://github.com/turion/essence-of-live-coding.
+  default: True
 
 library
   exposed-modules:
@@ -57,7 +60,7 @@ library
     FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
     FRP.Rhine.Clock.Proxy
-    FRP.Rhine.Clock.Realtime.Audio
+    -- FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Event
     FRP.Rhine.Clock.Realtime.Millisecond
@@ -69,7 +72,7 @@ library
     FRP.Rhine.ClSF.Except
     FRP.Rhine.ClSF.Random
     FRP.Rhine.ClSF.Reader
-    FRP.Rhine.ClSF.Upsample
+    -- FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.ClockErasure
@@ -85,7 +88,7 @@ library
     FRP.Rhine.ResamplingBuffer.Util
     FRP.Rhine.Schedule
     FRP.Rhine.Schedule.Concurrently
-    FRP.Rhine.Schedule.Trans
+    -- FRP.Rhine.Schedule.Trans
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
     FRP.Rhine.Type
@@ -100,6 +103,7 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base         >= 4.13 && < 4.17
+                     , monadic-arrow >= 0.1
                      , dunai        >= 0.8
                      , transformers >= 0.5
                      , time         >= 1.8
@@ -112,6 +116,12 @@ library
                      -- Remove version pin when https://github.com/ivanperez-keera/dunai/issues/298 is resolved:
                      , simple-affine-space == 0.1.1
                      , time-domain
+
+
+  if flag(livecoding)
+    build-depends: dunai-live >= 0.6
+  else
+    build-depends: dunai      >= 0.6
 
   -- Directories containing source files.
   hs-source-dirs:      src
