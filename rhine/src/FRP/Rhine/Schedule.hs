@@ -20,6 +20,9 @@ Specific implementations of schedules are found in submodules.
 -}
 module FRP.Rhine.Schedule where
 
+-- base
+import Data.Data
+
 -- transformers
 import Control.Monad.Trans.Reader
 
@@ -162,7 +165,15 @@ instance
    therefore it is always possible to schedule these two clocks deterministically.
    The left subclock of the combined clock always ticks instantly after @cl1@.
 -}
-schedSeq1 :: (Monad m, Semigroup cl1) => Schedule m cl1 (SequentialClock m cl1 cl2)
+schedSeq1 ::
+  ( Monad m
+  , Semigroup cl1
+  , Data (Time cl1)
+  , Data (Tag cl1)
+  , Data (Time cl2)
+  , Data (Tag cl2)
+  ) =>
+  Schedule m cl1 (SequentialClock m cl1 cl2)
 schedSeq1 = Schedule $ \cl1 SequentialClock {sequentialSchedule = Schedule {..}, ..} -> do
   (runningClock, initTime) <- initSchedule (cl1 <> sequentialCl1) sequentialCl2
   return (duplicateSubtick runningClock, initTime)
@@ -170,7 +181,16 @@ schedSeq1 = Schedule $ \cl1 SequentialClock {sequentialSchedule = Schedule {..},
 {- | As 'schedSeq1', but for the right subclock.
    The right subclock of the combined clock always ticks instantly before @cl2@.
 -}
-schedSeq2 :: (Monad m, Semigroup cl2, Time cl1 ~ Time cl2) => Schedule m (SequentialClock m cl1 cl2) cl2
+schedSeq2 ::
+  ( Monad m
+  , Semigroup cl2
+  , Time cl1 ~ Time cl2
+  , Data (Time cl1)
+  , Data (Tag cl1)
+  , Data (Time cl2)
+  , Data (Tag cl2)
+  ) =>
+  Schedule m (SequentialClock m cl1 cl2) cl2
 schedSeq2 = Schedule $ \SequentialClock {sequentialSchedule = Schedule {..}, ..} cl2 -> do
   (runningClock, initTime) <- initSchedule sequentialCl1 (sequentialCl2 <> cl2)
   return (duplicateSubtick (runningClock >>> second (arr swapEither)) >>> second (arr remap), initTime)
@@ -209,7 +229,15 @@ instance
 {- | Like 'schedSeq1', but for parallel clocks.
    The left subclock of the combined clock always ticks instantly after @cl1@.
 -}
-schedPar1 :: (Monad m, Semigroup cl1) => Schedule m cl1 (ParallelClock m cl1 cl2)
+schedPar1 ::
+  ( Monad m
+  , Semigroup cl1
+  , Data (Time cl1)
+  , Data (Tag cl1)
+  , Data (Time cl2)
+  , Data (Tag cl2)
+  ) =>
+  Schedule m cl1 (ParallelClock m cl1 cl2)
 schedPar1 = Schedule $ \cl1 ParallelClock {parallelSchedule = Schedule {..}, ..} -> do
   (runningClock, initTime) <- initSchedule (cl1 <> parallelCl1) parallelCl2
   return (duplicateSubtick runningClock, initTime)
@@ -217,7 +245,15 @@ schedPar1 = Schedule $ \cl1 ParallelClock {parallelSchedule = Schedule {..}, ..}
 {- | Like 'schedPar1',
    but the left subclock of the combined clock always ticks instantly /before/ @cl1@.
 -}
-schedPar1' :: (Monad m, Semigroup cl1) => Schedule m cl1 (ParallelClock m cl1 cl2)
+schedPar1' ::
+  ( Monad m
+  , Semigroup cl1
+  , Data (Time cl1)
+  , Data (Tag cl1)
+  , Data (Time cl2)
+  , Data (Tag cl2)
+  ) =>
+  Schedule m cl1 (ParallelClock m cl1 cl2)
 schedPar1' = Schedule $ \cl1 ParallelClock {parallelSchedule = Schedule {..}, ..} -> do
   (runningClock, initTime) <- initSchedule (parallelCl1 <> cl1) parallelCl2
   return (duplicateSubtick runningClock >>> arr (second remap), initTime)
@@ -229,7 +265,16 @@ schedPar1' = Schedule $ \cl1 ParallelClock {parallelSchedule = Schedule {..}, ..
 {- | Like 'schedPar1', but for the right subclock.
    The right subclock of the combined clock always ticks instantly before @cl2@.
 -}
-schedPar2 :: (Monad m, Semigroup cl2, Time cl1 ~ Time cl2) => Schedule m (ParallelClock m cl1 cl2) cl2
+schedPar2 ::
+  ( Monad m
+  , Semigroup cl2
+  , Time cl1 ~ Time cl2
+  , Data (Time cl1)
+  , Data (Tag cl1)
+  , Data (Time cl2)
+  , Data (Tag cl2)
+  ) =>
+  Schedule m (ParallelClock m cl1 cl2) cl2
 schedPar2 = Schedule $ \ParallelClock {parallelSchedule = Schedule {..}, ..} cl2 -> do
   (runningClock, initTime) <- initSchedule parallelCl1 (parallelCl2 <> cl2)
   return (duplicateSubtick (runningClock >>> second (arr swapEither)) >>> second (arr remap), initTime)
@@ -241,7 +286,16 @@ schedPar2 = Schedule $ \ParallelClock {parallelSchedule = Schedule {..}, ..} cl2
 {- | Like 'schedPar1',
    but the right subclock of the combined clock always ticks instantly /after/ @cl2@.
 -}
-schedPar2' :: (Monad m, Semigroup cl2, Time cl1 ~ Time cl2) => Schedule m (ParallelClock m cl1 cl2) cl2
+schedPar2' ::
+  ( Monad m
+  , Semigroup cl2
+  , Time cl1 ~ Time cl2
+  , Data (Time cl1)
+  , Data (Tag cl1)
+  , Data (Time cl2)
+  , Data (Tag cl2)
+  ) =>
+  Schedule m (ParallelClock m cl1 cl2) cl2
 schedPar2' = Schedule $ \ParallelClock {parallelSchedule = Schedule {..}, ..} cl2 -> do
   (runningClock, initTime) <- initSchedule parallelCl1 (parallelCl2 <> cl2)
   return (duplicateSubtick (runningClock >>> second (arr swapEither)) >>> second (arr remap), initTime)

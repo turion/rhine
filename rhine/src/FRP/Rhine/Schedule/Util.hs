@@ -1,6 +1,9 @@
 -- | Utility to define certain deterministic schedules.
 module FRP.Rhine.Schedule.Util where
 
+-- base
+import Data.Data
+
 -- dunai
 import Data.MonadicStreamFunction
 import Data.MonadicStreamFunction.Async
@@ -8,7 +11,10 @@ import Data.MonadicStreamFunction.Async
 {- | In a composite running clock,
    duplicate the tick of one subclock.
 -}
-duplicateSubtick :: Monad m => MSF m () (time, Either a b) -> MSF m () (time, Either a (Either a b))
+duplicateSubtick ::
+  (Monad m, Data time, Data a, Data b) =>
+  MSF m () (time, Either a b) ->
+  MSF m () (time, Either a (Either a b))
 duplicateSubtick runningClock = concatS $ runningClock >>> arr duplicateLeft
   where
     duplicateLeft (time, Left a) = [(time, Left a), (time, Right $ Left a)]

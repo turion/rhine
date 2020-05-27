@@ -1,10 +1,13 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- |
 'Clock's are the central new notion in Rhine.
@@ -23,6 +26,7 @@ where
 
 -- base
 import qualified Control.Category as Category
+import Data.Data
 
 -- transformers
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -57,7 +61,12 @@ Different values of the same clock type should tick at the same speed,
 and only differ in implementation details.
 Often, clocks are singletons.
 -}
-class TimeDomain (Time cl) => Clock m cl where
+class
+  ( TimeDomain (Time cl)
+  -- , Data (Time cl), Data (Tag cl)
+  ) =>
+  Clock m cl
+  where
   -- | The time domain, i.e. type of the time stamps the clock creates.
   type Time cl
 
@@ -87,6 +96,8 @@ data TimeInfo cl = TimeInfo
   , tag :: Tag cl
   -- ^ The tag annotation of the current tick
   }
+
+deriving instance (Data cl, Data (Diff (Time cl)), Data (Time cl), Data (Tag cl)) => Data (TimeInfo cl)
 
 -- | A utility that changes the tag of a 'TimeInfo'.
 retag ::

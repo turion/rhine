@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {- | Create 'ClSF's with randomness without 'IO'.
@@ -12,6 +14,9 @@ module FRP.Rhine.ClSF.Random (
 )
 where
 
+-- base
+import Data.Data
+
 -- transformers
 import Control.Monad.IO.Class
 
@@ -19,8 +24,6 @@ import Control.Monad.IO.Class
 import Control.Monad.Random
 
 -- dunai
-import Control.Monad.Trans.MSF.Except (performOnFirstSample)
-import Control.Monad.Trans.MSF.Random as X hiding (evalRandS, getRandomRS, getRandomRS_, getRandomS, runRandS)
 import qualified Control.Monad.Trans.MSF.Random as MSF
 
 -- rhine
@@ -31,7 +34,7 @@ import FRP.Rhine.ClSF.Random.Util
 
 -- | Generates random values, updating the generator on every step.
 runRandS ::
-  (RandomGen g, Monad m) =>
+  (Data g, RandomGen g, Monad m) =>
   ClSF (RandT g m) cl a b ->
   -- | The initial random seed
   g ->
@@ -40,7 +43,7 @@ runRandS clsf = MSF.runRandS (morphS commuteReaderRand clsf)
 
 -- | Updates the generator every step but discards the generator.
 evalRandS ::
-  (RandomGen g, Monad m) =>
+  (Data g, RandomGen g, Monad m) =>
   ClSF (RandT g m) cl a b ->
   g ->
   ClSF m cl a b
@@ -50,7 +53,7 @@ evalRandS clsf g = runRandS clsf g >>> arr snd
    only outputting the generator.
 -}
 execRandS ::
-  (RandomGen g, Monad m) =>
+  (Data g, RandomGen g, Monad m) =>
   ClSF (RandT g m) cl a b ->
   g ->
   ClSF m cl a g
@@ -69,6 +72,11 @@ evalRandIOS' ::
   ClSF (RandT StdGen m) cl a b ->
   ClSF m cl a b
 evalRandIOS' = performOnFirstSample . liftIO . evalRandIOS
+
+-- deriving instance Data StdGen
+instance Data StdGen
+
+-- FIXME This will crash
 
 -- * Creating random behaviours
 

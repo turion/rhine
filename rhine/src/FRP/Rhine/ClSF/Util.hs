@@ -16,6 +16,7 @@ module FRP.Rhine.ClSF.Util where
 import Control.Arrow
 import Control.Category (Category)
 import qualified Control.Category (id)
+import Data.Data
 import Data.Maybe (fromJust)
 import Data.Monoid (Last (Last), getLast)
 
@@ -26,6 +27,8 @@ import Data.Sequence
 import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
+
+import Control.Monad.Trans.MSF.Except hiding (throwS, try)
 import Control.Monad.Trans.MSF.Reader (readerS)
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
 
@@ -88,7 +91,7 @@ If you replace 'sinceStart' by 'sinceInitS',
 it will usually hang after one second,
 since it doesn't reset after restarting the sawtooth.
 -}
-sinceStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
+sinceStart :: (Monad m, Data time, TimeDomain time) => BehaviourF m time a (Diff time)
 sinceStart =
   absoluteS >>> proc time -> do
     startTime <- keepFirst -< time
@@ -160,6 +163,7 @@ integralFrom v0 = proc v -> do
 integral ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , s ~ Diff td
   ) =>
   BehaviorF m td v v
@@ -172,6 +176,7 @@ integral = integralFrom zeroVector
 derivativeFrom ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , s ~ Diff td
   ) =>
   v ->
@@ -185,6 +190,7 @@ derivativeFrom v0 = proc v -> do
 derivative ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , s ~ Diff td
   ) =>
   BehaviorF m td v v
@@ -196,6 +202,7 @@ derivative = derivativeFrom zeroVector
 threePointDerivativeFrom ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , s ~ Diff td
   ) =>
   -- | The initial position
@@ -212,6 +219,7 @@ threePointDerivativeFrom v0 = proc v -> do
 threePointDerivative ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , s ~ Diff td
   ) =>
   BehaviorF m td v v
@@ -231,6 +239,7 @@ weightedAverageFrom ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Data v
   ) =>
   -- | The initial position
   v ->
@@ -248,6 +257,7 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
 averageFrom ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , Floating s
   , s ~ Diff td
   ) =>
@@ -266,6 +276,7 @@ averageFrom v0 t = proc v -> do
 average ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , Floating s
   , s ~ Diff td
   ) =>
@@ -283,6 +294,7 @@ averageLinFrom ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Data v
   ) =>
   -- | The initial position
   v ->
@@ -300,6 +312,7 @@ averageLin ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Data v
   ) =>
   -- | The time scale on which the signal is averaged
   Diff td ->
@@ -312,6 +325,7 @@ averageLin = averageLinFrom zeroVector
 lowPass ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , Floating s
   , s ~ Diff td
   ) =>
@@ -323,6 +337,7 @@ lowPass = average
 highPass ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , Floating s
   , s ~ Diff td
   ) =>
@@ -335,6 +350,7 @@ highPass t = clId ^-^ lowPass t
 bandPass ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , Floating s
   , s ~ Diff td
   ) =>
@@ -347,6 +363,7 @@ bandPass t = lowPass t >>> highPass t
 bandStop ::
   ( Monad m
   , VectorSpace v s
+  , Data v
   , Floating s
   , s ~ Diff td
   ) =>
@@ -358,16 +375,17 @@ bandStop t = clId ^-^ bandPass t
 -- * Delays
 
 -- | Remembers and indefinitely outputs ("holds") the first input value.
-keepFirst :: Monad m => ClSF m cl a a
+keepFirst :: (Data a, Finite a, Monad m) => ClSF m cl a a
 keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
 
+{-
 {- | Remembers all input values that arrived within a given time window.
    New values are appended left.
 -}
 historySince ::
-  (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl)) =>
+  (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl), Data a) =>
   -- | The size of the time window
   Diff (Time cl) ->
   ClSF m cl a (Seq (TimeInfo cl, a))
@@ -380,7 +398,9 @@ historySince dTime = readerS $ accumulateWith appendValue empty
    initialising with the first input.
 -}
 delayBy ::
-  (Monad m, Ord (Diff td), TimeDomain td) =>
+  ( Monad m, Ord (Diff td), TimeDomain td
+     , Data a
+     ) =>
   -- | The time span to delay the signal
   Diff td ->
   BehaviorF m td a a
@@ -388,6 +408,7 @@ delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefi
   where
     safeHead EmptyR = Nothing
     safeHead (_ :> a) = Just a
+-}
 
 -- * Timers
 
@@ -432,5 +453,5 @@ scaledTimer diff = timer diff >>> arr (/ diff)
 {- | Remembers the last 'Just' value,
    defaulting to the given initialisation value.
 -}
-lastS :: Monad m => a -> MSF m (Maybe a) a
+lastS :: (Data a, Monad m) => a -> MSF m (Maybe a) a
 lastS a = arr Last >>> mappendFrom (Last (Just a)) >>> arr (getLast >>> fromJust)
