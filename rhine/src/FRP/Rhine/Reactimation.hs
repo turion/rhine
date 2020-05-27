@@ -6,6 +6,9 @@ as main loops.
 -}
 module FRP.Rhine.Reactimation where
 
+-- base
+import Control.Monad ((>=>))
+
 -- dunai
 import Data.MonadicStreamFunction.InternalCore
 
@@ -57,9 +60,7 @@ flow ::
   ) =>
   Rhine m cl () () ->
   m ()
-flow rhine = do
-  msf <- eraseClock rhine
-  reactimate $ msf >>> arr (const ())
+flow = eraseClockRhine >=> reactimate
 
 {- | Run a synchronous 'ClSF' with its clock as a main loop,
    similar to Yampa's, or Dunai's, 'reactimate'.

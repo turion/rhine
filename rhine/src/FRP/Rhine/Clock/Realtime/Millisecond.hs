@@ -78,6 +78,7 @@ waitClock = Millisecond $ RescaledClockS FixedStep $ \_ -> do
       return (now, remaining > 0)
   return (runningClock, initTime)
 
+{-
 -- TODO It would be great if this could be directly implemented in terms of downsampleFixedStep
 downsampleMillisecond ::
   (KnownNat n, Monad m) =>
@@ -92,6 +93,7 @@ downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
             , "for two Millisecond clocks."
             , "Use a correct schedule like downsampleMillisecond."
             ]
+-}
 
 -- | Two 'Millisecond' clocks can always be scheduled deterministically.
 scheduleMillisecond :: Schedule IO (Millisecond n1) (Millisecond n2)

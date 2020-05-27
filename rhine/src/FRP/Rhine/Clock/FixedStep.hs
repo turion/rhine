@@ -75,6 +75,7 @@ scheduleFixedStep = Schedule f
               [(k, Left ()) | k `mod` n1 == 0]
                 ++ [(k, Right ()) | k `mod` n2 == 0]
 
+{-
 -- TODO The problem is that the schedule doesn't give a guarantee where in the n ticks of the first clock the second clock will tick.
 -- For this to work, it has to be the last.
 -- With scheduleFixedStep, this works,
@@ -92,3 +93,4 @@ downsampleFixedStep = collect >>-^ arr (fromList >>> assumeSize)
             , "for two FixedStep clocks."
             , "Use a correct schedule like downsampleFixedStep."
             ]
+-}

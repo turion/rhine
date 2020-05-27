@@ -8,6 +8,9 @@ Interpolation buffers.
 -}
 module FRP.Rhine.ResamplingBuffer.Interpolation where
 
+-- base
+import Data.Data
+
 -- containers
 import Data.Sequence
 
@@ -28,6 +31,7 @@ linear ::
   , VectorSpace v s
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
+  , Data v
   ) =>
   -- | The initial velocity (derivative of the signal)
   v ->
@@ -95,6 +99,8 @@ cubic ::
   , Eq v
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
+  , Data s
+  , Data v
   ) =>
   ResamplingBuffer m cl1 cl2 v v
 {- FOURMOLU_DISABLE -}

@@ -45,7 +45,8 @@ import FRP.Rhine.Clock.Select as X
 
 import FRP.Rhine.ResamplingBuffer.Collect as X
 import FRP.Rhine.ResamplingBuffer.FIFO as X
-import FRP.Rhine.ResamplingBuffer.Interpolation as X
+
+-- import FRP.Rhine.ResamplingBuffer.Interpolation as X
 import FRP.Rhine.ResamplingBuffer.KeepLast as X
 import FRP.Rhine.ResamplingBuffer.LIFO as X
 import FRP.Rhine.ResamplingBuffer.MSF as X
@@ -54,3 +55,5 @@ import FRP.Rhine.ResamplingBuffer.Timeless as X
 import FRP.Rhine.Schedule.Concurrently as X
 import FRP.Rhine.Schedule.Trans as X
 import FRP.Rhine.Schedule.Util as X
+
+import FRP.Rhine.Reactimation.Live as X
