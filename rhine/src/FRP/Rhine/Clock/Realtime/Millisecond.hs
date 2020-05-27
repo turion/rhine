@@ -9,6 +9,7 @@ Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
+
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
@@ -79,6 +80,7 @@ waitClock = Millisecond $ RescaledClockS (unyieldClock FixedStep) $ \_ -> do
       return (now, remaining > 0)
   return (runningClock, initTime)
 
+{-
 -- TODO It would be great if this could be directly implemented in terms of downsampleFixedStep
 downsampleMillisecond ::
   (KnownNat n, Monad m) =>

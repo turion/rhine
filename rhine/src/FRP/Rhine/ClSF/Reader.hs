@@ -25,8 +25,8 @@ commuteReaders a =
   ReaderT $ \r1 -> ReaderT $ \r2 -> runReaderT (runReaderT a r2) r1
 
 {- | Create ("wrap") a 'ReaderT' layer in the monad stack of a behaviour.
-   Each tick, the 'ReaderT' side effect is performed
-   by passing the original behaviour the extra @r@ input.
+  Each tick, the 'ReaderT' side effect is performed
+  by passing the original behaviour the extra @r@ input.
 -}
 readerS ::
   Monad m =>
@@ -36,7 +36,7 @@ readerS behaviour =
   morphS commuteReaders $ MSF.readerS $ arr swap >>> behaviour
 
 {- | Remove ("run") a 'ReaderT' layer from the monad stack
-   by making it an explicit input to the behaviour.
+  by making it an explicit input to the behaviour.
 -}
 runReaderS ::
   Monad m =>

@@ -18,6 +18,7 @@ The general mnemonic for combinator names is:
 module FRP.Rhine.Reactimation.Combinators where
 
 -- rhine
+
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
@@ -31,22 +32,21 @@ import FRP.Rhine.Type
 
 infix 5 @@
 
-{- FOURMOLU_DISABLE -}
 {- | Create a synchronous 'Rhine' by combining a clocked signal function with a matching clock.
-   Synchronicity is ensured by requiring that data enters (@In cl@)
-   and leaves (@Out cl@) the system at the same as it is processed (@cl@).
+  Synchronicity is ensured by requiring that data enters (@In cl@)
+  and leaves (@Out cl@) the system at the same as it is processed (@cl@).
 -}
 (@@) ::
   ( cl ~ In cl
   , cl ~ Out cl
   ) =>
-  ClSF  m cl a b ->
-          cl     ->
+  ClSF m cl a b ->
+  cl ->
   Rhine m cl a b
 (@@) = Rhine . Synchronous
 
 {- | A purely syntactical convenience construction
-   enabling quadruple syntax for sequential composition, as described below.
+  enabling quadruple syntax for sequential composition, as described below.
 -}
 infix 2 >--
 
@@ -78,6 +78,7 @@ rh    =  rh1 >-- rb --> rh2
 @
 -}
 infixr 1 -->
+
 (-->) ::
   ( Clock m cl1
   , Clock m cl2
@@ -161,17 +162,17 @@ Rhine sn1 clL |@| Rhine sn2 clR =
 -- | Postcompose a 'Rhine' with a pure function.
 (@>>^) ::
   Monad m =>
-  Rhine m cl a b       ->
-              (b -> c) ->
-  Rhine m cl a      c
+  Rhine m cl a b ->
+  (b -> c) ->
+  Rhine m cl a c
 Rhine sn cl @>>^ f = Rhine (sn >>>^ f) cl
 
 -- | Precompose a 'Rhine' with a pure function.
 (^>>@) ::
   Monad m =>
-            (a -> b)  ->
-  Rhine m cl      b c ->
-  Rhine m cl a      c
+  (a -> b) ->
+  Rhine m cl b c ->
+  Rhine m cl a c
 f ^>>@ Rhine sn cl = Rhine (f ^>>> sn) cl
 
 -- | Postcompose a 'Rhine' with a 'ClSF'.
@@ -179,9 +180,9 @@ f ^>>@ Rhine sn cl = Rhine (f ^>>> sn) cl
   ( Clock m (Out cl)
   , Time cl ~ Time (Out cl)
   ) =>
-  Rhine m      cl  a b   ->
-  ClSF  m (Out cl)   b c ->
-  Rhine m      cl  a   c
+  Rhine m cl a b ->
+  ClSF m (Out cl) b c ->
+  Rhine m cl a c
 Rhine sn cl @>-^ clsf = Rhine (sn >--^ clsf) cl
 
 -- | Precompose a 'Rhine' with a 'ClSF'.
@@ -189,8 +190,9 @@ Rhine sn cl @>-^ clsf = Rhine (sn >--^ clsf) cl
   ( Clock m (In cl)
   , Time cl ~ Time (In cl)
   ) =>
-  ClSF  m (In cl) a b   ->
-  Rhine m     cl    b c ->
-  Rhine m     cl  a   c
+  ClSF m (In cl) a b ->
+  Rhine m cl b c ->
+  Rhine m cl a c
 clsf ^->@ Rhine sn cl = Rhine (clsf ^--> sn) cl
+
 {- FOURMOLU_ENABLE -}

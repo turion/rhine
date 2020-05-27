@@ -31,19 +31,19 @@ import FRP.Rhine.Clock
 -- * Clocked signal functions and behaviours
 
 {- | A (synchronous, clocked) monadic stream function
-   with the additional side effect of being time-aware,
-   that is, reading the current 'TimeInfo' of the clock @cl@.
+  with the additional side effect of being time-aware,
+  that is, reading the current 'TimeInfo' of the clock @cl@.
 -}
 type ClSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
 
 {- | A clocked signal is a 'ClSF' with no input required.
-   It produces its output on its own.
+  It produces its output on its own.
 -}
 type ClSignal m cl a = forall arbitrary. ClSF m cl arbitrary a
 
 {- | A (side-effectful) behaviour is a time-aware stream
-   that doesn't depend on a particular clock.
-   @time@ denotes the 'TimeDomain'.
+  that doesn't depend on a particular clock.
+  @time@ denotes the 'TimeDomain'.
 -}
 type Behaviour m time a = forall cl. time ~ Time cl => ClSignal m cl a
 
@@ -51,8 +51,8 @@ type Behaviour m time a = forall cl. time ~ Time cl => ClSignal m cl a
 type Behavior m time a = Behaviour m time a
 
 {- | A (side-effectful) behaviour function is a time-aware synchronous stream
-   function that doesn't depend on a particular clock.
-   @time@ denotes the 'TimeDomain'.
+  function that doesn't depend on a particular clock.
+  @time@ denotes the 'TimeDomain'.
 -}
 type BehaviourF m time a b = forall cl. time ~ Time cl => ClSF m cl a b
 
@@ -93,7 +93,7 @@ liftClSFAndClock ::
 liftClSFAndClock = hoistClSFAndClock lift
 
 {- | A monadic stream function without dependency on time
-   is a 'ClSF' for any clock.
+  is a 'ClSF' for any clock.
 -}
 timeless :: Monad m => MSF m a b -> ClSF m cl a b
 timeless = liftTransS

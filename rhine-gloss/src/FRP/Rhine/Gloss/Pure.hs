@@ -23,6 +23,7 @@ module FRP.Rhine.Gloss.Pure (
 
 -- base
 import qualified Control.Category as Category
+import Data.Data
 import Data.Functor.Identity
 
 -- transformers
@@ -73,7 +74,7 @@ paintAll pic = clear >> paint pic
 -- * Clocks
 
 {- | The overall clock of a pure @rhine@ 'ClSF' that can be run by @gloss@.
-   It ticks both on events (@tag = Just Event@) and simulation steps (@tag = Nothing@).
+  It ticks both on events (@tag = Just Event@) and simulation steps (@tag = Nothing@).
 -}
 data GlossClock = GlossClock
 
@@ -99,7 +100,7 @@ You can also simply output the picture and it will be painted on top.
 type GlossClSF = ClSF GlossM GlossClock () Picture
 
 {- | Observe whether there was an event this tick,
-   and which one.
+  and which one.
 -}
 currentEvent :: ClSF GlossM GlossClock () (Maybe Event)
 currentEvent = tagS

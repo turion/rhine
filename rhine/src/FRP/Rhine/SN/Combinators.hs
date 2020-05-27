@@ -7,69 +7,69 @@ Combinators for composing signal networks sequentially and parallely.
 module FRP.Rhine.SN.Combinators where
 
 -- rhine
-import FRP.Rhine.ClSF.Core
+import FRP.Rhine.ClSF.Core hiding (Feedback)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.SN
 import FRP.Rhine.Schedule
 
-{- FOURMOLU_DISABLE -}
 -- | Postcompose a signal network with a pure function.
-(>>>^)
-  :: Monad m
-  => SN m cl a b
-  ->          (b -> c)
-  -> SN m cl a      c
-Synchronous clsf      >>>^ f = Synchronous $ clsf >>^ f
-Sequential sn1 rb sn2 >>>^ f = Sequential sn1 rb     $ sn2 >>>^ f
-Parallel   sn1    sn2 >>>^ f = Parallel  (sn1 >>>^ f) (sn2 >>>^ f)
+(>>>^) ::
+  Monad m =>
+  SN m cl a b ->
+  (b -> c) ->
+  SN m cl a c
+Synchronous clsf >>>^ f = Synchronous $ clsf >>^ f
+Sequential sn1 rb sn2 >>>^ f = Sequential sn1 rb $ sn2 >>>^ f
+Parallel sn1 sn2 >>>^ f = Parallel (sn1 >>>^ f) (sn2 >>>^ f)
 Postcompose sn clsf >>>^ f = Postcompose sn $ clsf >>^ f
 Precompose clsf sn >>>^ f = Precompose clsf $ sn >>>^ f
 Feedback buf sn >>>^ f = Feedback buf $ sn >>>^ first f
 firstResampling@(FirstResampling _ _) >>>^ f = Postcompose firstResampling $ arr f
 
 -- | Precompose a signal network with a pure function.
-(^>>>)
-  :: Monad m
-  =>        (a -> b)
-  -> SN m cl      b c
-  -> SN m cl a      c
-f ^>>> Synchronous clsf      = Synchronous $ f ^>> clsf
-f ^>>> Sequential sn1 rb sn2 = Sequential (f ^>>> sn1) rb      sn2
-f ^>>> Parallel   sn1    sn2 = Parallel   (f ^>>> sn1) (f ^>>> sn2)
+(^>>>) ::
+  Monad m =>
+  (a -> b) ->
+  SN m cl b c ->
+  SN m cl a c
+f ^>>> Synchronous clsf = Synchronous $ f ^>> clsf
+f ^>>> Sequential sn1 rb sn2 = Sequential (f ^>>> sn1) rb sn2
+f ^>>> Parallel sn1 sn2 = Parallel (f ^>>> sn1) (f ^>>> sn2)
 f ^>>> Postcompose sn clsf = Postcompose (f ^>>> sn) clsf
 f ^>>> Precompose clsf sn = Precompose (f ^>> clsf) sn
 f ^>>> Feedback buf sn = Feedback buf $ first f ^>>> sn
 f ^>>> firstResampling@(FirstResampling _ _) = Precompose (arr f) firstResampling
 
 -- | Postcompose a signal network with a 'ClSF'.
-(>--^)
-  :: ( Clock m (Out cl)
-     , Time cl ~ Time (Out cl)
-     )
-  => SN    m      cl  a b
-  -> ClSF  m (Out cl)   b c
-  -> SN    m      cl  a   c
+(>--^) ::
+  ( Clock m (Out cl)
+  , Time cl ~ Time (Out cl)
+  ) =>
+  SN m cl a b ->
+  ClSF m (Out cl) b c ->
+  SN m cl a c
 (>--^) = Postcompose
 
 -- | Precompose a signal network with a 'ClSF'.
-(^-->)
-  :: ( Clock m (In cl)
-     , Time cl ~ Time (In cl)
-     )
-  => ClSF m (In cl) a b
-  -> SN   m     cl    b c
-  -> SN   m     cl  a   c
+(^-->) ::
+  ( Clock m (In cl)
+  , Time cl ~ Time (In cl)
+  ) =>
+  ClSF m (In cl) a b ->
+  SN m cl b c ->
+  SN m cl a c
 (^-->) = Precompose
 
--- | Compose two signal networks on the same clock in data-parallel.
---   At one tick of @cl@, both networks are stepped.
-(****)
-  :: Monad m
-  => SN m cl  a      b
-  -> SN m cl     c      d
-  -> SN m cl (a, c) (b, d)
+{- | Compose two signal networks on the same clock in data-parallel.
+  At one tick of @cl@, both networks are stepped.
+-}
+(****) ::
+  Monad m =>
+  SN m cl a b ->
+  SN m cl c d ->
+  SN m cl (a, c) (b, d)
 Synchronous clsf1 **** Synchronous clsf2 = Synchronous $ clsf1 *** clsf2
 Sequential sn11 rb1 sn12 **** Sequential sn21 rb2 sn22 = Sequential sn1 rb sn2
   where

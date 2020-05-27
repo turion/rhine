@@ -31,8 +31,7 @@ where
 
 -- base
 import Control.Concurrent.Chan
-
--- time
+import Data.Data
 import Data.Time.Clock
 
 -- deepseq
@@ -43,6 +42,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 
 -- rhine
+
 import FRP.Rhine.ClSF
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
@@ -53,8 +53,8 @@ import FRP.Rhine.Clock.Proxy
 type EventChanT event m = ReaderT (Chan event) m
 
 {- | Escape the 'EventChanT' layer by explicitly providing a channel
-   over which events are sent.
-   Often this is not needed, and 'runEventChanT' can be used instead.
+  over which events are sent.
+  Often this is not needed, and 'runEventChanT' can be used instead.
 -}
 withChan :: Chan event -> EventChanT event m a -> m a
 withChan = flip runReaderT
@@ -136,18 +136,18 @@ emitSMaybe' = mapMaybe emitS' >>> arr (const ())
 -- * Event clocks
 
 {- | A clock that ticks whenever an @event@ is emitted.
-   It is not yet bound to a specific channel,
-   since ideally, the correct channel is created automatically
-   by 'runEventChanT'.
-   If you want to create the channel manually and bind the clock to it,
-   use 'eventClockOn'.
+  It is not yet bound to a specific channel,
+  since ideally, the correct channel is created automatically
+  by 'runEventChanT'.
+  If you want to create the channel manually and bind the clock to it,
+  use 'eventClockOn'.
 -}
 data EventClock event = EventClock
 
 instance Semigroup (EventClock event) where
   (<>) _ _ = EventClock
 
-instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
+instance (Data event, MonadIO m) => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime
   type Tag (EventClock event) = event
   initClock _ = do
@@ -164,8 +164,8 @@ instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
 instance GetClockProxy (EventClock event)
 
 {- | Create an event clock that is bound to a specific event channel.
-   This is usually only useful if you can't apply 'runEventChanT'
-   to the main loop (see 'withChanS').
+  This is usually only useful if you can't apply 'runEventChanT'
+  to the main loop (see 'withChanS').
 -}
 eventClockOn ::
   MonadIO m =>

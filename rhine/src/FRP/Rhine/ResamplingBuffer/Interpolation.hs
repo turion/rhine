@@ -8,6 +8,9 @@ Interpolation buffers.
 -}
 module FRP.Rhine.ResamplingBuffer.Interpolation where
 
+-- base
+import Data.Data
+
 -- containers
 import Data.Sequence
 
@@ -28,6 +31,8 @@ linear ::
   , VectorSpace v s
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
+  , Data v
+  , Num s
   ) =>
   -- | The initial velocity (derivative of the signal)
   v ->
@@ -81,12 +86,12 @@ sinc windowSize =
 -- TODO Do we want to give initial values?
 
 {- | Interpolates the signal with Hermite splines,
-   using 'threePointDerivative'.
+  using 'threePointDerivative'.
 
-   Caution: In order to calculate the derivatives of the incoming signal,
-   it has to be delayed by two ticks of @cl1@.
-   In a non-realtime situation, a higher quality is achieved
-   if the ticks of @cl2@ are delayed by two ticks of @cl1@.
+  Caution: In order to calculate the derivatives of the incoming signal,
+  it has to be delayed by two ticks of @cl1@.
+  In a non-realtime situation, a higher quality is achieved
+  if the ticks of @cl2@ are delayed by two ticks of @cl1@.
 -}
 cubic ::
   ( Monad m
@@ -95,22 +100,25 @@ cubic ::
   , Eq v
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
+  , Data s
+  , Data v
+  , Num s
+  , Fractional s
   ) =>
   ResamplingBuffer m cl1 cl2 v v
-{- FOURMOLU_DISABLE -}
 cubic =
   ((iPre zeroVector &&& threePointDerivative) &&& (sinceInitS >-> iPre 0))
     >-> (clId &&& iPre (zeroVector, 0))
-   ^->> keepLast ((zeroVector, 0), (zeroVector, 0))
-   >>-^ proc (((dv, v), t1), ((dv', v'), t1')) -> do
-     t2 <- sinceInitS -< ()
-     let
-       t        = (t1 - t1') / (t2 - t1')
-       tsquared = t ^ 2
-       tcubed   = t ^ 3
-       vInter   = ( 2 * tcubed - 3 * tsquared     + 1) *^  v'
-              ^+^ (     tcubed - 2 * tsquared + t    ) *^ dv'
-              ^+^ (-2 * tcubed + 3 * tsquared        ) *^  v
-              ^+^ (     tcubed -     tsquared        ) *^ dv
-     returnA -< vInter
-{- FOURMOLU_ENABLE -}
+    ^->> keepLast ((zeroVector, 0), (zeroVector, 0))
+      >>-^ proc (((dv, v), t1), ((dv', v'), t1')) -> do
+        t2 <- sinceInitS -< ()
+        let
+          t = (t1 - t1') / (t2 - t1')
+          tsquared = t ^ 2
+          tcubed = t ^ 3
+          vInter =
+            (2 * tcubed - 3 * tsquared + 1) *^ v'
+              ^+^ (tcubed - 2 * tsquared + t) *^ dv'
+              ^+^ (-2 * tcubed + 3 * tsquared) *^ v
+              ^+^ (tcubed - tsquared) *^ dv
+        returnA -< vInter

@@ -9,6 +9,8 @@
 -- | Wrapper to write @gloss@ applications in Rhine, using concurrency.
 module FRP.Rhine.Gloss.IO (
   GlossConcT,
+  GlossEnv,
+  runGlossConcT,
   paintIO,
   clearIO,
   paintAllIO,
@@ -17,6 +19,7 @@ module FRP.Rhine.Gloss.IO (
   launchInGlossThread,
   launchGlossThread,
   flowGlossIO,
+  flowGlossLive,
   runGlossEnvClock,
   RunGlossEnvClock,
 )
@@ -40,8 +43,14 @@ import Graphics.Gloss.Interface.IO.Game
 -- monad-schedule
 import Control.Monad.Schedule.Class
 
+-- essence-of-live-coding
+import LiveCoding.Cell
+import LiveCoding.LiveProgram
+import LiveCoding.RuntimeIO.Launch
+
 -- rhine
 import FRP.Rhine
+import FRP.Rhine.Reactimation.ClockErasure
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -118,18 +127,19 @@ instance GetClockProxy GlossSimClockIO
 -- * Reactimation
 
 {- | Apply this to supply the 'GlossConcT' effect.
-   Creates a new thread in which @gloss@ is run,
-   and feeds the clocks 'GlossEventClockIO' and 'GlossSimClockIO'.
+  Creates a new thread in which @gloss@ is run,
+  and feeds the clocks 'GlossEventClockIO' and 'GlossSimClockIO'.
 
-   Usually, this function is applied to the result of 'flow',
-   so you can handle all occurring effects as needed.
-   If you only use @gloss@ in your whole signal network,
-   you can use 'flowGlossIO' instead.
+  Usually, this function is applied to the result of 'flow',
+  so you can handle all occurring effects as needed.
+  If you only use @gloss@ in your whole signal network,
+  you can use 'flowGlossIO' instead.
 -}
-launchGlossThread ::
+launchInGlossThread ::
   MonadIO m =>
   GlossSettings ->
   m GlossEnv
+
 launchGlossThread GlossSettings {..} = do
   vars <- liftIO $ GlossEnv <$> newEmptyMVar <*> newEmptyMVar <*> newIORef Blank <*> pure 0
   let
@@ -161,10 +171,10 @@ launchInGlossThread ::
   m a
 launchInGlossThread settings glossLoop = do
   vars <- launchGlossThread settings
-  runReaderT (unGlossConcT glossLoop) vars
+  return vars
 
 {- | Run a 'Rhine' in the 'GlossConcT' monad by launching a separate thread for the @gloss@ backend,
-   and reactimate in the foreground.
+  and reactimate in the foreground.
 -}
 flowGlossIO ::
   ( MonadIO m

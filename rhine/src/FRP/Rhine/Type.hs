@@ -11,10 +11,11 @@ A signal network together with a matching clock value.
 module FRP.Rhine.Type where
 
 -- dunai
-import Data.MonadicStreamFunction
+import Data.MonadicStreamFunction hiding (Feedback)
 
 -- rhine
-import FRP.Rhine.Clock
+
+import FRP.Rhine.Clock hiding (Feedback)
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer)

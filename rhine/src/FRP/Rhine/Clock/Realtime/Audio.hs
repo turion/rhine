@@ -21,6 +21,7 @@ module FRP.Rhine.Clock.Realtime.Audio (
 where
 
 -- base
+
 import Data.Time.Clock
 import GHC.Float (double2Float)
 import GHC.TypeLits (KnownNat, Nat, natVal)
@@ -157,7 +158,7 @@ instance GetClockProxy (PureAudioClock rate)
 type PureAudioClockF (rate :: AudioRate) = RescaledClock (PureAudioClock rate) Float
 
 {- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float',
-   using 'double2Float' to rescale.
+  using 'double2Float' to rescale.
 -}
 pureAudioClockF :: PureAudioClockF rate
 pureAudioClockF =

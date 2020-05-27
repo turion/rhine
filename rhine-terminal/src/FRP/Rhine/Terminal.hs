@@ -60,17 +60,17 @@ instance Semigroup TerminalEventClock where
   t <> _ = t
 
 {- | A function wrapping `flow` to use at the top level
- in order to run a `Rhine (TerminalT t m) cl ()`
+in order to run a `Rhine (TerminalT t m) cl ()`
 
- Example:
+Example:
 
- @
- mainRhine :: MonadIO m => Rhine (TerminalT LocalTerminal m) TerminalEventClock () ()
- mainRhine = tagS >-> arrMCl (liftIO . print) @@ TerminalEventClock
+@
+mainRhine :: MonadIO m => Rhine (TerminalT LocalTerminal m) TerminalEventClock () ()
+mainRhine = tagS >-> arrMCl (liftIO . print) @@ TerminalEventClock
 
- main :: IO ()
- main = withTerminal $ \term -> `flowTerminal` term mainRhine
- @
+main :: IO ()
+main = withTerminal $ \term -> `flowTerminal` term mainRhine
+@
 -}
 flowTerminal ::
   ( MonadIO m

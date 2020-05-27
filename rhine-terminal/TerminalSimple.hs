@@ -1,3 +1,4 @@
+-- \| Example application for the @rhine-terminal@ library.
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}

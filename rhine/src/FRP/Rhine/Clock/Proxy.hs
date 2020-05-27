@@ -13,7 +13,7 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 
 {- | Witnesses the structure of a clock type,
-   in particular whether 'SequentialClock's or 'ParallelClock's are involved.
+  in particular whether 'SequentialClock's or 'ParallelClock's are involved.
 -}
 data ClockProxy cl where
   LeafProxy ::
@@ -39,7 +39,7 @@ outProxy (SequentialProxy _ p2) = outProxy p2
 outProxy (ParallelProxy pL pR) = ParallelProxy (outProxy pL) (outProxy pR)
 
 {- | Return the incoming tag, assuming that the incoming clock is ticked,
-   and 'Nothing' otherwise.
+  and 'Nothing' otherwise.
 -}
 inTag :: ClockProxy cl -> Tag cl -> Maybe (Tag (In cl))
 inTag (SequentialProxy p1 _) (Left tag1) = inTag p1 tag1
@@ -49,7 +49,7 @@ inTag (ParallelProxy _ pR) (Right tagR) = Right <$> inTag pR tagR
 inTag LeafProxy tag = Just tag
 
 {- | Return the incoming tag, assuming that the outgoing clock is ticked,
-   and 'Nothing' otherwise.
+  and 'Nothing' otherwise.
 -}
 outTag :: ClockProxy cl -> Tag cl -> Maybe (Tag (Out cl))
 outTag (SequentialProxy _ _) (Left _) = Nothing

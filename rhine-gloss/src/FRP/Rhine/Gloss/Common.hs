@@ -1,8 +1,14 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 -- | Common definitions for all @gloss@ backends.
 module FRP.Rhine.Gloss.Common (
   module FRP.Rhine.Gloss.Common,
   module X,
 ) where
+
+-- base
+import Data.Data
 
 -- gloss
 import qualified Graphics.Gloss as X
@@ -27,3 +33,10 @@ defaultSettings =
     , backgroundColor = greyN 0.3
     , stepsPerSecond = 30
     }
+
+deriving instance Data MouseButton
+deriving instance Data SpecialKey
+deriving instance Data Key
+deriving instance Data KeyState
+deriving instance Data Modifiers
+deriving instance Data Event

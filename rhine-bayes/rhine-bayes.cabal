@@ -25,6 +25,10 @@ source-repository this
   location: git@github.com:turion/rhine.git
   tag:      v0.9
 
+flag livecoding
+  description: Use the livecoding backend. See https://github.com/turion/essence-of-live-coding.
+  default: True
+
 library
   exposed-modules:
     FRP.Rhine.Bayes
@@ -33,10 +37,17 @@ library
   build-depends:       base         >= 4.11 && < 4.18
                      , transformers >= 0.5
                      , rhine        == 0.9
-                     , dunai        ^>= 0.9
                      , log-domain   >= 0.12
                      , monad-bayes  >= 1.1.0
-  hs-source-dirs:      src
+  if flag(livecoding)
+    build-depends:
+        essence-of-live-coding-bayes ^>= 0.2.7
+      , essence-of-live-coding ^>= 0.2.7
+    hs-source-dirs:    flags/livecoding/essence-of-live-coding
+  else
+    build-depends:
+        dunai        ^>= 0.9
+    hs-source-dirs:    flags/livecoding/dunai
   default-language:    Haskell2010
   default-extensions:
     Arrows

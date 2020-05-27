@@ -15,6 +15,7 @@ The time differences are supplied at the type level.
 module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
+import Data.Data
 import Data.List.NonEmpty hiding (unfold)
 import Data.Maybe (fromMaybe)
 import GHC.TypeLits (KnownNat, Nat, natVal)
@@ -32,11 +33,11 @@ import FRP.Rhine.Clock.Proxy
 -- * The 'Periodic' clock
 
 {- | A clock whose tick lengths cycle through
-   a (nonempty) list of type-level natural numbers.
-   E.g. @Periodic '[1, 2]@ ticks at times 1, 3, 4, 5, 7, 8, etc.
+  a (nonempty) list of type-level natural numbers.
+  E.g. @Periodic '[1, 2]@ ticks at times 1, 3, 4, 5, 7, 8, etc.
 
-   The waiting side effect is formal, in 'ScheduleT'.
-   You can use e.g. 'runScheduleIO' to produce an actual delay.
+  The waiting side effect is formal, in 'ScheduleT'.
+  You can use e.g. 'runScheduleIO' to produce an actual delay.
 -}
 data Periodic (v :: [Nat]) where
   Periodic :: Periodic (n : ns)
@@ -83,7 +84,7 @@ instance
 -- TODO Port back to dunai when naming issues are resolved
 
 -- | Repeatedly outputs the values of a given list, in order.
-cycleS :: Monad m => NonEmpty a -> MSF m () a
+cycleS :: (Data a, Monad m) => NonEmpty a -> MSF m () a
 cycleS as = unfold (second (fromMaybe as) . uncons) as
 
 {-

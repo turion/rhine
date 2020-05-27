@@ -17,6 +17,7 @@ and utilities to work with them.
 module FRP.Rhine.Schedule where
 
 -- base
+import Data.Data
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as N
 
@@ -32,15 +33,6 @@ import Control.Monad.Schedule.Class
 import FRP.Rhine.Clock
 
 -- * Scheduling
-
-scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (MSF m a b) -> MSF m a (NonEmpty b)
-scheduleList msfs = scheduleList' msfs []
-  where
-    scheduleList' msfs running = MSF $ \a -> do
-      let bsAndConts = flip unMSF a <$> msfs
-      (done, running) <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
-      let (bs, dones) = N.unzip done
-      return (bs, scheduleList' dones running)
 
 {- | Two clocks in the 'ScheduleT' monad transformer
   can always be canonically scheduled.
@@ -61,8 +53,8 @@ runningSchedule ::
 runningSchedule _ _ rc1 rc2 = concatS $ scheduleList [rc1 >>> arr (second Left), rc2 >>> arr (second Right)] >>> arr N.toList
 
 {- | A schedule implements a combination of two clocks.
-   It outputs a time stamp and an 'Either' value,
-   which specifies which of the two subclocks has ticked.
+  It outputs a time stamp and an 'Either' value,
+  which specifies which of the two subclocks has ticked.
 -}
 initSchedule ::
   ( Time cl1 ~ Time cl2
@@ -87,7 +79,7 @@ initSchedule cl1 cl2 = do
 -- ** Sequentially combined clocks
 
 {- | Two clocks can be combined with a schedule as a clock
-   for an asynchronous sequential composition of signal networks.
+  for an asynchronous sequential composition of signal networks.
 -}
 data SequentialClock cl1 cl2 = Time cl1 ~ Time cl2 =>
   SequentialClock
@@ -110,7 +102,7 @@ instance
 -- ** Parallelly combined clocks
 
 {- | Two clocks can be combined with a schedule as a clock
-   for an asynchronous parallel composition of signal networks.
+  for an asynchronous parallel composition of signal networks.
 -}
 data ParallelClock cl1 cl2 = Time cl1 ~ Time cl2 =>
   ParallelClock
@@ -145,7 +137,7 @@ type family Out cl where
   Out cl = cl
 
 {- | A tree representing possible last times to which
-   the constituents of a clock may have ticked.
+  the constituents of a clock may have ticked.
 -}
 data LastTime cl where
   SequentialLastTime ::
@@ -169,7 +161,7 @@ data ParClockInclusion clS cl where
   ParClockRefl :: ParClockInclusion cl cl
 
 {- | Generates a tag for the composite clock from a tag of a leaf clock,
-   given a parallel clock inclusion.
+  given a parallel clock inclusion.
 -}
 parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left tag

@@ -1,9 +1,11 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- |
 In the Rhine philosophy, _event sources are clocks_.
@@ -13,6 +15,9 @@ This module provides a general purpose selection clock
 that ticks only on certain subevents.
 -}
 module FRP.Rhine.Clock.Select where
+
+-- base
+import Data.Data
 
 -- rhine
 import FRP.Rhine.Clock
@@ -25,11 +30,11 @@ import Data.MonadicStreamFunction.Async (concatS)
 import Data.Maybe (maybeToList)
 
 {- | A clock that selects certain subevents of type 'a',
-   from the tag of a main clock.
+  from the tag of a main clock.
 
-   If two 'SelectClock's would tick on the same type of subevents,
-   but should not have the same type,
-   one should @newtype@ the subevent.
+  If two 'SelectClock's would tick on the same type of subevents,
+  but should not have the same type,
+  one should @newtype@ the subevent.
 -}
 data SelectClock cl a = SelectClock
   { mainClock :: cl
@@ -53,7 +58,14 @@ instance (Monoid cl, Semigroup a) => Monoid (SelectClock cl a) where
       , select = const mempty
       }
 
-instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
+instance
+  ( Monad m
+  , Clock m cl
+  , Data (Time cl)
+  , Data a
+  ) =>
+  Clock m (SelectClock cl a)
+  where
   type Time (SelectClock cl a) = Time cl
   type Tag (SelectClock cl a) = a
   initClock SelectClock {..} = do
@@ -67,7 +79,7 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
 instance GetClockProxy (SelectClock cl a)
 
 {- | Helper function that runs an 'MSF' with 'Maybe' output
-   until it returns a value.
+  until it returns a value.
 -}
-filterS :: Monad m => MSF m () (Maybe b) -> MSF m () b
+filterS :: (Monad m, Data b) => MSF m () (Maybe b) -> MSF m () b
 filterS = concatS . (>>> arr maybeToList)

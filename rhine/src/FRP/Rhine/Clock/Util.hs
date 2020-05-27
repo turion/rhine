@@ -1,7 +1,11 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module FRP.Rhine.Clock.Util where
+
+-- base
+import Data.Data
 
 -- time-domain
 import Data.TimeDomain
@@ -13,10 +17,14 @@ import FRP.Rhine.Clock.Proxy
 -- * Auxiliary definitions and utilities
 
 {- | Given a clock value and an initial time,
-   generate a stream of time stamps.
+  generate a stream of time stamps.
 -}
 genTimeInfo ::
-  (Monad m, Clock m cl) =>
+  ( Monad m
+  , Clock m cl
+  , Data (Time cl)
+  , Data (Tag cl)
+  ) =>
   ClockProxy cl ->
   Time cl ->
   MSF m (Time cl, Tag cl) (TimeInfo cl)

@@ -9,6 +9,9 @@ As an easy starter, you can use the helper function 'buildGlossRhine'.
 -}
 module FRP.Rhine.Gloss.Pure.Combined where
 
+-- base
+import Data.Data
+
 -- rhine
 import FRP.Rhine
 
@@ -17,8 +20,8 @@ import FRP.Rhine.Gloss.Common
 import FRP.Rhine.Gloss.Pure
 
 {- | The overall clock of a pure @rhine@ 'SN' that can be run by @gloss@.
-   It is combined of two subsystems, the event part and the simulation part.
-   @a@ is the type of subevents that are selected.
+  It is combined of two subsystems, the event part and the simulation part.
+  @a@ is the type of subevents that are selected.
 -}
 type GlossCombinedClock a =
   SequentialClock
@@ -31,7 +34,7 @@ type GlossCombinedClock a =
 type GlossEventClock a = SelectClock GlossClock a
 
 {- | Select the relevant events by converting them to @Just a@,
-   and the irrelevant ones to 'Nothing'.
+  and the irrelevant ones to 'Nothing'.
 -}
 glossEventSelectClock ::
   (Event -> Maybe a) ->
@@ -96,6 +99,7 @@ that is called with a list of all relevant events
 that occurred in the last tick.
 -}
 buildGlossRhine ::
+  Data a =>
   -- | The event selector
   (Event -> Maybe a) ->
   -- | The 'ClSF' representing the game loop.

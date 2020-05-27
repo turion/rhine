@@ -21,6 +21,7 @@ where
 
 -- base
 import qualified Control.Category as Category
+import Data.Data
 
 -- transformers
 import Control.Monad.Trans.Class (lift)
@@ -28,6 +29,7 @@ import Control.Monad.Trans.Except as X
 import Control.Monad.Trans.Reader
 
 -- dunai
+
 import Control.Monad.Trans.MSF.Except hiding (once, once_, throwOn, throwOn', throwS, try)
 import Data.MonadicStreamFunction
 
@@ -72,7 +74,7 @@ throwOnCond cond e = proc a ->
     else returnA -< a
 
 {- | Variant of 'throwOnCond' for Kleisli arrows.
-   Throws the exception when the input is 'True'.
+| Throws the exception when the input is 'True'.
 -}
 throwOnCondM :: Monad m => (a -> m Bool) -> e -> ClSF (ExceptT e m) cl a a
 throwOnCondM cond e = proc a -> do
@@ -119,24 +121,24 @@ runClSFExcept :: Monad m => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
 runClSFExcept = morphS commuteExceptReader . runMSFExcept
 
 {- | Enter the monad context in the exception
-   for 'ClSF's in the 'ExceptT' monad.
-   The 'ClSF' will be run until it encounters an exception.
+  for 'ClSF's in the 'ExceptT' monad.
+  The 'ClSF' will be run until it encounters an exception.
 -}
-try :: Monad m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
+try :: (Data e, Finite e, Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
 try = MSFE.try . morphS commuteReaderExcept
 
 {- | Within the same tick, perform a monadic action,
-   and immediately throw the value as an exception.
+  and immediately throw the value as an exception.
 -}
-once :: Monad m => (a -> m e) -> ClSFExcept m cl a b e
+once :: (Monad m, Data e, Finite e) => (a -> m e) -> ClSFExcept m cl a b e
 once f = MSFE.once $ lift . f
 
 -- | A variant of 'once' without input.
-once_ :: Monad m => m e -> ClSFExcept m cl a b e
+once_ :: (Monad m, Data e, Finite e) => m e -> ClSFExcept m cl a b e
 once_ = once . const
 
 {- | Advances a single tick with the given Kleisli arrow,
-   and then throws an exception.
+  and then throws an exception.
 -}
-step :: Monad m => (a -> m (b, e)) -> ClSFExcept m cl a b e
+step :: (Monad m, Data e, Finite e) => (a -> m (b, e)) -> ClSFExcept m cl a b e
 step f = MSFE.step $ lift . f

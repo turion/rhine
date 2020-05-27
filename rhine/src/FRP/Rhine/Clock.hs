@@ -1,10 +1,13 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- |
 'Clock's are the central new notion in Rhine.
@@ -23,13 +26,14 @@ where
 
 -- base
 import qualified Control.Category as Category
+import Data.Data
 
 -- transformers
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
 -- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+import Data.MonadicStreamFunction as X hiding (Feedback, (>>>^), (^>>>))
 
 -- time-domain
 import Data.TimeDomain as X
@@ -57,7 +61,14 @@ Different values of the same clock type should tick at the same speed,
 and only differ in implementation details.
 Often, clocks are singletons.
 -}
-class TimeDomain (Time cl) => Clock m cl where
+class
+  ( TimeDomain (Time cl)
+  , Data (Time cl)
+  , Data (Diff (Time cl))
+  , Data (Tag cl)
+  ) =>
+  Clock m cl
+  where
   -- | The time domain, i.e. type of the time stamps the clock creates.
   type Time cl
 
@@ -88,6 +99,8 @@ data TimeInfo cl = TimeInfo
   -- ^ The tag annotation of the current tick
   }
 
+deriving instance (Data cl, Data (Diff (Time cl)), Data (Time cl), Data (Tag cl)) => Data (TimeInfo cl)
+
 -- | A utility that changes the tag of a 'TimeInfo'.
 retag ::
   (Time cl1 ~ Time cl2) =>
@@ -104,25 +117,25 @@ retag f TimeInfo {..} = TimeInfo {tag = f tag, ..}
 type Rescaling cl time = Time cl -> time
 
 {- | An effectful morphism of time domains is a Kleisli arrow.
-   It can use a side effect to rescale a point in one time domain
-   into another one.
+  It can use a side effect to rescale a point in one time domain
+  into another one.
 -}
 type RescalingM m cl time = Time cl -> m time
 
 {- | An effectful, stateful morphism of time domains is an 'MSF'
-   that uses side effects to rescale a point in one time domain
-   into another one.
+  that uses side effects to rescale a point in one time domain
+  into another one.
 -}
 type RescalingS m cl time tag = MSF m (Time cl, Tag cl) (time, tag)
 
 {- | Like 'RescalingS', but allows for an initialisation
-   of the rescaling morphism, together with the initial time.
+  of the rescaling morphism, together with the initial time.
 -}
 type RescalingSInit m cl time tag = Time cl -> m (RescalingS m cl time tag, time)
 
 {- | Convert an effectful morphism of time domains into a stateful one with initialisation.
-   Think of its type as @RescalingM m cl time -> RescalingSInit m cl time tag@,
-   although this type is ambiguous.
+  Think of its type as @RescalingM m cl time -> RescalingSInit m cl time tag@,
+  although this type is ambiguous.
 -}
 rescaleMToSInit ::
   Monad m =>
@@ -140,7 +153,7 @@ data RescaledClock cl time = RescaledClock
   }
 
 instance
-  (Monad m, TimeDomain time, Clock m cl) =>
+  (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl) =>
   Clock m (RescaledClock cl time)
   where
   type Time (RescaledClock cl time) = time
@@ -153,7 +166,7 @@ instance
       )
 
 {- | Instead of a mere function as morphism of time domains,
-   we can transform one time domain into the other with an effectful morphism.
+  we can transform one time domain into the other with an effectful morphism.
 -}
 data RescaledClockM m cl time = RescaledClockM
   { unscaledClockM :: cl
@@ -163,7 +176,7 @@ data RescaledClockM m cl time = RescaledClockM
   }
 
 instance
-  (Monad m, TimeDomain time, Clock m cl) =>
+  (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl) =>
   Clock m (RescaledClockM m cl time)
   where
   type Time (RescaledClockM m cl time) = time
@@ -185,7 +198,7 @@ rescaledClockToM RescaledClock {..} =
     }
 
 {- | Instead of a mere function as morphism of time domains,
-   we can transform one time domain into the other with a monadic stream function.
+  we can transform one time domain into the other with a monadic stream function.
 -}
 data RescaledClockS m cl time tag = RescaledClockS
   { unscaledClockS :: cl
@@ -196,7 +209,7 @@ data RescaledClockS m cl time tag = RescaledClockS
   }
 
 instance
-  (Monad m, TimeDomain time, Clock m cl) =>
+  (Monad m, TimeDomain time, Clock m cl, Data (Diff time), Data time, Data tag) =>
   Clock m (RescaledClockS m cl time tag)
   where
   type Time (RescaledClockS m cl time tag) = time

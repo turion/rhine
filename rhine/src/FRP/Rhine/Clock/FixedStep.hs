@@ -31,9 +31,9 @@ import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
 
 {- | A pure (side effect free) clock with fixed step size,
-   i.e. ticking at multiples of 'n'.
-   The tick rate is in the type signature,
-   which prevents composition of signals at different rates.
+  i.e. ticking at multiples of 'n'.
+  The tick rate is in the type signature,
+  which prevents composition of signals at different rates.
 -}
 data FixedStep (n :: Nat) where
   FixedStep :: KnownNat n => FixedStep n -- TODO Does the constraint bring any benefit?

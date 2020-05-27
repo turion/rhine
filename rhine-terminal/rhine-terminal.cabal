@@ -27,8 +27,9 @@ source-repository this
   tag:      v0.9
 
 library
-  exposed-modules:
-    FRP.Rhine.Terminal
+  if !flag(livecoding)
+    exposed-modules:
+      FRP.Rhine.Terminal
   build-depends:       base         >= 4.11 && < 4.18
                      , exceptions   >= 0.10.4
                      , transformers >= 0.5
@@ -45,46 +46,51 @@ library
   if flag(dev)
     ghc-options: -Werror
 
-executable rhine-terminal-simple
-  main-is:             TerminalSimple.hs
-  ghc-options:         -threaded
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.9
-                     , rhine-terminal
-                     , terminal     >= 0.2.0.0
-                     , text         >= 1.2.5.0
-                     , time         >= 1.9.3
+if !flag(livecoding)
+  executable rhine-terminal-simple
+    main-is:             TerminalSimple.hs
+    ghc-options:         -threaded
+    build-depends:       base         >= 4.14 && < 4.18
+                      , rhine        == 0.9
+                      , rhine-terminal
+                      , terminal     >= 0.2.0.0
+                      , text         >= 1.2.5.0
+                      , time         >= 1.9.3
 
-  default-language:    Haskell2010
-  ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
-  default-extensions:
-    TypeOperators
-  if flag(dev)
-    ghc-options: -Werror
+    default-language:    Haskell2010
+    ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
+    default-extensions:
+      TypeOperators
+    if flag(dev)
+      ghc-options: -Werror
 
-test-suite rhine-terminal-tests
-  type:                exitcode-stdio-1.0
-  main-is:             tests/Main.hs
-  ghc-options:         -threaded
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.9
-                     , rhine-terminal
-                     , exceptions   >= 0.10.4
-                     , transformers >= 0.5
-                     , terminal     >= 0.2.0.0
-                     , text         >= 1.2.5.0
-                     , time         >= 1.9.3
-                     , stm          >= 2.5.0
-                     , hspec
+  test-suite rhine-terminal-tests
+    type:                exitcode-stdio-1.0
+    main-is:             tests/Main.hs
+    ghc-options:         -threaded
+    build-depends:       base         >= 4.14 && < 4.18
+                      , rhine        == 0.9
+                      , rhine-terminal
+                      , exceptions   >= 0.10.4
+                      , transformers >= 0.5
+                      , terminal     >= 0.2.0.0
+                      , text         >= 1.2.5.0
+                      , time         >= 1.9.3
+                      , stm          >= 2.5.0
+                      , hspec
 
-  default-language:    Haskell2010
-  ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
-  default-extensions:
-    TypeOperators
-  if flag(dev)
-    ghc-options: -Werror
+    default-language:    Haskell2010
+    ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
+    default-extensions:
+      TypeOperators
+    if flag(dev)
+      ghc-options: -Werror
 
 flag dev
   description: Enable warnings as errors. Active on ci.
   default: False
   manual: True
+
+flag livecoding
+  description: Use the livecoding backend. See https://github.com/turion/essence-of-live-coding.
+  default: True

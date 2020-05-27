@@ -1,16 +1,21 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {- | Create 'ClSF's with randomness without 'IO'.
-   Uses the @MonadRandom@ package.
-   This module copies the API from @dunai@'s
-   'Control.Monad.Trans.MSF.Random'.
+  Uses the @MonadRandom@ package.
+  This module copies the API from @dunai@'s
+  'Control.Monad.Trans.MSF.Random'.
 -}
 module FRP.Rhine.ClSF.Random (
   module FRP.Rhine.ClSF.Random,
   module X,
 )
 where
+
+-- base
+import Data.Data
 
 -- transformers
 import Control.Monad.IO.Class
@@ -19,7 +24,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Random
 
 -- dunai
-import Control.Monad.Trans.MSF.Except (performOnFirstSample)
+
 import Control.Monad.Trans.MSF.Random as X hiding (evalRandS, getRandomRS, getRandomRS_, getRandomS, runRandS)
 import qualified Control.Monad.Trans.MSF.Random as MSF
 
@@ -31,7 +36,7 @@ import FRP.Rhine.ClSF.Random.Util
 
 -- | Generates random values, updating the generator on every step.
 runRandS ::
-  (RandomGen g, Monad m) =>
+  (Data g, RandomGen g, Monad m) =>
   ClSF (RandT g m) cl a b ->
   -- | The initial random seed
   g ->
@@ -40,17 +45,17 @@ runRandS clsf = MSF.runRandS (morphS commuteReaderRand clsf)
 
 -- | Updates the generator every step but discards the generator.
 evalRandS ::
-  (RandomGen g, Monad m) =>
+  (Data g, RandomGen g, Monad m) =>
   ClSF (RandT g m) cl a b ->
   g ->
   ClSF m cl a b
 evalRandS clsf g = runRandS clsf g >>> arr snd
 
 {- | Updates the generator every step but discards the value,
-   only outputting the generator.
+  only outputting the generator.
 -}
 execRandS ::
-  (RandomGen g, Monad m) =>
+  (Data g, RandomGen g, Monad m) =>
   ClSF (RandT g m) cl a b ->
   g ->
   ClSF m cl a g
@@ -63,12 +68,10 @@ evalRandIOS ::
   IO (ClSF m cl a b)
 evalRandIOS clsf = evalRandS clsf <$> newStdGen
 
--- | Evaluates the random computation by using the global random generator on the first tick.
-evalRandIOS' ::
-  MonadIO m =>
-  ClSF (RandT StdGen m) cl a b ->
-  ClSF m cl a b
-evalRandIOS' = performOnFirstSample . liftIO . evalRandIOS
+-- deriving instance Data StdGen
+instance Data StdGen
+
+-- FIXME This will crash
 
 -- * Creating random behaviours
 
@@ -79,7 +82,7 @@ getRandomS ::
 getRandomS = constMCl getRandom
 
 {- | Produce a random value at every tick,
-   within a range given per tick.
+  within a range given per tick.
 -}
 getRandomRS ::
   (MonadRandom m, Random a) =>
@@ -87,7 +90,7 @@ getRandomRS ::
 getRandomRS = arrMCl getRandomR
 
 {- | Produce a random value at every tick,
-   within a range given once.
+  within a range given once.
 -}
 getRandomRS_ ::
   (MonadRandom m, Random a) =>
