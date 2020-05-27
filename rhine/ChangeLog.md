@@ -8,6 +8,8 @@ every major version in `dunai` triggers a major version in `rhine`.
 
 * Replaced old reactimation mechanism by clock erasure
 * Dropped GHC support for < 8.4
+* Reworked `gloss` backends.
+  There are now two pure backends and an `IO` backend.
 
 ## 0.6.0
 
