@@ -62,7 +62,7 @@ Often, clocks are singletons.
 -}
 class
   ( TimeDomain (Time cl)
-  -- , Data (Time cl), Data (Tag cl)
+  , Data (Time cl), Data (Diff (Time cl)), Data (Tag cl)
   ) => Clock m cl where
   -- | The time domain, i.e. type of the time stamps the clock creates.
   type Time cl
@@ -187,7 +187,7 @@ data RescaledClockS m cl time tag = RescaledClockS
   --   depending on the initial time before rescaling
   }
 
-instance (Monad m, TimeDomain time, Clock m cl)
+instance (Monad m, TimeDomain time, Clock m cl, Data (Diff time), Data time, Data tag)
       => Clock m (RescaledClockS m cl time tag) where
   type Time (RescaledClockS m cl time tag) = time
   type Tag  (RescaledClockS m cl time tag) = tag
