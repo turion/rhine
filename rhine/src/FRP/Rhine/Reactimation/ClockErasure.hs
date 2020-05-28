@@ -170,8 +170,16 @@ eraseClockRhine
   => Rhine m cl () () -> m (MSF m () ())
 eraseClockRhine Rhine {..} = do
   (runningClock, initTime) <- initClock clock
-  -- Run the main loop
-  return $ proc () -> do
+  return $ eraseClockRunningAndSN runningClock initTime sn
+
+eraseClockRunningAndSN
+  :: ( Monad m, Clock m cl
+     , GetClockProxy cl
+     , Time cl ~ Time (In  cl)
+     , Time cl ~ Time (Out cl)
+     )
+  => RunningClock m (Time cl) (Tag cl) -> Time cl -> SN m cl () () -> MSF m () ()
+eraseClockRunningAndSN runningClock initTime sn = proc () -> do
     (time, tag) <- runningClock -< ()
     eraseClockSN initTime sn -< (time, tag, void $ inTag (toClockProxy sn) tag)
     returnA -< ()

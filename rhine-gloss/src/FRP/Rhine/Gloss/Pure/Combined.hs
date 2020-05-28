@@ -11,6 +11,21 @@ As an easy starter, you can use the helper function 'buildGlossRhine'.
 
 module FRP.Rhine.Gloss.Pure.Combined where
 
+<<<<<<< HEAD
+=======
+-- base
+import Data.Data
+
+-- transformers
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Writer
+
+-- dunai
+import qualified Control.Monad.Trans.MSF.Reader as MSFReader
+import Data.MonadicStreamFunction.InternalCore
+
+>>>>>>> 6462139 (WIP)
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.Reactimation.ClockErasure
@@ -28,7 +43,7 @@ type GlossCombinedClock a
       GlossSimulationClock
 
 -- | Schedule the subclocks of the 'GlossCombinedClock'.
-glossSchedule :: Schedule GlossM (GlossEventClock a) GlossSimulationClock
+glossSchedule :: Data a => Schedule GlossM (GlossEventClock a) GlossSimulationClock
 glossSchedule = schedSelectClocks
 
 -- ** Events
@@ -100,7 +115,8 @@ that is called with a list of all relevant events
 that occurred in the last tick.
 -}
 buildGlossRhine
-  :: (Event -> Maybe a) -- ^ The event selector
+  :: Data a
+  => (Event -> Maybe a) -- ^ The event selector
   -> ClSF GlossM GlossSimulationClock [a] () -- ^ The 'ClSF' representing the game loop.
   -> GlossRhine a
 buildGlossRhine selector clsfSim
@@ -112,7 +128,8 @@ buildGlossRhine selector clsfSim
 
 -- | The main function that will start the @gloss@ backend and run the 'SN'.
 flowGlossCombined
-  :: GlossSettings
+  :: Data a
+  => GlossSettings
   -> GlossRhine a -- ^ The @gloss@-compatible 'Rhine'.
   -> IO ()
 flowGlossCombined settings Rhine { .. } = flowGlossWithWorldMSF settings clock $ proc tick -> do
