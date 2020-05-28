@@ -18,6 +18,7 @@ module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
 import Control.Monad (forever)
+import Data.Data
 import Data.List.NonEmpty hiding (unfold)
 import Data.Maybe (fromMaybe)
 import GHC.TypeLits (Nat, KnownNat, natVal)
@@ -78,7 +79,7 @@ instance (KnownNat n1, KnownNat n2, NonemptyNatList (n2 : ns))
 
 -- TODO Port back to dunai when naming issues are resolved
 -- | Repeatedly outputs the values of a given list, in order.
-cycleS :: Monad m => NonEmpty a -> MSF m () a
+cycleS :: (Data a, Monad m) => NonEmpty a -> MSF m () a
 cycleS as = unfold (second (fromMaybe as) . uncons) as
 
 {-

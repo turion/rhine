@@ -18,6 +18,7 @@ module FRP.Rhine.ClSF.Except
 
 -- base
 import qualified Control.Category as Category
+import Data.Data
 
 -- transformers
 import Control.Monad.Trans.Class (lift)
@@ -115,20 +116,20 @@ runClSFExcept = morphS commuteExceptReader . runMSFExcept
 -- | Enter the monad context in the exception
 --   for 'ClSF's in the 'ExceptT' monad.
 --   The 'ClSF' will be run until it encounters an exception.
-try :: Monad m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
+try :: (Data e, Finite e, Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
 try = MSFE.try . morphS commuteReaderExcept
 
 -- | Within the same tick, perform a monadic action,
 --   and immediately throw the value as an exception.
-once :: Monad m => (a -> m e) -> ClSFExcept m cl a b e
+once :: (Monad m, Data e, Finite e) => (a -> m e) -> ClSFExcept m cl a b e
 once f = MSFE.once $ lift . f
 
 -- | A variant of 'once' without input.
-once_ :: Monad m => m e -> ClSFExcept m cl a b e
+once_ :: (Monad m, Data e, Finite e) => m e -> ClSFExcept m cl a b e
 once_ = once . const
 
 
 -- | Advances a single tick with the given Kleisli arrow,
 --   and then throws an exception.
-step :: Monad m => (a -> m (b, e)) -> ClSFExcept m cl a b e
+step :: (Monad m, Data e, Finite e) => (a -> m (b, e)) -> ClSFExcept m cl a b e
 step f = MSFE.step $ lift . f

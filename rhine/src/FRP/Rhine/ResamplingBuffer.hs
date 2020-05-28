@@ -6,6 +6,7 @@ Just as schedules form the boundaries between different clocks,
 synchronous signal functions ticking at different speeds.
 -}
 
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,11 +16,12 @@ module FRP.Rhine.ResamplingBuffer
   )
   where
 
--- rhine
-import FRP.Rhine.Clock
-
 -- base
 import Control.Arrow (second)
+import Data.Data
+
+-- rhine
+import FRP.Rhine.Clock
 
 -- A quick note on naming conventions, to whoever cares:
 -- . Call a single clock @cl@.
@@ -39,18 +41,21 @@ or specific to certain clocks.
 * 'a': The input type
 * 'b': The output type
 -}
-data ResamplingBuffer m cla clb a b = ResamplingBuffer
+data ResamplingBuffer m cla clb a b = forall s . Data s => ResamplingBuffer
   { put
-      :: TimeInfo cla
+      :: s
+      -> TimeInfo cla
       -> a
-      -> m (   ResamplingBuffer m cla clb a b)
+      -> m s
     -- ^ Store one input value of type 'a' at a given time stamp,
     --   and return a continuation.
   , get
-      :: TimeInfo clb
-      -> m (b, ResamplingBuffer m cla clb a b)
+      :: s
+      -> TimeInfo clb
+      -> m (b, s)
     -- ^ Retrieve one output value of type 'b' at a given time stamp,
     --   and a continuation.
+  , resamplingState :: s
   }
 
 -- | A type synonym to allow for abbreviation.
@@ -64,6 +69,7 @@ hoistResamplingBuffer
   -> ResamplingBuffer m1 cla clb a b
   -> ResamplingBuffer m2 cla clb a b
 hoistResamplingBuffer hoist ResamplingBuffer {..} = ResamplingBuffer
-  { put = (((hoistResamplingBuffer hoist <$>) . hoist) .) . put
-  , get = (second (hoistResamplingBuffer hoist) <$>) . hoist . get
+  { put = ((hoist .) .) . put
+  , get = (hoist .) . get
+  , ..
   }

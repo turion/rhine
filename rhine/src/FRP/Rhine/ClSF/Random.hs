@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 -- | Create 'ClSF's with randomness without 'IO'.
 --   Uses the @MonadRandom@ package.
@@ -11,6 +13,8 @@ module FRP.Rhine.ClSF.Random
   )
   where
 
+-- base
+import Data.Data
 
 -- transformers
 import Control.Monad.IO.Class
@@ -22,7 +26,6 @@ import System.Random (newStdGen)
 import Control.Monad.Random
 
 -- dunai
-import Control.Monad.Trans.MSF.Except (performOnFirstSample)
 import qualified Control.Monad.Trans.MSF.Random as MSF
 import Control.Monad.Trans.MSF.Random as X hiding (runRandS, evalRandS, getRandomS, getRandomRS, getRandomRS_)
 
@@ -34,7 +37,7 @@ import FRP.Rhine.ClSF.Random.Util
 
 -- | Generates random values, updating the generator on every step.
 runRandS
-  :: (RandomGen g, Monad m)
+  :: (Data g, RandomGen g, Monad m)
   => ClSF (RandT g m) cl a     b
   -> g -- ^ The initial random seed
   -> ClSF          m  cl a (g, b)
@@ -42,7 +45,7 @@ runRandS clsf g = MSF.runRandS (morphS commuteReaderRand clsf) g
 
 -- | Updates the generator every step but discards the generator.
 evalRandS
-  :: (RandomGen g, Monad m)
+  :: (Data g, RandomGen g, Monad m)
   => ClSF (RandT g m) cl a b
   -> g
   -> ClSF          m  cl a b
@@ -51,7 +54,7 @@ evalRandS clsf g = runRandS clsf g >>> arr snd
 -- | Updates the generator every step but discards the value,
 --   only outputting the generator.
 execRandS
-  :: (RandomGen g, Monad m)
+  :: (Data g, RandomGen g, Monad m)
   => ClSF (RandT g m) cl a b
   -> g
   -> ClSF          m  cl a g
@@ -66,12 +69,9 @@ evalRandIOS clsf = do
   g <- newStdGen
   return $ evalRandS clsf g
 
--- | Evaluates the random computation by using the global random generator on the first tick.
-evalRandIOS'
-  :: MonadIO m
-  => ClSF (RandT StdGen m) cl a b
-  -> ClSF               m  cl a b
-evalRandIOS' = performOnFirstSample . liftIO . evalRandIOS
+-- deriving instance Data StdGen
+instance Data StdGen where
+  -- FIXME This will crash
 
 -- * Creating random behaviours
 

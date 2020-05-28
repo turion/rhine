@@ -1,3 +1,27 @@
+# Caution
+
+This is the work in progress live coding branch.
+To test it:
+
+1. Install nix (https://nixos.org/nix/)
+2. Clone this repository and `cd` into it
+3. `cd rhine-gloss`
+4. Start `nix-shell` (and wait)
+5. `cabal repl exe:rhine-gloss-gears`
+6. Type:
+   ```
+   :def liveinit liveinit
+   :def livereload livereload
+   ```
+7. Start the program by typing `:liveinit`
+8. Edit `rhine-gloss/Main.hs`
+9. Reload by typing `:livereload`
+
+Let me know if you have problems with this.
+
+If you want to go without nix, you're on your own to ensure the correct setup, but you will have to locally make the current `master` versions of https://github.com/turion/dunai-live and https://github.com/turion/essence-of-live-coding available
+(e.g. using `cabal.project.local`).
+
 # README
 --------
 
