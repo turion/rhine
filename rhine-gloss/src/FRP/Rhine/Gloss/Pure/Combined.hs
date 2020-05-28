@@ -10,6 +10,21 @@ As an easy starter, you can use the helper function 'buildGlossRhine'.
 -}
 module FRP.Rhine.Gloss.Pure.Combined where
 
+<<<<<<< HEAD
+=======
+-- base
+import Data.Data
+
+-- transformers
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Writer
+
+-- dunai
+import qualified Control.Monad.Trans.MSF.Reader as MSFReader
+import Data.MonadicStreamFunction.InternalCore
+
+>>>>>>> 6462139 (WIP)
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.Reactimation.ClockErasure
@@ -29,7 +44,7 @@ type GlossCombinedClock a =
     GlossSimulationClock
 
 -- | Schedule the subclocks of the 'GlossCombinedClock'.
-glossSchedule :: Schedule GlossM (GlossEventClock a) GlossSimulationClock
+glossSchedule :: Data a => Schedule GlossM (GlossEventClock a) GlossSimulationClock
 glossSchedule = schedSelectClocks
 
 -- ** Events
@@ -102,27 +117,25 @@ a single signal function
 that is called with a list of all relevant events
 that occurred in the last tick.
 -}
-buildGlossRhine ::
-  -- | The event selector
-  (Event -> Maybe a) ->
-  -- | The 'ClSF' representing the game loop.
-  ClSF GlossM GlossSimulationClock [a] () ->
-  GlossRhine a
-buildGlossRhine selector clsfSim =
-  timeInfoOf tag @@ glossEventSelectClock selector
-    >-- collect -@- glossSchedule
-    --> clsfSim @@ glossSimulationClock
+buildGlossRhine
+  :: Data a
+  => (Event -> Maybe a) -- ^ The event selector
+  -> ClSF GlossM GlossSimulationClock [a] () -- ^ The 'ClSF' representing the game loop.
+  -> GlossRhine a
+buildGlossRhine selector clsfSim
+  =   timeInfoOf tag @@ glossEventSelectClock selector
+  >-- collect       -@- glossSchedule
+  --> clsfSim        @@ glossSimulationClock
 
 -- * Reactimation
 
 -- | The main function that will start the @gloss@ backend and run the 'SN'.
-flowGlossCombined ::
-  GlossSettings ->
-  -- | The @gloss@-compatible 'Rhine'.
-  GlossRhine a ->
-  IO ()
-flowGlossCombined settings Rhine {..} = flowGlossWithWorldMSF settings clock $ proc tick -> do
-  eraseClockSN 0 sn
-    -< case tick of
-      (_, Left event) -> (0, Left event, Just ())
-      (diffTime, Right ()) -> (diffTime, Right (), Nothing)
+flowGlossCombined
+  :: Data a
+  => GlossSettings
+  -> GlossRhine a -- ^ The @gloss@-compatible 'Rhine'.
+  -> IO ()
+flowGlossCombined settings Rhine { .. } = flowGlossWithWorldMSF settings clock $ proc tick -> do
+  eraseClockSN 0 sn -< case tick of
+    (_       , Left event) -> (0       , Left event, Just ())
+    (diffTime, Right ()  ) -> (diffTime, Right ()  , Nothing)
