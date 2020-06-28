@@ -1,1 +1,1 @@
-(import ./. {}).env
+(import ../nix/shellFrom.nix {}) (import ./. {})

@@ -1,3 +1,4 @@
 let
   mypkgs = import ./. {};
-in mypkgs.rhine-gloss.env
+  shellFrom = import ./nix/shellFrom.nix {};
+in shellFrom mypkgs.rhine-gloss
