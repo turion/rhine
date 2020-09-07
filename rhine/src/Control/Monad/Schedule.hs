@@ -223,3 +223,7 @@ async aSched bSched = do
     Right (aCont, b) -> do
       a <- aCont
       return (a, b)
+
+raceMSF
+  :: MonadSchedule m
+  => MSF (ListT m)
