@@ -12,7 +12,8 @@ module FRP.Rhine.Schedule.Trans where
 import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
-import Control.Monad.Schedule
+import Control.Monad.Schedule hiding (Diff)
+import qualified Control.Monad.Schedule as MonadSchedule
 import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 
@@ -23,14 +24,15 @@ import FRP.Rhine.Schedule
 --   can always be canonically scheduled.
 --   Indeed, this is the purpose for which 'ScheduleT' was defined.
 schedule
-  :: ( Monad m
-     , Clock (ScheduleT (Diff (Time cl1)) m) cl1
-     , Clock (ScheduleT (Diff (Time cl1)) m) cl2
+  :: ( MonadSchedule m
+     , MonadSchedule.Diff m ~ Diff (Time cl1)
+     , Clock m cl1
+     , Clock m cl2
      , Time cl1 ~ Time cl2
      , Ord (Diff (Time cl1))
      , Num (Diff (Time cl1))
      )
-  => Schedule (ScheduleT (Diff (Time cl1)) m) cl1 cl2
+  => Schedule m cl1 cl2
 schedule = Schedule {..}
   where
     initSchedule cl1 cl2 = do
@@ -43,13 +45,14 @@ schedule = Schedule {..}
 
     -- Combines the two individual running clocks to one running clock.
     runningSchedule
-      :: ( Monad m
-         , Clock (ScheduleT (Diff (Time cl1)) m) cl1
-         , Clock (ScheduleT (Diff (Time cl2)) m) cl2
-         , Time cl1 ~ Time cl2
-         , Ord (Diff (Time cl1))
-         , Num (Diff (Time cl1))
-         )
+      :: ( MonadSchedule m
+        , MonadSchedule.Diff m ~ Diff (Time cl1)
+        , Clock m cl1
+        , Clock m cl2
+        , Time cl1 ~ Time cl2
+        , Ord (Diff (Time cl1))
+        , Num (Diff (Time cl1))
+        )
       => cl1 -> cl2
       -> MSF (ScheduleT (Diff (Time cl1)) m) () (Time cl1, Tag cl1)
       -> MSF (ScheduleT (Diff (Time cl1)) m) () (Time cl2, Tag cl2)
