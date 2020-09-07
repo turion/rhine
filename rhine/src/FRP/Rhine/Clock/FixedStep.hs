@@ -18,7 +18,7 @@ module FRP.Rhine.Clock.FixedStep where
 import Data.Maybe (fromMaybe)
 import GHC.TypeLits
 
--- fixed-vector
+-- vector-sized
 import Data.Vector.Sized (Vector, fromList)
 
 -- dunai
