@@ -41,6 +41,9 @@ instance GetClockProxy cl => ToClockProxy (Rhine m cl a b) where
 {- |
 Start the clock and the signal network,
 effectively hiding the clock type from the outside.
+
+Since the caller will not know when the clock @'In' cl@ ticks,
+the input 'a' has to be given at all times, even those when it doesn't tick.
 -}
 eraseClock
   :: (Monad m, Clock m cl, GetClockProxy cl)
