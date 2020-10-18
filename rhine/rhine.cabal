@@ -52,6 +52,7 @@ source-repository this
 library
   exposed-modules:
     Control.Monad.Schedule
+    Control.Monad.Schedule.Class
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.FixedStep

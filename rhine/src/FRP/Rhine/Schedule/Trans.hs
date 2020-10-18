@@ -13,6 +13,7 @@ import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
 import Control.Monad.Schedule
+import Control.Monad.Schedule.Class
 import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 
