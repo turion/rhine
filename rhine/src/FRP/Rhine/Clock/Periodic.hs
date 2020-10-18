@@ -22,8 +22,10 @@ import GHC.TypeLits (KnownNat, Nat, natVal)
 -- dunai
 import Data.MonadicStreamFunction
 
+-- monad-schedule
+import Control.Monad.Schedule.Trans
+
 -- rhine
-import Control.Monad.Schedule
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 
