@@ -10,6 +10,7 @@ packages:
 extra-deps:
 - terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
 - monad-bayes-1.1.0@sha256:8929887b2883e553b928dcc9b1326171c87b6aa26f11800dc8c55b119a9e9649,6123
+- monad-schedule-0.1.2.1@sha256:95d6b9c6fd36f585e4a52938ebd1762c2e2caa8bb3c11ce86985dd11a2caae1a,1776
 
 nix:
   packages:

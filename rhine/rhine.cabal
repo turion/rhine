@@ -56,7 +56,6 @@ source-repository this
 
 library
   exposed-modules:
-    Control.Monad.Schedule
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.FixedStep
@@ -117,6 +116,7 @@ library
                      -- Remove version pin when https://github.com/ivanperez-keera/dunai/issues/298 is resolved:
                      , simple-affine-space == 0.1.1
                      , time-domain
+                     , monad-schedule >= 0.1.2
 
   -- Directories containing source files.
   hs-source-dirs:      src
