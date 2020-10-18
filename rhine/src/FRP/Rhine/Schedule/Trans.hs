@@ -11,8 +11,11 @@ module FRP.Rhine.Schedule.Trans where
 -- dunai
 import Data.MonadicStreamFunction.InternalCore
 
+-- monad-schedule
+import Control.Monad.Schedule.Class
+import Control.Monad.Schedule.Trans hiding (Schedule)
+
 -- rhine
-import Control.Monad.Schedule
 import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 
@@ -23,7 +26,7 @@ import FRP.Rhine.Schedule
 --   can always be canonically scheduled.
 --   Indeed, this is the purpose for which 'ScheduleT' was defined.
 schedule
-  :: ( Monad m
+  :: ( Monad m, MonadSchedule m
      , Clock (ScheduleT (Diff (Time cl1)) m) cl1
      , Clock (ScheduleT (Diff (Time cl1)) m) cl2
      , Time cl1 ~ Time cl2
@@ -43,7 +46,7 @@ schedule = Schedule {..}
 
     -- Combines the two individual running clocks to one running clock.
     runningSchedule
-      :: ( Monad m
+      :: ( Monad m, MonadSchedule m
          , Clock (ScheduleT (Diff (Time cl1)) m) cl1
          , Clock (ScheduleT (Diff (Time cl2)) m) cl2
          , Time cl1 ~ Time cl2

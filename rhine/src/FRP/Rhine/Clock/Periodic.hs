@@ -24,10 +24,12 @@ import GHC.TypeLits (Nat, KnownNat, natVal)
 -- dunai
 import Data.MonadicStreamFunction
 
+-- monad-schedule
+import Control.Monad.Schedule.Trans
+
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import Control.Monad.Schedule
 
 -- * The 'Periodic' clock
 

@@ -51,7 +51,6 @@ source-repository this
 
 library
   exposed-modules:
-    Control.Monad.Schedule
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.FixedStep
@@ -111,6 +110,7 @@ library
                      , MonadRandom  >= 0.5
                      , simple-affine-space
                      , time-domain
+                     , monad-schedule >= 0.1
 
   -- Directories containing source files.
   hs-source-dirs:      src
