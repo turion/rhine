@@ -14,6 +14,7 @@ import Control.Monad.Trans.Writer
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Class
 
+-- TODO: Return value could also be m (NonEmpty a, [m a]), if several finish at the same time.
 -- | 'Monad's in which actions can be scheduled concurrently.
 class MonadSchedule m where
   -- | Run the actions concurrently,
