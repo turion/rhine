@@ -38,6 +38,9 @@ import Data.MonadicStreamFunction.InternalCore
 import FRP.Rhine
 import FRP.Rhine.Reactimation.ClockErasure
 
+-- monad-schedule
+import Control.Monad.Schedule.Class
+
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
 
@@ -48,6 +51,10 @@ import FRP.Rhine.Gloss.Common
 -- | A pure monad in which all effects caused by the @gloss@ backend take place.
 newtype GlossM a = GlossM {unGlossM :: (ReaderT (Float, Maybe Event)) (Writer Picture) a}
   deriving (Functor, Applicative, Monad)
+
+-- A fake schedule instance that will never be called because the Gloss backend does the scheduling.
+instance MonadSchedule GlossM where
+  schedule = error "GlossM.schedule should never be called"
 
 -- | Add a picture to the canvas.
 paint :: Picture -> GlossM ()
@@ -115,6 +122,12 @@ flowGloss settings clsf = flowGlossWithWorldMSF settings GlossClock $ proc (time
 -- FIXME Hide?
 
 -- | Helper function
+flowGlossWithWorldMSF ::
+  Clock GlossM cl =>
+  GlossSettings ->
+  cl ->
+  MSF GlossM (Time cl, Tag cl) b ->
+  IO ()
 flowGlossWithWorldMSF GlossSettings {..} clock msf =
   play display backgroundColor stepsPerSecond (worldMSF, Blank) getPic handleEvent simStep
   where

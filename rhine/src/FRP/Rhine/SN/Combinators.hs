@@ -94,7 +94,7 @@ Synchronous _ **** Sequential {} = error "Impossible pattern: Synchronous _ ****
 Sequential {} **** Synchronous _ = error "Impossible pattern: Sequential {} **** Synchronous _"
 
 -- | Compose two signal networks on different clocks in clock-parallel.
---   At one tick of @ParClock m cl1 cl2@, one of the networks is stepped,
+--   At one tick of @ParClock cl1 cl2@, one of the networks is stepped,
 --   dependent on which constituent clock has ticked.
 --
 --   Note: This is essentially an infix synonym of 'Parallel'
@@ -108,11 +108,11 @@ Sequential {} **** Synchronous _ = error "Impossible pattern: Sequential {} ****
      )
   => SN m             clL      a b
   -> SN m                 clR  a b
-  -> SN m (ParClock m clL clR) a b
+  -> SN m (ParClock clL clR) a b
 (||||) = Parallel
 
 -- | Compose two signal networks on different clocks in clock-parallel.
---   At one tick of @ParClock m cl1 cl2@, one of the networks is stepped,
+--   At one tick of @ParClock cl1 cl2@, one of the networks is stepped,
 --   dependent on which constituent clock has ticked.
 (++++)
   :: ( Monad m, Clock m clL, Clock m clR
@@ -124,5 +124,5 @@ Sequential {} **** Synchronous _ = error "Impossible pattern: Sequential {} ****
      )
   => SN m             clL      a         b
   -> SN m                 clR  a           c
-  -> SN m (ParClock m clL clR) a (Either b c)
+  -> SN m (ParClock clL clR) a (Either b c)
 snL ++++ snR = (snL >>>^ Left) |||| (snR >>>^ Right)

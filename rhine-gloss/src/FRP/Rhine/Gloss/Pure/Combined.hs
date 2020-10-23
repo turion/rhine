@@ -24,13 +24,8 @@ import FRP.Rhine.Gloss.Pure
 -}
 type GlossCombinedClock a =
   SequentialClock
-    GlossM
     (GlossEventClock a)
     GlossSimulationClock
-
--- | Schedule the subclocks of the 'GlossCombinedClock'.
-glossSchedule :: Schedule GlossM (GlossEventClock a) GlossSimulationClock
-glossSchedule = schedSelectClocks
 
 -- ** Events
 
@@ -92,7 +87,7 @@ mySim = ...
 
 myGlossRhine :: GlossRhine a
 myGlossRhine
-  = myEventSubsystem @@ myEventClock >-- collect -@- glossSchedule --> mySim @@ glossSimulationClock
+  = myEventSubsystem @@ myEventClock >-- collect --> mySim @@ glossSimulationClock
 @
 -}
 type GlossRhine a = Rhine GlossM (GlossCombinedClock a) () ()
@@ -110,7 +105,7 @@ buildGlossRhine ::
   GlossRhine a
 buildGlossRhine selector clsfSim =
   timeInfoOf tag @@ glossEventSelectClock selector
-    >-- collect -@- glossSchedule
+    >-- collect
     --> clsfSim @@ glossSimulationClock
 
 -- * Reactimation

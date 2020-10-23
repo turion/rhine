@@ -85,15 +85,12 @@ ballRh = ball @@ waitClock
 statusRh :: Rhine IO StatusClock Ball ()
 statusRh = statusMsg @@ waitClock
 
-simToStatus :: ResamplingPoint IO SimClock StatusClock Ball Ball
-simToStatus = downsampleSimToStatus -@- scheduleMillisecond
-
-ballStatusRh :: Rhine IO (SeqClock IO SimClock StatusClock) (Maybe BallVel) ()
-ballStatusRh = ballRh >-- simToStatus --> statusRh
+ballStatusRh :: Rhine IO (SeqClock SimClock StatusClock) (Maybe BallVel) ()
+ballStatusRh = ballRh >-- downsampleSimToStatus --> statusRh
 
 main :: IO ()
 main =
   flow $
     startVelRh
-      >-- fifoUnbounded -@- concurrently
+      >-- fifoUnbounded
       --> ballStatusRh

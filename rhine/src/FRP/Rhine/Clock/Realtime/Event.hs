@@ -46,8 +46,6 @@ import Control.Monad.Trans.Reader
 import FRP.Rhine.ClSF
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.Schedule
-import FRP.Rhine.Schedule.Concurrently
 
 -- * Monads allowing for event emission and handling
 
@@ -135,7 +133,7 @@ emitSMaybe' ::
   ClSF (EventChanT event m) cl (Maybe event) ()
 emitSMaybe' = mapMaybe emitS' >>> arr (const ())
 
--- * Event clocks and schedules
+-- * Event clocks
 
 {- | A clock that ticks whenever an @event@ is emitted.
    It is not yet bound to a specific channel,
@@ -178,24 +176,3 @@ eventClockOn chan =
     { unhoistedClock = EventClock
     , monadMorphism = withChan chan
     }
-
-{- |
-Given two clocks with an 'EventChanT' layer directly atop the 'IO' monad,
-you can schedule them using concurrent GHC threads,
-and share the event channel.
-
-Typical use cases:
-
-* Different subevent selection clocks
-  (implemented i.e. with 'FRP.Rhine.Clock.Select')
-  on top of the same main event source.
-* An event clock and other event-unaware clocks in the 'IO' monad,
-  which are lifted using 'liftClock'.
--}
-concurrentlyWithEvents ::
-  ( Time cl1 ~ Time cl2
-  , Clock (EventChanT event IO) cl1
-  , Clock (EventChanT event IO) cl2
-  ) =>
-  Schedule (EventChanT event IO) cl1 cl2
-concurrentlyWithEvents = readerSchedule concurrently
