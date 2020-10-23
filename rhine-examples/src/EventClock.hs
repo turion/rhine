@@ -48,7 +48,7 @@ handleEvents = tagS >>> arrMCl (putStrLn >>> liftIO)
 --   (Only scheduling happens concurrently.)
 eventExample :: IO ()
 eventExample = runEventChanT $ flow
-  $ emitEventSystem ||@ concurrentlyWithEvents @|| handleEventSystem
+  $ emitEventSystem |@| handleEventSystem
   where
     emitEventSystem   = message >-> emitS @@ liftClock waitClock
     handleEventSystem = handleEvents      @@ EventClock
@@ -79,9 +79,9 @@ randomsExample = runEventChanT $ flow wholeSystem
     busy = (liftClock Busy :: HoistClock IO EventIO Busy) -- TODO Can't remove brackets. GHC parser bug?
     emitEventSystem   = randomNumbers >-> emitS @@ busy
     handleEventSystem = handleEvents            @@ EventClock
-    eventSystem = emitEventSystem ||@ concurrentlyWithEvents @|| handleEventSystem
+    eventSystem = emitEventSystem |@| handleEventSystem
     responsiveSystem = liftClSFAndClock responsive @@ liftClock waitClock -- TODO This can be lifted in one go
-    wholeSystem = eventSystem ||@ concurrentlyWithEvents @|| responsiveSystem
+    wholeSystem = eventSystem |@| responsiveSystem
 
 
 -- | Put the expensive computation on a separate thread,
@@ -92,7 +92,7 @@ threadsRandomsExample = do
   chan <- newChan
   let
     eventClock = eventClockOn chan :: HoistClock EventIO IO (EventClock String)
-    eventSystem = handleEvents @@ eventClock ||@ concurrently @|| responsive @@ waitClock
+    eventSystem = handleEvents @@ eventClock |@| responsive @@ waitClock
     busy = (liftClock Busy :: HoistClock IO EventIO Busy) -- TODO Can't remove brackets. GHC parser bug?
   void $ forkIO $ flow $ eventSystem
   withChan chan $ flow $ randomNumbers >-> emitS' @@ busy

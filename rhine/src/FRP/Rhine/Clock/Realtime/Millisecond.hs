@@ -23,7 +23,6 @@ import Data.Vector.Sized (Vector, fromList)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.FixedStep
-import FRP.Rhine.Schedule
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.ResamplingBuffer.Collect
@@ -56,12 +55,12 @@ instance GetClockProxy (Millisecond n)
 
 --   Note that this clock internally uses 'threadDelay' which can block
 --   for quite a lot longer than the requested time, which can cause
---   the clock to miss one or more ticks when using low values of 'n'. 
---   When using 'threadDelay', the difference between the real wait time 
---   and the requested wait time will be larger when using 
+--   the clock to miss one or more ticks when using low values of 'n'.
+--   When using 'threadDelay', the difference between the real wait time
+--   and the requested wait time will be larger when using
 --   the '-threaded' ghc option (around 800 microseconds) than when not using
 --   this option (around 100 microseconds). For low values of @n@ it is recommended
---   that '-threaded' not be used in order to miss less ticks. The clock will adjust 
+--   that '-threaded' not be used in order to miss less ticks. The clock will adjust
 --   the wait time, up to no wait time at all, to catch up when a tick is missed.
 
 waitClock :: KnownNat n => Millisecond n
@@ -91,10 +90,3 @@ downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
       , "for two Millisecond clocks."
       , "Use a correct schedule like downsampleMillisecond."
       ]
-
--- | Two 'Millisecond' clocks can always be scheduled deterministically.
-scheduleMillisecond :: Schedule IO (Millisecond n1) (Millisecond n2)
-scheduleMillisecond = Schedule initSchedule'
-  where
-    initSchedule' (Millisecond cl1) (Millisecond cl2)
-      = initSchedule (rescaledScheduleS scheduleFixedStep) cl1 cl2

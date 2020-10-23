@@ -34,7 +34,7 @@ pureClSF = currentEvent >>> arr maybeToList >>> sim
 
 -- | Run the gears simulation with the pure backend with two subsystems,
 --   one at the rate of events, one at the rate of simulation.
-pureRhine = tagS @@ glossEventClock >-- collect -@- glossSchedule --> sim >-> arrMCl paintAll @@ glossSimulationClock
+pureRhine = tagS @@ glossEventClock >-- collect --> sim >-> arrMCl paintAll @@ glossSimulationClock
 
 -- | Run the gears simulation with the 'IO' backend.
-ioRhine = tagS @@ GlossEventClockIO >-- collect -@- glossConcurrently --> sim >-> arrMCl paintAllIO @@ GlossSimClockIO
+ioRhine = tagS @@ GlossEventClockIO >-- collect --> sim >-> arrMCl paintAllIO @@ GlossSimClockIO
