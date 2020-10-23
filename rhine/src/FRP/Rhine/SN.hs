@@ -54,7 +54,7 @@ data SN m cl a b where
     => SN               m      clab            a b
     -> ResamplingBuffer m (Out clab) (In clcd)   b c
     -> SN               m                clcd      c d
-    -> SN m (SequentialClock m clab      clcd) a     d
+    -> SN m (SequentialClock   clab      clcd) a     d
   -- | Two 'SN's with the same input and output data may be parallely composed.
   Parallel
     :: ( Clock m cl1, Clock m cl2
@@ -66,9 +66,9 @@ data SN m cl a b where
        , Time cl1 ~ Time (In cl1)
        , Time cl2 ~ Time (In cl2)
        )
-    => SN m                  cl1      a b
-    -> SN m                      cl2  a b
-    -> SN m (ParallelClock m cl1 cl2) a b
+    => SN m                cl1      a b
+    -> SN m                    cl2  a b
+    -> SN m (ParallelClock cl1 cl2) a b
 
 instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
   type Cl (SN m cl a b) = cl

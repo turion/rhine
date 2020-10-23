@@ -85,8 +85,6 @@ library
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
     FRP.Rhine.Schedule
-    FRP.Rhine.Schedule.Concurrently
-    FRP.Rhine.Schedule.Trans
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
     FRP.Rhine.TimeDomain
@@ -95,7 +93,6 @@ library
   other-modules:
     FRP.Rhine.ClSF.Random.Util
     FRP.Rhine.ClSF.Except.Util
-    FRP.Rhine.Schedule.Util
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
