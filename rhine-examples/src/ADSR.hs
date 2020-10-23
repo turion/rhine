@@ -216,7 +216,7 @@ consoleADSR = runADSR myADSR >-> arrMCl print @@ waitClock
    and pulse output.
 -}
 main :: IO ()
-main = flow $ key >-- keepLast False -@- concurrently --> consoleADSR
+main = flow $ key >-- keepLast False --> consoleADSR
 
 -- * Utilities
 

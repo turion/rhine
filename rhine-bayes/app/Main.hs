@@ -337,11 +337,11 @@ visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC Glos
 mainRhineMultiRate =
   userTemperature
     @@ glossClockUTC GlossEventClockIO
-      >-- keepLast initialTemperature -@- glossConcurrently -->
+      >-- keepLast initialTemperature -->
         modelRhine
-        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
+        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
           inference
-            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -->
               visualisationRhine
 {- FOURMOLU_ENABLE -}
 

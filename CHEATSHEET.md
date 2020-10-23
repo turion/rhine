@@ -8,7 +8,7 @@ If you miss something, feel free to open an issue or pull request.
 |              | Time          | Data               |
 |--------------|---------------|--------------------|
 | Synchronous  | Atomic clocks | Signal functions   |
-| Asynchronous | Schedules     | Resampling buffers |
+| Asynchronous | Scheduling    | Resampling buffers |
 
 ## Types
 `m` is always the monad in which side effects can take place at every step.
@@ -65,28 +65,24 @@ If you miss something, feel free to open an issue or pull request.
 
 ##### Parallel composition
 
-| Operator   | Resulting Type                                     |
-|------------|----------------------------------------------------|
-| `@\|\|`    | `Rhine m (ParallelClock m clL clR) a b`            |
-| `@++`      | `Rhine m (ParallelClock m clL clR) a (Either b c)` |
-
-For more information, see [docs/operators.md](docs/operators.md).
+| Operator   | Resulting Type                                   |
+|------------|--------------------------------------------------|
+| `\|@\|`    | `Rhine m (ParallelClock clL clR) a b`            |
+| `+@+`      | `Rhine m (ParallelClock clL clR) a (Either b c)` |
 
 #### Common combinators in action
 
 ##### Sequential signal composition
 ```
-clsf @@ cl >-- resBuf -@- schedule --> rh :: Rhine m (SequentialClock m cl cl') a b
+clsf @@ cl >-- resBuf --> rh :: Rhine m (SequentialClock cl cl') a b
 
 clsf    -- This is a clocked signal function.
      @@    -- Run the clocked signal function on...
         cl    -- ...this clock. Together, they form a "rhine".
            >--    -- We're resampling the signal function's output...
-               resBuf    -- ...with this buffer...
-                      -@-    -- at the following schedule:
-                          schedule    -- It decides when the two signal networks are activated.
-                                   -->    -- The output of the resampling is forwarded to...
-                                       rh    -- ...another rhine.
+               resBuf    -- ...with this buffer.
+                      -->    -- The output of the resampling is forwarded to...
+                          rh    -- ...another rhine.
 ```
 
 ##### Data-parallel signal composition
@@ -102,13 +98,11 @@ sn1    -- This is a signal network with input `a` and output `b`, on clock `cl`.
 ##### Time-parallel signal composition
 
 ```
-rhL ||@ schedule @|| rhR :: Rhine m (ParallelClock clL clR) a b
+rhL |@| rhR :: Rhine m (ParallelClock clL clR) a b
 
 rhL    -- A rhine that inputs some data `a` and outputs some data `b`, on some clock `clL`.
-    ||@    -- We are going to execute the first rhine in parallel with another one.
-        schedule    -- This schedule decides when which clock is activated.
-                 @||    -- And now the other rhine:
-                     rhR    -- Here it is. It also inputs `a` and outputs `b`, but on another clock, e.g. `clR`.
+    |@|    -- We are going to execute the first rhine in parallel with another one.
+        rhR    -- The other rhine. It also inputs `a` and outputs `b`, but on another clock, e.g. `clR`.
 ```
 
 ## Common functions

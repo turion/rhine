@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -9,7 +8,6 @@
 module FRP.Rhine.Terminal (
   TerminalEventClock (..),
   flowTerminal,
-  terminalConcurrently,
 ) where
 
 -- base
@@ -28,9 +26,10 @@ import System.Terminal (Event, Interrupt, MonadInput, TerminalT, awaitEvent, run
 import System.Terminal.Internal (Terminal)
 
 -- transformers
-
-import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader
+
+-- monad-schedule
+import Control.Monad.Schedule.Class
 
 -- rhine
 import FRP.Rhine
@@ -84,38 +83,13 @@ flowTerminal ::
   m ()
 flowTerminal term clsf = flip runTerminalT term $ flow clsf
 
-{- | A schedule in the 'TerminalT LocalTerminal' transformer,
-   supplying the same backend connection to its scheduled clocks.
--}
-terminalConcurrently ::
-  forall t cl1 cl2.
-  ( Terminal t
-  , Clock (TerminalT t IO) cl1
-  , Clock (TerminalT t IO) cl2
-  , Time cl1 ~ Time cl2
-  ) =>
-  Schedule (TerminalT t IO) cl1 cl2
-terminalConcurrently =
-  Schedule $ \cl1 cl2 -> do
-    term <- terminalT ask
-    lift $
-      first liftTransS
-        <$> initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
-
 -- Workaround TerminalT constructor not being exported. Should be safe in practice.
 -- See PR upstream https://github.com/lpeterse/haskell-terminal/pull/18
 terminalT :: ReaderT t m a -> TerminalT t m a
 terminalT = unsafeCoerce
 
-type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
+unTerminalT :: TerminalT t m a -> ReaderT t m a
+unTerminalT = unsafeCoerce
 
-runTerminalClock ::
-  Terminal t =>
-  t ->
-  cl ->
-  RunTerminalClock IO t cl
-runTerminalClock term unhoistedClock =
-  HoistClock
-    { monadMorphism = flip runTerminalT term
-    , ..
-    }
+instance (Monad m, MonadSchedule m) => MonadSchedule (TerminalT t m) where
+  schedule = terminalT . fmap (fmap (fmap terminalT)) . schedule . fmap unTerminalT

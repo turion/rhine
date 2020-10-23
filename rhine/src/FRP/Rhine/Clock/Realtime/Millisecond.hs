@@ -23,7 +23,6 @@ import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
-import FRP.Rhine.Schedule
 
 {- |
 A clock ticking every 'n' milliseconds,
@@ -91,10 +90,3 @@ downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
             , "for two Millisecond clocks."
             , "Use a correct schedule like downsampleMillisecond."
             ]
-
--- | Two 'Millisecond' clocks can always be scheduled deterministically.
-scheduleMillisecond :: Schedule IO (Millisecond n1) (Millisecond n2)
-scheduleMillisecond = Schedule initSchedule'
-  where
-    initSchedule' (Millisecond cl1) (Millisecond cl2) =
-      initSchedule (rescaledScheduleS scheduleFixedStep) cl1 cl2

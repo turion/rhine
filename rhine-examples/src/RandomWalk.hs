@@ -26,7 +26,7 @@ type Point = Vector2 Float
 
 type SimulationClock = Millisecond 1
 type DisplayClock = Millisecond 1000
-type AppClock = SequentialClock IO StdinClock (SequentialClock IO SimulationClock DisplayClock)
+type AppClock = SequentialClock StdinClock (SequentialClock SimulationClock DisplayClock)
 
 {- | On every newline, show the current point and the local time.
    Also, forward the current point so it can be saved.
@@ -83,7 +83,7 @@ debugLocalTime = proc a -> do
 mainRhine :: Rhine IO AppClock () ()
 mainRhine =
   feedbackRhine (debugLocalTime ^->> keepLast zeroVector) $
-    keyboard @@ StdinClock >-- keepLast zeroVector -@- concurrently --> simulation @@ waitClock >-- keepLast (zeroVector, zeroVector) -@- scheduleMillisecond --> display @@ waitClock
+    keyboard @@ StdinClock >-- keepLast zeroVector --> simulation @@ waitClock >-- keepLast (zeroVector, zeroVector) --> display @@ waitClock
 
 -- | Execute the main Rhine
 main :: IO ()
