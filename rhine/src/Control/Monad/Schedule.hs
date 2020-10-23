@@ -80,6 +80,8 @@ runScheduleIO = runScheduleT $ liftIO . threadDelay . (* 1000) . fromIntegral
 instance Ord diff => MonadSchedule (Wait diff) where
   schedule waits = let (smallestWait :| waits') = N.sortBy compareWait waits in (, waits') <$> smallestWait
 
+-- TODO Relax Num to a typeclass Difference so () is an instance. Then we have cooperative multitasking.
+
 -- | Run each action one step until it is discovered which action(s) are pure, or yield next.
 --   If there is a pure action, it is returned,
 --   otherwise all actions are shifted to the time when the earliest action yields.
