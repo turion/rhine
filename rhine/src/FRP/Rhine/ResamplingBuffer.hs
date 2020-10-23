@@ -67,3 +67,25 @@ hoistResamplingBuffer hoist ResamplingBuffer {..} = ResamplingBuffer
   { put = (((hoistResamplingBuffer hoist <$>) . hoist) .) . put
   , get = (second (hoistResamplingBuffer hoist) <$>) . hoist . get
   }
+
+
+firstSynchronousResamplingBuffer
+  :: Monad m
+  => ResamplingBuffer m cl cl  a      b
+  -> ResamplingBuffer m cl cl (a, c) (b, c)
+firstSynchronousResamplingBuffer ResamplingBuffer { .. } = ResamplingBuffer
+  { put = \cl (a, c) -> firstSynchronousResamplingBuffer' c <$> put cl a
+  , get = error "firstSynchronousResamplingBuffer: Attempted to `get` when you should `put`"
+  }
+
+firstSynchronousResamplingBuffer'
+  :: Monad m
+  => c
+  -> ResamplingBuffer m cl cl  a      b
+  -> ResamplingBuffer m cl cl (a, c) (b, c)
+firstSynchronousResamplingBuffer' c ResamplingBuffer { .. } = ResamplingBuffer
+  { put = error "firstSynchronousResamplingBuffer': Attempting to `put` when you should `get`"
+  , get = \timeInfo -> do
+      (b, rb') <- get timeInfo
+      return ((b, c), firstSynchronousResamplingBuffer rb')
+  }

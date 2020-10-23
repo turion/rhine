@@ -20,11 +20,10 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Reactimation.ClockErasure
-import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type
-
-
+import Control.Monad.Schedule.Class
+import FRP.Rhine.SN
 
 -- * Running a Rhine
 
@@ -57,12 +56,9 @@ main = flow $ mainSF @@ clock
 -}
 -- TODO Can we chuck the constraints into Clock m cl?
 flow
-  :: ( Monad m, Clock m cl
-     , GetClockProxy cl
-     , Time cl ~ Time (In  cl)
-     , Time cl ~ Time (Out cl)
+  :: ( Monad m, MonadSchedule m
      )
-  => Rhine m cl () () -> m ()
+  => Rhine m clIn clOut () () -> m ()
 flow rhine = do
   msf <- eraseClock rhine
   reactimate $ msf >>> arr (const ())
@@ -70,9 +66,10 @@ flow rhine = do
 -- | Run a synchronous 'ClSF' with its clock as a main loop,
 --   similar to Yampa's, or Dunai's, 'reactimate'.
 reactimateCl
-  :: ( Monad m, Clock m cl
+  :: ( Monad m, MonadSchedule m
+     , Clock m cl
      , GetClockProxy cl
      , cl ~ In  cl, cl ~ Out cl
      )
   => cl -> ClSF m cl () () -> m ()
-reactimateCl cl clsf = flow $ clsf @@ cl
+reactimateCl cl clsf = flow $ Synchronous clsf cl
