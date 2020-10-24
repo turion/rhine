@@ -110,6 +110,7 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (EventT ev m) where
               :  delayed'
               ++ (mkEmit <$> emits)
               ++ broadcastOnce ev listens
+          -- FIXME Better to do this with sequences
           -- No actions have returned yet, and all listeners are waiting.
           -- Unblock them by telling them that there will be no event now.
           ([], [], listens) -> broadcastUntilReturn $ fromList
