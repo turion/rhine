@@ -64,7 +64,7 @@ runEventTWith events = viewT >=> eval events
     eval (ev :<| events) (Listen :>>= f) = runEventTWith events $ f $ Just ev
     eval Empty (Listen :>>= f) = runEventTWith Empty $ f Nothing
 
-instance Monad m => MonadSchedule (EventT ev m) where
+instance (Monad m, MonadSchedule m) => MonadSchedule (EventT ev m) where
   schedule = broadcastUntilReturn >>> lift
     where
       partitionEventT
@@ -93,19 +93,34 @@ instance Monad m => MonadSchedule (EventT ev m) where
       mkListen f = listen >>= f
 
       broadcastUntilReturn
-        :: Monad m
+        :: (Monad m, MonadSchedule m)
         => NonEmpty (EventT ev m a)
         -> m (NonEmpty a, [EventT ev m a])
       broadcastUntilReturn actions = do
-        views <- sequenceA $ viewT <$> actions
+        (views, delayed) <- schedule $ viewT <$> actions
+        let delayed' = liftMView <$> delayed
         case partitionEventT $ toList views of
           -- Some actions have finally returned. The other actions will be wrapped again and processed later.
-          ((a : as), emits, listens) -> return (a :| as, (mkEmit <$> emits) ++ (mkListen <$> listens))
+          ((a : as), emits, listens) -> return (a :| as, delayed' ++ (mkEmit <$> emits) ++ (mkListen <$> listens))
           -- No actions have returned yet, but one has emitted an event.
           -- Broadcast it to all listeners.
           ([], (ev, action) : emits, listens)
             -> broadcastUntilReturn $ fromList
-              $ action : (mkEmit <$> emits) ++ broadcastOnce ev listens
+              $  action
+              :  delayed'
+              ++ (mkEmit <$> emits)
+              ++ broadcastOnce ev listens
           -- No actions have returned yet, and all listeners are waiting.
           -- Unblock them by telling them that there will be no event now.
-          ([], [], listens) -> broadcastUntilReturn $ fromList $ ($ Nothing) <$> listens
+          ([], [], listens) -> broadcastUntilReturn $ fromList
+            $ delayed'
+            ++ (($ Nothing) <$> listens)
+
+-- * 'ProgramT' utilities
+
+liftView :: Monad m => ProgramViewT instr m a -> ProgramT instr m a
+liftView (Return a) = return a
+liftView (instr :>>= f) = singleton instr >>= f
+
+liftMView :: Monad m => m (ProgramViewT instr m a) -> ProgramT instr m a
+liftMView action = join $ lift $ liftView <$> action
