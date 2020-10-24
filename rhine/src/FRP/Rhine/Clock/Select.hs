@@ -21,8 +21,14 @@ import FRP.Rhine.Clock.Proxy
 -- dunai
 import Data.MonadicStreamFunction.Async (concatS)
 
+-- monad-schedule
+import Control.Monad.Schedule.Class (MonadSchedule)
+
 -- base
 import Data.Maybe (maybeToList)
+
+-- rhine
+import Control.Monad.Event
 
 -- | A clock that selects certain subevents of type 'a',
 --   from the tag of a main clock.
@@ -49,17 +55,20 @@ instance (Monoid cl, Semigroup a) => Monoid (SelectClock cl a) where
     , select = const mempty
     }
 
-
-instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
+-- FIXME This doesn't work
+-- instance (Monad m, Clock m cl) => Clock (EventT (Tag cl) m) (SelectClock cl a) where
+instance (Clock m cl, Monad m, MonadSchedule m, ev ~ (Time cl, Maybe (Tag cl))) => Clock (EventT ev m) (SelectClock cl a) where
   type Time (SelectClock cl a) = Time cl
   type Tag  (SelectClock cl a) = a
   initClock SelectClock {..} = do
-    (runningClock, initialTime) <- initClock mainClock
-    let
-      runningSelectClock = filterS $ proc _ -> do
-        (time, tag) <- runningClock -< ()
-        returnA                     -< (time, ) <$> select tag
-    return (runningSelectClock, initialTime)
+    (initialTime, _initialEvent) <- listenUntil Just
+    return (constM $ listenUntil selector, initialTime)
+      where
+        selector :: (Time cl, Maybe (Tag cl)) -> Maybe (Time cl, a)
+        selector (time, evMaybe) = do
+          ev <- evMaybe
+          a <- select ev
+          return (time, a)
 
 instance GetClockProxy (SelectClock cl a)
 
