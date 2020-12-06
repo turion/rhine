@@ -129,7 +129,7 @@ tagS >>> arr read :: ClSF IO StdinClock () Int
 [`tagS`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine.html#v:tagS) contains the string that the [`StdinClock`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine.html#t:StdinClock) grabbed from `stdin`, and only the clock has been allowed to block the thread!
 
 
-* Can a sampling schedule dynamically change, eg depend on a signal?
+* Can a sampling schedule dynamically change, e.g. depend on a signal?
 
 Yes, for instance you could implement a distance-dependent [collision detector](https://github.com/turion/rhine/issues/152).
 
