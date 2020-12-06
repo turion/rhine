@@ -112,7 +112,7 @@ see the [cheatsheet](https://github.com/turion/rhine/blob/master/CHEATSHEET.md).
 
 ## FAQ
 
-* Why does my blocking code, eg `arrMCl readLn`, behave [erratically](https://github.com/turion/rhine/issues/153)?
+* Why does my blocking code, e.g. `arrMCl readLn`, behave [erratically](https://github.com/turion/rhine/issues/153)?
 
 Clocks must be the only thing that blocks the thread, not `ClSF`s. So for example, you can fix:
 
