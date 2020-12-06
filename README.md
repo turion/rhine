@@ -112,7 +112,7 @@ see the [cheatsheet](https://github.com/turion/rhine/blob/master/CHEATSHEET.md).
 
 ## FAQ
 
-* Why does my blocking code, eg `arrMCl readLn`, behave [erratically](https://github.com/turion/rhine/issues/153)?
+* Why does my blocking code, e.g. `arrMCl readLn`, behave [erratically](https://github.com/turion/rhine/issues/153)?
 
 Clocks must be the only thing that blocks the thread, not `ClSF`s. So for example, you can fix:
 
@@ -126,17 +126,19 @@ by using:
 tagS >>> arr read :: ClSF IO StdinClock () Int
 ```
 
-`tagS` contains the string that the `StdinClock` grabbed from `stdin`, and only the clock has been allowed to block the thread!
+[`tagS`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine.html#v:tagS) contains the string that the [`StdinClock`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine.html#t:StdinClock) grabbed from `stdin`, and only the clock has been allowed to block the thread!
 
 
-* Can a sampling schedule dynamically change, eg depend on a signal?
+* Can a sampling schedule dynamically change, e.g. depend on a signal?
 
 Yes, for instance you could implement a distance-dependent [collision detector](https://github.com/turion/rhine/issues/152).
 
 
-* How to handle slow computations, IE computations that take longer than the sample rate?
+* How to handle slow computations, i.e. computations that take longer than the sample rate?
 
-Several [strategies exist](https://github.com/turion/rhine/issues/151) and it depends on your use case. For `FixedStep` clocks, it won't matter since the execution of the program isn't tied to a realtime clock. For `ClSF`s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
+Several [strategies exist](https://github.com/turion/rhine/issues/151) and it depends on your use case.
+For `FixedStep` clocks, it won't matter since the execution of the program isn't tied to a realtime clock.
+For `ClSF`s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
 
 ## Development
 
