@@ -134,7 +134,7 @@ tagS >>> arr read :: ClSF IO StdinClock () Int
 Yes, for instance you could implement a distance-dependent [collision detector](https://github.com/turion/rhine/issues/152).
 
 
-* How to handle slow computations, IE computations that take longer than the sample rate?
+* How to handle slow computations, i.e. computations that take longer than the sample rate?
 
 Several [strategies exist](https://github.com/turion/rhine/issues/151) and it depends on your use case.
 For `FixedStep` clocks, it won't matter since the execution of the program isn't tied to a realtime clock.
