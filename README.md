@@ -136,7 +136,9 @@ Yes, for instance you could implement a distance-dependent [collision detector](
 
 * How to handle slow computations, IE computations that take longer than the sample rate?
 
-Several [strategies exist](https://github.com/turion/rhine/issues/151) and it depends on your use case. For `FixedStep` clocks, it won't matter since the execution of the program isn't tied to a realtime clock. For `ClSF`s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
+Several [strategies exist](https://github.com/turion/rhine/issues/151) and it depends on your use case.
+For `FixedStep` clocks, it won't matter since the execution of the program isn't tied to a realtime clock.
+For `ClSF`s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
 
 ## Development
 
