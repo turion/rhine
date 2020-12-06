@@ -126,7 +126,7 @@ by using:
 tagS >>> arr read :: ClSF IO StdinClock () Int
 ```
 
-`tagS` contains the string that the `StdinClock` grabbed from `stdin`, and only the clock has been allowed to block the thread!
+[`tagS`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine.html#v:tagS) contains the string that the [`StdinClock`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine.html#t:StdinClock) grabbed from `stdin`, and only the clock has been allowed to block the thread!
 
 
 * Can a sampling schedule dynamically change, eg depend on a signal?
