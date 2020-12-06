@@ -114,7 +114,7 @@ see the [cheatsheet](https://github.com/turion/rhine/blob/master/CHEATSHEET.md).
 
 * Why does my blocking code, e.g. `arrMCl readLn`, behave [erratically](https://github.com/turion/rhine/issues/153)?
 
-Clocks must be the only thing that blocks the thread, not `ClSF`s. So for example, you can fix:
+[`Clock`](https://hackage.haskell.org/package/rhine-0.7.0/docs/FRP-Rhine-Clock.html)s must be the only things that block a thread, not [`ClSF`](https://hackage.haskell.org/package/rhine-0.7.0/docs/FRP-Rhine-ClSF-Core.html#t:ClSF)s. So for example, you can fix:
 
 ```haskell
 arrMCl readLn
@@ -137,8 +137,8 @@ Yes, for instance you could implement a distance-dependent [collision detector](
 * How to handle slow computations, i.e. computations that take longer than the sample rate?
 
 Several [strategies exist](https://github.com/turion/rhine/issues/151) and it depends on your use case.
-For `FixedStep` clocks, it won't matter since the execution of the program isn't tied to a realtime clock.
-For `ClSF`s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
+For [`FixedStep`](https://hackage.haskell.org/package/rhine-0.7.0/docs/FRP-Rhine-Clock-FixedStep.html#t:FixedStep) clocks, it won't matter since the execution of the program isn't tied to a realtime clock.
+For [`ClSF`](https://hackage.haskell.org/package/rhine-0.7.0/docs/FRP-Rhine-ClSF-Core.html#t:ClSF)s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
 
 ## Development
 
