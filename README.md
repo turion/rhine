@@ -76,9 +76,13 @@ would be:
   --   which is output every second.
   main :: IO ()
   main = flow $
-    ms500 @@ waitClock ||@ scheduleMillisecond @|| ms1200 @@ waitClock
-    >-- collect -@- concurrently -->
-    printEverySecond @@ waitClock
+    ms500 @@ waitClock            --  a Rhine = a ClSF in the context of a Clock
+    ||@ scheduleMillisecond @||   --  Compose 2 rhines in parallel
+    ms1200 @@ waitClock           --  a Rhine
+    >-- collect                   --  buffer results from both Rhines into a list
+        -@- concurrently          --  the next Rhine executes in its own thread
+    -->
+    printEverySecond @@ waitClock --  the final Rhine
 
   -- | Uncomment the following for a type error (the clocks don't match):
 
