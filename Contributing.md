@@ -69,6 +69,21 @@ In a pull request, do the following:
 1. Add new GHC to `.travis.yml`, remove old ones
 2. Update currently supported and default GHCs in this document
 
+## Library layout
+
+The repository is split into these packages:
+
+* `rhine`: The main library
+* `rhine-gloss` (and future packages `rhine-BACKEND`): Libraries connecting `rhine` to [`gloss`](http://hackage.haskell.org/package/gloss) (or some other backend)
+* `rhine-examples`: A zoo of examples using the library and different backends.
+
+If you have a contribution, and you are wondering where it should go, you can ask these questions to find the right place:
+
+* Is it portable (all OSes), has no external (non-Haskell) dependencies, and can be universally used with many backends? __`rhine`__.
+* Is it an example application, or maybe a tutorial? __`rhine-examples`__.
+* Does it concern an existing backend? __`rhine-BACKEND`__ (where you replace `BACKEND` with the name of the backend).
+* Does it add a new backend? Ideally, create a separate repository called `rhine-BACKEND`, and link to it from the main `rhine` README. If it's a backend to some library that is well-established in the Haskell community, and you're willing to maintain it and update it whenever there are breaking changes, we can talk about merging it into the main repository, though.
+
 ## Contributors
 
 Thanks go to:
@@ -80,3 +95,4 @@ Thanks go to:
 * https://github.com/alexpeits/
 * https://github.com/walseb/
 * https://github.com/smunix/
+* https://github.com/freckletonj
