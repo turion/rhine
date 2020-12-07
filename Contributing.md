@@ -84,6 +84,14 @@ If you have a contribution, and you are wondering where it should go, you can as
 * Does it concern an existing backend? __`rhine-BACKEND`__ (where you replace `BACKEND` with the name of the backend).
 * Does it add a new backend? Ideally, create a separate repository called `rhine-BACKEND`, and link to it from the main `rhine` README. If it's a backend to some library that is well-established in the Haskell community, and you're willing to maintain it and update it whenever there are breaking changes, we can talk about merging it into the main repository, though.
 
+### Backend libraries
+
+Core backend libraries (i.e. those that live in this repo here) have the same version numbers as the main library,
+and will always be up to date with that version of the main library.
+(There is no support for non-matching versions of a backend library and the main library.)
+
+Contributed backend libraries are of course free to adopt whatever versioning schema they want.
+
 ## Contributors
 
 Thanks go to:
