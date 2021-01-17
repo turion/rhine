@@ -67,6 +67,18 @@ hoistSchedule hoist Schedule {..} = Schedule initSchedule'
     hoistMSF = morphS
     -- TODO This should be a dunai issue
 
+
+hoistClockSchedule
+  :: ( Monad m1, Monad m2
+     , TimeDomainOf cl1 ~ TimeDomainOf cl2)
+  => (forall a . m1 a -> m2 a)
+  -> Schedule m1 cl1 cl2
+  -> Schedule m2 (HoistClock m1 m2 cl1) (HoistClock m1 m2 cl2)
+hoistClockSchedule hoist schedule = Schedule startSchedule'
+  where
+    startSchedule' (HoistClock cl1 _) (HoistClock cl2 _)
+      = startSchedule (hoistSchedule hoist schedule) cl1 cl2
+
 -- | Swaps the clocks for a given schedule.
 flipSchedule
   :: Monad m
@@ -177,6 +189,20 @@ schedSeq2 = Schedule $ \SequentialClock { sequentialSchedule = Schedule {..}, ..
 
 -- ** Parallelly combined clocks
 
+-- | Hoist a sequential clock, preserving its decomposition.
+--   Hoists the individual clocks and the schedule.
+hoistedSeqClock
+  :: (Monad m, Monad m')
+  => (forall a . m a -> m' a)
+  -> SequentialClock m cl1 cl2
+  -> SequentialClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)
+hoistedSeqClock morph (SequentialClock {..}) = SequentialClock
+  { sequentialCl1      = HoistClock sequentialCl1 morph
+  , sequentialCl2      = HoistClock sequentialCl2 morph
+  , sequentialSchedule = hoistClockSchedule morph sequentialSchedule
+  }
+
+-- ** Parallelly composed clocks
 
 -- | Two clocks can be combined with a schedule as a clock
 --   for an asynchronous parallel composition of signal networks.
@@ -238,6 +264,19 @@ schedPar2' = Schedule $ \ParallelClock { parallelSchedule = Schedule {..}, .. } 
       remap (Left tag2)          = Right tag2
       remap (Right (Left tag2))  = Left $ Right tag2
       remap (Right (Right tag1)) = Left $ Left tag1
+
+-- | Hoist a parallel clock, preserving its decomposition.
+--   Hoists the individual clocks and the schedule.
+hoistedParClock
+  :: (Monad m, Monad m')
+  => (forall a . m a -> m' a)
+  -> ParallelClock m cl1 cl2
+  -> ParallelClock m' (HoistClock m m' cl1)  (HoistClock m m' cl2)
+hoistedParClock morph (ParallelClock {..}) = ParallelClock
+  { parallelCl1      = HoistClock parallelCl1 morph
+  , parallelCl2      = HoistClock parallelCl2 morph
+  , parallelSchedule = hoistClockSchedule morph parallelSchedule
+  }
 
 
 -- * Navigating the clock tree
