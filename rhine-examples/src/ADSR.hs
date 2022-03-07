@@ -143,7 +143,7 @@ decay d = linearly d 1
 
 -- | A period in which a given amplitude is sustained indefinitely.
 sustain :: Monad m => amplitude -> Behaviour m time amplitude
-sustain = arr . const
+sustain amplitude = arr_ amplitude
 
 -- | The period in which the level falls from the sustain level to 0.
 --   and then an exception is thrown.
