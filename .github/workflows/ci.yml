@@ -7,7 +7,7 @@ jobs:
       matrix:
         ghc: ['8.4.4', '8.6.5', '8.8.4','8.10.7','9.0.2']
         os: [ubuntu-latest]
-    name: Haskell GHC ${{ matrix.ghc }} cabal + stack
+    name: Haskell GHC ${{ matrix.ghc }} cabal
     env:
       cabal_project_freeze: cabal.project.${{ matrix.ghc }}.freeze
     steps:
@@ -17,8 +17,6 @@ jobs:
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: '3.6.2.0'
-          enable-stack: true
-          stack-version: '2.7'
       - name: Install dependencies
         run: sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
       - name: Cabal update
@@ -41,10 +39,3 @@ jobs:
       - name: Cabal test
         run: |
           cabal test all --enable-tests --test-show-details=Always --project-file=cabal.project.${{ matrix.ghc }}
-      - name: Cache stack build artifacts
-        uses:  freckle/stack-cache-action@v1.0.1
-        with:
-          stack-yaml: stack.${{ matrix.ghc }}.yaml
-      - name: Stack build and test
-        run: |
-          stack build --system-ghc --test --stack-yaml stack.${{ matrix.ghc }}.yaml
