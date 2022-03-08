@@ -94,4 +94,4 @@ getRandomRS_
   :: (MonadRandom m, Random a)
   => (a, a)
   -> Behaviour m time a
-getRandomRS_ = constMCl . getRandomR
+getRandomRS_ range = constMCl $ getRandomR range
