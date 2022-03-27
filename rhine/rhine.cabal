@@ -88,7 +88,6 @@ library
     FRP.Rhine.Schedule.Trans
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
-    FRP.Rhine.TimeDomain
     FRP.Rhine.Type
 
   other-modules:
@@ -100,7 +99,7 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base         >= 4.11 && < 4.16
+  build-depends:       base         >= 4.13 && < 4.16
                      , dunai        >= 0.6
                      , transformers >= 0.5
                      , time         >= 1.8
@@ -111,6 +110,7 @@ library
                      , random       >= 1.1
                      , MonadRandom  >= 0.5
                      , simple-affine-space
+                     , time-domain
 
   -- Directories containing source files.
   hs-source-dirs:      src
