@@ -2,10 +2,12 @@
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Clock.Util where
 
+-- time-domain
+import Data.TimeDomain
+
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.TimeDomain
 
 -- * Auxiliary definitions and utilities
 
