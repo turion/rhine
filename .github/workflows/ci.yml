@@ -16,7 +16,9 @@ jobs:
         with:
           ghc-version: ${{ matrix.ghc }}
       - name: Install dependencies
-        run: sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
       - name: Cache Cabal build artifacts
         uses: actions/cache@v2
         with:
