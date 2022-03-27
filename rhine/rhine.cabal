@@ -88,7 +88,6 @@ library
     FRP.Rhine.Schedule.Trans
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
-    FRP.Rhine.TimeDomain
     FRP.Rhine.Type
 
   other-modules:
@@ -111,6 +110,7 @@ library
                      , random       >= 1.1
                      , MonadRandom  >= 0.5
                      , simple-affine-space
+                     , time-domain
 
   -- Directories containing source files.
   hs-source-dirs:      src

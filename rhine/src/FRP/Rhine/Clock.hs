@@ -31,8 +31,8 @@ import Control.Monad.Trans.Class (lift, MonadTrans)
 -- dunai
 import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
 
--- rhine
-import FRP.Rhine.TimeDomain as X
+-- time-domain
+import Data.TimeDomain as X
 
 -- * The 'Clock' type class
 
