@@ -1,12 +1,9 @@
-attrs@{ ... }:
-
 let
-  localPackages = import ./nix/localPackages.nix attrs;
+  lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+  flake-compat-src = fetchTarball {
+    url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
+    sha256 = lock.nodes.flake-compat.locked.narHash;
+  };
+  flake-compat = import flake-compat-src { src =  ./.; };
 in
-{
-  inherit (localPackages)
-    rhine
-    rhine-gloss
-    rhine-examples
-  ;
-}
+flake-compat.defaultNix

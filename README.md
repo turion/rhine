@@ -38,6 +38,7 @@ constraints on clocks come into effect, enforcing clock safety.
 
 A typical example,
 which can be run as `cd rhine-examples/ && cabal run Demonstration`,
+(or using nix flakes with `nix develop` followed `cabal run Demonstration`),
 would be:
 
 ```haskell

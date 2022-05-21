@@ -37,3 +37,24 @@ jobs:
       - name: Cabal test
         run: |
           cabal test all --enable-tests --test-show-details=Always --project-file=cabal.project.${{ matrix.ghc }}
+  build-flake:
+    name: Nix Flake
+    strategy:
+      matrix:
+        os:
+          - ubuntu-20.04
+          - macos-12
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: cachix/install-nix-action@v15
+      - name: Build default package (rhine)
+        run: nix build
+      - name: Build default package (rhine-examples)
+        run: nix build .#rhine-examples
+      - name: Build default package (rhine-gloss)
+        run: nix build .#rhine-gloss
+      - name: Run tests
+        run: nix develop -c cabal test all
+      # nix flake check breaks on IFD in multi-platform flake https://github.com/NixOS/nix/issues/4265
+      # - run: nix flake check
