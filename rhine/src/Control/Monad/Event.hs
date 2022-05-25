@@ -10,7 +10,7 @@ import Data.Foldable
 import Data.List.NonEmpty (NonEmpty (..), fromList)
 
 -- containers
-import Data.Sequence ((<|), Seq (..))
+import Data.Sequence ((<|), Seq (..), empty)
 
 -- transformers
 import Control.Monad.Trans.Class
@@ -63,6 +63,11 @@ runEventTWith events = viewT >=> eval events
     eval events (Emit ev :>>= f) = runEventTWith (ev <| events) $ f ()
     eval (ev :<| events) (Listen :>>= f) = runEventTWith events $ f $ Just ev
     eval Empty (Listen :>>= f) = runEventTWith Empty $ f Nothing
+
+-- | Run 'EventT' single threaded, with an empty initial list of events.
+--   Discards leftover emitted events.
+evalEventT :: Monad m => EventT ev m a -> m a
+evalEventT = (fst <$>) . runEventTWith empty
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (EventT ev m) where
   schedule = broadcastUntilReturn >>> lift
