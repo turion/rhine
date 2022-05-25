@@ -76,3 +76,20 @@ instance GetClockProxy (SelectClock cl a)
 --   until it returns a value.
 filterS :: Monad m => MSF m () (Maybe b) -> MSF m () b
 filterS = concatS . (>>> arr maybeToList)
+
+newtype EventSource cl = EventSource cl
+
+-- I don't completely understand why this instance definition isn't fine, and I have to do a strange workaround.
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/3485
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/14046
+-- instance (Monad m, MonadSchedule m, Clock m cl) => Clock (EventT (Time cl, Maybe (Tag cl)) m) (EventSource cl) where
+instance (Monad m, MonadSchedule m, Clock m cl, ev ~ (Time cl, Maybe (Tag cl))) => Clock (EventT ev m) (EventSource cl) where
+  type Time (EventSource cl) = Time cl
+  type Tag  (EventSource cl) = Tag  cl
+  initClock (EventSource cl) = do
+    (runningClock, initialTime) <- lift $ initClock cl
+    emit (initialTime, Nothing)
+    return (liftTransS runningClock >>> arrM emitAndReturn, initialTime)
+      where
+        emitAndReturn :: (Time cl, Tag cl) -> EventT (Time cl, Maybe (Tag cl)) m (Time cl, Tag cl)
+        emitAndReturn (time, tag) = emit (time, Just tag) >> return (time, tag)
