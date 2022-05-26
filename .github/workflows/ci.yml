@@ -37,6 +37,13 @@ jobs:
       - name: Cabal test
         run: |
           cabal test all --enable-tests --test-show-details=Always --project-file=cabal.project.${{ matrix.ghc }}
+      - name: Cache stack build artifacts
+        uses:  freckle/stack-cache-action@v1.0.1
+        with:
+          stack-yaml: stack.${{ matrix.ghc }}.yaml
+      - name: Stack build and test
+        run: |
+          stack build --system-ghc --test --stack-yaml stack.${{ matrix.ghc }}.yaml
   build-flake:
     name: Nix Flake
     strategy:
