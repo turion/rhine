@@ -41,23 +41,31 @@ import FRP.Rhine.Reactimation.ClockErasure
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
+
+-- monad-schedule
 import Control.Monad.Schedule.Class
+import Control.Monad.Schedule.Yield
 
 -- * @gloss@ effects
 
 -- FIXME How about a Reader (MSF () (Either Float Event))? That might unify the two backends and make the pure one more flexible.
 
 -- | A pure monad in which all effects caused by the @gloss@ backend take place.
-newtype GlossM a = GlossM { unGlossM :: (ReaderT (Float, Maybe Event)) (Writer Picture) a }
+newtype GlossM a = GlossM { unGlossM :: YieldT (ReaderT (Float, Maybe Event) (Writer Picture)) a }
   deriving (Functor, Applicative, Monad)
+  -- deriving (Functor, Applicative, Monad, MonadSchedule)
 
--- A fake schedule instance that will never be called because the Gloss backend does the scheduling.
+-- FIXME for some reasons deriving gets thrown off by the newtype
 instance MonadSchedule GlossM where
-  schedule = error "GlossM.schedule should never be called"
+  schedule actions = fmap (fmap (fmap GlossM)) $ GlossM $ schedule $ fmap unGlossM actions
+
+-- -- A fake schedule instance that will never be called because the Gloss backend does the scheduling.
+-- instance MonadSchedule GlossM where
+--   schedule = error "GlossM.schedule should never be called"
 
 -- | Add a picture to the canvas.
 paint :: Picture -> GlossM ()
-paint = GlossM . lift . tell
+paint = GlossM . lift . lift . tell
 
 -- FIXME This doesn't what you think it does
 -- | Clear the canvas.
@@ -80,7 +88,7 @@ instance Semigroup GlossClock where
 instance Clock GlossM GlossClock where
   type Time GlossClock = Float
   type Tag  GlossClock = Maybe Event
-  initClock _ = return (constM (GlossM ask) >>> (sumS *** Category.id), 0)
+  initClock _ = return (constM (GlossM $ yield >> lift ask) >>> (sumS *** Category.id), 0)
 
 instance GetClockProxy GlossClock
 
@@ -125,8 +133,8 @@ flowGlossWithWorldMSF
 flowGlossWithWorldMSF GlossSettings { .. } clock msf
   = play display backgroundColor stepsPerSecond (worldMSF, Blank) getPic handleEvent simStep
     where
-      worldMSF = MSFReader.runReaderS $ morphS unGlossM $ proc () -> do
-        (time, tag) <- fst $ fst $ runWriter $ flip runReaderT (0, Nothing) $ unGlossM $ initClock clock -< ()
+      worldMSF = MSFReader.runReaderS $ morphS (runYieldT . unGlossM) $ proc () -> do
+        (time, tag) <- fst $ fst $ runWriter $ flip runReaderT (0, Nothing) $ runYieldT $ unGlossM $ initClock clock -< ()
         msf -< (time, tag)
       getPic (_, pic) = pic
       stepWith (diff, maybeEvent) (msf, _) = snd *** id $ runWriter $ unMSF msf ((diff, maybeEvent), ())
