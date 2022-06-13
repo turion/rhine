@@ -87,6 +87,20 @@ eraseClockSN initialTime (Parallel snL snR) = proc (time, tag, maybeA) -> do
     Left  tagL -> eraseClockSN initialTime snL -< (time, tagL, maybeA)
     Right tagR -> eraseClockSN initialTime snR -< (time, tagR, maybeA)
 
+eraseClockSN initialTime (Postcompose sn clsf) =
+  let
+    proxy = toClockProxy sn
+  in proc input@(time, tag, _) -> do
+  bMaybe <- eraseClockSN initialTime sn -< input
+  mapMaybeS $ eraseClockClSF (outProxy proxy) initialTime clsf -< (time, , ) <$> outTag proxy tag <*> bMaybe
+
+eraseClockSN initialTime (Precompose clsf sn) =
+  let
+    proxy = toClockProxy sn
+  in proc (time, tag, aMaybe) -> do
+  bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time, , ) <$> inTag proxy tag <*> aMaybe
+  eraseClockSN initialTime sn -< (time, tag, bMaybe)
+
 -- | Translate a resampling buffer into a monadic stream function.
 --
 --   The input decides whether the buffer is to accept input or has to produce output.
