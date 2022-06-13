@@ -69,6 +69,22 @@ data SN m cl a b where
     => SN m                  cl1      a b
     -> SN m                      cl2  a b
     -> SN m (ParallelClock m cl1 cl2) a b
+  -- | A 'ClSF' can always be postcomposed onto an 'SN' if the clocks match on the output.
+  Postcompose
+    :: ( Clock m (Out cl)
+       , Time cl ~ Time (Out cl)
+       )
+    => SN    m      cl  a b
+    -> ClSF  m (Out cl)   b c
+    -> SN    m      cl  a   c
+  -- | A 'ClSF' can always be precomposed onto an 'SN' if the clocks match on the input.
+  Precompose
+    :: ( Clock m (In cl)
+       , Time cl ~ Time (In cl)
+       )
+    => ClSF m (In cl) a b
+    -> SN   m     cl    b c
+    -> SN   m     cl  a   c
 
 instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
   type Cl (SN m cl a b) = cl

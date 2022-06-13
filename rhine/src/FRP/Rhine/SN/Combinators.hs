@@ -24,7 +24,8 @@ import FRP.Rhine.SN
 Synchronous clsf      >>>^ f = Synchronous $ clsf >>^ f
 Sequential sn1 rb sn2 >>>^ f = Sequential sn1 rb     $ sn2 >>>^ f
 Parallel   sn1    sn2 >>>^ f = Parallel  (sn1 >>>^ f) (sn2 >>>^ f)
-
+Postcompose sn clsf >>>^ f = Postcompose sn $ clsf >>^ f
+Precompose clsf sn >>>^ f = Precompose clsf $ sn >>>^ f
 
 -- | Precompose a signal network with a pure function.
 (^>>>)
@@ -35,7 +36,28 @@ Parallel   sn1    sn2 >>>^ f = Parallel  (sn1 >>>^ f) (sn2 >>>^ f)
 f ^>>> Synchronous clsf      = Synchronous $ f ^>> clsf
 f ^>>> Sequential sn1 rb sn2 = Sequential (f ^>>> sn1) rb      sn2
 f ^>>> Parallel   sn1    sn2 = Parallel   (f ^>>> sn1) (f ^>>> sn2)
+f ^>>> Postcompose sn clsf = Postcompose (f ^>>> sn) clsf
+f ^>>> Precompose clsf sn = Precompose (f ^>> clsf) sn
 
+-- | Postcompose a signal network with a 'ClSF'.
+(>--^)
+  :: ( Clock m (Out cl)
+     , Time cl ~ Time (Out cl)
+     )
+  => SN    m      cl  a b
+  -> ClSF  m (Out cl)   b c
+  -> SN    m      cl  a   c
+(>--^) = Postcompose
+
+-- | Precompose a signal network with a 'ClSF'.
+(^-->)
+  :: ( Clock m (In cl)
+     , Time cl ~ Time (In cl)
+     )
+  => ClSF m (In cl) a b
+  -> SN   m     cl    b c
+  -> SN   m     cl  a   c
+(^-->) = Precompose
 
 -- | Compose two signal networks on the same clock in data-parallel.
 --   At one tick of @cl@, both networks are stepped.
