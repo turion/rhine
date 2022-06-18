@@ -43,8 +43,6 @@ library
 executable rhine-terminal-repl
   main-is:             Main.hs
   ghc-options:         -threaded
-  -- build-depends:       base         >= 4.9 && < 5
-  --                    , rhine-terminal
   build-depends:       base         >= 4.11 && < 4.16
                      , rhine        == 0.7.1
                      , rhine-terminal
@@ -53,6 +51,23 @@ executable rhine-terminal-repl
                      , terminal     >= 0.2.0.0
                      , text         >= 1.2.5.0
                      , time         >= 1.9.3
+
+  default-language:    Haskell2010
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+
+test-suite rhine-terminal-tests
+  type:                exitcode-stdio-1.0
+  main-is:             tests/Main.hs
+  ghc-options:         -threaded
+  build-depends:       base         >= 4.11 && < 4.16
+                     , rhine        == 0.7.1
+                     , rhine-terminal
+                     , exceptions   >= 0.10.4
+                     , transformers >= 0.5
+                     , terminal     >= 0.2.0.0
+                     , text         >= 1.2.5.0
+                     , time         >= 1.9.3
+                     , hspec
 
   default-language:    Haskell2010
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
