@@ -3,7 +3,6 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -26,7 +25,7 @@ import Data.Time.Clock ( getCurrentTime )
 
 -- terminal
 import System.Terminal
-import System.Terminal.Internal ( LocalTerminal )
+import System.Terminal.Internal ( Terminal )
 
 -- transformers
 import Control.Monad.Trans.Class (lift)
@@ -39,12 +38,12 @@ import FRP.Rhine.Schedule (Schedule(..))
 import FRP.Rhine (concurrently, liftTransS, first)
 
 -- * Terminal clock
-newtype TerminalEventClock = TerminalEventClock LocalTerminal
+newtype TerminalEventClock t = TerminalEventClock t
 
-instance Clock (TerminalT LocalTerminal IO) TerminalEventClock
+instance Terminal t => Clock (TerminalT t IO) (TerminalEventClock t)
   where
-    type Time TerminalEventClock = UTCTime
-    type Tag  TerminalEventClock = Either Interrupt Event
+    type Time (TerminalEventClock t) = UTCTime
+    type Tag  (TerminalEventClock t) = Either Interrupt Event
 
     initClock (TerminalEventClock term) = do
       initialTime <- liftIO getCurrentTime
@@ -56,30 +55,32 @@ instance Clock (TerminalT LocalTerminal IO) TerminalEventClock
         , initialTime
         )
 
-instance GetClockProxy TerminalEventClock
+instance Terminal t => GetClockProxy (TerminalEventClock t)
 
-instance Semigroup TerminalEventClock where
+instance Terminal t => Semigroup (TerminalEventClock t) where
   t <> _ = t
 
 -- | A schedule in the 'TerminalT LocalTerminal' transformer,
 --   supplying the same backend connection to its scheduled clocks.
 terminalConcurrently
-  :: forall cl1 cl2. (
-       Clock (TerminalT LocalTerminal IO) cl1
-     , Clock (TerminalT LocalTerminal IO) cl2
+  :: forall t cl1 cl2. (
+       Terminal t
+     , Clock (TerminalT t IO) cl1
+     , Clock (TerminalT t IO) cl2
      , Time cl1 ~ Time cl2
      )
-  => LocalTerminal -> Schedule (TerminalT LocalTerminal IO) cl1 cl2
+  => t -> Schedule (TerminalT t IO) cl1 cl2
 terminalConcurrently term
   = Schedule $ \cl1 cl2 -> lift $ first liftTransS <$>
     initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
 
-type RunTerminalClock m cl = HoistClock (TerminalT LocalTerminal m) m cl
+type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
 
 runTerminalClock
-  :: LocalTerminal
+  :: Terminal t
+  => t
   -> cl
-  -> RunTerminalClock IO cl
+  -> RunTerminalClock IO t cl
 runTerminalClock term unhoistedClock = HoistClock
   { monadMorphism = flip runTerminalT term
   , ..
