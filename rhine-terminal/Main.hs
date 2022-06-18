@@ -87,4 +87,37 @@ main :: IO ()
 main = do
   hSetBuffering stdin NoBuffering
   hSetBuffering stdout NoBuffering
-  withTerminal $ \term -> runTerminalT (flow $ mainRhine term) term
+  -- withTerminal $ \term -> runTerminalT (flow $ mainRhine term) term
+  withTerminal $ \term -> runTerminalT (flow $ mainRhine' term) term
+
+------------
+--
+-- Alternate
+
+beat' :: ClSF App cl () Text
+beat' = flip T.cons " > " . (cycle " ." !!) <$> count
+
+key' :: ClSF App KeyClock () Char
+key' = tagS
+
+display' :: ClSF App cl (Either Text Char) ()
+display' = arrMCl $ \case
+  Left prompt -> do
+    Position _ column <- getCursorPosition
+    if column /= 0 then do
+      moveCursorBackward column
+      putText prompt
+      setCursorColumn column
+    else putText prompt
+    flush
+  Right k -> do
+    putChar k
+    flush
+
+-- Rhine of sources
+
+sensor' :: LocalTerminal -> Rhine App DisplayClock () (Either Text Char)
+sensor' term = beat' @@ liftClock waitClock ++@ terminalConcurrently term @++ key' @@ keyClock term
+
+mainRhine' :: LocalTerminal -> Rhine App DisplayClock () ()
+mainRhine' term = sensor' term @>-^ display'
