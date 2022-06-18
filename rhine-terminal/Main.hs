@@ -33,12 +33,12 @@ type AppT = TerminalT LocalTerminal
 
 -- Clocks
 
-type KeyClock = SelectClock TerminalEventClock Char
+type KeyClock = SelectClock (TerminalEventClock LocalTerminal) Char
 
 keyClock :: LocalTerminal -> KeyClock
 keyClock term = SelectClock { mainClock = TerminalEventClock term, select = selectChar }
   where
-    selectChar :: Tag TerminalEventClock -> Maybe Char
+    selectChar :: Tag (TerminalEventClock LocalTerminal) -> Maybe Char
     selectChar = \case
       Right (KeyEvent (CharKey k) _) -> Just k
       _ -> Nothing
