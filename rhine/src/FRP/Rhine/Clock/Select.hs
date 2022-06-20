@@ -24,7 +24,6 @@ import Data.MonadicStreamFunction.Async (concatS)
 
 -- base
 import Data.Maybe (catMaybes, maybeToList)
-import Data.Semigroup
 
 -- | A clock that selects certain subevents of type 'a',
 --   from the tag of a main clock.
@@ -38,6 +37,18 @@ data SelectClock cl a = SelectClock
   --   or 'Just a' if the subclock should tick, with tag 'a'.
   , select    :: Tag cl -> Maybe a
   }
+
+instance (Semigroup a, Semigroup cl) => Semigroup (SelectClock cl a) where
+  cl1 <> cl2 = SelectClock
+    { mainClock = mainClock cl1 <> mainClock cl2
+    , select = \tag -> select cl1 tag <> select cl2 tag
+    }
+
+instance (Monoid cl, Semigroup a) => Monoid (SelectClock cl a) where
+  mempty = SelectClock
+    { mainClock = mempty
+    , select = const mempty
+    }
 
 
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
