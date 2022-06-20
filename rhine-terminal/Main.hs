@@ -84,7 +84,7 @@ sources :: LocalTerminal
         -> Rhine App SignalClock () Interrupt
         -> Rhine App AppClock () Actions
 sources term input prompt signal =
-  ( ( input ++@ concurrently @++ signal )
+  ( ( input ++@ schedSelectClocks @++ signal )
             ++@ concurrently @++ prompt
   ) @>>^ \case
             Left (Left i) -> Input i
