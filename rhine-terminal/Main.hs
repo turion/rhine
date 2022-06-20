@@ -25,12 +25,11 @@ import System.Terminal.Internal
 import FRP.Rhine
 import System.IO hiding (putChar)
 
-import FRP.Rhine.Terminal (TerminalEventClock(..), terminalConcurrently)
+import FRP.Rhine.Terminal (TerminalEventClock(..))
 import System.Exit (exitSuccess)
 
 
-type App = AppT IO
-type AppT = TerminalT LocalTerminal
+type App = IO
 
 -- Clocks
 
@@ -59,10 +58,10 @@ signalClock term = SelectClock { mainClock = TerminalEventClock term, select = s
       Left i -> Just i
       _ -> Nothing
 
-type BeatClock = LiftClock IO AppT (Millisecond 1000)
+type BeatClock = Millisecond 1000
 
 
-type AppClock = ParallelClock App (ParallelClock App InputClock BeatClock) SignalClock
+type AppClock = ParallelClock App (ParallelClock App InputClock SignalClock) BeatClock
 
 -- Rhines
 
@@ -70,7 +69,7 @@ keySource :: LocalTerminal -> Rhine App InputClock () Input
 keySource term = tagS @@ keyClock term
 
 beatSource :: Rhine App BeatClock () Text
-beatSource = (flip T.cons " > " . (cycle " ." !!) <$> count) @@ liftClock waitClock
+beatSource = (flip T.cons " > " . (cycle " ." !!) <$> count) @@ waitClock
 
 signalSource :: LocalTerminal ->Rhine App SignalClock () Interrupt
 signalSource term = tagS @@ signalClock term
@@ -85,17 +84,17 @@ sources :: LocalTerminal
         -> Rhine App SignalClock () Interrupt
         -> Rhine App AppClock () Actions
 sources term input prompt signal =
-  ( ( input ++@ terminalConcurrently term @++ prompt )
-            ++@ terminalConcurrently term @++ signal
+  ( ( input ++@ concurrently @++ signal )
+            ++@ concurrently @++ prompt
   ) @>>^ \case
             Left (Left i) -> Input i
-            Left (Right p) -> Prompt p
-            Right s -> Signal s
+            Left (Right s) -> Signal s
+            Right p -> Prompt p
 
 -- ClSFs
 
-display :: ClSF App cl Actions ()
-display = arrMCl $ \case
+display :: LocalTerminal -> ClSF App cl Actions ()
+display term = arrMCl $ (flip runTerminalT term .) $ \case
   Input i ->
     case i of
       Char c -> putChar c >> flush
@@ -122,7 +121,7 @@ display = arrMCl $ \case
 -- Rhines
 
 mainRhine :: LocalTerminal -> Rhine App AppClock () ()
-mainRhine term = sources term (keySource term) beatSource (signalSource term) @>-^ display
+mainRhine term = sources term (keySource term) beatSource (signalSource term) @>-^ display term
 
 -- Main
 
@@ -130,6 +129,4 @@ main :: IO ()
 main = do
   hSetBuffering stdin NoBuffering
   hSetBuffering stdout NoBuffering
-  withTerminal $ \term -> runTerminalT (flow $ mainRhine term) term
-
-
+  withTerminal $ \term -> flow $ mainRhine term

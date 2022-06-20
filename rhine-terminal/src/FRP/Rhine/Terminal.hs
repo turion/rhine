@@ -29,7 +29,7 @@ import System.Terminal.Internal ( Terminal )
 
 -- transformers
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (liftIO, MonadIO)
 
 -- rhine
 import FRP.Rhine.ClSF ( constM, UTCTime, Clock(..), HoistClock(..) )
@@ -40,7 +40,7 @@ import FRP.Rhine (concurrently, liftTransS, first)
 -- * Terminal clock
 newtype TerminalEventClock t = TerminalEventClock t
 
-instance Terminal t => Clock (TerminalT t IO) (TerminalEventClock t)
+instance (Terminal t, MonadIO m) => Clock m (TerminalEventClock t)
   where
     type Time (TerminalEventClock t) = UTCTime
     type Tag  (TerminalEventClock t) = Either Interrupt Event
@@ -48,7 +48,7 @@ instance Terminal t => Clock (TerminalT t IO) (TerminalEventClock t)
     initClock (TerminalEventClock term) = do
       initialTime <- liftIO getCurrentTime
       return
-        ( constM $ flip runTerminalT term $ do
+        ( constM $ liftIO $ flip runTerminalT term $ do
             event <- awaitEvent
             time <- liftIO getCurrentTime
             return (time, event)
