@@ -44,6 +44,13 @@ instance (Semigroup a, Semigroup cl) => Semigroup (SelectClock cl a) where
     , select = \tag -> select cl1 tag <> select cl2 tag
     }
 
+instance (Monoid cl, Semigroup a) => Monoid (SelectClock cl a) where
+  mempty = SelectClock
+    { mainClock = mempty
+    , select = const mempty
+    }
+
+
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
   type Time (SelectClock cl a) = Time cl
   type Tag  (SelectClock cl a) = a
