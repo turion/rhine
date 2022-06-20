@@ -11,9 +11,11 @@
       flake = false;
     };
 
-    haskell-flake-utils.url = "github:ivanovs-4/haskell-flake-utils";
-    haskell-flake-utils.inputs.nixpkgs.follows = "nixpkgs";
-    haskell-flake-utils.inputs.flake-utils.follows = "flake-utils";
+    haskell-flake-utils = {
+      url = "github:ivanovs-4/haskell-flake-utils";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
   };
 
 outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }:
