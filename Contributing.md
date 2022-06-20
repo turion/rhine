@@ -23,8 +23,8 @@
 
 ### GHC, cabal, stack, nix
 
-* Rhine should be compilable with `cabal`, `nix` and `stack`.
-  If in doubt, use `cabal` and `nix`.
+* Rhine should be compilable with `cabal`, `nix` (including flakes) and `stack`.
+  If in doubt, use `cabal` and `nix` (preferably flakes with `nix develop`).
 * Rhine does not make an effort to support old GHC versions,
   but it does make an effort to support _new_ versions.
   Check `.travis.yml` for supported GHC versions.
