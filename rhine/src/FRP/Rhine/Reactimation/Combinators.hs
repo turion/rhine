@@ -191,3 +191,40 @@ infix 3 @||
        -> Rhine m (ParallelClock   m clL clR) a b
 RhineParallelAndSchedule (Rhine sn1 clL) schedule @|| (Rhine sn2 clR)
   = Rhine (sn1 |||| sn2) (ParallelClock clL clR schedule)
+
+
+-- | Postcompose a 'Rhine' with a pure function.
+(@>>^)
+  :: Monad m
+  => Rhine m cl a b
+  ->             (b -> c)
+  -> Rhine m cl a      c
+Rhine sn cl @>>^ f = Rhine (sn >>>^ f) cl
+
+-- | Precompose a 'Rhine' with a pure function.
+(^>>@)
+  :: Monad m
+  =>           (a -> b)
+  -> Rhine m cl      b c
+  -> Rhine m cl a      c
+f ^>>@ Rhine sn cl = Rhine (f ^>>> sn) cl
+
+-- | Postcompose a 'Rhine' with a 'ClSF'.
+(@>-^)
+  :: ( Clock m (Out cl)
+     , Time cl ~ Time (Out cl)
+     )
+  => Rhine m      cl  a b
+  -> ClSF  m (Out cl)   b c
+  -> Rhine m      cl  a   c
+Rhine sn cl @>-^ clsf = Rhine (sn >--^ clsf) cl
+
+-- | Precompose a 'Rhine' with a 'ClSF'.
+(^->@)
+  :: ( Clock m (In cl)
+     , Time cl ~ Time (In cl)
+     )
+  => ClSF  m (In cl) a b
+  -> Rhine m     cl    b c
+  -> Rhine m     cl  a   c
+clsf ^->@ Rhine sn cl = Rhine (clsf ^--> sn) cl

@@ -29,11 +29,12 @@ If you miss something, feel free to open an issue or pull request.
 * `|` roughly means "in time-parallel"
 * `+` is as `|`, but has the topology of a "fan-in", in analogy to [`Control.Arrow.ArrowChoice`](https://hackage.haskell.org/package/base-4.12.0.0/docs/Control-Arrow.html#v:-124--124--124-)
 * `>` and `-` are in the direction of data flow
+* `-` means that a `ClSF` or `ResBuf` is involved
 * `^` composes with a pure function
 
 ### Common combinators
 
-#### SN composition
+#### `SN` composition
 
 ##### Sequential composition
 | Operator        | Description                                                                                | Simplified Type Signature                                                |
@@ -42,6 +43,8 @@ If you miss something, feel free to open an issue or pull request.
 | `>->` and `<-<` | Same as `>>>` and `<<<` but with higher operator precedence                                |                                                                          |
 | `^>>>`          | Precompose a signal network with a pure function                                           | `(a -> b) -> SN m cl b c -> SN m cl a c`                                 |
 | `>>>^`          | Postcompose a signal network with a pure function                                          | `SN m cl a b -> (b -> c) -> SN m cl a c`                                 |
+| `^-->` | Precompose a signal network with a `ClSF` | `ClSF m (In cl) a b -> SN m cl b c -> SN m cl a c` |
+| `>--^` | Postcompose a signal network with a `ClSF` | `SN m cl a b -> ClSF m (Out cl) b c -> SN m cl a c` |
 
 ##### Parallel composition
 | Operator   | Clock Type | Input Type | Output Type | Resulting Type                             |
@@ -50,7 +53,17 @@ If you miss something, feel free to open an issue or pull request.
 | `++++`     | Different  | Same       | Different   | `SN m (ParClock m clL clR) a (Either b c)` |
 | `\|\|\|\|` | Different  | Same       | Same        | `SN m (ParClock m clL clR) a b`            |
 
-##### Parallel rhine composition
+#### `Rhine` composition
+
+##### Sequential composition
+| Operator        | Description                                                                                | Simplified Type Signature                                                |
+|-----------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `^>>@`          | Precompose a `Rhine` with a pure function                                           | `(a -> b) -> Rhine m cl b c -> Rhine m cl a c`                                 |
+| `@>>^`          | Postcompose a `Rhine` with a pure function                                          | `Rhine m cl a b -> (b -> c) -> Rhine m cl a c`                                 |
+| `^->@` | Precompose a `Rhine` with a `ClSF` | `ClSF m (In cl) a b -> Rhine m cl b c -> Rhine m cl a c` |
+| `@>-^` | Postcompose a `Rhine` with a `ClSF` | `Rhine m cl a b -> ClSF m (Out cl) b c -> Rhine m cl a c` |
+
+##### Parallel composition
 
 | Operator   | Resulting Type                                     |
 |------------|----------------------------------------------------|
