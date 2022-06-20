@@ -38,6 +38,11 @@ data SelectClock cl a = SelectClock
   , select    :: Tag cl -> Maybe a
   }
 
+instance (Semigroup a, Semigroup cl) => Semigroup (SelectClock cl a) where
+  cl1 <> cl2 = SelectClock
+    { mainClock = mainClock cl1 <> mainClock cl2
+    , select = \tag -> select cl1 tag <> select cl2 tag
+    }
 
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
   type Time (SelectClock cl a) = Time cl
