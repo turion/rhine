@@ -1,0 +1,10 @@
+resolver: lts-19.08
+
+packages:
+- rhine
+- rhine-examples
+- rhine-gloss
+
+extra-deps:
+- time-domain-0.1.0.0@sha256:48146872e85f46399e8b8d7ff7c3d3b7f530e2de167b6893ba3ce649ba2e2e75,800
+
