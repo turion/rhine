@@ -12,7 +12,7 @@ and reexports everything needed from there.
 module FRP.Rhine.ClSF.Except
   ( module FRP.Rhine.ClSF.Except
   , module X
-  , safe, safely, Empty, exceptS, runMSFExcept, currentInput
+  , safe, safely, exceptS, runMSFExcept, currentInput
   )
   where
 
