@@ -15,9 +15,6 @@ module FRP.Rhine.ClSF.Random
 -- transformers
 import Control.Monad.IO.Class
 
--- random
-import System.Random (newStdGen)
-
 -- MonadRandom
 import Control.Monad.Random
 

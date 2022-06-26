@@ -29,7 +29,6 @@ import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
 import Control.Monad.Trans.MSF.Reader (readerS)
-import Data.MonadicStreamFunction (constM, sumFrom, iPre, feedback)
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
 
 -- simple-affine-space
