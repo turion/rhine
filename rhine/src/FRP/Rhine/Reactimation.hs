@@ -8,10 +8,6 @@ as main loops.
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation where
 
--- base
-import Control.Monad ((>=>))
-import Data.Functor (void)
-
 -- dunai
 import Data.MonadicStreamFunction.InternalCore
 
@@ -19,12 +15,9 @@ import Data.MonadicStreamFunction.InternalCore
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF.Core
-import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type
-
-
 
 -- * Running a Rhine
 

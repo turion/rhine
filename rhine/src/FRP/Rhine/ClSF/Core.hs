@@ -23,7 +23,6 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 
 -- dunai
-import Data.MonadicStreamFunction (MSF, arrM, constM, morphS, liftTransS)
 import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
 
 -- rhine

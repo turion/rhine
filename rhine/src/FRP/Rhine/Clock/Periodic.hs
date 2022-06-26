@@ -17,7 +17,6 @@ The time differences are supplied at the type level.
 module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
-import Control.Monad (forever)
 import Data.List.NonEmpty hiding (unfold)
 import Data.Maybe (fromMaybe)
 import GHC.TypeLits (Nat, KnownNat, natVal)
