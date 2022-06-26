@@ -9,9 +9,8 @@ every input line on the console triggers one tick of the 'StdinClock'.
 {-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Clock.Realtime.Stdin where
 
--- base
+-- time
 import Data.Time.Clock
-import Data.Semigroup
 
 -- transformers
 import Control.Monad.IO.Class
@@ -19,7 +18,6 @@ import Control.Monad.IO.Class
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import Data.Semigroup
 
 {- |
 A clock that ticks for every line entered on the console,

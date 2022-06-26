@@ -6,12 +6,8 @@
 
 module FRP.Rhine.ClSF.Upsample where
 
--- base
-import Data.Semigroup
-
 -- dunai
 import Control.Monad.Trans.MSF.Reader
---import Data.MonadicStreamFunction
 
 -- rhine
 import FRP.Rhine.ClSF.Core

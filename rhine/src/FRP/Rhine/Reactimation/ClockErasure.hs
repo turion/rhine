@@ -13,12 +13,10 @@ module FRP.Rhine.Reactimation.ClockErasure where
 
 -- base
 import Control.Monad (join)
-import Data.Maybe (fromJust, fromMaybe)
 
 -- dunai
 import Control.Monad.Trans.MSF.Reader
 import Data.MonadicStreamFunction
-import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
 import FRP.Rhine.Clock
@@ -26,7 +24,6 @@ import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Util
 import FRP.Rhine.ClSF hiding (runReaderS)
 import FRP.Rhine.ResamplingBuffer
-import FRP.Rhine.Schedule
 import FRP.Rhine.SN
 
 -- | Run a clocked signal function as a monadic stream function,

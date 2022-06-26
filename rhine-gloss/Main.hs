@@ -3,7 +3,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- base
-import qualified Control.Category as Category
 import Data.Maybe (maybeToList)
 
 -- rhine-gloss
@@ -28,6 +27,7 @@ main = do
     1 -> flowGloss defaultSettings pureClSF
     2 -> flowGlossCombined defaultSettings pureRhine
     3 -> flowGlossIO defaultSettings ioRhine
+    _ -> error "Invalid input"
 
 -- | Run the gears simulation with the pure backend synchronously.
 pureClSF = currentEvent >>> arr maybeToList >>> sim

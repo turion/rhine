@@ -20,9 +20,7 @@ module FRP.Rhine.Gloss.IO
   where
 
 -- base
-import qualified Control.Category as Category
 import Control.Concurrent
-import Control.Concurrent.MVar
 import Data.Functor (void)
 import Data.IORef
 
@@ -125,10 +123,10 @@ launchGlossThread GlossSettings { .. } glossLoop = do
       getPic               (_, _, _, picRef)   = readIORef picRef
       -- Only try to put so this doesn't hang in case noone is listening for events or ticks
       handleEvent event    vars@(_, eventVar, _, _) = do
-        result <- tryPutMVar eventVar event
+        void $ tryPutMVar eventVar event
         return vars
       simStep     diffTime vars@(timeVar,  _, _, _) = do
-        result <- tryPutMVar timeVar diffTime
+        void $ tryPutMVar timeVar diffTime
         return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
   runReaderT (unGlossConcT glossLoop) vars

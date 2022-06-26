@@ -28,12 +28,12 @@ data ClockProxy cl where
 
 inProxy :: ClockProxy cl -> ClockProxy (In cl)
 inProxy LeafProxy = LeafProxy
-inProxy (SequentialProxy p1 p2) = inProxy p1
+inProxy (SequentialProxy p1 _) = inProxy p1
 inProxy (ParallelProxy pL pR) = ParallelProxy (inProxy pL) (inProxy pR)
 
 outProxy :: ClockProxy cl -> ClockProxy (Out cl)
 outProxy LeafProxy = LeafProxy
-outProxy (SequentialProxy p1 p2) = outProxy p2
+outProxy (SequentialProxy _ p2) = outProxy p2
 outProxy (ParallelProxy pL pR) = ParallelProxy (outProxy pL) (outProxy pR)
 
 -- | Return the incoming tag, assuming that the incoming clock is ticked,

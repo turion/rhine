@@ -18,9 +18,6 @@ module FRP.Rhine.ResamplingBuffer
 -- rhine
 import FRP.Rhine.Clock
 
--- base
-import Control.Arrow (second)
-
 -- A quick note on naming conventions, to whoever cares:
 -- . Call a single clock @cl@.
 -- . Call several clocks @cl1@, @cl2@ etc. in most situations.
