@@ -13,7 +13,6 @@ module FRP.Rhine.Gloss.Pure.Combined where
 
 -- rhine
 import FRP.Rhine
-import FRP.Rhine.Reactimation.ClockErasure
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -103,15 +102,3 @@ buildGlossRhine selector clsfSim
   =   timeInfoOf tag @@ glossEventSelectClock selector
   >-- collect
   --> clsfSim        @@ glossSimulationClock
-
--- * Reactimation
-
--- | The main function that will start the @gloss@ backend and run the 'SN'.
-flowGlossCombined
-  :: GlossSettings
-  -> GlossRhine a -- ^ The @gloss@-compatible 'Rhine'.
-  -> IO ()
-flowGlossCombined settings Rhine { .. } = flowGlossWithWorldMSF settings clock $ proc tick -> do
-  eraseClockSN 0 sn -< case tick of
-    (_       , Left event) -> (0       , Left event, Just ())
-    (diffTime, Right ()  ) -> (diffTime, Right ()  , Nothing)
