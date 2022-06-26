@@ -9,11 +9,15 @@ import System.IO
 import System.Terminal
 import System.Terminal.Internal
 import FRP.Rhine
-import GHC.Conc (retry, readTVarIO)
-import Control.Concurrent (forkIO)
+import GHC.Conc (retry, readTVarIO, atomically)
+import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (void)
 
+--stm
+import Control.Concurrent.STM.TQueue
+
 import Test.Hspec
+import Data.Text (singleton)
 -- import Test.Tasty ()
 -- import Test.Tasty.HUnit ( assertEqual )
 
@@ -27,11 +31,11 @@ keyClock term = SelectClock { mainClock = TerminalEventClock term, select = sele
       Right (KeyEvent (CharKey k) _) -> Just k
       _ -> Nothing
 
-defaultSettings :: VirtualTerminalSettings
-defaultSettings = VirtualTerminalSettings
+defaultSettings :: TQueue Event -> VirtualTerminalSettings
+defaultSettings eventQueue = VirtualTerminalSettings
     { virtualType         = "xterm"
     , virtualWindowSize   = pure (Size 3 10)
-    , virtualEvent        = retry
+    , virtualEvent        = readTQueue eventQueue
     , virtualInterrupt    = retry
     }
 
@@ -43,21 +47,27 @@ displayDot = tagS >-> arrMCl (\_ -> do
 testRhine :: Terminal t => t -> Rhine (TerminalT t IO) (KeyClock t) () ()
 testRhine term = displayDot @@ keyClock term
 
+charEvent :: Terminal t => TQueue Event -> t -> Char -> IO ()
+charEvent eventQueue terminal char = do
+  termCommand terminal $ PutText $ singleton char
+  atomically $ writeTQueue eventQueue $ KeyEvent (CharKey char) mempty
+
 main :: IO ()
 main = hspec $ do
     describe "rhine-terminal with VirtualTerminal" $ do
       it "replaces virtual inputs by dots" $ do
-        t <- withVirtualTerminal defaultSettings $ \t -> do
+        eventQueue <- newTQueueIO
+        withVirtualTerminal (defaultSettings eventQueue) $ \t -> do
           void $ liftIO $ forkIO $ runTerminalT (flow $ testRhine t) t
-          termCommand t (PutText "ABC")
-          termCommand t PutLn
-          termCommand t (PutText "123")
-          termCommand t PutLn
-          termCommand t PutLn
-          pure t
-        readTVarIO (virtualWindow t) `shouldReturn` expWindow
+          charEvent eventQueue t '1'
+          threadDelay $ 1000 * 1000
+          charEvent eventQueue t '2'
+          threadDelay $ 1000 * 1000
+          charEvent eventQueue t '3'
+          threadDelay $ 1000 * 1000
+          readTVarIO (virtualWindow t) `shouldReturn` expWindow
         where
           expWindow =
-              [ "...       "
+              [ "1.2.3.    "
               , "          "
               , "          " ]
