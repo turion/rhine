@@ -94,17 +94,14 @@ RhineAndResamplingBuffer (Rhine sn1 cl1) rb --> (Rhine sn2 cl2)
 {- | The combinators for parallel composition allow for the following syntax:
 
 @
-rh1   :: Rhine    m                clL      a         b
+rh1   :: Rhine m                clL      a         b
 rh1   =  ...
 
-rh2   :: Rhine    m                    clR  a           c
+rh2   :: Rhine m                    clR  a           c
 rh2   =  ...
 
-sched :: Schedule m                clL clR
-sched =  ...
-
-rh    :: Rhine    m (ParallelClock clL clR) a (Either b c)
-rh    =  rh1 ++\@ sched \@++ rh2
+rh    :: Rhine m (ParallelClock clL clR) a (Either b c)
+rh    =  rh1 +\@+ rh2
 @
 -}
 infix 3 +@+
@@ -125,17 +122,14 @@ Rhine sn1 clL +@+ Rhine sn2 clR
 {- | The combinators for parallel composition allow for the following syntax:
 
 @
-rh1   :: Rhine    m                clL      a b
+rh1   :: Rhine m                clL      a b
 rh1   =  ...
 
-rh2   :: Rhine    m                    clR  a b
+rh2   :: Rhine m                    clR  a b
 rh2   =  ...
 
-sched :: Schedule m                clL clR
-sched =  ...
-
-rh    :: Rhine    m (ParallelClock clL clR) a b
-rh    =  rh1 ||\@ sched \@|| rh2
+rh    :: Rhine m (ParallelClock clL clR) a b
+rh    =  rh1 |\@| rh2
 @
 -}
 infix 3 |@|
