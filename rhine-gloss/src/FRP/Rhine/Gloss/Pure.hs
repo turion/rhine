@@ -1,4 +1,3 @@
-{-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -19,28 +18,30 @@ module FRP.Rhine.Gloss.Pure (
   GlossClSF,
   currentEvent,
   flowGloss,
-  flowGlossWithWorldMSF,
+  flowGlossClSF,
 ) where
 
 -- base
 import qualified Control.Category as Category
+import Data.Functor.Identity
 
 -- transformers
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Writer
+import Control.Monad.Trans.Writer.Strict
 
 -- dunai
+import Control.Monad.Trans.MSF (performOnFirstSample)
 import qualified Control.Monad.Trans.MSF.Reader as MSFReader
+import qualified Control.Monad.Trans.MSF.Writer as MSFWriter
 import Data.MonadicStreamFunction.InternalCore
-
--- rhine
-import FRP.Rhine
-import FRP.Rhine.Reactimation.ClockErasure
 
 -- monad-schedule
 import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Yield
+
+-- rhine
+import FRP.Rhine
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -105,35 +106,29 @@ currentEvent = tagS
 
 -- * Reactimation
 
-{- | The main function that will start the @gloss@ backend and run the 'SN'
-   (in the case of the combined clock).
--}
-flowGloss ::
+-- | Specialisation of 'flowGloss' to a 'GlossClSF'
+flowGlossClSF ::
   GlossSettings ->
-  -- | The @gloss@-compatible 'Rhine'.
+  -- | The @gloss@-compatible 'ClSF'.
   GlossClSF ->
   IO ()
-flowGloss settings clsf = flowGlossWithWorldMSF settings GlossClock $ proc (time, tag) -> do
-  arrM (const clear) -< ()
-  pic <- eraseClockClSF getClockProxy 0 clsf -< (time, tag, ())
-  arrM paint -< pic
+flowGlossClSF settings clsf = flowGloss settings $ clsf >-> arrMCl paintAll @@ GlossClock
 
--- FIXME Hide?
+type WorldMSF = MSF Identity ((Float, Maybe Event), ()) (Picture, Maybe ())
 
--- | Helper function
-flowGlossWithWorldMSF ::
-  Clock GlossM cl =>
+-- | The main function that will start the @gloss@ backend and run the 'Rhine'
+flowGloss ::
+  (Clock GlossM cl, GetClockProxy cl) =>
   GlossSettings ->
-  cl ->
-  MSF GlossM (Time cl, Tag cl) b ->
+  Rhine GlossM cl () () ->
   IO ()
-flowGlossWithWorldMSF GlossSettings {..} clock msf =
+flowGloss GlossSettings {..} rhine =
   play display backgroundColor stepsPerSecond (worldMSF, Blank) getPic handleEvent simStep
   where
-    worldMSF = MSFReader.runReaderS $ morphS (runYieldT . unGlossM) $ proc () -> do
-      (time, tag) <- fst $ fst $ runWriter $ flip runReaderT (0, Nothing) $ runYieldT $ unGlossM $ initClock clock -< ()
-      msf -< (time, tag)
+    worldMSF :: WorldMSF
+    worldMSF = MSFWriter.runWriterS $ MSFReader.runReaderS $ morphS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
+    stepWith :: (Float, Maybe Event) -> (WorldMSF, Picture) -> (WorldMSF, Picture)
+    stepWith (diff, eventMaybe) (msf, _) = let ((picture, _), msf') = runIdentity $ unMSF msf ((diff, eventMaybe), ()) in (msf', picture)
     getPic (_, pic) = pic
-    stepWith (diff, maybeEvent) (msf, _) = first snd $ runWriter $ unMSF msf ((diff, maybeEvent), ())
     handleEvent event = stepWith (0, Just event)
     simStep diff = stepWith (diff, Nothing)
