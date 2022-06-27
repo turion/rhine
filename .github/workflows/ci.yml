@@ -33,7 +33,7 @@ jobs:
           cabal build all  --enable-tests --only-dependencies --project-file=cabal.project.${{ matrix.ghc }}
       - name: Cabal build packages
         run: |
-          cabal build all --enable-tests --project-file=cabal.project.${{ matrix.ghc }}
+          cabal build all --enable-tests --project-file=cabal.project.${{ matrix.ghc }} -fdev
       - name: Cabal test
         run: |
           cabal test all --enable-tests --test-show-details=Always --project-file=cabal.project.${{ matrix.ghc }}

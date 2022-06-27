@@ -22,6 +22,8 @@ executable HelloWorld
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.0.0
   default-language:    Haskell2010
+  if flag(dev)
+    ghc-options: -Werror
 
 executable Demonstration
   hs-source-dirs:      src
@@ -30,6 +32,8 @@ executable Demonstration
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.0.0
   default-language:    Haskell2010
+  if flag(dev)
+    ghc-options: -Werror
 
 executable ADSR
   hs-source-dirs:      src
@@ -38,6 +42,8 @@ executable ADSR
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.0.0
   default-language:    Haskell2010
+  if flag(dev)
+    ghc-options: -Werror
 
 executable Periodic
   hs-source-dirs:      src
@@ -47,6 +53,8 @@ executable Periodic
                      , rhine        == 0.8.0.0
                      , transformers >= 0.5
   default-language:    Haskell2010
+  if flag(dev)
+    ghc-options: -Werror
 
 executable EventClock
   hs-source-dirs:      src
@@ -56,6 +64,8 @@ executable EventClock
                      , rhine        == 0.8.0.0
                      , random       >= 1.1
   default-language:    Haskell2010
+  if flag(dev)
+    ghc-options: -Werror
 
 executable Sawtooth
   hs-source-dirs:      src
@@ -64,3 +74,10 @@ executable Sawtooth
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.0.0
   default-language:    Haskell2010
+  if flag(dev)
+    ghc-options: -Werror
+
+flag dev
+  description: Enable warnings as errors. Active on ci.
+  default: False
+  manual: True
