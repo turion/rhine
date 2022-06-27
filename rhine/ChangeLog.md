@@ -4,10 +4,14 @@ The version numbering follows the package `dunai`.
 Since `rhine` reexports modules from `dunai`,
 every major version in `dunai` triggers a major version in `rhine`.
 
-## 0.7.1
+## 0.8.0.0
 
 * Documentation improvements
 * Support for GHC 9.0.2
+* Updated to `dunai-0.8`
+* Added functions to pre-/post-compose SNs and Rhines with ClSFs
+* Added flake & stack support on CI.
+  Thank you, Miguel Negrão and Jun Matsuhita!
 
 ## 0.7.0
 
