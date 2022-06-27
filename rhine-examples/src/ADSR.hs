@@ -3,6 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | * Attack-Decay-Sustain-Release hull
 
@@ -160,7 +161,7 @@ release r s = linearly r s 0 0
 
 -- | A signal that alternates between 'False' and 'True' on every console newline.
 key :: Rhine IO StdinClock () Bool
-key = (count >>^ odd) @@ StdinClock
+key = (count @Integer >>^ odd) @@ StdinClock
 
 -- | Output the current amplitude of the ADSR hull on the console,
 --   every 0.03 seconds.
