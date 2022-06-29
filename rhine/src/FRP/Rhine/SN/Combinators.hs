@@ -26,6 +26,7 @@ Sequential sn1 rb sn2 >>>^ f = Sequential sn1 rb     $ sn2 >>>^ f
 Parallel   sn1    sn2 >>>^ f = Parallel  (sn1 >>>^ f) (sn2 >>>^ f)
 Postcompose sn clsf >>>^ f = Postcompose sn $ clsf >>^ f
 Precompose clsf sn >>>^ f = Precompose clsf $ sn >>>^ f
+Feedback buf sn >>>^ f = Feedback buf $ sn >>>^ first f
 
 -- | Precompose a signal network with a pure function.
 (^>>>)
@@ -38,6 +39,7 @@ f ^>>> Sequential sn1 rb sn2 = Sequential (f ^>>> sn1) rb      sn2
 f ^>>> Parallel   sn1    sn2 = Parallel   (f ^>>> sn1) (f ^>>> sn2)
 f ^>>> Postcompose sn clsf = Postcompose (f ^>>> sn) clsf
 f ^>>> Precompose clsf sn = Precompose (f ^>> clsf) sn
+f ^>>> Feedback buf sn = Feedback buf $ first f ^>>> sn
 
 -- | Postcompose a signal network with a 'ClSF'.
 (>--^)
@@ -79,6 +81,9 @@ Precompose clsf sn1 **** sn2 = Precompose (first clsf) $ sn1 **** sn2
 sn1 **** Precompose clsf sn2 = Precompose (second clsf) $ sn1 **** sn2
 Postcompose sn1 clsf **** sn2 = Postcompose (sn1 **** sn2) (first clsf)
 sn1 **** Postcompose sn2 clsf = Postcompose (sn1 **** sn2) (second clsf)
+
+Feedback buf sn1 **** sn2 = Feedback buf $ (\((a, c), c1) -> ((a, c1), c)) ^>>> (sn1 **** sn2) >>>^ (\((b, d1), d) -> ((b, d), d1))
+sn1 **** Feedback buf sn2 = Feedback buf $ (\((a, c), c1) -> (a, (c, c1))) ^>>> (sn1 **** sn2) >>>^ (\(b, (d, d1)) -> ((b, d), d1))
 
 -- Note that the patterns above are the only ones that can occur.
 -- This is ensured by the clock constraints in the SF constructors.

@@ -6,6 +6,8 @@ A signal network together with a matching clock value.
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
 module FRP.Rhine.Type where
 
 -- dunai
@@ -16,6 +18,8 @@ import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.SN
+import FRP.Rhine.ResamplingBuffer (ResamplingBuffer)
+import FRP.Rhine.Schedule (Out, In)
 
 {- |
 A 'Rhine' consists of a 'SN' together with a clock of matching type 'cl'.
@@ -55,3 +59,22 @@ eraseClock Rhine {..} = do
   return $ proc a -> do
     (time, tag) <- runningClock -< ()
     eraseClockSN initTime sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
+
+{- |
+Loop back data from the output to the input.
+
+Since output and input will generally tick at different clocks,
+the data needs to be resampled.
+-}
+feedbackRhine
+  :: ( Clock m (In cl),  Clock m (Out cl)
+     , Time (In cl) ~ Time cl
+     , Time (Out cl) ~ Time cl
+     )
+  => ResamplingBuffer m (Out cl) (In cl) d c
+  -> Rhine            m cl (a, c) (b, d)
+  -> Rhine            m cl  a      b
+feedbackRhine buf Rhine { .. } = Rhine
+  { sn = Feedback buf sn
+  , clock
+  }
