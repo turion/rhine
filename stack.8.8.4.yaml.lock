@@ -32,7 +32,6 @@ packages:
     hackage: text-1.2.5.0@sha256:791f0f6c97ed96113f17ab520cf0efe1a3a4f883a8c85910a5660567c8241c40,7895
   original:
     hackage: text-1.2.5.0@sha256:791f0f6c97ed96113f17ab520cf0efe1a3a4f883a8c85910a5660567c8241c40,7895
-<<<<<<< HEAD
 - completed:
     pantry-tree:
       sha256: f05b577b5b2b6f8805ec5b2c0af9d8c42005319522b20db72ce6de90b7cbfe52
@@ -47,8 +46,6 @@ packages:
     hackage: parsec-3.1.15.1@sha256:8c7a36aaadff12a38817fc3c4ff6c87e3352cffd1a58df640de7ed7a97ad8fa3,4601
   original:
     hackage: parsec-3.1.15.1@sha256:8c7a36aaadff12a38817fc3c4ff6c87e3352cffd1a58df640de7ed7a97ad8fa3,4601
-=======
->>>>>>> 34cd5ea (Keep simple example)
 snapshots:
 - completed:
     sha256: 637fb77049b25560622a224845b7acfe81a09fdb6a96a3c75997a10b651667f6
