@@ -4,8 +4,6 @@ module Main where
 
 import Prelude hiding (putChar)
 import FRP.Rhine.Terminal
-import System.IO
-    ( hSetBuffering, stdin, stdout, BufferMode(NoBuffering) )
 import System.Terminal
 import System.Terminal.Internal
 import FRP.Rhine
@@ -18,8 +16,6 @@ import Control.Concurrent.STM.TQueue
 
 import Test.Hspec
 import Data.Text (singleton)
--- import Test.Tasty ()
--- import Test.Tasty.HUnit ( assertEqual )
 
 type KeyClock t = SelectClock (TerminalEventClock t) Char
 
