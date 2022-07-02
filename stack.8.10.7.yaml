@@ -4,7 +4,10 @@ packages:
 - rhine
 - rhine-examples
 - rhine-gloss
+- rhine-terminal
 
 extra-deps:
 - time-domain-0.1.0.0@sha256:48146872e85f46399e8b8d7ff7c3d3b7f530e2de167b6893ba3ce649ba2e2e75,800
 - dunai-0.8.3@sha256:06f75101fc87566f00e09b6c941384a98e1e1393eac721976e5b714d9c4a1f68,6260
+- terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
+- text-1.2.5.0@sha256:791f0f6c97ed96113f17ab520cf0efe1a3a4f883a8c85910a5660567c8241c40,7895
