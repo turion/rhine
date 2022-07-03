@@ -27,7 +27,7 @@ import System.Exit (exitSuccess)
 
 -- Clocks
 
-data Input = Char Char
+data Input = Char Char Modifiers
            | Space | Backspace | Enter
            | Exit
 
@@ -38,7 +38,7 @@ inputClock term = SelectClock { mainClock = TerminalEventClock term, select = se
   where
     selectKey :: Tag (TerminalEventClock LocalTerminal) -> Maybe Input
     selectKey = \case
-      Right (KeyEvent (CharKey k) _) -> Just (Char k)
+      Right (KeyEvent (CharKey k) m) -> Just (Char k m)
       Right (KeyEvent SpaceKey _) -> Just Space
       Right (KeyEvent BackspaceKey _) -> Just Backspace
       Right (KeyEvent EnterKey _) -> Just Enter
@@ -59,7 +59,10 @@ promptSource = flip T.cons " > " . (cycle " ." !!) <$> count
 
 inputSink :: LocalTerminal -> ClSF IO cl Input ()
 inputSink term = arrMCl $ (flip runTerminalT term .) $ \case
-  Char c -> putChar c >> flush
+  -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
+  Char c m
+    | c /= 'J' && m /= ctrlKey -> putChar c >> flush
+    | otherwise -> pure ()
   Space -> putChar ' ' >> flush
   Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
   Enter -> putLn >> flush
