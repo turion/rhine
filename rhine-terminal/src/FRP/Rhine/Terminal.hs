@@ -26,7 +26,7 @@ import Data.Time.Clock ( getCurrentTime )
 
 -- terminal
 import System.Terminal
-    ( awaitEvent, runTerminalT, Event, Interrupt, TerminalT (..) )
+    ( awaitEvent, runTerminalT, Event, Interrupt, TerminalT )
 import System.Terminal.Internal ( Terminal )
 
 -- transformers
@@ -47,9 +47,8 @@ instance (Terminal t) => Clock (TerminalT t IO) TerminalEventClock
 
     initClock TerminalEventClock = do
       initialTime <- liftIO getCurrentTime
-      term  <- TerminalT ask
       return
-        ( constM $ liftIO $ flip runTerminalT term $ do
+        ( constM $ do
             event <- awaitEvent
             time <- liftIO getCurrentTime
             return (time, event)
