@@ -1,7 +1,1 @@
 packages: */*.cabal
-
-source-repository-package
-    type: git
-    location: https://github.com/jmatsushita/haskell-terminal
-    tag: 2af6a53d4bb629f4e8dd95d1fe500ee3b233364c
-
