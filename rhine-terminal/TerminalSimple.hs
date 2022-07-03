@@ -22,8 +22,11 @@ import System.Terminal.Internal
 import FRP.Rhine
 import System.IO hiding (putChar)
 
-import FRP.Rhine.Terminal (TerminalEventClock(..))
+import FRP.Rhine.Terminal (TerminalEventClock(..), flowTerminal, terminalConcurrently)
 import System.Exit (exitSuccess)
+
+
+type App = TerminalT LocalTerminal IO
 
 -- Clocks
 
@@ -31,12 +34,12 @@ data Input = Char Char Modifiers
            | Space | Backspace | Enter
            | Exit
 
-type InputClock = SelectClock (TerminalEventClock LocalTerminal) Input
+type InputClock = SelectClock TerminalEventClock Input
 
-inputClock :: LocalTerminal -> InputClock
-inputClock term = SelectClock { mainClock = TerminalEventClock term, select = selectKey }
+inputClock :: InputClock
+inputClock = SelectClock { mainClock = TerminalEventClock, select = selectKey }
   where
-    selectKey :: Tag (TerminalEventClock LocalTerminal) -> Maybe Input
+    selectKey :: Tag TerminalEventClock -> Maybe Input
     selectKey = \case
       Right (KeyEvent (CharKey k) m) -> Just (Char k m)
       Right (KeyEvent SpaceKey _) -> Just Space
@@ -45,35 +48,36 @@ inputClock term = SelectClock { mainClock = TerminalEventClock term, select = se
       Left _ -> Just Exit
       _ -> Nothing
 
-type PromptClock = Millisecond 1000
+type PromptClock = LiftClock IO (TerminalT LocalTerminal) (Millisecond 1000)
 
-type AppClock = ParallelClock IO InputClock PromptClock
+type AppClock = ParallelClock App InputClock PromptClock
 
 -- ClSFs
 
-inputSource :: ClSF IO InputClock () Input
+inputSource :: ClSF App InputClock () Input
 inputSource = tagS
 
-promptSource :: ClSF IO PromptClock () Text
+promptSource :: ClSF App PromptClock () Text
 promptSource = flip T.cons " > " . (cycle " ." !!) <$> count
 
-inputSink :: LocalTerminal -> ClSF IO cl Input ()
-inputSink term = arrMCl $ (flip runTerminalT term .) $ \case
-  -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
-  Char c m
-    | c /= 'J' && m /= ctrlKey -> putChar c >> flush
-    | otherwise -> pure ()
-  Space -> putChar ' ' >> flush
-  Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
-  Enter -> putLn >> flush
-  Exit -> do
-    putLn
-    putStringLn "Exiting program."
-    flush
-    liftIO exitSuccess
+inputSink ::  ClSF App cl Input ()
+inputSink = arrMCl $ \input -> do
+  case input of
+    -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
+    Char c m
+      | c /= 'J' && m /= ctrlKey -> putChar c >> flush
+      | otherwise -> pure ()
+    Space -> putChar ' ' >> flush
+    Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
+    Enter -> putLn >> flush
+    Exit -> do
+      putLn
+      putStringLn "Exiting program."
+      flush
+      liftIO exitSuccess
 
-promptSink :: LocalTerminal -> ClSF IO cl Text ()
-promptSink term = arrMCl $ (flip runTerminalT term .) $ \prmpt -> do
+promptSink :: ClSF App cl Text ()
+promptSink = arrMCl $ \prmpt -> do
   Position _ column <- getCursorPosition
   if column /= 0 then do
     moveCursorBackward column
@@ -82,17 +86,16 @@ promptSink term = arrMCl $ (flip runTerminalT term .) $ \prmpt -> do
   else putText prmpt
   flush
 
-
 -- Rhines
 
-mainRhine :: LocalTerminal -> Rhine IO AppClock () ()
-mainRhine term = inputRhine ||@ concurrently @|| promptRhine
+mainRhine :: Rhine App AppClock () ()
+mainRhine = inputRhine ||@ terminalConcurrently @|| promptRhine
   where
-    inputRhine :: Rhine IO InputClock () ()
-    inputRhine = inputSource >-> inputSink term @@ inputClock term
+    inputRhine :: Rhine App InputClock () ()
+    inputRhine = inputSource >-> inputSink @@ inputClock
 
-    promptRhine :: Rhine IO PromptClock () ()
-    promptRhine = promptSource >-> promptSink term @@ waitClock
+    promptRhine :: Rhine App PromptClock () ()
+    promptRhine = promptSource >-> promptSink @@ liftClock waitClock
 
 -- Main
 
@@ -100,4 +103,4 @@ main :: IO ()
 main = do
   hSetBuffering stdin NoBuffering
   hSetBuffering stdout NoBuffering
-  withTerminal $ \term -> flow $ mainRhine term
+  withTerminal $ \term -> flowTerminal term mainRhine
