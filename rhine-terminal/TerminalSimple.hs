@@ -9,44 +9,49 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
+-- base
 import Prelude hiding (putChar)
-
--- rhine
-import Control.Monad.Schedule ()
-
+import System.Exit (exitSuccess)
+import System.IO hiding (putChar)
+-- text
 import Data.Text (Text)
 import qualified Data.Text as T
+-- terminal
 import System.Terminal
 import System.Terminal.Internal
+-- rhine
 import FRP.Rhine
-import System.IO hiding (putChar)
-
-import FRP.Rhine.Terminal (TerminalEventClock(..), flowTerminal, terminalConcurrently)
-import System.Exit (exitSuccess)
-
+-- rhine-terminal
+import FRP.Rhine.Terminal
+    ( TerminalEventClock(..), flowTerminal, terminalConcurrently )
 
 type App = TerminalT LocalTerminal IO
 
 -- Clocks
 
-data Input = Char Char Modifiers
-           | Space | Backspace | Enter
-           | Exit
+data Input
+  = Char Char Modifiers
+  | Space
+  | Backspace
+  | Enter
+  | Exit
 
 type InputClock = SelectClock TerminalEventClock Input
 
 inputClock :: InputClock
-inputClock = SelectClock { mainClock = TerminalEventClock, select = selectKey }
-  where
-    selectKey :: Tag TerminalEventClock -> Maybe Input
-    selectKey = \case
-      Right (KeyEvent (CharKey k) m) -> Just (Char k m)
-      Right (KeyEvent SpaceKey _) -> Just Space
-      Right (KeyEvent BackspaceKey _) -> Just Backspace
-      Right (KeyEvent EnterKey _) -> Just Enter
-      Left _ -> Just Exit
-      _ -> Nothing
+inputClock = SelectClock
+  { mainClock = TerminalEventClock
+  , select }
+    where
+      select :: Tag TerminalEventClock -> Maybe Input
+      select (Right (KeyEvent (CharKey k) m))  = Just (Char k m)
+      select (Right (KeyEvent SpaceKey _))     = Just Space
+      select (Right (KeyEvent BackspaceKey _)) = Just Backspace
+      select (Right (KeyEvent EnterKey _))     = Just Enter
+      select (Left _)                          = Just Exit
+      select _                                 = Nothing
 
 type PromptClock = LiftClock IO (TerminalT LocalTerminal) (Millisecond 1000)
 

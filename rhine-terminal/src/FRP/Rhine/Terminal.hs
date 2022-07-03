@@ -30,12 +30,10 @@ import System.Terminal
 import System.Terminal.Internal ( Terminal )
 
 -- transformers
-import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Trans.Reader
 
 -- rhine
-import FRP.Rhine.ClSF ( constM, UTCTime, Clock(..), ClSF )
-import FRP.Rhine.Clock.Proxy ( GetClockProxy )
+import FRP.Rhine.Clock.Proxy ()
 import FRP.Rhine
 import Control.Monad.Trans.Class (lift)
 
@@ -49,7 +47,7 @@ instance (Terminal t) => Clock (TerminalT t IO) TerminalEventClock
 
     initClock TerminalEventClock = do
       initialTime <- liftIO getCurrentTime
-      term <- TerminalT ask
+      term  <- TerminalT ask
       return
         ( constM $ liftIO $ flip runTerminalT term $ do
             event <- awaitEvent
