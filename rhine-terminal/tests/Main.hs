@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
 import Prelude hiding (putChar)
@@ -17,13 +18,13 @@ import Control.Concurrent.STM.TQueue
 import Test.Hspec
 import Data.Text (singleton)
 
-type KeyClock t = SelectClock (TerminalEventClock t) Char
+type KeyClock = SelectClock TerminalEventClock Char
 
-keyClock :: Terminal t => t -> KeyClock t
-keyClock term = SelectClock { mainClock = TerminalEventClock term, select = selectChar }
+keyClock :: KeyClock
+keyClock = SelectClock { mainClock = TerminalEventClock , select }
   where
-    -- selectChar :: Terminal t => Tag (TerminalEventClock t) -> Maybe Char
-    selectChar = \case
+    select :: Tag TerminalEventClock -> Maybe Char
+    select = \case
       Right (KeyEvent (CharKey k) _) -> Just k
       _ -> Nothing
 
@@ -35,13 +36,13 @@ defaultSettings eventQueue = VirtualTerminalSettings
     , virtualInterrupt    = retry
     }
 
-displayDot :: (Terminal t, MonadScreen m) => ClSF m (KeyClock t) () ()
+displayDot :: MonadScreen m => ClSF m KeyClock () ()
 displayDot = tagS >-> arrMCl (\_ -> do
   putChar '.'
   flush)
 
-testRhine :: Terminal t => t -> Rhine (TerminalT t IO) (KeyClock t) () ()
-testRhine term = displayDot @@ keyClock term
+testRhine :: Terminal t => Rhine (TerminalT t IO) KeyClock () ()
+testRhine = displayDot @@ keyClock
 
 charEvent :: Terminal t => TQueue Event -> t -> Char -> IO ()
 charEvent eventQueue terminal char = do
@@ -54,7 +55,7 @@ main = hspec $ do
       it "replaces virtual inputs by dots" $ do
         eventQueue <- newTQueueIO
         withVirtualTerminal (defaultSettings eventQueue) $ \t -> do
-          void $ liftIO $ forkIO $ runTerminalT (flow $ testRhine t) t
+          void $ liftIO $ forkIO $ flowTerminal t testRhine
           charEvent eventQueue t '1'
           threadDelay $ 1000 * 1000
           charEvent eventQueue t '2'
