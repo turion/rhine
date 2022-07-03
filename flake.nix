@@ -17,14 +17,9 @@
       inputs.flake-utils.follows = "flake-utils";
     };
 
-    terminal-fork = {
-      url = "github:jmatsushita/haskell-terminal/reader";
-      flake = false;
   };
 
-  };
-
-outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, terminal-fork, ... }:
+outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }:
   haskell-flake-utils.lib.simpleCabalProject2flake {
     inherit self nixpkgs;
 
@@ -40,10 +35,6 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, termi
 
     name = "rhine";
     packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" ];
-    hpPreOverrides = { pkgs }: new: old:
-      with pkgs.haskell.lib; {
-        terminal = old.callCabal2nix "terminal" terminal-fork {};
-      };
 
   };
 }
