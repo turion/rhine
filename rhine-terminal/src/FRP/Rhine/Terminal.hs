@@ -6,7 +6,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Terminal
   ( TerminalEventClock (..)
@@ -26,7 +25,7 @@ import Data.Time.Clock ( getCurrentTime )
 
 -- terminal
 import System.Terminal
-    ( awaitEvent, runTerminalT, Event, Interrupt, TerminalT )
+    ( awaitEvent, runTerminalT, Event, Interrupt, TerminalT, MonadInput )
 import System.Terminal.Internal ( Terminal )
 
 -- transformers
@@ -37,10 +36,10 @@ import FRP.Rhine.Clock.Proxy ()
 import FRP.Rhine
 import Control.Monad.Trans.Class (lift)
 
--- * Terminal clock
+-- | A clock that ticks whenever events or interrupts on the terminal arrive.
 data TerminalEventClock = TerminalEventClock
 
-instance (Terminal t) => Clock (TerminalT t IO) TerminalEventClock
+instance (MonadInput m, MonadIO m) => Clock m TerminalEventClock
   where
     type Time TerminalEventClock = UTCTime
     type Tag  TerminalEventClock = Either Interrupt Event
