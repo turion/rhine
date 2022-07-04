@@ -48,12 +48,13 @@ inputClock = SelectClock
   , select }
     where
       select :: Tag TerminalEventClock -> Maybe Input
-      select (Right (KeyEvent (CharKey k) m))  = Just (Char k m)
-      select (Right (KeyEvent SpaceKey _))     = Just Space
-      select (Right (KeyEvent BackspaceKey _)) = Just Backspace
-      select (Right (KeyEvent EnterKey _))     = Just Enter
-      select (Left _)                          = Just Exit
-      select _                                 = Nothing
+      select = \case
+        Right (KeyEvent (CharKey k) m)  -> Just (Char k m)
+        Right (KeyEvent SpaceKey _)     -> Just Space
+        Right (KeyEvent BackspaceKey _) -> Just Backspace
+        Right (KeyEvent EnterKey _)     -> Just Enter
+        Left _                          -> Just Exit
+        _                               -> Nothing
 
 type PromptClock = LiftClock IO (TerminalT LocalTerminal) (Millisecond 1000)
 
@@ -68,8 +69,7 @@ promptSource :: ClSF App PromptClock () Text
 promptSource = flip T.cons " > " . (cycle " ." !!) <$> count
 
 inputSink ::  ClSF App cl Input ()
-inputSink = arrMCl $ \input -> do
-  case input of
+inputSink = arrMCl $ \case
     -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
   Char c m  -> unless (c /= 'J' && m /= ctrlKey) $ putChar c >> flush
     Space     -> putChar ' ' >> flush
