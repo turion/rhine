@@ -15,6 +15,8 @@
 import Prelude hiding (putChar)
 import System.Exit (exitSuccess)
 import System.IO hiding (putChar)
+import Control.Monad
+
 -- text
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -69,13 +71,11 @@ inputSink ::  ClSF App cl Input ()
 inputSink = arrMCl $ \input -> do
   case input of
     -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
-    Char c m
-      | c /= 'J' && m /= ctrlKey -> putChar c >> flush
-      | otherwise -> pure ()
-    Space -> putChar ' ' >> flush
+  Char c m  -> unless (c /= 'J' && m /= ctrlKey) $ putChar c >> flush
+    Space     -> putChar ' ' >> flush
     Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
-    Enter -> putLn >> flush
-    Exit -> do
+    Enter     -> putLn >> flush
+    Exit      -> do
       putLn
       putStringLn "Exiting program."
       flush
