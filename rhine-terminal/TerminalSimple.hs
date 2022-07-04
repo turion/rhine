@@ -27,7 +27,7 @@ import System.Terminal.Internal
 import FRP.Rhine
 -- rhine-terminal
 import FRP.Rhine.Terminal
-    ( TerminalEventClock(..), flowTerminal, terminalConcurrently )
+    ( TerminalEventClock(..), flowTerminal )
 
 type App = TerminalT LocalTerminal IO
 
@@ -70,16 +70,16 @@ promptSource = flip T.cons " > " . (cycle " ." !!) <$> count
 
 inputSink ::  ClSF App cl Input ()
 inputSink = arrMCl $ \case
-    -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
+  -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
   Char c m  -> unless (c /= 'J' && m /= ctrlKey) $ putChar c >> flush
-    Space     -> putChar ' ' >> flush
-    Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
-    Enter     -> putLn >> flush
-    Exit      -> do
-      putLn
-      putStringLn "Exiting program."
-      flush
-      liftIO exitSuccess
+  Space     -> putChar ' ' >> flush
+  Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
+  Enter     -> putLn >> flush
+  Exit      -> do
+    putLn
+    putStringLn "Exiting program."
+    flush
+    liftIO exitSuccess
 
 promptSink :: ClSF App cl Text ()
 promptSink = arrMCl $ \prmpt -> do
@@ -94,7 +94,7 @@ promptSink = arrMCl $ \prmpt -> do
 -- Rhines
 
 mainRhine :: Rhine App AppClock () ()
-mainRhine = inputRhine ||@ terminalConcurrently @|| promptRhine
+mainRhine = inputRhine ||@ concurrently @|| promptRhine
   where
     inputRhine :: Rhine App InputClock () ()
     inputRhine = inputSource >-> inputSink @@ inputClock
