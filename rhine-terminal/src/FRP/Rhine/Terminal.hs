@@ -14,6 +14,7 @@ import Prelude hiding (putChar)
 import Control.Concurrent ()
 import Control.Concurrent.MVar ()
 import Data.IORef ()
+import Unsafe.Coerce (unsafeCoerce)
 
 -- time
 import Data.Time.Clock ( getCurrentTime )
@@ -70,35 +71,38 @@ flowTerminal
   -> IO ()
 flowTerminal term clsf = flip runTerminalT term $ flow clsf
 
--- -- | A schedule in the 'TerminalT LocalTerminal' transformer,
--- --   supplying the same backend connection to its scheduled clocks.
--- terminalConcurrently
---   :: forall t cl1 cl2. (
---        Terminal t
---      , Clock (TerminalT t IO) cl1
---      , Clock (TerminalT t IO) cl2
---      , Time cl1 ~ Time cl2
---      )
---   => Schedule (TerminalT t IO) cl1 cl2
+-- | A schedule in the 'TerminalT LocalTerminal' transformer,
+--   supplying the same backend connection to its scheduled clocks.
+terminalConcurrently
+  :: forall t cl1 cl2. (
+       Terminal t
+     , Clock (TerminalT t IO) cl1
+     , Clock (TerminalT t IO) cl2
+     , Time cl1 ~ Time cl2
+     )
+  => Schedule (TerminalT t IO) cl1 cl2
 -- terminalConcurrently
 --   = Schedule $ \cl1 cl2 -> do
 --       lift $ first liftTransS <$>
 --         initSchedule concurrently _ _
 
--- terminalConcurrently
---   = Schedule $ \cl1 cl2 -> do
---       term <- TerminalT ask
---       lift $ first liftTransS <$>
---         initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
+terminalT :: ReaderT t m a -> TerminalT t m a
+terminalT = unsafeCoerce
 
--- type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
+terminalConcurrently
+  = Schedule $ \cl1 cl2 -> do
+      term <- terminalT ask
+      lift $ first liftTransS <$>
+        initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
 
--- runTerminalClock
---   :: Terminal t
---   => t
---   -> cl
---   -> RunTerminalClock IO t cl
--- runTerminalClock term unhoistedClock = HoistClock
---   { monadMorphism = flip runTerminalT term
---   , ..
---   }
+type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
+
+runTerminalClock
+  :: Terminal t
+  => t
+  -> cl
+  -> RunTerminalClock IO t cl
+runTerminalClock term unhoistedClock = HoistClock
+  { monadMorphism = flip runTerminalT term
+  , ..
+  }
