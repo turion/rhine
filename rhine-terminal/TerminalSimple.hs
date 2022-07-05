@@ -73,15 +73,15 @@ inputSink = arrMCl $ \case
   Char c m  -> when (c /= 'J' && m /= ctrlKey) $ putChar c >> flush
   Space     -> putChar ' ' >> flush
   Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
-  Enter     -> putLn >> flush
+  Enter     -> putLn >> changePrompt "  > " >> flush
   Exit      -> do
     putLn
     putStringLn "Exiting program."
     flush
     liftIO exitSuccess
 
-promptSink :: ClSF App cl Text ()
-promptSink = arrMCl $ \prmpt -> do
+changePrompt :: MonadScreen m => Text -> m ()
+changePrompt prmpt = do
   Position _ column <- getCursorPosition
   if column /= 0 then do
     moveCursorBackward column
@@ -89,6 +89,9 @@ promptSink = arrMCl $ \prmpt -> do
     setCursorColumn column
   else putText prmpt
   flush
+
+promptSink :: ClSF App cl Text ()
+promptSink = arrMCl changePrompt
 
 -- Rhines
 
