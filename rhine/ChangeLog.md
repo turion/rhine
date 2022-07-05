@@ -11,7 +11,7 @@ every major version in `dunai` triggers a major version in `rhine`.
 * Updated to `dunai-0.8`
 * Added functions to pre-/post-compose SNs and Rhines with ClSFs
 * Added flake & stack support on CI.
-  Thank you, Miguel Negrão and Jun Matsuhita!
+  Thank you, Miguel Negrão and Jun Matsushita!
 
 ## 0.7.0
 

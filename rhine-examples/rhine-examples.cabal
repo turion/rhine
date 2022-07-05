@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-examples
-version:             0.8.0.0
+version:             0.8.0.1
 -- synopsis:
 -- description:
 license:             BSD3
@@ -20,7 +20,7 @@ executable HelloWorld
   main-is:             HelloWorld.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9 && < 5
-                     , rhine        == 0.8.0.0
+                     , rhine        == 0.8.0.1
   default-language:    Haskell2010
   if flag(dev)
     ghc-options: -Werror
@@ -30,7 +30,7 @@ executable Demonstration
   main-is:             Demonstration.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9 && < 5
-                     , rhine        == 0.8.0.0
+                     , rhine        == 0.8.0.1
   default-language:    Haskell2010
   if flag(dev)
     ghc-options: -Werror
@@ -40,7 +40,7 @@ executable ADSR
   main-is:             ADSR.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9 && < 5
-                     , rhine        == 0.8.0.0
+                     , rhine        == 0.8.0.1
   default-language:    Haskell2010
   if flag(dev)
     ghc-options: -Werror
@@ -50,7 +50,7 @@ executable Periodic
   main-is:             Periodic.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9 && < 5
-                     , rhine        == 0.8.0.0
+                     , rhine        == 0.8.0.1
                      , transformers >= 0.5
   default-language:    Haskell2010
   if flag(dev)
@@ -61,7 +61,7 @@ executable EventClock
   main-is:             EventClock.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9 && < 5
-                     , rhine        == 0.8.0.0
+                     , rhine        == 0.8.0.1
                      , random       >= 1.1
   default-language:    Haskell2010
   if flag(dev)
@@ -72,7 +72,7 @@ executable Sawtooth
   main-is:             Sawtooth.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9 && < 5
-                     , rhine        == 0.8.0.0
+                     , rhine        == 0.8.0.1
   default-language:    Haskell2010
   if flag(dev)
     ghc-options: -Werror
