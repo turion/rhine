@@ -70,7 +70,7 @@ promptSource = flip T.cons " > " . (cycle " ." !!) <$> count
 inputSink ::  ClSF App cl Input ()
 inputSink = arrMCl $ \case
   -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
-  Char c m  -> unless (c /= 'J' && m /= ctrlKey) $ putChar c >> flush
+  Char c m  -> when (c /= 'J' && m /= ctrlKey) $ putChar c >> flush
   Space     -> putChar ' ' >> flush
   Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
   Enter     -> putLn >> flush
