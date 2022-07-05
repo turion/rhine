@@ -93,7 +93,7 @@ promptSink = arrMCl $ \prmpt -> do
 -- Rhines
 
 mainRhine :: Rhine App AppClock () ()
-mainRhine = inputRhine ||@ concurrently @|| promptRhine
+mainRhine = inputRhine ||@ terminalConcurrently @|| promptRhine
   where
     inputRhine :: Rhine App InputClock () ()
     inputRhine = inputSource >-> inputSink @@ inputClock
