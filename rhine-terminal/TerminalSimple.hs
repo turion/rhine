@@ -27,7 +27,6 @@ import System.Terminal.Internal
 import FRP.Rhine
 -- rhine-terminal
 import FRP.Rhine.Terminal
-    ( TerminalEventClock(..), flowTerminal )
 
 type App = TerminalT LocalTerminal IO
 

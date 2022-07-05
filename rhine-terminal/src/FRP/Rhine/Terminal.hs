@@ -7,12 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecordWildCards #-}
-module FRP.Rhine.Terminal
-  ( TerminalEventClock (..)
-  , flowTerminal
-  -- , terminalConcurrently
-  )
-  where
+module FRP.Rhine.Terminal where
 
 -- base
 import Prelude hiding (putChar)
