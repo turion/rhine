@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 import Prelude hiding (putChar)
 
@@ -23,78 +24,141 @@ import System.Terminal.Internal
 import FRP.Rhine
 import System.IO hiding (putChar)
 
-import FRP.Rhine.Terminal (TerminalEventClock(..))
+import FRP.Rhine.Terminal (TerminalEventClock(..), flowTerminal, terminalConcurrently)
 import FRP.Rhine.FSNotify (WatchDirEventClock(..))
 import Control.Concurrent (threadDelay)
-import Control.Monad (forever)
+import Control.Monad (forever, when)
+import Control.Monad.Trans.State
 import System.FSNotify
 import qualified System.FSNotify as FSNotify
 import System.Exit (exitSuccess)
+
+
+type Driver = TerminalT LocalTerminal IO
+type App = StateT AppState Driver
+
+-- State
+
+data AppState = AppState
+  { statePrompt :: Text
+  , stateCounter :: Int
+  }
 
 -- Clocks
 
 data Input = Char Char Modifiers | Space | Backspace | Enter
 
-type InputClock = SelectClock (TerminalEventClock LocalTerminal) Input
+type InputClock = SelectClock TerminalEventClock Input
 
-keyClock :: LocalTerminal -> InputClock
-keyClock term = SelectClock { mainClock = TerminalEventClock term, select = selectKey }
+keyClock :: InputClock
+keyClock = SelectClock { mainClock = TerminalEventClock, select }
   where
-    selectKey :: Tag (TerminalEventClock LocalTerminal) -> Maybe Input
-    selectKey = \case
+    select :: Tag TerminalEventClock -> Maybe Input
+    select = \case
       Right (KeyEvent (CharKey k) m) -> Just (Char k m)
       Right (KeyEvent SpaceKey _) -> Just Space
       Right (KeyEvent BackspaceKey _) -> Just Backspace
       Right (KeyEvent EnterKey _) -> Just Enter
       _ -> Nothing
 
-type SignalClock = SelectClock (TerminalEventClock LocalTerminal) Interrupt
+type SignalClock = SelectClock TerminalEventClock Interrupt
 
-signalClock :: LocalTerminal -> SignalClock
-signalClock term = SelectClock { mainClock = TerminalEventClock term, select = selectInterrupt }
+signalClock :: SignalClock
+signalClock = SelectClock { mainClock = TerminalEventClock, select }
   where
-    selectInterrupt :: Tag (TerminalEventClock LocalTerminal) -> Maybe Interrupt
-    selectInterrupt = \case
+    select :: Tag TerminalEventClock -> Maybe Interrupt
+    select = \case
       Left i -> Just i
       _ -> Nothing
 
-type BeatClock = Millisecond 1000
+type BeatClock = LiftClock IO (TerminalT LocalTerminal) (Millisecond 1000)
 
-type AppClock = ParallelClock IO (ParallelClock IO (ParallelClock IO InputClock SignalClock) BeatClock) WatchDirEventClock
+type AppClock = ParallelClock App (ParallelClock App (ParallelClock App InputClock SignalClock) BeatClock) WatchDirEventClock
+
+type DriverClock = ParallelClock Driver (ParallelClock Driver (ParallelClock Driver InputClock SignalClock) BeatClock) WatchDirEventClock
 
 -- Rhines
 
-keySource :: LocalTerminal -> Rhine IO InputClock () Input
-keySource term = tagS @@ keyClock term
+keySource :: Rhine Driver InputClock () Input
+keySource = tagS @@ keyClock
 
-beatSource :: Rhine IO BeatClock () Text
-beatSource = (flip T.cons " > " . (cycle " ." !!) <$> count) @@ waitClock
+signalSource :: Rhine Driver SignalClock () Interrupt
+signalSource = tagS @@ signalClock
 
-signalSource :: LocalTerminal -> Rhine IO SignalClock () Interrupt
-signalSource term = tagS @@ signalClock term
+-- beatSource :: Rhine App PromptClock () Text
+-- beatSource = (flip T.cons " > " . (cycle " ." !!) <$> count) @@ liftClock waitClock
 
-watchDirSource :: WatchManager -> FilePath -> ActionPredicate -> Rhine IO WatchDirEventClock () FSNotify.Event
+beatSource :: Rhine Driver BeatClock () Bool
+beatSource = (cycle [True, False] !!) <$> count @@ liftClock waitClock
+
+watchDirSource :: MonadIO m => WatchManager -> FilePath -> ActionPredicate -> Rhine m WatchDirEventClock () FSNotify.Event
 watchDirSource mgr fp ap = tagS @@ WatchDirEventClock mgr fp ap
 
-data Actions = Input Input
-             | Prompt Text
-             | Signal Interrupt
-             | Event FSNotify.Event
+data Response
+  = Input Input
+  | Beat Bool
+  | Signal Interrupt
+  | Event FSNotify.Event
 
-sources :: Rhine IO InputClock () Input
-        -> Rhine IO BeatClock () Text
-        -> Rhine IO SignalClock () Interrupt
-        -> Rhine IO WatchDirEventClock () FSNotify.Event
-        -> Rhine IO AppClock () Actions
-sources input prompt signal watchdir =
+data Request
+  = Display Input
+  | Prompt Text
+  | Exit
+
+sources
+  :: Rhine Driver InputClock () Input
+  -> Rhine Driver BeatClock () Bool
+  -> Rhine Driver SignalClock () Interrupt
+  -> Rhine Driver WatchDirEventClock () FSNotify.Event
+  -> Rhine Driver DriverClock () Response
+sources input beat signal watchdir =
   ( ( ( input ++@ schedSelectClocks @++ signal )
-              ++@ concurrently @++ prompt )
-              ++@ concurrently @++ watchdir
+              ++@ terminalConcurrently @++ beat )
+              ++@ terminalConcurrently @++ watchdir
   ) @>>^ \case
             Left (Left (Left i)) -> Input i
             Left (Left (Right s)) -> Signal s
-            Left (Right p) -> Prompt p
+            Left (Right p) -> Beat p
             Right w -> Event w
+
+
+
+-- ClSFs
+
+actuate
+  :: (MonadScreen m, MonadIO m)
+  => ClSF m cl Request ()
+actuate = arrMCl $ \case
+  Display i -> case i of
+    -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
+    Char c m  -> when (c /= 'J' && m /= ctrlKey) $ putChar c >> flush
+    Space -> putChar ' ' >> flush
+    Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
+    Enter  -> putLn >> changePrompt "  > " >> flush
+
+  Prompt prmpt -> changePrompt prmpt
+
+  Exit -> do
+    putLn
+    putStringLn "Exiting program."
+    flush
+    liftIO exitSuccess
+
+  -- Signal i -> do
+  --   putLn
+  --   putStringLn $ show i ++ ": exiting program."
+  --   flush
+  --   liftIO exitSuccess
+
+  -- Event _ -> do
+  --   changePrompt "*"
+  --   -- putStringLn $ "Event: " ++ show e
+  --   flush
+
+-- Application
+
+application :: ClSF Driver DriverClock Response Request
+application = undefined
 
 -- Utilities
 
@@ -108,38 +172,12 @@ changePrompt prmpt = do
   else putText prmpt
   flush
 
--- ClSFs
-
-display :: LocalTerminal -> ClSF IO cl Actions ()
-display term = arrMCl $ (flip runTerminalT term .) $ \case
-  Input i ->
-    case i of
-      -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
-      Char c m
-        | c /= 'J' && m /= ctrlKey -> putChar c >> flush
-        | otherwise -> pure ()
-      Space -> putChar ' ' >> flush
-      Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
-      Enter -> putLn >> flush
-
-  Prompt prmpt -> changePrompt prmpt
-
-  Signal i -> do
-    putLn
-    putStringLn $ show i ++ ": exiting program."
-    flush
-    liftIO exitSuccess
-
-  Event _ -> do
-    changePrompt "*"
-    -- putStringLn $ "Event: " ++ show e
-    flush
-
 
 -- Rhines
 
-mainRhine :: LocalTerminal -> WatchManager -> Handle -> Rhine IO AppClock () ()
-mainRhine term mgr history = sources (keySource term) beatSource (signalSource term) (watchDirSource mgr "." (const True)) @>-^ display term
+mainRhine :: WatchManager -> Handle -> Text -> Rhine Driver DriverClock () ()
+mainRhine mgr history suffix
+  = sources keySource beatSource signalSource (watchDirSource mgr "." (const True)) @>-^ application @>-^ actuate
 
 -- Persistence
 
@@ -156,4 +194,4 @@ main = do
     withFile ".history" ReadWriteMode $ \history ->
       withTerminal $ \term -> do
         liftIO $ print (termType term)
-        flow $ mainRhine term mgr history
+        flowTerminal term $ mainRhine mgr history " > "

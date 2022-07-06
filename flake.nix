@@ -35,6 +35,9 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
 
     name = "rhine";
     packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" ];
+    shellExtBuildInputs = {pkgs}: with pkgs; [
+      haskellPackages.haskell-language-server
+    ];
 
   };
 }
