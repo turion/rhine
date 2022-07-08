@@ -16,12 +16,14 @@ import Control.Concurrent.MVar ()
 import Data.IORef ()
 import Unsafe.Coerce (unsafeCoerce)
 
+-- monad-schedule
+import Control.Monad.Schedule.Class
+
 -- time
 import Data.Time.Clock ( getCurrentTime )
 
 -- terminal
--- terminal
-import System.Terminal ( awaitEvent, runTerminalT, Event, Interrupt, TerminalT, MonadInput )
+import System.Terminal ( awaitEvent, runTerminalT, Event, Interrupt, TerminalT (..), MonadInput )
 import System.Terminal.Internal ( Terminal )
 
 -- transformers
@@ -85,34 +87,38 @@ flowTerminal
   -> m ()
 flowTerminal term clsf = flip runTerminalT term $ flow clsf
 
--- | A schedule in the 'TerminalT LocalTerminal' transformer,
---   supplying the same backend connection to its scheduled clocks.
-terminalConcurrently
-  :: forall t cl1 cl2. (
-       Terminal t
-     , Clock (TerminalT t IO) cl1
-     , Clock (TerminalT t IO) cl2
-     , Time cl1 ~ Time cl2
-     )
-  => Schedule (TerminalT t IO) cl1 cl2
-terminalConcurrently
-  = Schedule $ \cl1 cl2 -> do
-      term <- terminalT ask
-      lift $ first liftTransS <$>
-        initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
+instance (Monad m, MonadSchedule m) => MonadSchedule (TerminalT t m) where
+  -- schedule actions = GlossConcT $ fmap (second $ map GlossConcT) $ schedule $ unGlossConcT <$> actions
+  schedule actions = TerminalT $ fmap (second $ map TerminalT) $ schedule $ unTerminalT <$> actions
+
+-- -- | A schedule in the 'TerminalT LocalTerminal' transformer,
+-- --   supplying the same backend connection to its scheduled clocks.
+-- terminalConcurrently
+--   :: forall t cl1 cl2. (
+--        Terminal t
+--      , Clock (TerminalT t IO) cl1
+--      , Clock (TerminalT t IO) cl2
+--      , Time cl1 ~ Time cl2
+--      )
+--   => Schedule (TerminalT t IO) cl1 cl2
+-- terminalConcurrently
+--   = Schedule $ \cl1 cl2 -> do
+--       term <- terminalT ask
+--       lift $ first liftTransS <$>
+--         initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
 
 -- Workaround TerminalT constructor not being exported. Should be safe in practice.
-terminalT :: ReaderT t m a -> TerminalT t m a
-terminalT = unsafeCoerce
+unTerminalT :: TerminalT t m a -> ReaderT t m a
+unTerminalT (TerminalT t) = t
 
-type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
+-- type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
 
-runTerminalClock
-  :: Terminal t
-  => t
-  -> cl
-  -> RunTerminalClock IO t cl
-runTerminalClock term unhoistedClock = HoistClock
-  { monadMorphism = flip runTerminalT term
-  , ..
-  }
+-- runTerminalClock
+--   :: Terminal t
+--   => t
+--   -> cl
+--   -> RunTerminalClock IO t cl
+-- runTerminalClock term unhoistedClock = HoistClock
+--   { monadMorphism = flip runTerminalT term
+--   , ..
+--   }
