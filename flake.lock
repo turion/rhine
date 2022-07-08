@@ -71,7 +71,25 @@
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
         "haskell-flake-utils": "haskell-flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "terminal-src": "terminal-src"
+      }
+    },
+    "terminal-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1656858436,
+        "narHash": "sha256-piGtYho56d/iWodc9H0F+hSbNAgr0mMvzs6dOxolUJw=",
+        "owner": "jmatsushita",
+        "repo": "haskell-terminal",
+        "rev": "72ecab5765cd1d06ab7202d7294ed34bf54566ca",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jmatsushita",
+        "ref": "reader",
+        "repo": "haskell-terminal",
+        "type": "github"
       }
     }
   },
