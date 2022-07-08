@@ -43,8 +43,7 @@ type InputClock = SelectClock TerminalEventClock Input
 
 inputClock :: InputClock
 inputClock = SelectClock
-  { mainClock = TerminalEventClock
-  , select }
+  { select }
     where
       select :: Tag TerminalEventClock -> Maybe Input
       select = \case
@@ -57,7 +56,7 @@ inputClock = SelectClock
 
 type PromptClock = LiftClock IO (TerminalT LocalTerminal) (Millisecond 1000)
 
-type AppClock = ParallelClock App InputClock PromptClock
+type AppClock = ParallelClock InputClock PromptClock
 
 -- ClSFs
 
@@ -96,7 +95,7 @@ promptSink = arrMCl changePrompt
 -- Rhines
 
 mainRhine :: Rhine App AppClock () ()
-mainRhine = inputRhine ||@ terminalConcurrently @|| promptRhine
+mainRhine = inputRhine |@| promptRhine
   where
     inputRhine :: Rhine App InputClock () ()
     inputRhine = inputSource >-> inputSink @@ inputClock
