@@ -102,7 +102,7 @@ sinceStart = absoluteS >>> proc time -> do
 {- | Alias for 'Control.Category.>>>' (sequential composition)
 with higher operator precedence, designed to work with the other operators, e.g.:
 
-> clsf1 >-> clsf2 @@ clA ||@ sched @|| clsf3 >-> clsf4 @@ clB
+> clsf1 >-> clsf2 @@ clA |@| clsf3 >-> clsf4 @@ clB
 
 The type signature specialises e.g. to
 

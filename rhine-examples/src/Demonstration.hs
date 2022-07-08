@@ -43,8 +43,8 @@ printEverySecond = arrMCl print
 --   which is output at every second.
 main :: IO ()
 main = flow $
-  ms500 @@ waitClock ||@ scheduleMillisecond @|| ms1200 @@ waitClock
-  >-- collect -@- concurrently -->
+  ms500 @@ waitClock |@| ms1200 @@ waitClock
+  >-- collect  -->
   printEverySecond @@ waitClock
 
 

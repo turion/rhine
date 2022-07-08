@@ -20,11 +20,11 @@ data ClockProxy cl where
   SequentialProxy
     :: ClockProxy cl1
     -> ClockProxy cl2
-    -> ClockProxy (SequentialClock m cl1 cl2)
+    -> ClockProxy (SequentialClock cl1 cl2)
   ParallelProxy
     :: ClockProxy clL
     -> ClockProxy clR
-    -> ClockProxy (ParallelClock m clL clR)
+    -> ClockProxy (ParallelClock clL clR)
 
 inProxy :: ClockProxy cl -> ClockProxy (In cl)
 inProxy LeafProxy = LeafProxy
@@ -65,10 +65,10 @@ class GetClockProxy cl where
     => ClockProxy cl
   getClockProxy = LeafProxy
 
-instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (SequentialClock m cl1 cl2) where
+instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (SequentialClock cl1 cl2) where
   getClockProxy = SequentialProxy getClockProxy getClockProxy
 
-instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (ParallelClock m cl1 cl2) where
+instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (ParallelClock cl1 cl2) where
   getClockProxy = ParallelProxy getClockProxy getClockProxy
 
 instance GetClockProxy cl => GetClockProxy (HoistClock m1 m2 cl)

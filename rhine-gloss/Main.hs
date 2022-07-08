@@ -24,8 +24,8 @@ main = do
   putStrLn "Please choose between the pure (1), the pure combined (2), and the IO backend (3):"
   n <- readLn
   case n of
-    1 -> flowGloss defaultSettings pureClSF
-    2 -> flowGlossCombined defaultSettings pureRhine
+    1 -> flowGlossClSF defaultSettings pureClSF
+    2 -> flowGloss defaultSettings pureRhine
     3 -> flowGlossIO defaultSettings ioRhine
     _ -> error "Invalid input"
 
@@ -34,7 +34,7 @@ pureClSF = currentEvent >>> arr maybeToList >>> sim
 
 -- | Run the gears simulation with the pure backend with two subsystems,
 --   one at the rate of events, one at the rate of simulation.
-pureRhine = tagS @@ glossEventClock >-- collect -@- glossSchedule --> sim >-> arrMCl paintAll @@ glossSimulationClock
+pureRhine = tagS @@ glossEventClock >-- collect --> sim >-> arrMCl paintAll @@ glossSimulationClock
 
 -- | Run the gears simulation with the 'IO' backend.
-ioRhine = tagS @@ GlossEventClockIO >-- collect -@- glossConcurrently --> sim >-> arrMCl paintAllIO @@ GlossSimClockIO
+ioRhine = tagS @@ GlossEventClockIO >-- collect --> sim >-> arrMCl paintAllIO @@ GlossSimClockIO

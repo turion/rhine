@@ -78,11 +78,9 @@ would be:
   main :: IO ()
   main = flow $
     ms500 @@ waitClock            --  a Rhine = a ClSF in the context of a Clock
-    ||@ scheduleMillisecond @||   --  compose 2 Rhines in parallel
-    ms1200 @@ waitClock           --  a Rhine
-    >-- collect                   --  buffer results from both Rhines into a list
-        -@- concurrently          --  the next Rhine executes in its own thread
-    -->
+    |@|                           --  compose 2 Rhines in parallel
+    ms1200 @@ waitClock           --  a Rhine at a different clock
+    >-- collect -->               --  buffer results from both Rhines into a list
     printEverySecond @@ waitClock --  the final Rhine
 
   -- | Uncomment the following for a type error (the clocks don't match):

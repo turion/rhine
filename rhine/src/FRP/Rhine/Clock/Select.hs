@@ -10,97 +10,87 @@ that ticks only on certain subevents.
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+-- {-# LANGUAGE TypeSynonymInstances #-}
+-- {-# LANGUAGE LiberalTypeSynonyms #-}
 module FRP.Rhine.Clock.Select where
+
+-- base
+import Data.Semigroup
 
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.Schedule
 
--- dunai
-import Data.MonadicStreamFunction.Async (concatS)
+-- transformers
+import Control.Monad.Trans.Class
+
+-- monad-schedule
+import Control.Monad.Schedule.Class (MonadSchedule)
 
 -- base
-import Data.Maybe (catMaybes, maybeToList)
+import Data.Maybe (maybeToList)
 
--- | A clock that selects certain subevents of type 'a',
---   from the tag of a main clock.
---
---   If two 'SelectClock's would tick on the same type of subevents,
---   but should not have the same type,
---   one should @newtype@ the subevent.
+-- rhine
+import Control.Monad.Event
+
+{- |
+A clock that selects certain events of type 'a',
+from the tag of a main clock @cl@.
+
+Note: If two 'SelectClock's would tick on the same type of subevents,
+but should not have the same type,
+one should @newtype@ the subevent.
+-}
 data SelectClock cl a = SelectClock
-  { mainClock :: cl -- ^ The main clock
-  -- | Return 'Nothing' if no tick of the subclock is required,
+  {
+  -- | Return 'Nothing' if no tick of the clock is required,
   --   or 'Just a' if the subclock should tick, with tag 'a'.
-  , select    :: Tag cl -> Maybe a
+  select :: Tag cl -> Maybe a
   }
 
-instance (Semigroup a, Semigroup cl) => Semigroup (SelectClock cl a) where
+instance Semigroup a => Semigroup (SelectClock cl a) where
   cl1 <> cl2 = SelectClock
-    { mainClock = mainClock cl1 <> mainClock cl2
-    , select = \tag -> select cl1 tag <> select cl2 tag
+    { select = \tag -> select cl1 tag <> select cl2 tag
     }
 
-instance (Monoid cl, Semigroup a) => Monoid (SelectClock cl a) where
+instance Semigroup a => Monoid (SelectClock cl a) where
   mempty = SelectClock
-    { mainClock = mempty
-    , select = const mempty
+    { select = const mempty
     }
 
-
-instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
+-- FIXME This doesn't work
+-- instance (Monad m, Clock m cl) => Clock (EventT (Tag cl) m) (SelectClock cl a) where
+instance (Clock m cl, Monad m, MonadSchedule m, ev ~ (Time cl, Maybe (Tag cl))) => Clock (EventT ev m) (SelectClock cl a) where
   type Time (SelectClock cl a) = Time cl
   type Tag  (SelectClock cl a) = a
   initClock SelectClock {..} = do
-    (runningClock, initialTime) <- initClock mainClock
-    let
-      runningSelectClock = filterS $ proc _ -> do
-        (time, tag) <- runningClock -< ()
-        returnA                     -< (time, ) <$> select tag
-    return (runningSelectClock, initialTime)
+    (initialTime, _initialEvent) <- listenUntil Just
+    return (constM $ listenUntil selector, initialTime)
+      where
+        selector :: (Time cl, Maybe (Tag cl)) -> Maybe (Time cl, a)
+        selector (time, evMaybe) = do
+          ev <- evMaybe
+          a <- select ev
+          return (time, a)
 
 instance GetClockProxy (SelectClock cl a)
 
--- | A universal schedule for two subclocks of the same main clock.
---   The main clock must be a 'Semigroup' (e.g. a singleton).
-schedSelectClocks
-  :: (Monad m, Semigroup cl, Clock m cl)
-  => Schedule m (SelectClock cl a) (SelectClock cl b)
-schedSelectClocks = Schedule {..}
-  where
-    initSchedule subClock1 subClock2 = do
-      (runningClock, initialTime) <- initClock
-        $ mainClock subClock1 <> mainClock subClock2
-      let
-        runningSelectClocks = concatS $ proc _ -> do
-          (time, tag) <- runningClock -< ()
-          returnA                     -< catMaybes
-            [ (time, ) . Left  <$> select subClock1 tag
-            , (time, ) . Right <$> select subClock2 tag ]
-      return (runningSelectClocks, initialTime)
+newtype EventSource cl = EventSource cl
 
--- | A universal schedule for a subclock and its main clock.
-schedSelectClockAndMain
-  :: (Monad m, Semigroup cl, Clock m cl)
-  => Schedule m cl (SelectClock cl a)
-schedSelectClockAndMain = Schedule {..}
-  where
-    initSchedule mainClock' SelectClock {..} = do
-      (runningClock, initialTime) <- initClock
-        $ mainClock' <> mainClock
-      let
-        runningSelectClock = concatS $ proc _ -> do
-          (time, tag) <- runningClock -< ()
-          returnA                     -< catMaybes
-            [ Just (time, Left tag)
-            , (time, ) . Right <$> select tag ]
-      return (runningSelectClock, initialTime)
-
-
--- | Helper function that runs an 'MSF' with 'Maybe' output
---   until it returns a value.
-filterS :: Monad m => MSF m () (Maybe b) -> MSF m () b
-filterS = concatS . (>>> arr maybeToList)
+-- I don't completely understand why this instance definition isn't fine, and I have to do a strange workaround.
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/3485
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/14046
+-- instance (Monad m, MonadSchedule m, Clock m cl) => Clock (EventT (Time cl, Maybe (Tag cl)) m) (EventSource cl) where
+instance (Monad m, MonadSchedule m, Clock m cl, ev ~ (Time cl, Maybe (Tag cl))) => Clock (EventT ev m) (EventSource cl) where
+  type Time (EventSource cl) = Time cl
+  type Tag  (EventSource cl) = Tag  cl
+  initClock (EventSource cl) = do
+    (runningClock, initialTime) <- lift $ initClock cl
+    emit (initialTime, Nothing)
+    return (liftTransS runningClock >>> arrM emitAndReturn, initialTime)
+      where
+        emitAndReturn :: (Time cl, Tag cl) -> EventT (Time cl, Maybe (Tag cl)) m (Time cl, Tag cl)
+        emitAndReturn (time, tag) = emit (time, Just tag) >> return (time, tag)

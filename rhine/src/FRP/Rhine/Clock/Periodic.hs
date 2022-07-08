@@ -8,12 +8,10 @@ The time differences are supplied at the type level.
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
@@ -24,10 +22,12 @@ import GHC.TypeLits (Nat, KnownNat, natVal)
 -- dunai
 import Data.MonadicStreamFunction
 
+-- monad-schedule
+import Control.Monad.Schedule.Trans
+
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import Control.Monad.Schedule
 
 -- * The 'Periodic' clock
 

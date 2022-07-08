@@ -21,16 +21,12 @@ import GHC.TypeLits
 -- vector-sized
 import Data.Vector.Sized (Vector, fromList)
 
--- dunai
-import Data.MonadicStreamFunction.Async (concatS)
-
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
-import FRP.Rhine.Schedule
 
 -- | A pure (side effect free) clock with fixed step size,
 --   i.e. ticking at multiples of 'n'.
@@ -56,20 +52,6 @@ instance GetClockProxy (FixedStep n)
 
 -- | A singleton clock that counts the ticks.
 type Count = FixedStep 1
-
--- | Two 'FixedStep' clocks can always be scheduled without side effects.
-scheduleFixedStep
-  :: Monad m
-  => Schedule m (FixedStep n1) (FixedStep n2)
-scheduleFixedStep = Schedule f where
-  f cl1 cl2 = return (msf, 0)
-    where
-      n1 = stepsize cl1
-      n2 = stepsize cl2
-      msf = concatS $ proc _ -> do
-        k <- arr (+1) <<< count -< ()
-        returnA                 -< [ (k, Left  ()) | k `mod` n1 == 0 ]
-                                ++ [ (k, Right ()) | k `mod` n2 == 0 ]
 
 -- TODO The problem is that the schedule doesn't give a guarantee where in the n ticks of the first clock the second clock will tick.
 -- For this to work, it has to be the last.

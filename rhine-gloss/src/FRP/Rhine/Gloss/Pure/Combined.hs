@@ -12,6 +12,7 @@ As an easy starter, you can use the helper function 'buildGlossRhine'.
 module FRP.Rhine.Gloss.Pure.Combined where
 
 -- rhine
+import Control.Monad.Event (evalEventT, EventT)
 import FRP.Rhine
 import FRP.Rhine.Reactimation.ClockErasure
 
@@ -23,13 +24,9 @@ import FRP.Rhine.Gloss.Pure
 --   It is combined of two subsystems, the event part and the simulation part.
 --   @a@ is the type of subevents that are selected.
 type GlossCombinedClock a
-  = SequentialClock GlossM
+  = SequentialClock
       (GlossEventClock a)
       GlossSimulationClock
-
--- | Schedule the subclocks of the 'GlossCombinedClock'.
-glossSchedule :: Schedule GlossM (GlossEventClock a) GlossSimulationClock
-glossSchedule = schedSelectClocks
 
 -- ** Events
 
@@ -42,8 +39,7 @@ glossEventSelectClock
   :: (Event -> Maybe a)
   -> GlossEventClock a
 glossEventSelectClock selector = SelectClock
-  { mainClock = GlossClock
-  , select = (>>= selector)
+  { select = (>>= selector)
   }
 
 -- | Tick on every event.
@@ -58,11 +54,12 @@ type GlossSimulationClock = SelectClock GlossClock ()
 glossSimulationClock :: GlossSimulationClock
 glossSimulationClock = SelectClock { .. }
   where
-    mainClock = GlossClock
     select (Just _event) = Nothing
     select Nothing        = Just ()
 
 -- * Signal networks
+
+type GlossClockEvent = (Float, Maybe (Maybe Event))
 
 {- |
 The type of a valid 'Rhine' that can be run by @gloss@,
@@ -92,7 +89,7 @@ myGlossRhine
   = myEventSubsystem @@ myEventClock >-- collect -@- glossSchedule --> mySim @@ glossSimulationClock
 @
 -}
-type GlossRhine a = Rhine GlossM (GlossCombinedClock a) () ()
+type GlossRhine a = Rhine (EventT GlossClockEvent GlossM) (GlossCombinedClock a) () ()
 
 {- | For most applications, it is sufficient to implement
 a single signal function
@@ -104,18 +101,6 @@ buildGlossRhine
   -> ClSF GlossM GlossSimulationClock [a] () -- ^ The 'ClSF' representing the game loop.
   -> GlossRhine a
 buildGlossRhine selector clsfSim
-  =   timeInfoOf tag @@ glossEventSelectClock selector
-  >-- collect       -@- glossSchedule
-  --> clsfSim        @@ glossSimulationClock
-
--- * Reactimation
-
--- | The main function that will start the @gloss@ backend and run the 'SN'.
-flowGlossCombined
-  :: GlossSettings
-  -> GlossRhine a -- ^ The @gloss@-compatible 'Rhine'.
-  -> IO ()
-flowGlossCombined settings Rhine { .. } = flowGlossWithWorldMSF settings clock $ proc tick -> do
-  eraseClockSN 0 sn -< case tick of
-    (_       , Left event) -> (0       , Left event, Just ())
-    (diffTime, Right ()  ) -> (diffTime, Right ()  , Nothing)
+  =   timeInfoOf tag   @@ glossEventSelectClock selector
+  >-- collect
+  --> liftClSF clsfSim @@ glossSimulationClock

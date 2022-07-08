@@ -51,7 +51,7 @@ source-repository this
 
 library
   exposed-modules:
-    Control.Monad.Schedule
+    Control.Monad.Event
     FRP.Rhine
     FRP.Rhine.Clock
     FRP.Rhine.Clock.FixedStep
@@ -84,8 +84,6 @@ library
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
     FRP.Rhine.Schedule
-    FRP.Rhine.Schedule.Concurrently
-    FRP.Rhine.Schedule.Trans
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
     FRP.Rhine.Type
@@ -93,7 +91,6 @@ library
   other-modules:
     FRP.Rhine.ClSF.Random.Util
     FRP.Rhine.ClSF.Except.Util
-    FRP.Rhine.Schedule.Util
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -104,6 +101,7 @@ library
                      , transformers >= 0.5
                      , time         >= 1.8
                      , free         >= 5.1
+                     , operational  >= 0.2
                      , containers   >= 0.5
                      , vector-sized >= 1.4
                      , deepseq      >= 1.4
@@ -111,6 +109,7 @@ library
                      , MonadRandom  >= 0.5
                      , simple-affine-space
                      , time-domain
+                     , monad-schedule >= 0.1
 
   -- Directories containing source files.
   hs-source-dirs:      src
