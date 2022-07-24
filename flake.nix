@@ -16,7 +16,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
-
   };
 
 outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }:
@@ -35,6 +34,5 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
 
     name = "rhine";
     packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" ];
-
   };
 }
