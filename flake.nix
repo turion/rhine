@@ -16,9 +16,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
+
+    terminal-src = {
+      # url = "github:jmatsushita/haskell-terminal/reader";
+      url = "path:/Users/jun/dev/workshop/haskell-terminal";
+      flake = false;
+    };
+
   };
 
-outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }:
+outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, terminal-src, ... }:
   haskell-flake-utils.lib.simpleCabalProject2flake {
     inherit self nixpkgs;
 
@@ -33,6 +40,17 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
     ];
 
     name = "rhine";
-    packageNames = [ "rhine-gloss" "rhine-examples" ];
+    packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" ];
+      hpPreOverrides = { pkgs }: new: old:
+        with pkgs.haskell.lib; with haskell-flake-utils.lib;
+        {
+          # monad-schedule = old.callHackageDirect { pkg = "monad-schedule"; ver = "0.1.2.0"; sha256 = "sha256-7zXI37brdrqlgiRo/RseP0iMhBferzDM+Qiu5F1hhus="; } {};
+          terminal = old.callCabal2nix "terminal" "${terminal-src}" {};
+        };
+
+    shellExtBuildInputs = {pkgs}: with pkgs; [
+      haskellPackages.haskell-language-server
+    ];
+
   };
 }

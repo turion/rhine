@@ -5,15 +5,50 @@
 
 packages:
 - completed:
-    hackage: time-domain-0.1.0.0@sha256:48146872e85f46399e8b8d7ff7c3d3b7f530e2de167b6893ba3ce649ba2e2e75,800
     pantry-tree:
-      size: 223
       sha256: afa0bf300d4ebf038bdea9d3990c0075743c9d20ffc9cb43db862a93342f7ba4
+      size: 223
+    hackage: time-domain-0.1.0.0@sha256:48146872e85f46399e8b8d7ff7c3d3b7f530e2de167b6893ba3ce649ba2e2e75,800
   original:
     hackage: time-domain-0.1.0.0@sha256:48146872e85f46399e8b8d7ff7c3d3b7f530e2de167b6893ba3ce649ba2e2e75,800
+- completed:
+    pantry-tree:
+      sha256: 674e02bdeb768ba1839077cbba24ec418f1cd82fb3e083a1b2fe900c4cdc0939
+      size: 2172
+    hackage: dunai-0.8.3@sha256:06f75101fc87566f00e09b6c941384a98e1e1393eac721976e5b714d9c4a1f68,6260
+  original:
+    hackage: dunai-0.8.3@sha256:06f75101fc87566f00e09b6c941384a98e1e1393eac721976e5b714d9c4a1f68,6260
+- completed:
+    pantry-tree:
+      sha256: 54160663bf0cbcd1d9fa52e136740faaf91a82d1ca1efeb08e8e58575a7446e7
+      size: 1775
+    hackage: terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
+  original:
+    hackage: terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
+- completed:
+    pantry-tree:
+      sha256: f41504ec5c04a3f3358ef104362f02fdef29cbce4e5e4e6dbd6b6db70c40d4bf
+      size: 7395
+    hackage: text-1.2.5.0@sha256:791f0f6c97ed96113f17ab520cf0efe1a3a4f883a8c85910a5660567c8241c40,7895
+  original:
+    hackage: text-1.2.5.0@sha256:791f0f6c97ed96113f17ab520cf0efe1a3a4f883a8c85910a5660567c8241c40,7895
+- completed:
+    pantry-tree:
+      sha256: f05b577b5b2b6f8805ec5b2c0af9d8c42005319522b20db72ce6de90b7cbfe52
+      size: 45845
+    hackage: Cabal-3.4.1.0@sha256:48e64c97688149fac15445803830177248f15a9b1a783389efed5e375d70d2d0,31402
+  original:
+    hackage: Cabal-3.4.1.0@sha256:48e64c97688149fac15445803830177248f15a9b1a783389efed5e375d70d2d0,31402
+- completed:
+    pantry-tree:
+      sha256: 147ad21b8aa90273721903a6b294cc4ecd660d229d88c4e84c6275bc5d630ae6
+      size: 2630
+    hackage: parsec-3.1.15.1@sha256:8c7a36aaadff12a38817fc3c4ff6c87e3352cffd1a58df640de7ed7a97ad8fa3,4601
+  original:
+    hackage: parsec-3.1.15.1@sha256:8c7a36aaadff12a38817fc3c4ff6c87e3352cffd1a58df640de7ed7a97ad8fa3,4601
 snapshots:
 - completed:
+    sha256: 637fb77049b25560622a224845b7acfe81a09fdb6a96a3c75997a10b651667f6
     size: 534126
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/31.yaml
-    sha256: 637fb77049b25560622a224845b7acfe81a09fdb6a96a3c75997a10b651667f6
   original: lts-16.31
