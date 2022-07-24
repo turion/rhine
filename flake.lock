@@ -71,7 +71,21 @@
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
         "haskell-flake-utils": "haskell-flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "terminal-src": "terminal-src"
+      }
+    },
+    "terminal-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1658586185,
+        "narHash": "sha256-xLPPMXSl0/K6gN9hxhynXjvEdz42eZV6rCW52aCPZWo=",
+        "path": "/Users/jun/dev/workshop/haskell-terminal",
+        "type": "path"
+      },
+      "original": {
+        "path": "/Users/jun/dev/workshop/haskell-terminal",
+        "type": "path"
       }
     }
   },
