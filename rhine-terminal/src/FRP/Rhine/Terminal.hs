@@ -7,31 +7,32 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecordWildCards #-}
-module FRP.Rhine.Terminal where
+module FRP.Rhine.Terminal
+  ( TerminalEventClock (..)
+  , flowTerminal
+  , terminalConcurrently
+  ) where
 
 -- base
 import Prelude hiding (putChar)
-import Control.Concurrent ()
-import Control.Concurrent.MVar ()
-import Data.IORef ()
 import Unsafe.Coerce (unsafeCoerce)
+
+-- exceptions
+import Control.Monad.Catch (MonadMask)
 
 -- time
 import Data.Time.Clock ( getCurrentTime )
 
--- terminal
 -- terminal
 import System.Terminal ( awaitEvent, runTerminalT, Event, Interrupt, TerminalT, MonadInput )
 import System.Terminal.Internal ( Terminal )
 
 -- transformers
 import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Class (lift)
 
 -- rhine
-import FRP.Rhine.Clock.Proxy ()
 import FRP.Rhine
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Catch (MonadMask)
 
 -- | A clock that ticks whenever events or interrupts on the terminal arrive.
 data TerminalEventClock = TerminalEventClock
@@ -62,13 +63,11 @@ instance Semigroup TerminalEventClock where
 -- Example:
 --
 -- @
---
 -- mainRhine :: MonadIO m => Rhine (TerminalT LocalTerminal m) TerminalEventClock () ()
 -- mainRhine = tagS >-> arrMCl (liftIO . print) @@ TerminalEventClock
 --
 -- main :: IO ()
 -- main = withTerminal $ \term -> `flowTerminal` term mainRhine
---
 -- @
 
 flowTerminal
@@ -102,6 +101,7 @@ terminalConcurrently
         initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
 
 -- Workaround TerminalT constructor not being exported. Should be safe in practice.
+-- See PR upstream https://github.com/lpeterse/haskell-terminal/pull/18
 terminalT :: ReaderT t m a -> TerminalT t m a
 terminalT = unsafeCoerce
 

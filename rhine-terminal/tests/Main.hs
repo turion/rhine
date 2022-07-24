@@ -16,9 +16,6 @@ import FRP.Rhine.Terminal
 import System.Terminal
 import System.Terminal.Internal
 
--- text
-import Data.Text (singleton)
-
 -- stm
 import Control.Concurrent.STM.TQueue
 
@@ -50,15 +47,14 @@ displayDot = constMCl $ do
 testRhine :: Terminal t => Rhine (TerminalT t IO) KeyClock () ()
 testRhine = displayDot @@ keyClock
 
-charEvent :: Terminal t => TQueue Event -> t -> Char -> IO ()
-charEvent eventQueue terminal char = do
-  termCommand terminal $ PutText $ singleton char
+charEvent :: TQueue Event -> t -> Char -> IO ()
+charEvent eventQueue _ char = do
   atomically $ writeTQueue eventQueue $ KeyEvent (CharKey char) mempty
 
 main :: IO ()
 main = hspec $ do
   describe "rhine-terminal with VirtualTerminal" $ do
-    it "replaces virtual inputs by dots" $ do
+    it "reaplces virtual inputs by dots" $ do
       eventQueue <- newTQueueIO
       withVirtualTerminal (defaultSettings eventQueue) $ \t -> do
         void $ liftIO $ forkIO $ flowTerminal t testRhine
@@ -71,6 +67,6 @@ main = hspec $ do
         readTVarIO (virtualWindow t) `shouldReturn` expWindow
       where
         expWindow =
-            [ "1.2.3.    "
+            [ "...       "
             , "          "
             , "          " ]
