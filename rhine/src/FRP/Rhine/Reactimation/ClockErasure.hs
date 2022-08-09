@@ -98,6 +98,26 @@ eraseClockSN initialTime (Precompose clsf sn) =
   bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time, , ) <$> inTag proxy tag <*> aMaybe
   eraseClockSN initialTime sn -< (time, tag, bMaybe)
 
+eraseClockSN initialTime (Feedback buf0 sn) =
+  let
+    proxy = toClockProxy sn
+  in feedback buf0 $ proc ((time, tag, aMaybe), buf) -> do
+  (cMaybe, buf') <- case inTag proxy tag of
+    Nothing -> do
+      returnA -< (Nothing, buf)
+    Just tagIn -> do
+      timeInfo <- genTimeInfo (inProxy proxy) initialTime -< (time, tagIn)
+      (c, buf') <- arrM $ uncurry get -< (buf, timeInfo)
+      returnA -< (Just c, buf')
+  bdMaybe <- eraseClockSN initialTime sn -< (time, tag, (, ) <$> aMaybe <*> cMaybe)
+  case (, ) <$> outTag proxy tag <*> bdMaybe of
+    Nothing -> do
+      returnA -< (Nothing, buf')
+    Just (tagOut, (b, d)) -> do
+      timeInfo <- genTimeInfo (outProxy proxy) initialTime -< (time, tagOut)
+      buf'' <- arrM $ uncurry $ uncurry put -< ((buf', timeInfo), d)
+      returnA -< (Just b, buf'')
+
 -- | Translate a resampling buffer into a monadic stream function.
 --
 --   The input decides whether the buffer is to accept input or has to produce output.

@@ -85,6 +85,16 @@ data SN m cl a b where
     => ClSF m (In cl) a b
     -> SN   m     cl    b c
     -> SN   m     cl  a   c
+  -- | Data can be looped back to the beginning of an 'SN',
+  --   but it must be resampled since the 'Out' and 'In' clocks are generally different.
+  Feedback
+    :: ( Clock m (In cl),  Clock m (Out cl)
+       , Time (In cl) ~ Time cl
+       , Time (Out cl) ~ Time cl
+       )
+    => ResBuf m (Out cl) (In cl) d c
+    -> SN     m cl (a, c) (b, d)
+    -> SN     m cl  a      b
 
 instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
   type Cl (SN m cl a b) = cl
