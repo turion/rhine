@@ -74,9 +74,18 @@ Sequential sn11 rb1 sn12 **** Sequential sn21 rb2 sn22 = Sequential sn1 rb sn2
     rb  = rb1 *-* rb2
 Parallel sn11 sn12 **** Parallel sn21 sn22
   = Parallel (sn11 **** sn21) (sn12 **** sn22)
+
+Precompose clsf sn1 **** sn2 = Precompose (first clsf) $ sn1 **** sn2
+sn1 **** Precompose clsf sn2 = Precompose (second clsf) $ sn1 **** sn2
+Postcompose sn1 clsf **** sn2 = Postcompose (sn1 **** sn2) (first clsf)
+sn1 **** Postcompose sn2 clsf = Postcompose (sn1 **** sn2) (second clsf)
+
 -- Note that the patterns above are the only ones that can occur.
 -- This is ensured by the clock constraints in the SF constructors.
-_ **** _ = error "Impossible pattern in ****"
+Synchronous _ **** Parallel _ _ = error "Impossible pattern: Synchronous _ **** Parallel _ _"
+Parallel _ _ **** Synchronous _ = error "Impossible pattern: Parallel _ _ **** Synchronous _"
+Synchronous _ **** Sequential {} = error "Impossible pattern: Synchronous _ **** Sequential {}"
+Sequential {} **** Synchronous _ = error "Impossible pattern: Sequential {} **** Synchronous _"
 
 -- | Compose two signal networks on different clocks in clock-parallel.
 --   At one tick of @ParClock m cl1 cl2@, one of the networks is stepped,
