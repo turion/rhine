@@ -1,0 +1,6 @@
+-- Workaround because monad-bayes does not build on GHC 9.4.4 yet
+packages:
+    rhine/rhine.cabal
+    rhine-gloss/rhine-gloss.cabal
+    rhine-terminal/rhine-terminal.cabal
+    rhine-examples/rhine-examples.cabal

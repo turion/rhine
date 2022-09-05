@@ -1,0 +1,89 @@
+name:                rhine-bayes
+version:             0.8.1
+synopsis:            monad-bayes backend for Rhine
+description:
+  This package provides a backend to the `monad-bayes` library,
+  enabling you to write stochastic processes as signal functions,
+  and performing online machine learning on them.
+license:             BSD3
+license-file:        LICENSE
+author:              Manuel Bärenz
+maintainer:          programming@manuelbaerenz.de
+-- copyright:
+category:            FRP
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+extra-doc-files:     README.md
+cabal-version:       1.18
+
+source-repository head
+  type:     git
+  location: git@github.com:turion/rhine.git
+
+source-repository this
+  type:     git
+  location: git@github.com:turion/rhine.git
+  tag:      v0.8.1
+
+library
+  exposed-modules:
+    FRP.Rhine.Bayes
+  other-modules:
+    Data.MonadicStreamFunction.Bayes
+  build-depends:       base         >= 4.11 && < 4.18
+                     , transformers >= 0.5
+                     , rhine        == 0.8.1
+                     , dunai        >= 0.8
+                     , log-domain   >= 0.12
+                     , monad-bayes  >= 1.1.0
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  default-extensions:
+    Arrows
+    DataKinds
+    DeriveFunctor
+    FlexibleContexts
+    FlexibleInstances
+    GeneralizedNewtypeDeriving
+    MultiParamTypeClasses
+    RankNTypes
+    ScopedTypeVariables
+    TupleSections
+    TypeFamilies
+
+  ghc-options:         -W
+  if flag(dev)
+    ghc-options: -Werror
+
+executable rhine-bayes-gloss
+  main-is:             Main.hs
+  hs-source-dirs:      app
+  ghc-options:         -threaded
+  build-depends:       base         >= 4.11 && < 4.18
+                     , rhine
+                     , rhine-bayes
+                     , rhine-gloss
+                     , monad-bayes
+                     , transformers
+                     , log-domain
+                     , mmorph
+                     , time
+  default-language:    Haskell2010
+  default-extensions:
+    Arrows
+    DataKinds
+    FlexibleContexts
+    NamedFieldPuns
+    RankNTypes
+    TupleSections
+    TypeApplications
+    TypeFamilies
+
+  ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
+  if flag(dev)
+    ghc-options: -Werror
+
+flag dev
+  description: Enable warnings as errors. Active on ci.
+  default: False
+  manual: True
