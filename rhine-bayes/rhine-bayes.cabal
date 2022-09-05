@@ -1,0 +1,66 @@
+name:                rhine-bayes
+version:             0.8.0.1
+synopsis:            Gloss backend for Rhine
+description:
+  This package provides a backend to the `monad-bayes` library,
+  enabling you to write stochastic processes as signal functions.
+license:             BSD3
+license-file:        LICENSE
+author:              Manuel Bärenz
+maintainer:          programming@manuelbaerenz.de
+-- copyright:
+category:            FRP
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+extra-doc-files:     README.md
+cabal-version:       1.18
+
+source-repository head
+  type:     git
+  location: git@github.com:turion/rhine.git
+
+source-repository this
+  type:     git
+  location: git@github.com:turion/rhine.git
+  tag:      v0.8.0.1
+
+
+library
+  exposed-modules:
+    FRP.Rhine.Bayes
+  build-depends:       base         >= 4.11 && < 4.16
+                     , transformers >= 0.5
+                     , rhine        == 0.8.0.1
+                     , dunai        >= 0.8
+                     , monad-bayes  >= 0.1.1
+                     , log-domain   >= 0.12
+                     , transformers >= 0.5
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  default-extensions:  Arrows
+  ghc-options:         -W
+  if flag(dev)
+    ghc-options: -Werror
+
+executable rhine-bayes-gloss
+  main-is:             Main.hs
+  hs-source-dirs:      app
+  ghc-options:         -threaded
+  build-depends:       base         >= 4.9 && < 5
+                     , rhine
+                     , rhine-bayes
+                     , rhine-gloss
+                     , monad-bayes
+                     , has-transformers
+                     , transformers
+                     , log-domain
+  default-language:    Haskell2010
+  default-extensions:  Arrows, DataKinds, TypeFamilies, TypeApplications, FlexibleContexts, RankNTypes
+  ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
+  if flag(dev)
+    ghc-options: -Werror
+
+flag dev
+  description: Enable warnings as errors. Active on ci.
+  default: False
+  manual: True
