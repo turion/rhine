@@ -83,6 +83,34 @@ executable rhine-bayes-gloss
   if flag(dev)
     ghc-options: -Werror
 
+executable rhine-bayes-gloss-lighthouse
+  main-is:             Lighthouse.hs
+  hs-source-dirs:      app
+  ghc-options:         -threaded
+  -- monad-bayes is not yet released for GHC 9.4
+  build-depends:       base         >= 4.11 && < 4.17
+                     , rhine
+                     , rhine-bayes
+                     , rhine-gloss
+                     , monad-bayes
+                     , transformers
+                     , log-domain
+                     , mmorph
+                     , time
+  default-language:    Haskell2010
+  default-extensions:
+    Arrows
+    DataKinds
+    FlexibleContexts
+    NamedFieldPuns
+    RankNTypes
+    TypeApplications
+    TypeFamilies
+
+  ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
+  if flag(dev)
+    ghc-options: -Werror
+
 flag dev
   description: Enable warnings as errors. Active on ci.
   default: False

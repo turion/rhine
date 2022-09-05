@@ -21,12 +21,13 @@ sim = timeInfoOf sinceInit >>> arr (* 50) >>> arr gears
 
 main :: IO ()
 main = do
-  putStrLn "Please choose between the pure (1), the pure combined (2), and the IO backend (3):"
+  putStrLn "Please choose between the pure (1), the pure combined (2), the IO backend with events (3), the IO backend without events (4):"
   n <- readLn
   case n of
     1 -> flowGloss defaultSettings pureClSF
     2 -> flowGlossCombined defaultSettings pureRhine
     3 -> flowGlossIO defaultSettings ioRhine
+    4 -> launchGlossThread defaultSettings $ reactimateCl GlossSimClockIO $ arr (const []) >-> sim >-> arrMCl paintAllIO
     _ -> error "Invalid input"
 
 -- | Run the gears simulation with the pure backend synchronously.
