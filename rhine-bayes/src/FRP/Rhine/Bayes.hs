@@ -1,9 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module FRP.Rhine.Bayes where
 
 -- transformers
-import Control.Monad.Trans.Reader (mapReaderT)
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader (mapReaderT, ask, runReaderT)
 
 -- log-domain
 import Numeric.Log hiding (sum)
@@ -11,13 +14,18 @@ import Numeric.Log hiding (sum)
 -- monad-bayes
 import Control.Monad.Bayes.Class
 import Control.Monad.Bayes.Population
-import Control.Monad.Bayes.Weighted
+import Control.Monad.Bayes.Weighted hiding (flatten)
 
 -- dunai
 import Data.MonadicStreamFunction.InternalCore (MSF(..))
 
 -- rhine
-import FRP.Rhine
+-- rhine
+import FRP.Rhine hiding (normalize)
+import Control.Monad (join)
+import Data.Functor (($>))
+
+import qualified Debug.Trace as Trace
 
 bayesFilter' :: (MonadInfer m, Eq sensor) =>
   -- | model
@@ -31,23 +39,41 @@ bayesFilter' model sensor = proc input -> do
   returnA -< (output, estimatedState)
 
 bayesFilter :: (MonadInfer m, Eq sensor) =>
-  ClSF m cl input (sensor, state) ->
+  ClSF m cl input (sensor, latent) ->
   -- | external sensor, data source
-  ClSF m cl (input, sensor) state
+  ClSF m cl (input, sensor) latent
 bayesFilter model = proc (input, measuredOutput) -> do
   (estimatedOutput, estimatedState) <- model -< input
   arrM condition -< estimatedOutput == measuredOutput
   returnA -< estimatedState
 
-runPopulationCl :: Monad m => ClSF (Population m) cl a b -> ClSF m cl a [(b, Log Double)]
-runPopulationCl clsf = runPopulationCl' [clsf]
+runPopulationCl :: forall m cl a b . Monad m =>
+  -- | Number of particles
+  Int ->
+  -- | Resampler
+  (forall x . Population m x -> Population m x)
+  -> ClSF (Population m) cl a b
+  -> ClSF m cl a [(b, Log Double)]
+runPopulationCl nParticles resampler clsf = runPopulationCl' $ spawn nParticles $> clsf
   where
-    runPopulationCl' :: Monad m => [ClSF (Population m) cl a b] -> ClSF m cl a [(b, Log Double)]
+    runPopulationCl' :: Monad m => Population m (ClSF (Population m) cl a b) -> ClSF m cl a [(b, Log Double)]
     runPopulationCl' clsfs = MSF $ \a -> do
-      -- FIXME Should I add the weights to the recursive call?
-      -- FIXME Should I resample here?
-      (bs, clsfs') <- unzip . concat <$> mapM (mapReaderT (fmap (fmap (\((b, clsf), weight) -> ((b, weight), clsf))) . runPopulation) . flip unMSF a) clsfs
-      return (bs, runPopulationCl' clsfs')
+      -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
+      -- funsies <- lift $ runPopulation clsfs
+      timeInfo <- ask
+      let thing = flip runReaderT timeInfo . flip unMSF a <$> clsfs
+      -- funsies2 <- lift $ runPopulation thing
+      -- funsies3 <- lift $ mapM runPopulation $ fst <$> funsies2
+      thang <- lift $ runPopulation $ join $
+        -- tracePopWeights "funsies" funsies `seq` tracePopWeights "funsies2" funsies2 `seq` tracePopWeights "funsies3" (concat funsies3) `seq`
+        thing
+      -- FIXME This abominal lambda could be done away by using Weighted?
+      let (currentPopulation, continuations) = unzip $ (\((b, clsf), weight) -> ((b, weight), (clsf, weight))) <$> thang
+      -- FIXME This normalizes, which introduces bias, whatever that means
+      return (currentPopulation, runPopulationCl' $ normalize $ resampler $ fromWeightedList $ return continuations)
+
+-- tracePopWeights :: String -> [(a, Log Double)] -> [(a, Log Double)]
+-- tracePopWeights msg as = Trace.trace (msg ++ show (map snd as)) as
 
 collapseCl :: MonadInfer m => ClSF (Population m) cl a b -> ClSF m cl a b
 collapseCl = hoistClSF collapse

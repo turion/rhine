@@ -17,7 +17,7 @@ import FRP.Rhine
 
 -- rhine-bayes
 import FRP.Rhine.Bayes hiding (average)
-import Numeric.Log
+import Numeric.Log hiding (sum)
 import Data.Tuple (swap)
 
 type StdDev = Double
@@ -26,43 +26,58 @@ type Sensor = Pos
 
 model :: MonadSample m => BehaviourF m UTCTime StdDev (Sensor, Pos)
 model = proc stdDev -> do
-  acceleration <- arrM $ normal 0 -< stdDev
-  -- Integral over roughly the last 10 seconds, dying off exponentially
+  acceleration <- arrM $ normal 3 -< stdDev
+  -- Integral over roughly the last 100 seconds, dying off exponentially
   velocity <- average 10 -< acceleration
   -- Integral over velocity with very slow reset
-  position <- average 100 -< velocity
-  measurementError <- constM $ normal 0 2 -< ()
+  position <- average 10 -< velocity
+  measurementError <- constM $ normal 0 3 -< ()
   returnA -< (position + measurementError, position)
 
-sensor :: MonadInfer m => BehaviourF m UTCTime StdDev Sensor
+sensor :: MonadSample m => BehaviourF m UTCTime StdDev Sensor
 sensor = model >>> arr fst
 
 filtered :: MonadInfer m => BehaviourF m UTCTime (StdDev, Sensor) Pos
-filtered = bayesFilter model
+filtered = proc (stdDev, sensor) -> do
+  (estimatedOutput, latent) <- model -< stdDev
+  arrM factor -< normalPdf estimatedOutput 1 sensor -- FIXME I think this is called an importance function?
+  returnA -< latent
+-- filtered = bayesFilter model
 
 -- FIXME Can't do it with Has?
 -- mainClSF :: (MonadIO m, MonadInfer m, Has (ExceptT ()) m) => BehaviourF m UTCTime () ()
 
 type MySmallMonad = Sequential SamplerIO
 
-averaged :: BehaviourF MySmallMonad UTCTime StdDev (Sensor, Pos)
-averaged = proc stdDev -> do
-  measuredPosition <- sensor -< stdDev
-  samples <- runPopulationCl filtered -< (stdDev, measuredPosition)
-  returnA -< (averageOf samples, measuredPosition)
+filteredAndTrue :: BehaviourF MySmallMonad UTCTime StdDev (Pos, Pos, Pos, Sensor)
+filteredAndTrue = proc stdDev -> do
+  (measuredPosition, actualPosition) <- model -< stdDev
+  samples <- runPopulationCl 200 resampleMultinomial filtered -< (stdDev, measuredPosition)
+  -- arrM $ liftIO . print -< samples
+  returnA -< (averageOf samples, stdDevOf samples, actualPosition, measuredPosition)
 
 -- Use Statistical?
 averageOf :: VectorSpace v Double => [(v, Log Double)] -> v
-averageOf = foldr (^+^) zeroVector . fmap (uncurry (*^) . first (exp . ln) . swap)
+averageOf things =
+  let
+    properThings = first (exp . ln) . swap <$> things
+    fullWeight = sum $ fst <$> properThings
+    sumOfThings = foldr (^+^) zeroVector $ fmap (uncurry (*^)) properThings
+  in sumOfThings ^/ fullWeight
+
+stdDevOf :: [(Double, Log Double)] -> Double
+stdDevOf things =
+  let
+    average = averageOf things
+    squares = first (\x -> (x - average) ^ 2) <$> things
+  in sqrt $ averageOf squares
 
 mainClSF :: BehaviourF MySmallMonad UTCTime () ()
 -- mainClSF :: BehaviourF MyMonad UTCTime () ()
 mainClSF = proc () -> do
   let stdDev = 10
-  -- FIXME This doesn't make sense, I have to initialise the particles at some point!
-  (estimatedPosition, measurement) <- averaged -< stdDev
-  -- FIXME y u no print
-  arrM $ liftIO . print -< (measurement, estimatedPosition)
+  output <- filteredAndTrue -< stdDev
+  arrM $ liftIO . print -< output
   n <- count -< ()
   arrM $ liftIO . print -< n
   -- liftHS $ throwOn () -< n > 100
@@ -98,6 +113,7 @@ main = do
   thing <- sampleIO
     -- $ runExceptT @()
     -- $ evidence
-    $ smcMultinomial 10000 10
+    -- $ smcMultinomial 10000 10
+    $ finish
     $ reactimateCl cl mainClSF
   print thing
