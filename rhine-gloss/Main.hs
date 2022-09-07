@@ -66,13 +66,14 @@ newtype EventLength a = EventLength a
 
 main :: IO ()
 main = do
-  putStrLn "Please choose between the pure (1), the pure combined (2), the IO backend (3), the IO livecoding backend (4):"
+  putStrLn "Please choose between the pure (1), the pure combined (2), the IO backend (3), the IO backend without events (4), the IO livecoding backend (5):"
   n <- readLn
   case n of
     1 -> flowGloss defaultSettings pureClSF
     2 -> flowGlossCombined defaultSettings pureRhine
     3 -> flowGlossIO defaultSettings ioRhine
-    4 -> do
+    4 -> launchGlossThread defaultSettings $ reactimateCl GlossSimClockIO $ arr (const []) >-> sim >-> arrMCl paintAllIO
+    5 -> do
       void $ flowGlossLive defaultSettings ioRhine
       void $ getLine
     _ -> error "Invalid input"
