@@ -151,14 +151,15 @@ launchGlossThread GlossSettings { .. } = do
 -- | Run a 'Rhine' in the 'GlossConcT' monad by launching a separate thread for the @gloss@ backend,
 --   and reactimate in the foreground.
 flowGlossIO
-  :: ( Clock (GlossConcT IO) cl
+  :: ( MonadIO m
+     , Clock (GlossConcT m) cl
      , GetClockProxy cl
      , Time cl ~ Time (In  cl)
      , Time cl ~ Time (Out cl)
      )
   => GlossSettings
-  -> Rhine (GlossConcT IO) cl () ()
-  -> IO ()
+  -> Rhine (GlossConcT m) cl () ()
+  -> m ()
 flowGlossIO settings = launchInGlossThread settings . flow
 
 flowGlossLive
@@ -178,8 +179,7 @@ flowGlossLive settings rhine = do
 -- | A schedule in the 'GlossConcT' transformer,
 --   supplying the same backend connection to its scheduled clocks.
 glossConcurrently
-  :: ( Monad IO
-     , Clock (GlossConcT IO) cl1, Clock (GlossConcT IO) cl2
+  :: ( Clock (GlossConcT IO) cl1, Clock (GlossConcT IO) cl2
      , Time cl1 ~ Time cl2
      )
   => Schedule (GlossConcT IO) cl1 cl2
