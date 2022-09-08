@@ -23,7 +23,7 @@ import FRP.Rhine.Gloss.IO
 import FRP.Rhine.Bayes hiding (average)
 import Numeric.Log hiding (sum)
 import Data.Tuple (swap)
-import FRP.Rhine.Gloss.Common (defaultSettings, Color, circleSolid, color, translate, blue, green, red)
+import FRP.Rhine.Gloss.Common
 import GHC.Float (float2Double, double2Float)
 
 type StdDev = Double
@@ -32,13 +32,16 @@ type Sensor = Pos
 
 model :: (MonadSample m, Diff td ~ Float) => BehaviourF m td StdDev (Sensor, Pos)
 model = proc stdDev -> do
-  acceleration <- arrM $ normal 3 -< stdDev
+  acceleration <- arrM $ normal 5 -< stdDev
   -- Integral over roughly the last 100 seconds, dying off exponentially
-  velocity <- average 10 -< double2Float acceleration
+  velocity <- decayIntegral 2 -< double2Float acceleration
   -- Integral over velocity with very slow reset
-  position <- average 10 -< velocity
+  position <- decayIntegral 2 -< velocity
   measurementError <- constM $ normal 0 3 -< ()
   returnA -< (float2Double position + measurementError, float2Double position)
+
+decayIntegral :: (VectorSpace v (Diff td), Monad m) => Diff td -> BehaviourF m td v v
+decayIntegral timeConstant = average timeConstant >>> arr (timeConstant *^)
 
 sensor :: (MonadSample m, Diff td ~ Float) => BehaviourF m td StdDev Sensor
 sensor = model >>> arr fst
@@ -53,7 +56,7 @@ filtered = proc (stdDev, sensor) -> do
 -- FIXME Can't do it with Has?
 -- mainClSF :: (MonadIO m, MonadInfer m, Has (ExceptT ()) m) => BehaviourF m td () ()
 
-type MySmallMonad = GlossConcT (Sequential SamplerIO)
+type MySmallMonad = Sequential (GlossConcT SamplerIO)
 
 data Result = Result
   { estimate :: Pos
@@ -93,19 +96,21 @@ stdDevOf things =
 
 visualisation :: BehaviourF MySmallMonad td Result ()
 visualisation = proc Result { estimate, stdDev, measured, latent } -> do
-  constMCl clearIO -< ()
+  constMCl $ lift clearIO -< ()
   drawBall -< (estimate, stdDev, blue)
-  drawBall -< (measured, 0.1, red)
-  drawBall -< (latent, 0.1, green)
+  drawBall -< (measured, 0.3, red)
+  drawBall -< (latent, 0.3, withAlpha 0.5 green)
+
+-- FIXME opacity of estimate based on total probability mass
 
 drawBall :: BehaviourF MySmallMonad td (Double, Double, Color) ()
 drawBall = proc (position, width, theColor) -> do
-  arrMCl paintIO -< translate (double2Float position) 0 $ color theColor $ circleSolid $ double2Float width
+  arrMCl $ lift . paintIO -< scale 20 20 $ translate (double2Float position) 0 $ color theColor $ circleSolid $ double2Float width
 
 mainClSF :: Diff td ~ Float => BehaviourF MySmallMonad td () ()
 -- mainClSF :: BehaviourF MyMonad td () ()
 mainClSF = proc () -> do
-  let stdDev = 10
+  let stdDev = 20
   output <- filteredAndTrue -< stdDev
   visualisation -< output
   arrM $ liftIO . print -< output
@@ -145,13 +150,17 @@ instance MonadSample m => MonadSample (GlossConcT m) where
   random = lift random
   -- FIXME Other PDs?
 
+glossClock :: LiftClock (GlossConcT SamplerIO) Sequential GlossSimClockIO
+glossClock = liftClock GlossSimClockIO
+
 main = do
   -- TODO would like push
   thing <- sampleIO
     -- $ runExceptT @()
     -- $ evidence
     -- $ smcMultinomial 10000 10
-    $ finish
     $ launchGlossThread defaultSettings
-    $ reactimateCl GlossSimClockIO mainClSF
+      { display = InWindow "rhine-bayes" (1024, 960) (10, 10) }
+    $ finish
+    $ reactimateCl glossClock mainClSF
   print thing

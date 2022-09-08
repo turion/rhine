@@ -137,17 +137,13 @@ launchGlossThread :: MonadIO m => GlossSettings -> m GlossEnv
 launchGlossThread GlossSettings { .. } = do
   vars <- liftIO $ ( , , , ) <$> newEmptyMVar <*> newEmptyMVar <*> newIORef 0 <*> newIORef Blank
   let
-      getPic               (_, _, _, picRef)   = putStrLn "getPic" >> readIORef picRef
+      getPic               (_, _, _, picRef)   = readIORef picRef
       -- Only try to put so this doesn't hang in case noone is listening for events or ticks
       handleEvent event    vars@(_, eventVar, _, _) = do
-        putStrLn "handleEvent start"
         void $ tryPutMVar eventVar event
-        putStrLn "handleEvent done"
         return vars
       simStep     diffTime vars@(timeVar,  _, _, _) = do
-        putStrLn "simStep start"
         void $ tryPutMVar timeVar diffTime
-        putStrLn "simStep done"
         return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
   return vars
