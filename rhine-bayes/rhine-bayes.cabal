@@ -1,6 +1,6 @@
 name:                rhine-bayes
 version:             0.8.0.1
-synopsis:            Gloss backend for Rhine
+synopsis:            monad-bayes backend for Rhine
 description:
   This package provides a backend to the `monad-bayes` library,
   enabling you to write stochastic processes as signal functions.
@@ -31,10 +31,10 @@ library
   build-depends:       base         >= 4.11 && < 4.16
                      , transformers >= 0.5
                      , rhine        == 0.8.0.1
-                     , dunai        >= 0.8
-                     , monad-bayes  >= 0.1.1
+                     , dunai        >= 0.9
                      , log-domain   >= 0.12
-                     , transformers >= 0.5
+                     , monad-bayes  >= 0.1.1
+                     , dunai-bayes  >= 0.9
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:  Arrows
