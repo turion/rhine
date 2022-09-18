@@ -27,6 +27,8 @@ type StdDev = Double
 type Pos = (Double, Double)
 type Sensor = Pos
 
+-- * Model
+
 -- | Harmonic oscillator with white noise
 prior1d :: (MonadSample m, Diff td ~ Double) =>
   -- | Starting position
@@ -61,6 +63,8 @@ generativeModel = proc latent -> do
   noiseNow <- noise -< ()
   returnA -< latent ^+^ noiseNow
 
+-- * Filtering
+
 -- FIXME make parameters like n particles/spawn, softeq interactive!
 -- That means it'll not be a ClSF anymore
 
@@ -93,6 +97,8 @@ filtered = proc stdDev -> do
     , particles = samples
     }
 
+-- * Visualization
+
 -- TODO FPS counter so we can see how too many particles bog down performance.
 -- Or rather decouple simulation and graphics, and then make simulation a busy loop (with a little sleep) and display the simulation rate.
 visualisation :: BehaviourF MySmallMonad td Result ()
@@ -117,6 +123,8 @@ drawParticles = proc particles -> do
     p : ps -> do
       drawParticle -< p
       drawParticles -< ps
+
+-- * Integration
 
 mainClSF :: Diff td ~ Double => BehaviourF MySmallMonad td () ()
 mainClSF = proc () -> do
