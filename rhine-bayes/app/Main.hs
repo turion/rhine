@@ -27,17 +27,25 @@ type StdDev = Double
 type Pos = (Double, Double)
 type Sensor = Pos
 
-
-model :: (MonadSample m, Diff td ~ Double) => BehaviourF m td StdDev (Sensor, Pos)
-model = feedback zeroVector $ proc (stdDev, position') -> do
-  impulse <- arrM (normal 0) &&& arrM (normal 0) -< stdDev
+-- | Harmonic oscillator with white noise
+prior1d :: (MonadSample m, Diff td ~ Double) =>
+  -- | Starting position
+  Double ->
+  -- | Starting velocity
+  Double ->
+  BehaviourF m td StdDev Double
+prior1d initialPosition initialVelocity = feedback 0 $ proc (stdDev, position') -> do
+  impulse <- arrM (normal 0) -< stdDev
   -- FIXME make -3 input, sample once at the beginning, or on every key stroke
-  let acceleration = (-3) *^ position' ^+^ impulse
+  let acceleration = (-3) * position' + impulse
   -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
-  velocity <- arr (^+^ (0, 10)) <<< decayIntegral 100 -< acceleration
-  position <- integralFrom (10, 0) -< velocity
-  measurementError <- constM (normal 0 5) &&& constM (normal 0 5) -< ()
-  returnA -< ((position ^+^ measurementError, position), position)
+  velocity <- arr (+ initialPosition) <<< decayIntegral 100 -< acceleration
+  position <- integralFrom initialVelocity -< velocity
+  returnA -< (position, position)
+
+-- | 2D harmonic oscillator with noise
+prior :: (MonadSample m, Diff td ~ Double) => BehaviourF m td StdDev Pos
+prior = prior1d 10 0 &&& prior1d 0 10
 
 double2FloatTuple :: (Double, Double) -> (Float, Float)
 double2FloatTuple = double2Float *** double2Float
@@ -45,12 +53,25 @@ double2FloatTuple = double2Float *** double2Float
 decayIntegral :: (VectorSpace v (Diff td), Monad m) => Diff td -> BehaviourF m td v v
 decayIntegral timeConstant = average timeConstant >>> arr (timeConstant *^)
 
+noise :: MonadSample m => Behaviour m td Pos
+noise = let stdDev = 5 in whiteNoise stdDev &&& whiteNoise stdDev
+
+generativeModel :: (MonadSample m, Diff td ~ Double) => BehaviourF m td Pos Sensor
+generativeModel = proc latent -> do
+  noiseNow <- noise -< ()
+  returnA -< latent ^+^ noiseNow
 
 -- FIXME make parameters like n particles/spawn, softeq interactive!
 -- That means it'll not be a ClSF anymore
 
-filtered :: (MonadInfer m, Diff td ~ Double) => BehaviourF m td (StdDev, Sensor) Pos
-filtered = bayesFilter model
+model :: (MonadSample m, Diff td ~ Double) => BehaviourF m td StdDev (Sensor, Pos)
+model = proc stdDev -> do
+  latent <- prior -< stdDev
+  sensor <- generativeModel -< latent
+  returnA -< (sensor, latent)
+
+posterior :: (MonadInfer m, Diff td ~ Double) => BehaviourF m td (StdDev, Sensor) Pos
+posterior = bayesFilter model
 
 -- FIXME Want ExceptT so we can exit with escape
 type MySmallMonad = GlossConcT SamplerIO
@@ -62,10 +83,10 @@ data Result = Result
   }
   deriving Show
 
-filteredAndTrue :: Diff td ~ Double => BehaviourF MySmallMonad td StdDev Result
-filteredAndTrue = proc stdDev -> do
+filtered :: Diff td ~ Double => BehaviourF MySmallMonad td StdDev Result
+filtered = proc stdDev -> do
   (measuredPosition, actualPosition) <- model -< stdDev
-  samples <- runPopulationCl 100 resampleSystematic filtered -< (stdDev, measuredPosition)
+  samples <- runPopulationCl 100 resampleSystematic posterior -< (stdDev, measuredPosition)
   returnA -< Result
     { measured = measuredPosition
     , latent = actualPosition
@@ -100,7 +121,7 @@ drawParticles = proc particles -> do
 mainClSF :: Diff td ~ Double => BehaviourF MySmallMonad td () ()
 mainClSF = proc () -> do
   let stdDev = 5
-  output <- filteredAndTrue -< stdDev
+  output <- filtered -< stdDev
   visualisation -< output
 
 -- FIXME should be in monad-bayes
