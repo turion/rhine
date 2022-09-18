@@ -37,7 +37,7 @@ library
                      , dunai-bayes  >= 0.9
   hs-source-dirs:      src
   default-language:    Haskell2010
-  default-extensions:  Arrows
+  default-extensions:  Arrows, FlexibleContexts, FlexibleInstances, RankNTypes, ScopedTypeVariables, TypeFamilies, MultiParamTypeClasses
   ghc-options:         -W
   if flag(dev)
     ghc-options: -Werror
