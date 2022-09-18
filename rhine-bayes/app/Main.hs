@@ -1,5 +1,11 @@
+-- base
+import GHC.Float (float2Double, double2Float)
+
 -- transformers
 import Control.Monad.Trans.Class
+
+-- log-domain
+import Numeric.Log hiding (sum)
 
 -- monad-bayes
 import Control.Monad.Bayes.Class
@@ -16,9 +22,7 @@ import FRP.Rhine.Gloss.IO
 
 -- rhine-bayes
 import FRP.Rhine.Bayes
-import Numeric.Log hiding (sum)
 import FRP.Rhine.Gloss.Common
-import GHC.Float (float2Double, double2Float)
 
 type StdDev = Double
 type Pos = (Double, Double)
