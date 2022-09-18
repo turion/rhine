@@ -54,6 +54,11 @@ properCl = hoistClSF proper
 
 -- * Short standard library of stochastic processes
 
+-- FIXME multivariate version
+-- | White noise, that is, an independent normal distribution at every time step
+whiteNoise :: MonadSample m => Double -> Behaviour m td Double
+whiteNoise sigma = constMCl $ normal 0 sigma
+
 -- | Construct a Lévy process from the increment between time steps
 levy ::
   (MonadSample m, VectorSpace v (Diff td)) =>
