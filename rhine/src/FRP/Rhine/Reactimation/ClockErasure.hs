@@ -118,6 +118,19 @@ eraseClockSN initialTime (Feedback buf0 sn) =
       buf'' <- arrM $ uncurry $ uncurry put -< ((buf', timeInfo), d)
       returnA -< (Just b, buf'')
 
+eraseClockSN initialTime (FirstResampling sn buf) =
+  let
+    proxy = toClockProxy sn
+  in proc (time, tag, acMaybe) -> do
+    bMaybe <- eraseClockSN initialTime sn -< (time, tag, fst <$> acMaybe)
+    let
+      resBufInput = case (inTag proxy tag, outTag proxy tag, snd <$> acMaybe) of
+        (Just tagIn, _, Just c) -> Just $ Left (time, tagIn, c)
+        (_, Just tagOut, _) -> Just $ Right (time, tagOut)
+        _ -> Nothing
+    dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) initialTime buf -< resBufInput
+    returnA -< (,) <$> bMaybe <*> join dMaybe
+
 -- | Translate a resampling buffer into a monadic stream function.
 --
 --   The input decides whether the buffer is to accept input or has to produce output.

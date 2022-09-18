@@ -69,6 +69,15 @@ data SN m cl a b where
     => SN m                  cl1      a b
     -> SN m                      cl2  a b
     -> SN m (ParallelClock m cl1 cl2) a b
+  -- | Bypass the signal network by forwarding data in parallel through a 'ResamplingBuffer'.
+  FirstResampling
+    :: ( Clock m (In cl), Clock m (Out cl)
+       , Time cl ~ Time (Out cl)
+       , Time cl ~ Time (In cl)
+       )
+    => SN               m cl               a      b
+    -> ResamplingBuffer m (In cl) (Out cl)    c      d
+    -> SN               m cl              (a, c) (b, d)
   -- | A 'ClSF' can always be postcomposed onto an 'SN' if the clocks match on the output.
   Postcompose
     :: ( Clock m (Out cl)
