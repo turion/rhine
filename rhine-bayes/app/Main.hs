@@ -63,6 +63,7 @@ filtered = bayesFilter model
 
 -- FIXME Want ExceptT so we can exit with escape
 type MySmallMonad = Sequential (GlossConcT SamplerIO)
+-- FIXME Don't need Sequential anymore?
 
 data Result = Result
   { estimate :: Pos
@@ -103,6 +104,8 @@ stdDevOf things =
     squares = first (\x -> norm (x ^-^ average) ^ 2) <$> things
   in sqrt $ averageOf squares
 
+-- TODO FPS counter so we can see how too many particles bog down performance.
+-- Or rather decouple simulation and graphics, and then make simulation a busy loop (with a little sleep) and display the simulation rate.
 visualisation :: BehaviourF MySmallMonad td Result ()
 visualisation = proc Result { estimate, stdDev, measured, latent, particles } -> do
   constMCl $ lift clearIO -< ()
