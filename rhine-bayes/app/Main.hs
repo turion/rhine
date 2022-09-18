@@ -79,7 +79,6 @@ filteredAndTrue = proc stdDev -> do
 visualisation :: BehaviourF MySmallMonad td Result ()
 visualisation = proc Result { measured, latent, particles } -> do
   constMCl $ lift clearIO -< ()
-  -- drawBall -< (estimate, stdDev, blue)
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
   drawParticles -< particles
