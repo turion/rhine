@@ -17,7 +17,6 @@ import FRP.Rhine.Gloss.IO
 -- rhine-bayes
 import FRP.Rhine.Bayes
 import Numeric.Log hiding (sum)
-import Data.Tuple (swap)
 import FRP.Rhine.Gloss.Common
 import GHC.Float (float2Double, double2Float)
 
@@ -55,9 +54,7 @@ type MySmallMonad = Sequential (GlossConcT SamplerIO)
 -- FIXME Don't need Sequential anymore?
 
 data Result = Result
-  { estimate :: Pos
-  , stdDev :: StdDev
-  , measured :: Sensor
+  { measured :: Sensor
   , latent :: Pos
   , particles :: [(Pos, Log Double)]
   }
@@ -68,34 +65,15 @@ filteredAndTrue = proc stdDev -> do
   (measuredPosition, actualPosition) <- model -< stdDev
   samples <- runPopulationCl 100 resampleSystematic filtered -< (stdDev, measuredPosition)
   returnA -< Result
-    { estimate = averageOf samples
-    , stdDev = stdDevOf samples
-    , measured = measuredPosition
+    { measured = measuredPosition
     , latent = actualPosition
     , particles = samples
     }
 
--- Use Statistical?
-averageOf :: VectorSpace v n => [(v, Log n)] -> v
-averageOf things =
-  let
-    properThings = first (exp . ln) . swap <$> things
-    fullWeight = sum $ fst <$> properThings
-    sumOfThings = foldr (^+^) zeroVector $ fmap (uncurry (*^)) properThings
-  in sumOfThings ^/ fullWeight
-
-stdDevOf :: [(Pos, Log Double)] -> Double
-stdDevOf things =
-  let
-    average = averageOf things
-    -- FIXME norm ^2 is wasteful
-    squares = first (\x -> norm (x ^-^ average) ^ 2) <$> things
-  in sqrt $ averageOf squares
-
 -- TODO FPS counter so we can see how too many particles bog down performance.
 -- Or rather decouple simulation and graphics, and then make simulation a busy loop (with a little sleep) and display the simulation rate.
 visualisation :: BehaviourF MySmallMonad td Result ()
-visualisation = proc Result { estimate, stdDev, measured, latent, particles } -> do
+visualisation = proc Result { measured, latent, particles } -> do
   constMCl $ lift clearIO -< ()
   -- drawBall -< (estimate, stdDev, blue)
   drawBall -< (measured, 0.3, red)
