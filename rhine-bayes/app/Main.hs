@@ -1,20 +1,12 @@
 -- transformers
-{-# LANGUAGE NamedFieldPuns #-}
 import Control.Monad.Trans.Class
-
--- base
-import Control.Monad.Fix
 
 -- monad-bayes
 import Control.Monad.Bayes.Class
-import Control.Monad.Bayes.Inference.SMC
 -- FIXME They should implement MMorph
 import Control.Monad.Bayes.Population hiding (hoist)
 import Control.Monad.Bayes.Sampler
 import Control.Monad.Bayes.Sequential
-
--- has-transformers
-import Control.Monad.Trans.Has
 
 -- rhine
 import FRP.Rhine
@@ -23,7 +15,7 @@ import FRP.Rhine
 import FRP.Rhine.Gloss.IO
 
 -- rhine-bayes
-import FRP.Rhine.Bayes hiding (average)
+import FRP.Rhine.Bayes
 import Numeric.Log hiding (sum)
 import Data.Tuple (swap)
 import FRP.Rhine.Gloss.Common
@@ -58,9 +50,6 @@ decayIntegral timeConstant = average timeConstant >>> arr (timeConstant *^)
 filtered :: (MonadInfer m, Diff td ~ Double) => BehaviourF m td (StdDev, Sensor) Pos
 filtered = bayesFilter model
 
--- FIXME Can't do it with Has?
--- mainClSF :: (MonadIO m, MonadInfer m, Has (ExceptT ()) m) => BehaviourF m td () ()
-
 -- FIXME Want ExceptT so we can exit with escape
 type MySmallMonad = Sequential (GlossConcT SamplerIO)
 -- FIXME Don't need Sequential anymore?
@@ -78,7 +67,6 @@ filteredAndTrue :: Diff td ~ Double => BehaviourF MySmallMonad td StdDev Result
 filteredAndTrue = proc stdDev -> do
   (measuredPosition, actualPosition) <- model -< stdDev
   samples <- runPopulationCl 100 resampleSystematic filtered -< (stdDev, measuredPosition)
-  -- arrM $ liftIO . print -< samples
   returnA -< Result
     { estimate = averageOf samples
     , stdDev = stdDevOf samples
@@ -114,8 +102,6 @@ visualisation = proc Result { estimate, stdDev, measured, latent, particles } ->
   drawBall -< (latent, 0.3, green)
   drawParticles -< particles
 
--- FIXME opacity of estimate based on total probability mass
-
 drawBall :: BehaviourF MySmallMonad td (Pos, Double, Color) ()
 drawBall = proc (position, width, theColor) -> do
   arrMCl $ lift . paintIO -< scale 20 20 $ uncurry translate (double2FloatTuple position) $ color theColor $ circleSolid $ double2Float width
@@ -133,16 +119,10 @@ drawParticles = proc particles -> do
       drawParticles -< ps
 
 mainClSF :: Diff td ~ Double => BehaviourF MySmallMonad td () ()
--- mainClSF :: BehaviourF MyMonad td () ()
 mainClSF = proc () -> do
   let stdDev = 5
   output <- filteredAndTrue -< stdDev
   visualisation -< output
-  -- arrM $ liftIO . print -< output
-  n <- count -< ()
-  arrM $ liftIO . print -< n
-  -- liftHS $ throwOn () -< n > 100
-  -- liftClSF $ liftClSF $ throwOn () -< n > 100
 
 -- FIXME should be in monad-bayes
 -- In fact there should be a newtype for lifting MonadSample along a transformer,
@@ -150,32 +130,11 @@ mainClSF = proc () -> do
 instance MonadSample m => MonadSample (ExceptT e m) where
   random = lift random
 
--- liftHS :: Has t m => (forall n . ClSF (t n) cl a b) -> ClSF m cl a b
--- liftHS clsf = hoistClSF liftH clsf
-
-
-cl :: IOClock MySmallMonad (Millisecond 100)
--- cl :: IOClock MyMonad (Millisecond 100)
-cl = ioClock waitClock
--- cl :: LiftClock (Population SamplerIO) Sequential (LiftClock SamplerIO Population (Millisecond 1000))
--- cl = liftClock $ liftClock (waitClock @1000)
-
--- data MyClock = MyClock
-
--- instance MonadIO m => Clock m MyClock where
---   type Time MyClock = td
---   type Tag  MyClock = Bool
---   initClock MyClock = do
---     (initClock cl
-
-
 -- See, this is why we need effect frameworks.
 -- Or why monad-bayes needs newtypes for monad transformers
 instance MonadSample m => MonadSample (GlossConcT m) where
   random = lift random
   -- FIXME Other PDs?
-
--- FIXME Make a td transformation
 
 glossClock :: RescaledClock (LiftClock (GlossConcT SamplerIO) Sequential GlossSimClockIO) Double
 glossClock = RescaledClock
@@ -186,9 +145,6 @@ glossClock = RescaledClock
 main = do
   -- TODO would like push
   thing <- sampleIO
-    -- $ runExceptT @()
-    -- $ evidence
-    -- $ smcMultinomial 10000 10
     $ launchGlossThread defaultSettings
       { display = InWindow "rhine-bayes" (1024, 960) (10, 10) }
     $ finish
