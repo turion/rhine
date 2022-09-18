@@ -77,7 +77,7 @@ data Result = Result
 filteredAndTrue :: Diff td ~ Double => BehaviourF MySmallMonad td StdDev Result
 filteredAndTrue = proc stdDev -> do
   (measuredPosition, actualPosition) <- model -< stdDev
-  samples <- runPopulationCl 100 resampleMultinomial filtered -< (stdDev, measuredPosition)
+  samples <- runPopulationCl 100 resampleSystematic filtered -< (stdDev, measuredPosition)
   -- arrM $ liftIO . print -< samples
   returnA -< Result
     { estimate = averageOf samples
