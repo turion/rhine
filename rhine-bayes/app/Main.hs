@@ -42,7 +42,7 @@ model = feedback zeroVector $ proc (stdDev, position') -> do
   -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
   velocity <- arr (^+^ (0, 10)) <<< decayIntegral 100 -< acceleration
   position <- integralFrom (10, 0) -< velocity
-  measurementError <- constM (normal 0 2) &&& constM (normal 0 2) -< ()
+  measurementError <- constM (normal 0 5) &&& constM (normal 0 5) -< ()
   returnA -< ((position ^+^ measurementError, position), position)
 
 double2FloatTuple :: (Double, Double) -> (Float, Float)
@@ -132,7 +132,7 @@ drawParticles = proc particles -> do
 mainClSF :: Diff td ~ Double => BehaviourF MySmallMonad td () ()
 -- mainClSF :: BehaviourF MyMonad td () ()
 mainClSF = proc () -> do
-  let stdDev = 20
+  let stdDev = 5
   output <- filteredAndTrue -< stdDev
   visualisation -< output
   -- arrM $ liftIO . print -< output
