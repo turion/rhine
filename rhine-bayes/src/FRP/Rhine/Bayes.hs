@@ -1,13 +1,5 @@
 module FRP.Rhine.Bayes where
 
--- base
-import Control.Monad (join)
-import Data.Functor (($>))
-
--- transformers
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader (mapReaderT, ask, runReaderT)
-
 -- log-domain
 import Numeric.Log hiding (sum)
 
@@ -17,7 +9,6 @@ import Control.Monad.Bayes.Population
 import Control.Monad.Bayes.Weighted hiding (flatten)
 
 -- dunai
-import Data.MonadicStreamFunction.InternalCore (MSF(..))
 import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
 
 -- dunai
@@ -25,7 +16,7 @@ import Data.MonadicStreamFunction.Bayes (SoftEq)
 import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 
 -- rhine
-import FRP.Rhine hiding (normalize)
+import FRP.Rhine
 
 -- FIXME Does this haddock work?
 -- | See 'Dunai.bayesFilter''
