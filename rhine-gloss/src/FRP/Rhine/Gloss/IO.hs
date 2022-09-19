@@ -31,6 +31,9 @@ import Data.IORef
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 
+-- mmorph
+import Control.Monad.Morph
+
 -- gloss
 import Graphics.Gloss.Interface.IO.Game
 
@@ -53,7 +56,7 @@ type GlossEnv = (MVar Float, MVar Event, IORef Float, IORef Picture)
 -- | Wraps the concurrent variables needed for communication with the @gloss@ backend.
 newtype GlossConcT m a = GlossConcT
   { unGlossConcT :: ReaderT GlossEnv m a }
-  deriving (Functor, Applicative, Monad, MonadTrans, MonadIO)
+  deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MFunctor, MMonad)
 
 withPicRef
   :: MonadIO m

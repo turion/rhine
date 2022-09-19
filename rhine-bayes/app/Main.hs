@@ -1,8 +1,12 @@
 -- base
+import Control.Monad (void)
 import GHC.Float (float2Double, double2Float)
 
 -- transformers
 import Control.Monad.Trans.Class
+
+-- mmorph
+import Control.Monad.Morph
 
 -- log-domain
 import Numeric.Log hiding (sum)
@@ -29,6 +33,8 @@ type Sensor = Pos
 
 -- * Model
 
+-- ** Prior
+
 -- | Harmonic oscillator with white noise
 prior1d :: (MonadSample m, Diff td ~ Double) =>
   -- | Starting position
@@ -48,6 +54,8 @@ prior1d initialPosition initialVelocity = feedback 0 $ proc (stdDev, position') 
 -- | 2D harmonic oscillator with noise
 prior :: (MonadSample m, Diff td ~ Double) => BehaviourF m td StdDev Pos
 prior = prior1d 10 0 &&& prior1d 0 10
+
+-- ** Observation
 
 double2FloatTuple :: (Double, Double) -> (Float, Float)
 double2FloatTuple = double2Float *** double2Float
@@ -124,13 +132,57 @@ drawParticles = proc particles -> do
       drawParticle -< p
       drawParticles -< ps
 
+type GlossClock = RescaledClockS (GlossConcT IO) GlossSimClockIO UTCTime ()
+-- type GlossClock = RescaledClock GlossSimClockIO Double
+
+glossClock :: GlossClock
+glossClock = RescaledClockS
+  { unscaledClockS = GlossSimClockIO
+  , rescaleS = const $ do
+
+      return (_, _)
+  }
+
 -- * Integration
+
+-- ** Single-rate : One sim step = one infer step = one display step
 
 mainClSF :: Diff td ~ Double => BehaviourF MySmallMonad td () ()
 mainClSF = proc () -> do
   let stdDev = 5
   output <- filtered -< stdDev
   visualisation -< output
+
+  -- TODO would like push
+main = void
+  $ sampleIO
+  $ launchGlossThread defaultSettings
+    { display = InWindow "rhine-bayes" (1024, 960) (10, 10) }
+  $ reactimateCl glossClock mainClSF
+
+-- ** Multi-rate: Simulation, inference, display at different rates
+
+-- TODO It's not so nice I need to morphS every component, but as long as I haven't gotten rid of schedules, I can't simplify this much
+modelRhine :: Rhine (GlossConcT IO) (Millisecond 100) StdDev (StdDev, (Sensor, Pos))
+-- modelRhine :: MonadSample m => Rhine m (Millisecond 100) StdDev (Sensor, Pos)
+modelRhine = hoistClSF sampleIOGloss (clId &&& model) @@ waitClock
+
+-- TODO It's silly that I need GlossConcT here
+inference :: Rhine (GlossConcT IO) Busy (StdDev, (Sensor, Pos)) Result
+-- FIXME abstract that bracket
+inference = hoistClSF sampleIOGloss thing @@ Busy
+  where
+    thing = proc (stdDev, (measured, latent)) -> do
+      particles <- (runPopulationCl 100 resampleSystematic posterior) -< (stdDev, measured)
+      returnA -< Result { measured, latent, particles }
+
+
+visualisationRhine :: Rhine (GlossConcT IO) GlossClock Result ()
+visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClock
+
+mainRhine = modelRhine >-- keepLast _ -@- glossConcurrently --> inference >-- keepLast _ -@- glossConcurrently --> visualisationRhine
+
+-- * Utilities
 
 -- FIXME should be in monad-bayes
 -- In fact there should be a newtype for lifting MonadSample along a transformer,
@@ -144,16 +196,5 @@ instance MonadSample m => MonadSample (GlossConcT m) where
   random = lift random
   -- FIXME Other PDs?
 
-glossClock :: RescaledClock GlossSimClockIO Double
-glossClock = RescaledClock
-  { unscaledClock = GlossSimClockIO
-  , rescale = float2Double
-  }
-
-main = do
-  -- TODO would like push
-  thing <- sampleIO
-    $ launchGlossThread defaultSettings
-      { display = InWindow "rhine-bayes" (1024, 960) (10, 10) }
-    $ reactimateCl glossClock mainClSF
-  print thing
+sampleIOGloss :: MySmallMonad a -> GlossConcT IO a
+sampleIOGloss = hoist sampleIO

@@ -43,6 +43,7 @@ library
                      , transformers >= 0.5
                      , rhine        == 0.8.1
                      , gloss        >= 1.12
+                     , mmorph       >= 1.2
   if flag(livecoding)
     build-depends: dunai-live >= 0.6
                  , essence-of-live-coding >= 0.1
