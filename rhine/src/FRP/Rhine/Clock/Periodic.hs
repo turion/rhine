@@ -8,12 +8,10 @@ The time differences are supplied at the type level.
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
@@ -45,7 +43,7 @@ instance (Monad m, NonemptyNatList v)
   type Time (Periodic v) = Integer
   type Tag  (Periodic v) = ()
   initClock cl = return
-    ( cycleS (theList cl) >>> withSideEffect wait >>> (accumulateWith (+) 0) &&& arr (const ())
+    ( cycleS (theList cl) >>> withSideEffect wait >>> accumulateWith (+) 0 &&& arr (const ())
     , 0
     )
 

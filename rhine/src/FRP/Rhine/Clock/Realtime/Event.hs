@@ -22,7 +22,6 @@ A simple example using events and threads can be found in rhine-examples.
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 module FRP.Rhine.Clock.Realtime.Event
   ( module FRP.Rhine.Clock.Realtime.Event
   , module Control.Monad.IO.Class
@@ -74,7 +73,7 @@ and then use 'withChanS'.
 -}
 runEventChanT :: MonadIO m => EventChanT event m a -> m a
 runEventChanT a = do
-  chan <- liftIO $ newChan
+  chan <- liftIO newChan
   runReaderT a chan
 
 {- | Remove ("run") an 'EventChanT' layer from the monad stack
@@ -156,7 +155,7 @@ instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
       ( constM $ do
           chan  <- ask
           event <- liftIO $ readChan chan
-          time  <- liftIO $ getCurrentTime
+          time  <- liftIO getCurrentTime
           return (time, event)
       , initialTime
       )
