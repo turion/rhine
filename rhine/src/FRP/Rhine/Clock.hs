@@ -7,7 +7,6 @@ This module provides the 'Clock' type class, several utilities,
 and certain general constructions of 'Clock's,
 such as clocks lifted along monad morphisms or time rescalings.
 -}
-{-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
