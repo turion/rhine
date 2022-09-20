@@ -78,6 +78,14 @@ data SN m cl a b where
     => SN               m cl               a      b
     -> ResamplingBuffer m (In cl) (Out cl)    c      d
     -> SN               m cl              (a, c) (b, d)
+  -- -- | TODO
+  -- Send
+  --   :: ( Clock m (In cl), Clock m (Out cl)
+  --      , Time cl ~ Time (Out cl)
+  --      , Time cl ~ Time (In cl)
+  --      )
+  --   => ResamplingBuffer m (In cl) (Out cl) a b
+  --   -> SN               m cl               a b
   -- | A 'ClSF' can always be postcomposed onto an 'SN' if the clocks match on the output.
   Postcompose
     :: ( Clock m (Out cl)
