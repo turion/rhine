@@ -54,6 +54,7 @@ executable rhine-bayes-gloss
                      , transformers
                      , log-domain
                      , mmorph
+                     , time
   default-language:    Haskell2010
   default-extensions:  Arrows, DataKinds, TypeFamilies, TypeApplications, FlexibleContexts, RankNTypes, NamedFieldPuns
   ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N

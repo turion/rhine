@@ -5,6 +5,9 @@ import GHC.Float (float2Double, double2Float)
 -- transformers
 import Control.Monad.Trans.Class
 
+-- time
+import Data.Time (getCurrentTime, addUTCTime)
+
 -- mmorph
 import Control.Monad.Morph
 
@@ -132,55 +135,85 @@ drawParticles = proc particles -> do
       drawParticle -< p
       drawParticles -< ps
 
-type GlossClock = RescaledClockS (GlossConcT IO) GlossSimClockIO UTCTime ()
--- type GlossClock = RescaledClock GlossSimClockIO Double
+type GlossClockUTC = RescaledClockS (GlossConcT IO) GlossSimClockIO UTCTime ()
 
-glossClock :: GlossClock
-glossClock = RescaledClockS
+glossClockUTC :: GlossClockUTC
+glossClockUTC = RescaledClockS
   { unscaledClockS = GlossSimClockIO
   , rescaleS = const $ do
-
-      return (_, _)
+      now <- liftIO getCurrentTime
+      return (arr $ \(timePassed, ()) -> (addUTCTime (realToFrac timePassed) now, ()), now)
   }
 
 -- * Integration
+
+main = do
+  putStrLn "Choose between single rate (1) and multi rate (2):"
+  choice <- read <$> getLine
+  case choice of
+    1 -> mainSingleRate
+    2 -> mainMultiRate
+    _ -> putStrLn "invalid choice" >> main
+
+glossSettings :: GlossSettings
+glossSettings = defaultSettings
+  { display = InWindow "rhine-bayes" (1024, 960) (10, 10) }
+
+-- FIXME Make interactive
+stdDev :: Double
+stdDev = 5
 
 -- ** Single-rate : One sim step = one infer step = one display step
 
 mainClSF :: Diff td ~ Double => BehaviourF MySmallMonad td () ()
 mainClSF = proc () -> do
-  let stdDev = 5
   output <- filtered -< stdDev
   visualisation -< output
 
+type GlossClock = RescaledClock GlossSimClockIO Double
+
+glossClock :: GlossClock
+glossClock = RescaledClock
+  { unscaledClock = GlossSimClockIO
+  , rescale = float2Double
+  }
+
   -- TODO would like push
-main = void
+mainSingleRate = void
   $ sampleIO
-  $ launchGlossThread defaultSettings
-    { display = InWindow "rhine-bayes" (1024, 960) (10, 10) }
+  $ launchGlossThread glossSettings
   $ reactimateCl glossClock mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
 
 -- TODO It's not so nice I need to morphS every component, but as long as I haven't gotten rid of schedules, I can't simplify this much
-modelRhine :: Rhine (GlossConcT IO) (Millisecond 100) StdDev (StdDev, (Sensor, Pos))
+modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) StdDev (StdDev, (Sensor, Pos))
 -- modelRhine :: MonadSample m => Rhine m (Millisecond 100) StdDev (Sensor, Pos)
-modelRhine = hoistClSF sampleIOGloss (clId &&& model) @@ waitClock
+modelRhine = hoistClSF sampleIOGloss (clId &&& model) @@ liftClock waitClock
 
+-- FIXME I still compute inference in the same thread. I should push calculation itself to a background thread, and force it there completely.
+-- A bit tricky with laziness...
 -- TODO It's silly that I need GlossConcT here
-inference :: Rhine (GlossConcT IO) Busy (StdDev, (Sensor, Pos)) Result
+inference :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (StdDev, (Sensor, Pos)) Result
 -- FIXME abstract that bracket
-inference = hoistClSF sampleIOGloss thing @@ Busy
+inference = hoistClSF sampleIOGloss thing @@ liftClock Busy
   where
+    thing :: (MonadSample m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
     thing = proc (stdDev, (measured, latent)) -> do
-      particles <- (runPopulationCl 100 resampleSystematic posterior) -< (stdDev, measured)
+      particles <- runPopulationCl 100 resampleSystematic posterior -< (stdDev, measured)
       returnA -< Result { measured, latent, particles }
 
 
-visualisationRhine :: Rhine (GlossConcT IO) GlossClock Result ()
-visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClock
+visualisationRhine :: Rhine (GlossConcT IO) GlossClockUTC Result ()
+visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC
 
-mainRhine = modelRhine >-- keepLast _ -@- glossConcurrently --> inference >-- keepLast _ -@- glossConcurrently --> visualisationRhine
+-- FIXME I need https://github.com/turion/rhine/pull/187 or similar in order to pass the model faster to the graphics even if inference takes longer
+mainRhine = const stdDev ^>>@ modelRhine >-- keepLast (stdDev, (zeroVector, zeroVector)) -@- glossConcurrently --> inference >-- keepLast Result { measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently --> visualisationRhine
+
+mainMultiRate :: IO ()
+mainMultiRate = void
+  $ launchGlossThread glossSettings
+  $ flow mainRhine
 
 -- * Utilities
 
