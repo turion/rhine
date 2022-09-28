@@ -12,7 +12,7 @@ import FRP.Rhine.Gloss
 gears :: Float -> Picture
 gears angle = color green $ pictures
   $ circleSolid 60
-  : map (rotate angle) [ rotate (45 * n) $ rectangleSolid 20 150 | n <- [0..3] ]
+  : [rotate (angle + 45 * n) $ rectangleSolid 20 150 | n <- [0 .. 3]]
 
 -- | Rotate the gear with a constant angular velocity.
 --   Disregards all events.
