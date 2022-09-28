@@ -6,6 +6,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE BangPatterns #-}
 module FRP.Rhine.Gloss.IO
   ( GlossConcT
   , paintIO
@@ -42,7 +44,12 @@ import FRP.Rhine.Gloss.Common
 
 -- * Gloss effects
 
-type GlossEnv = (MVar Float, MVar Event, IORef Float, IORef Picture)
+data GlossEnv = GlossEnv
+  { timeVar :: MVar Float
+  , eventVar :: MVar Event
+  , picRef :: IORef Picture
+  , time :: Float
+  }
 
 -- | Wraps the concurrent variables needed for communication with the @gloss@ backend.
 newtype GlossConcT m a = GlossConcT
@@ -54,7 +61,7 @@ withPicRef
   => (IORef Picture -> IO a)
   -> GlossConcT m a
 withPicRef action = GlossConcT $ do
-  (_, _, _, picRef) <- ask
+  GlossEnv { picRef } <- ask
   liftIO $ action picRef
 
 -- | Add a picture to the canvas.
@@ -80,10 +87,9 @@ instance MonadIO m => Clock (GlossConcT m) GlossEventClockIO where
   initClock _ = return (constM getEvent, 0)
     where
       getEvent = do
-        (_, eventVar, timeRef, _) <- GlossConcT ask
+        GlossEnv { eventVar, time } <- GlossConcT ask
         liftIO $ do
           event <- takeMVar eventVar
-          time <- readIORef timeRef
           return (time, event)
 
 instance GetClockProxy GlossEventClockIO
@@ -94,14 +100,11 @@ data GlossSimClockIO = GlossSimClockIO
 instance MonadIO m => Clock (GlossConcT m) GlossSimClockIO where
   type Time GlossSimClockIO = Float
   type Tag  GlossSimClockIO = ()
-  initClock _ = return (constM getTime >>> sumS >>> withSideEffect writeTime &&& arr (const ()), 0)
+  initClock _ = return (constM getTime &&& arr (const ()), 0)
     where
       getTime = do
-        (timeVar, _, _, _) <- GlossConcT ask
+        GlossEnv { timeVar } <- GlossConcT ask
         liftIO $ takeMVar timeVar
-      writeTime time = do
-        (_, _, timeRef, _) <- GlossConcT ask
-        liftIO $ writeIORef timeRef time
 
 instance GetClockProxy GlossSimClockIO
 
@@ -121,16 +124,17 @@ launchGlossThread
   -> GlossConcT m a
   ->            m a
 launchGlossThread GlossSettings { .. } glossLoop = do
-  vars <- liftIO $ ( , , , ) <$> newEmptyMVar <*> newEmptyMVar <*> newIORef 0 <*> newIORef Blank
+  vars <- liftIO $ GlossEnv <$> newEmptyMVar <*> newEmptyMVar <*> newIORef Blank <*> pure 0
   let
-      getPic               (_, _, _, picRef)   = readIORef picRef
+      getPic GlossEnv { picRef }   = readIORef picRef
       -- Only try to put so this doesn't hang in case noone is listening for events or ticks
-      handleEvent event    vars@(_, eventVar, _, _) = do
+      handleEvent event vars@GlossEnv { eventVar } = do
         void $ tryPutMVar eventVar event
         return vars
-      simStep     diffTime vars@(timeVar,  _, _, _) = do
-        void $ tryPutMVar timeVar diffTime
-        return vars
+      simStep diffTime vars@GlossEnv { timeVar, time } = do
+        let !time' = time + diffTime
+        void $ tryPutMVar timeVar time'
+        return vars { time = time' }
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
   runReaderT (unGlossConcT glossLoop) vars
 
