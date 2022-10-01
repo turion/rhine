@@ -25,16 +25,22 @@ data ClockProxy cl where
     :: ClockProxy clL
     -> ClockProxy clR
     -> ClockProxy (ParallelClock m clL clR)
+  InjectionProxy
+    :: ClockProxy cl1
+    -> ClockProxy cl2
+    -> ClockProxy (InjectionClock m cl1 cl2)
 
 inProxy :: ClockProxy cl -> ClockProxy (In cl)
 inProxy LeafProxy = LeafProxy
 inProxy (SequentialProxy p1 _) = inProxy p1
 inProxy (ParallelProxy pL pR) = ParallelProxy (inProxy pL) (inProxy pR)
+inProxy (InjectionProxy _ p2) = inProxy p2
 
 outProxy :: ClockProxy cl -> ClockProxy (Out cl)
 outProxy LeafProxy = LeafProxy
 outProxy (SequentialProxy _ p2) = outProxy p2
 outProxy (ParallelProxy pL pR) = ParallelProxy (outProxy pL) (outProxy pR)
+outProxy (InjectionProxy _ p2) = outProxy p2
 
 -- | Return the incoming tag, assuming that the incoming clock is ticked,
 --   and 'Nothing' otherwise.
@@ -43,6 +49,8 @@ inTag (SequentialProxy p1 _) (Left  tag1) = inTag p1 tag1
 inTag (SequentialProxy _  _) (Right _)    = Nothing
 inTag (ParallelProxy pL _) (Left  tagL) = Left  <$> inTag pL tagL
 inTag (ParallelProxy _ pR) (Right tagR) = Right <$> inTag pR tagR
+inTag (InjectionProxy _ _) (Left _) = Nothing
+inTag (InjectionProxy _ p2) (Right tag2) = inTag p2 tag2
 inTag LeafProxy tag = Just tag
 
 -- | Return the incoming tag, assuming that the outgoing clock is ticked,
@@ -52,6 +60,8 @@ outTag (SequentialProxy _ _ ) (Left  _)    = Nothing
 outTag (SequentialProxy _ p2) (Right tag2) = outTag p2 tag2
 outTag (ParallelProxy pL _) (Left  tagL) = Left  <$> outTag pL tagL
 outTag (ParallelProxy _ pR) (Right tagR) = Right <$> outTag pR tagR
+outTag (InjectionProxy _ _) (Left _) = Nothing
+outTag (InjectionProxy _ p2) (Right tag2) = outTag p2 tag2
 outTag LeafProxy tag = Just tag
 
 -- TODO Should this be a superclass with default implementation of clocks? But then we have a circular dependency...
@@ -70,6 +80,9 @@ instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (SequentialCloc
 
 instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (ParallelClock m cl1 cl2) where
   getClockProxy = ParallelProxy getClockProxy getClockProxy
+
+instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (InjectionClock m cl1 cl2) where
+  getClockProxy = InjectionProxy getClockProxy getClockProxy
 
 instance GetClockProxy cl => GetClockProxy (HoistClock m1 m2 cl)
 instance GetClockProxy cl => GetClockProxy (RescaledClock cl time)

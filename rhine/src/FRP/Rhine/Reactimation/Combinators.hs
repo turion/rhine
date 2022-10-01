@@ -228,3 +228,103 @@ Rhine sn cl @>-^ clsf = Rhine (sn >--^ clsf) cl
   -> Rhine m     cl    b c
   -> Rhine m     cl  a   c
 clsf ^->@ Rhine sn cl = Rhine (clsf ^--> sn) cl
+
+  
+-- | Syntactic sugar for 'RhineAndResamplingPoint' with '()' specified as the input.
+infix 2 >=-
+(>=-) :: Rhine m cl1 () a
+      -> ResamplingPoint m cl1 cl2 a b
+      -> RhineAndResamplingPoint m cl1 cl2 () b
+(>=-) = RhineAndResamplingPoint
+
+{- | The combinators for injection composition allow for the following syntax:
+
+@
+rh1   :: Rhine            m      cl1           () b
+rh1   =  ...
+
+rh2   :: Rhine            m               cl2  (a, c) d
+rh2   =  ...
+
+rb    :: ResamplingBuffer m (Out cl1) (In cl2) b c
+rb    =  ...
+
+sched :: Schedule         m       cl1     cl2
+sched =  ...
+
+rh    :: Rhine m (InjectionClock m cl1    cl2) a d
+rh    =  rh1 >=- rb -@- sched -=> rh2
+@
+-}
+infix 1 -=>
+(-=>) :: ( Clock m cl1, Clock m cl2
+         , Clock m (Out cl1)
+         , Clock m (In cl2)
+         , GetClockProxy cl1, GetClockProxy cl2
+         , Time cl1 ~ Time cl2
+         , Time cl1 ~ Time (Out cl1)
+         , Time cl2 ~ Time (In cl2)
+         )
+      => RhineAndResamplingPoint m cl1 cl2 () b
+      -> Rhine m                       cl2 (a, b) c
+      -> Rhine m (InjectionClock m cl1 cl2) a c
+RhineAndResamplingPoint (Rhine sn1 cl1) (ResamplingPoint rb cc) -=> (Rhine sn2 cl2)
+  = Rhine (Injection sn1 rb sn2) (InjectionClock cl1 cl2 cc)
+
+-- | Two schedules necessary to combine two 'InjectionClock's
+--   to allow the convenient construction of a 'SeqInjection'.
+data InjScheduling m clL clR cl1 =
+     InjScheduling (Schedule m clL clR) (Schedule m (ParallelClock m clL clR) cl1)
+
+-- | Syntactic sugar for 'InjScheduling'.
+infix 8 =@=
+(=@=) :: Schedule      m clL clR
+      -> Schedule      m (ParallelClock m clL clR) cl1
+      -> InjScheduling m clL clR cl1
+(=@=) = InjScheduling
+
+-- | A purely syntactical convenience construction
+--   enabling quadruple syntax for sequential injection composition, as described below.
+data RhineAndInjScheduling m clL clR cl1 a b =
+     RhineAndInjScheduling (Rhine m (InjectionClock m clL cl1) a b) (InjScheduling m clL clR cl1)
+
+-- | Syntactic sugar for 'RhineAndInjScheduling'.
+infix 2 >>=-
+(>>=-) :: Rhine m (InjectionClock m clL cl1) a b
+       -> InjScheduling m clL clR cl1
+       -> RhineAndInjScheduling m clL clR cl1 a b
+(>>=-) = RhineAndInjScheduling
+
+{- | The combinators for sequential injection composition allow for the following syntax:
+
+@
+rh1    :: Rhine m (InjectionClock m clL cl1) a b
+rh1    =  ...
+
+rh2    :: Rhine m (InjectionClock m clR cl1) b c
+rh2    =  ...
+
+sched1 :: Schedule m clL clR
+sched1 =  ...
+
+sched2 :: Schedule m (ParallelClock m clL clR) cl1
+sched2 =  ...
+
+rh     :: Rhine (InjectionClock m (ParallelClock m clL clR) cl1) a c
+rh     =  rh1 >>=- sched1 =@= sched2 -=>> rh2
+@
+-}
+infix 1 -=>>
+(-=>>) :: ( Clock m cl1, Clock m clL, Clock m clR
+          , GetClockProxy cl1
+          , GetClockProxy clL
+          , GetClockProxy clR
+          , Time cl1 ~ Time clL
+          , Time clL ~ Time clR
+          )
+       => RhineAndInjScheduling m clL clR cl1 a b
+       -> Rhine m (InjectionClock m clR cl1) b c
+       -> Rhine m (InjectionClock m (ParallelClock m clL clR) cl1) a c
+RhineAndInjScheduling (Rhine sn1 (InjectionClock clL cl1 _)) (InjScheduling lr cc)
+  -=>> (Rhine sn2 (InjectionClock clR _ _))
+  = Rhine (SeqInjection sn1 sn2) (InjectionClock (ParallelClock clL clR lr) cl1 cc)
