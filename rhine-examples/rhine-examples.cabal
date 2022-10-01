@@ -89,6 +89,16 @@ executable RandomWalk
   if flag(dev)
     ghc-options: -Werror
 
+executable InjectionClock
+  hs-source-dirs:      src
+  main-is:             RandomWalk.hs
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base         >= 4.9 && < 5
+                     , rhine        == 0.8.0.1
+  default-language:    Haskell2010
+  if flag(dev)
+    ghc-options: -Werror
+
 flag dev
   description: Enable warnings as errors. Active on ci.
   default: False
