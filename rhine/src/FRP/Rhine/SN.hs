@@ -69,6 +69,32 @@ data SN m cl a b where
     => SN m                  cl1      a b
     -> SN m                      cl2  a b
     -> SN m (ParallelClock m cl1 cl2) a b
+  -- | Inject data from one 'SN' into another at a different rate. Used for creating 'SeqInjection's.
+  Injection
+    :: ( Clock m cl1, Clock m cl2
+       , Clock m (Out cl1)
+       , Clock m (In  cl2)
+       , GetClockProxy cl1, GetClockProxy cl2
+       , Time cl1 ~ Time cl2
+       , Time cl1 ~ Time (Out cl1)
+       , Time cl2 ~ Time (In cl2)
+       )
+    => SN m cl1 () b
+    -> ResamplingBuffer m (Out cl1) (In cl2) b c
+    -> SN m cl2 (a, c) d
+    -> SN m (InjectionClock m cl1 cl2) a d
+  -- | Two 'Injection's with matching main clocks can be combined sequentially without a 'ResBuf'.
+  SeqInjection
+    :: ( Clock m cl1, Clock m clL, Clock m clR
+       , GetClockProxy cl1
+       , GetClockProxy clL
+       , GetClockProxy clR
+       , Time cl1 ~ Time clL
+       , Time clL ~ Time clR
+       )
+    => SN m (InjectionClock m clL cl1)                        a b
+    -> SN m (InjectionClock m clR cl1)                        b c
+    -> SN m (InjectionClock m (ParallelClock m clL clR) cl1) a c
   -- | A 'ClSF' can always be postcomposed onto an 'SN' if the clocks match on the output.
   Postcompose
     :: ( Clock m (Out cl)

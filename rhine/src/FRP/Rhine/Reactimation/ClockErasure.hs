@@ -84,6 +84,39 @@ eraseClockSN initialTime (Parallel snL snR) = proc (time, tag, maybeA) -> do
     Left  tagL -> eraseClockSN initialTime snL -< (time, tagL, maybeA)
     Right tagR -> eraseClockSN initialTime snR -< (time, tagR, maybeA)
 
+eraseClockSN initialTime (Injection sn1 resBuf sn2) =
+  let
+    proxy1 = toClockProxy sn1
+    proxy2 = toClockProxy sn2
+  in proc (time, tag, maybeA) -> do
+  resBufIn <- case tag of
+    Left  tagL -> do
+      maybeB <- eraseClockSN initialTime sn1 -< (time, tagL, Just ())
+      returnA -< Left <$> ((time, , ) <$> outTag proxy1 tagL <*> maybeB)
+    Right tagR -> do
+      returnA -< Right <$> (time, ) <$> inTag proxy2 tagR
+  maybeC <- mapMaybeS $ eraseClockResBuf (outProxy proxy1) (inProxy proxy2) initialTime resBuf -< resBufIn
+  case tag of
+    Left  _      -> do
+      returnA -< Nothing
+    Right tagR -> do
+      eraseClockSN initialTime sn2 -< (time, tagR, (, ) <$> maybeA <*> join maybeC)
+
+eraseClockSN initialTime (SeqInjection sn1 sn2) =
+  proc (time, tag, maybeA) -> do
+    maybeB <- mapMaybeS $ eraseClockSN initialTime sn1 -< (time, , maybeA)      <$> mkLeft tag
+    maybeC <- mapMaybeS $ eraseClockSN initialTime sn2 -< (time, , join maybeB) <$> mkRight tag
+    returnA -< join maybeC
+      where
+        mkLeft :: Either (Either tagL tagR) tag -> Maybe (Either tagL tag)
+        mkLeft (Left (Left  tag)) = Just (Left  tag)
+        mkLeft (Left (Right _  )) = Nothing
+        mkLeft (Right       tag ) = Just (Right tag)
+        mkRight :: Either (Either tagL tagR) tag -> Maybe (Either tagR tag)
+        mkRight (Left (Left  _  )) = Nothing
+        mkRight (Left (Right tag)) = Just (Left  tag)
+        mkRight (Right       tag ) = Just (Right tag)
+
 eraseClockSN initialTime (Postcompose sn clsf) =
   let
     proxy = toClockProxy sn

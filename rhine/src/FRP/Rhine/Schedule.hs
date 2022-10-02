@@ -236,6 +236,29 @@ schedPar2' = Schedule $ \ParallelClock { parallelSchedule = Schedule {..}, .. } 
       remap (Right (Left tag2))  = Left $ Right tag2
       remap (Right (Right tag1)) = Left $ Left tag1
 
+-- ** Clocks for data Injection
+
+
+-- | Two clocks can be combined with a schedule as a clock
+--   for an asynchronous sequential composition for injection within a signal network.
+data InjectionClock m cl1 cl2
+  = Time cl1 ~ Time cl2
+  => InjectionClock
+    { injectFromCl1 :: cl1
+    , injectInCl2 :: cl2
+    , injectionSchedule :: Schedule m cl1 cl2
+    } 
+
+-- | Abbreviation synonym.
+type InjClock m clSup clSub = InjectionClock m clSup clSub
+
+instance (Monad m, Clock m cl1, Clock m cl2)
+      => Clock m (InjectionClock m cl1 cl2) where
+  type Time (InjectionClock m cl1 cl2) = Time cl1
+  type Tag  (InjectionClock m cl1 cl2) = Either (Tag cl1) (Tag cl2)
+  initClock InjectionClock {..}
+    = initSchedule injectionSchedule injectFromCl1 injectInCl2
+
 
 -- * Navigating the clock tree
 
@@ -243,12 +266,14 @@ schedPar2' = Schedule $ \ParallelClock { parallelSchedule = Schedule {..}, .. } 
 type family In cl where
   In (SequentialClock m cl1 cl2) = In cl1
   In (ParallelClock   m cl1 cl2) = ParallelClock m (In cl1) (In cl2)
+  In (InjectionClock  m cl1 cl2) = In cl2
   In cl                          = cl
 
 -- | The clock that represents the rate at which data leaves the system.
 type family Out cl where
   Out (SequentialClock m cl1 cl2) = Out cl2
   Out (ParallelClock   m cl1 cl2) = ParallelClock m (Out cl1) (Out cl2)
+  Out (InjectionClock  m cl1 cl2) = Out cl2
   Out cl                          = cl
 
 
