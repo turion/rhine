@@ -91,7 +91,7 @@ executable RandomWalk
 
 executable InjectionClock
   hs-source-dirs:      src
-  main-is:             RandomWalk.hs
+  main-is:             InjectionClock.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.0.1
