@@ -125,7 +125,7 @@ drawBall = proc (position, width, theColor) -> do
 
 drawParticle :: BehaviourF MySmallMonad td (Pos, Log Double) ()
 drawParticle = proc (position, probability) -> do
-  drawBall -< (position, 0.1, withAlpha (double2Float $ exp $ 0.2 * ln probability) violet)
+  drawBall -< (position, 0.1, withAlpha (double2Float $ exp $ 0.2 * ln probability) white)
 
 drawParticles :: BehaviourF MySmallMonad td [(Pos, Log Double)] ()
 drawParticles = proc particles -> do
