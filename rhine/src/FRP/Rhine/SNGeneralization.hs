@@ -62,6 +62,8 @@ data SN (inClocks :: [Clocked]) (internalClocks :: [Type]) (outClocks :: [Clocke
 data Clocks (cls :: [Type]) = Clocks (HList cls)
 
 instance Clock m cl => Clock m (Clocks '[cl]) where
+  type Time (Clocks '[cl]) = Time cl
+  initClock cl = _
 
 type family Concat (as :: [a]) (as' :: [a]) :: [a] where
   Concat '[] as' = as'
