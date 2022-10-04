@@ -18,16 +18,14 @@ import Data.HList
 data Clocked = Clocked Type Type
 
 data SN (inClocks :: [Clocked]) (internalClocks :: [Type]) (outClocks :: [Clocked]) (m :: Type -> Type) where
-  Synchronous :: ClSF m cl a b -> SN '[ 'Clocked a cl] '[cl] '[ 'Clocked b cl] m
+  Synchronous ::
+    ClSF m cl a b ->
+    SN inClocks internalClocks outClocks m ->
+    SN ('Clocked a cl ': inClocks) (cl ': internalClocks) ('Clocked b cl ': outClocks) m
   Resampling ::
     ResBuf m cl1 cl2 a b ->
     SN ('Clocked b cl2 ': inClocks) internalClocks ('Clocked a cl1 ': outClocks) m ->
     SN inClocks internalClocks outClocks m
-  -- TODO Alternatively, could make Synchronous a cons-like operator
-  Combine ::
-    SN inClocks1 internalClocks1 outClocks1 m ->
-    SN inClocks2 internalClocks2 outClocks2 m ->
-    SN (Concat inClocks1 inClocks2) (Concat internalClocks1 internalClocks2) (Concat outClocks1 outClocks2) m
   PermuteInClocks ::
     SN inClocksBefore internalClocks outClocks m ->
     Permutation inClocksBefore inClocksAfter ->
@@ -64,10 +62,6 @@ data Clocks (cls :: [Type]) = Clocks (HList cls)
 instance Clock m cl => Clock m (Clocks '[cl]) where
   type Time (Clocks '[cl]) = Time cl
   initClock cl = _
-
-type family Concat (as :: [a]) (as' :: [a]) :: [a] where
-  Concat '[] as' = as'
-  Concat (a ': as) as' = a ': Concat as as'
 
 data Permutation (before :: [a]) (after :: [a]) where
   Identity :: Permutation as as
