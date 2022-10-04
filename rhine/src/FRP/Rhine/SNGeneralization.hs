@@ -10,7 +10,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 module FRP.Rhine.SNGeneralization where
 import Data.Kind (Type)
 import FRP.Rhine.ClSF
@@ -21,51 +20,43 @@ import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Schedule (In, Out)
 import Data.Void
 
--- FIXME Clocked a cl or Clocked cl a?
-data Clocked = Clocked Type Type
+data Plug = Closed | Open Type
+data Clocked = Clocked Plug Type Plug
 
-data SN td (inClocks :: [Clocked]) (internalClocks :: [Type]) (outClocks :: [Clocked]) (m :: Type -> Type) where
-  Empty :: SN td '[] '[] '[] m
+data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
+  Empty :: SN td '[] m
   Synchronous ::
     (Clock m cl, td ~ Time cl, cl ~ In cl, cl ~ Out cl) =>
     ClSF m cl a b ->
-    SN td inClocks internalClocks outClocks m ->
-    SN td ('Clocked a cl ': inClocks) (cl ': internalClocks) ('Clocked b cl ': outClocks) m
-  Resampling ::
+    SN td clocks m ->
+    SN td ('Clocked (Open a) cl (Open b) ': clocks) m
+  ResamplingHere ::
     (td ~ Time cl1, td ~ Time cl2) =>
     ResBuf m cl1 cl2 a b ->
-    SN td ('Clocked b cl2 ': inClocks) internalClocks ('Clocked a cl1 ': outClocks) m ->
-    SN td inClocks internalClocks outClocks m
-  PermuteInClocks ::
-    SN td inClocksBefore internalClocks outClocks m ->
-    Permutation inClocksBefore inClocksAfter ->
-    SN td inClocksAfter internalClocks outClocks m
-  PermuteInternalClocks ::
-    SN td inClocks internalClocksBefore outClocks m ->
-    Permutation internalClocksBefore internalClocksAfter ->
-    SN td inClocks internalClocksAfter outClocks m
-  PermuteOutClocks ::
-    SN td inClocks internalClocks outClocksBefore m ->
-    Permutation outClocksBefore outClocksAfter ->
-    SN td inClocks internalClocks outClocksAfter m
+    SN td ('Clocked (Open b) cl2 c ': 'Clocked d cl1 (Open a) ': clocks) m ->
+    SN td ('Clocked Closed cl2 c ': 'Clocked d cl1 Closed ': clocks) m
   DoneIn ::
-    SN td ('Clocked () cl ': inClocks) internalClocks outClocks m ->
-    SN td inClocks internalClocks outClocks m
+    SN td ('Clocked (Open a) cl b ': clocks) m ->
+    SN td ('Clocked Closed cl b ': clocks) m
   -- TODO Or do we want to be able to erase arbitrary output?
   DoneOut ::
-    SN td inClocks internalClocks ('Clocked () cl ': outClocks) m ->
-    SN td inClocks internalClocks outClocks m
-  -- FIXME get rid of if nil & cons work
-  ConcatIn2 ::
-    SN td ('Clocked a cl1 ': 'Clocked b cl2 ': inClocks) internalClocks outClocks m ->
-    SN td ('Clocked (HList '[a, b]) (Clocks td '[cl1, cl2]) ': inClocks) internalClocks outClocks m
-  -- TODO Replicate 3 of these. Not sure this can be refactored to reduce duplication
+    SN td ('Clocked a cl (Open b) ': clocks) m ->
+    SN td ('Clocked a cl Closed ': clocks) m
   ConcatInNil ::
-    SN td inClocks internalClocks outClocks m ->
-    SN td ('Clocked (HList '[]) (Clocks td '[]) ': inClocks) internalClocks outClocks m
-  ConcatInCons ::
-    SN td ('Clocked (HList as) (Clocks td cls) ': 'Clocked a cl ': inClocks) internalClocks outClocks m ->
-    SN td ('Clocked (HList (a ': as)) (Clocks td (cl ': cls)) ': inClocks) internalClocks outClocks m
+    SN td clocks m ->
+    SN td ('Clocked (Open (HList '[])) (Clocks td '[]) (Open (HList '[])) ': clocks) m
+  ConcatInConsOO ::
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked (Open a) cl (Open b) ': clocks) m ->
+    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HList (b ': bs))) ': clocks) m
+  ConcatInConsOC ::
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked (Open a) cl Closed ': clocks) m ->
+    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HList bs)) ': clocks) m
+  ConcatInConsCO ::
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked Closed cl (Open b) ': clocks) m ->
+    SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HList (b ': bs))) ': clocks) m
+  ConcatInConsCC ::
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked Closed cl Closed ': clocks) m ->
+    SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HList bs)) ': clocks) m
 
 data Clocks (td :: Type) (cls :: [Type]) = Clocks (HList cls)
 
@@ -91,21 +82,33 @@ data Swap (before :: [a]) (after :: [a]) where
 
 deriving instance (Show (Swap before after))
 
--- data InClocked (inClocks :: [Clocked]) where
---   InNil :: InClocked '[]
---   InCons :: a -> InClocked clas -> InClocked ('Clocked a cl ': clas)
+data InClocked (inClocks :: [Clocked]) where
+  InHere :: a -> InClocked ('Clocked (Open a) cl b ': cls)
+  InThere :: InClocked cls -> InClocked ('Clocked a cl b ': cls)
 
--- data OutClocked (outClocks :: [Clocked]) where
---   OutHere :: a -> OutClocked ('Clocked a cl ': clas)
---   OutThere :: OutClocked clas -> OutClocked ('Clocked a cl ': clas)
+analyseIn :: InClocked ('Clocked (Open a) cl b ': cls) -> Either e (InClocked cls)
+analyseIn (InHere a) = Left a
+analyseIn (InThere cls) = Right $ analyseIn cls
 
-data ClockedData (clocked :: [Clocked]) where
-  CDLeft :: a -> ClockedData ('Clocked a cl ': clas)
-  CDRight :: ClockedData clas -> ClockedData ('Clocked a cl ': clas)
+data OutClocked (outClocks :: [Clocked]) where
+  OutHere :: b -> OutClocked ('Clocked a cl (Open b) ': cls)
+  OutThere :: OutClocked cls -> OutClocked ('Clocked a cl b ': cls)
 
-analyseCD :: ClockedData ('Clocked a cl ': cls) -> Either a (ClockedData cls)
-analyseCD (CDLeft a) = Left a
-analyseCD (CDRight cd) = Right cd
+data TagClocked (clocks :: [Clocked]) where
+  TagHere :: Tag cl -> TagClocked ('Clocked a cl b ': cls)
+  TagThere :: TagClocked cls -> TagClocked ('Clocked a cl b ': cls)
+
+analyseTag :: TagClocked ('Clocked a cl b ': cls) -> Either (Tag cl) (TagClocked cls)
+analyseTag (TagHere tag) = Left tag
+analyseTag (TagThere cls) = Right $ analyseTag cls
+
+-- data ClockedData (clocked :: [Clocked]) where
+--   CDLeft :: a -> ClockedData ('Clocked a cl ': clas)
+--   CDRight :: ClockedData clas -> ClockedData ('Clocked a cl ': clas)
+
+-- analyseCD :: ClockedData ('Clocked a cl ': cls) -> Either a (ClockedData cls)
+-- analyseCD (CDLeft a) = Left a
+-- analyseCD (CDRight cd) = Right cd
 
 -- type family ClockedData (clocked :: [Clocked]) :: [Type] where
 --   ClockedData '[] = '[]
@@ -118,29 +121,22 @@ data HeterogeneousSum (as :: [Type]) where
 clockErasure ::
   Monad m =>
   td ->
-  SN td inClocks internalClocks outClocks m ->
+  SN td clocks m ->
   MSF m
-    (td, Tag (Clocks td internalClocks), ClockedData inClocks)
-    (ClockedData outClocks)
+    (td, TagClocked clocks, InClocked clocks)
+    (InClocked clocks)
 clockErasure initialTime (Synchronous clsf sn) = case internalClocksMatchTimeDomain sn of
   Refl -> proc (time, tag, input) -> do
-    case (tag, analyseCD input) of
+    case (analyseTag tag, analyseIn input) of
       (Left tagClSF, Left a) -> do
         b <- eraseClockClSF LeafProxy initialTime clsf -< (time, tagClSF, a)
-        returnA -< CDLeft b
+        returnA -< OutHere b
       (Right tagClocks, Right a) -> do
         output <- clockErasure initialTime sn -< (time, tagClocks, a)
         returnA -< CDRight output
       _ -> error "clockErasure: Impossible pattern in input (Left, Right)/(Right, Left)" -< ()
-clockErasure initialTime (Resampling rb sn) = proc (time, tag, input) -> do
+clockErasure initialTime (ResamplingHere rb sn) = proc (time, tag, input) -> do
   case (tag, analyseCD input) of
     (Left tagL, Left a) -> do
       b <- eraseClockResBuf LeafProxy LeafProxy initialTime rb -< _
       returnA -< _
-
-internalClocksMatchTimeDomain :: SN td inClocks internalClocks outClocks m -> td :~: Time (Clocks td internalClocks)
-internalClocksMatchTimeDomain Empty = error "Hah. Yes. Well... turns out empty list is not a clock, so this is sort of moot"
-internalClocksMatchTimeDomain (Synchronous _ sn) = case internalClocksMatchTimeDomain sn of
-  Refl -> Refl
-internalClocksMatchTimeDomain (Resampling _ sn) = internalClocksMatchTimeDomain sn
-internalClocksMatchTimeDomain (PermuteInternalClocks sn Identity) = internalClocksMatchTimeDomain sn

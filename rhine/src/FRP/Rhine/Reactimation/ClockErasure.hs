@@ -7,7 +7,6 @@ and is thus not exported from 'FRP.Rhine'.
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 module FRP.Rhine.Reactimation.ClockErasure where
 
