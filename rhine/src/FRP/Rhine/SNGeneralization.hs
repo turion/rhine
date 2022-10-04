@@ -13,55 +13,51 @@ import Data.Kind (Type)
 import FRP.Rhine.ClSF
 import FRP.Rhine.ResamplingBuffer
 import Data.HList
-import Control.Monad.Trans.MSF (MSFExcept)
 
 -- FIXME Clocked a cl or Clocked cl a?
 data Clocked = Clocked Type Type
 
-data SN (inClocks :: [Clocked]) (internalClocks :: [Type]) (outClocks :: [Clocked]) (m :: Type -> Type) e where
-  SynchronousExcept :: ClSFExcept m cl a b e -> SN '[ 'Clocked a cl] '[cl] '[ 'Clocked b cl] m e
+data SN (inClocks :: [Clocked]) (internalClocks :: [Type]) (outClocks :: [Clocked]) (m :: Type -> Type) where
+  Synchronous :: ClSF m cl a b -> SN '[ 'Clocked a cl] '[cl] '[ 'Clocked b cl] m
   Resampling ::
-    ResBuf (ExceptT e m) cl1 cl2 a b ->
-    SN ('Clocked b cl2 ': inClocks) internalClocks ('Clocked a cl1 ': outClocks) m e ->
-    SN inClocks internalClocks outClocks m e
+    ResBuf m cl1 cl2 a b ->
+    SN ('Clocked b cl2 ': inClocks) internalClocks ('Clocked a cl1 ': outClocks) m ->
+    SN inClocks internalClocks outClocks m
   -- TODO Alternatively, could make Synchronous a cons-like operator
   Combine ::
-    SN inClocks1 internalClocks1 outClocks1 m e ->
-    SN inClocks2 internalClocks2 outClocks2 m e ->
-    SN (Concat inClocks1 inClocks2) (Concat internalClocks1 internalClocks2) (Concat outClocks1 outClocks2) m e
-  Stop :: e -> SN inClocks internalClocks outClocks m e
-  -- This is cool because it means I can rewire internally!
-  Catch :: SN inClocks internalClocks outClocks m e1 -> (e1 -> SN inClocks internalClocks outClocks m e2) -> SN inClocks internalClocks outClocks m e2
+    SN inClocks1 internalClocks1 outClocks1 m ->
+    SN inClocks2 internalClocks2 outClocks2 m ->
+    SN (Concat inClocks1 inClocks2) (Concat internalClocks1 internalClocks2) (Concat outClocks1 outClocks2) m
   PermuteInClocks ::
-    SN inClocksBefore internalClocks outClocks m e ->
+    SN inClocksBefore internalClocks outClocks m ->
     Permutation inClocksBefore inClocksAfter ->
-    SN inClocksAfter internalClocks outClocks m e
+    SN inClocksAfter internalClocks outClocks m
   PermuteInternalClocks ::
-    SN inClocks internalClocksBefore outClocks m e ->
+    SN inClocks internalClocksBefore outClocks m ->
     Permutation internalClocksBefore internalClocksAfter ->
-    SN inClocks internalClocksAfter outClocks m e
+    SN inClocks internalClocksAfter outClocks m
   PermuteOutClocks ::
-    SN inClocks internalClocks outClocksBefore m e ->
+    SN inClocks internalClocks outClocksBefore m ->
     Permutation outClocksBefore outClocksAfter ->
-    SN inClocks internalClocks outClocksAfter m e
+    SN inClocks internalClocks outClocksAfter m
   DoneIn ::
-    SN ('Clocked () cl ': inClocks) internalClocks outClocks m e ->
-    SN inClocks internalClocks outClocks m e
+    SN ('Clocked () cl ': inClocks) internalClocks outClocks m ->
+    SN inClocks internalClocks outClocks m
   -- TODO Or do we want to be able to erase arbitrary output?
   DoneOut ::
-    SN inClocks internalClocks ('Clocked () cl ': outClocks) m e ->
-    SN inClocks internalClocks outClocks m e
+    SN inClocks internalClocks ('Clocked () cl ': outClocks) m ->
+    SN inClocks internalClocks outClocks m
   -- FIXME get rid of if nil & cons work
   ConcatIn2 ::
-    SN ('Clocked a cl1 ': 'Clocked b cl2 ': inClocks) internalClocks outClocks m e ->
-    SN ('Clocked (HList '[a, b]) (Clocks '[cl1, cl2]) ': inClocks) internalClocks outClocks m e
+    SN ('Clocked a cl1 ': 'Clocked b cl2 ': inClocks) internalClocks outClocks m ->
+    SN ('Clocked (HList '[a, b]) (Clocks '[cl1, cl2]) ': inClocks) internalClocks outClocks m
   -- TODO Replicate 3 of these. Not sure this can be refactored to reduce duplication
   ConcatInNil ::
-    SN inClocks internalClocks outClocks m e ->
-    SN ('Clocked (HList '[]) (Clocks '[]) ': inClocks) internalClocks outClocks m e
+    SN inClocks internalClocks outClocks m ->
+    SN ('Clocked (HList '[]) (Clocks '[]) ': inClocks) internalClocks outClocks m
   ConcatInCons ::
-    SN ('Clocked (HList as) (Clocks cls) ': 'Clocked a cl ': inClocks) internalClocks outClocks m e ->
-    SN ('Clocked (HList (a ': as)) (Clocks (cl ': cls)) ': inClocks) internalClocks outClocks m e
+    SN ('Clocked (HList as) (Clocks cls) ': 'Clocked a cl ': inClocks) internalClocks outClocks m ->
+    SN ('Clocked (HList (a ': as)) (Clocks (cl ': cls)) ': inClocks) internalClocks outClocks m
 
 data Clocks (cls :: [Type]) = Clocks (HList cls)
 
@@ -91,5 +87,5 @@ data OutClocked (outClocks :: [Clocked]) where
   OutHere :: a -> OutClocked ('Clocked a cl ': clas)
   OutThere :: OutClocked clas -> OutClocked ('Clocked a cl ': clas)
 
-clockErasure :: SN inClocks internalClocks outClocks m e -> MSF (ExceptT e m) a b
+clockErasure :: SN inClocks internalClocks outClocks m -> MSF m a b
 clockErasure = _
