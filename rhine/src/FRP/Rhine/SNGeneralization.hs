@@ -128,7 +128,7 @@ clockErasure ::
 clockErasure initialTime (Synchronous clsf sn) = case internalClocksMatchTimeDomain sn of
   Refl -> proc (time, tag, input) -> do
     case (analyseTag tag, analyseIn input) of
-      (TagHere tagClSF, InHere a) -> do
+      (Left tagClSF, Left a) -> do
         b <- eraseClockClSF LeafProxy initialTime clsf -< (time, tagClSF, a)
         returnA -< OutHere b
       (Right tagClocks, Right a) -> do
