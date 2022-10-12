@@ -29,7 +29,6 @@ Precompose clsf sn >>>^ f = Precompose clsf $ sn >>>^ f
 Feedback buf sn >>>^ f = Feedback buf $ sn >>>^ first f
 -- That's a bit surprising... I think we're not at the end of the SN tale yet
 firstResampling@(FirstResampling _ _) >>>^ f = Postcompose firstResampling $ arr f
--- Send rb >>>^ f = _ -- FIXME This is just profunctor
 
 -- | Precompose a signal network with a pure function.
 (^>>>)
@@ -92,9 +91,6 @@ sn1 **** Feedback buf sn2 = Feedback buf $ (\((a, c), c1) -> (a, (c, c1))) ^>>> 
 -- FIXME This changes order of execution :(
 FirstResampling sn1 buf **** sn2 = (\((a1, c1), c) -> ((a1, c), c1)) ^>>> FirstResampling (sn1 **** sn2) buf >>>^ (\((b1, d), d1) -> ((b1, d1), d))
 sn1 **** FirstResampling sn2 buf = (\(a, (a1, c1)) -> ((a, a1), c1)) ^>>> FirstResampling (sn1 **** sn2) buf >>>^ (\((b, b1), d1) -> (b, (b1, d1)))
-
--- Send buf1 **** Send buf2 = Send $ buf1 *-* buf2
--- Send buf **** Synchronous clsf = _
 
 -- Note that the patterns above are the only ones that can occur.
 -- This is ensured by the clock constraints in the SF constructors.
