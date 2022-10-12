@@ -81,7 +81,7 @@ rescaledSchedule
   :: Monad m
   => Schedule m cl1 cl2
   -> Schedule m (RescaledClock cl1 time) (RescaledClock cl2 time)
-rescaledSchedule schedule = Schedule $ initSchedule'
+rescaledSchedule schedule = Schedule initSchedule'
   where
     initSchedule' cl1 cl2 = initSchedule (rescaledScheduleS schedule) (rescaledClockToS cl1) (rescaledClockToS cl2)
 

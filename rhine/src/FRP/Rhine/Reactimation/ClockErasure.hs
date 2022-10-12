@@ -7,7 +7,6 @@ and is thus not exported from 'FRP.Rhine'.
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 module FRP.Rhine.Reactimation.ClockErasure where
 
@@ -71,7 +70,7 @@ eraseClockSN initialTime (Sequential sn1 resBuf sn2) =
       maybeB <- eraseClockSN initialTime sn1 -< (time, tagL, maybeA)
       returnA -< Left <$> ((time, , ) <$> outTag proxy1 tagL <*> maybeB)
     Right tagR -> do
-      returnA -< Right <$> (time, ) <$> inTag proxy2 tagR
+      returnA -< Right . (time, ) <$> inTag proxy2 tagR
   maybeC <- mapMaybeS $ eraseClockResBuf (outProxy proxy1) (inProxy proxy2) initialTime resBuf -< resBufIn
   case tag of
     Left  _    -> do
@@ -117,6 +116,19 @@ eraseClockSN initialTime (Feedback buf0 sn) =
       timeInfo <- genTimeInfo (outProxy proxy) initialTime -< (time, tagOut)
       buf'' <- arrM $ uncurry $ uncurry put -< ((buf', timeInfo), d)
       returnA -< (Just b, buf'')
+
+eraseClockSN initialTime (FirstResampling sn buf) =
+  let
+    proxy = toClockProxy sn
+  in proc (time, tag, acMaybe) -> do
+    bMaybe <- eraseClockSN initialTime sn -< (time, tag, fst <$> acMaybe)
+    let
+      resBufInput = case (inTag proxy tag, outTag proxy tag, snd <$> acMaybe) of
+        (Just tagIn, _, Just c) -> Just $ Left (time, tagIn, c)
+        (_, Just tagOut, _) -> Just $ Right (time, tagOut)
+        _ -> Nothing
+    dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) initialTime buf -< resBufInput
+    returnA -< (,) <$> bMaybe <*> join dMaybe
 
 -- | Translate a resampling buffer into a monadic stream function.
 --

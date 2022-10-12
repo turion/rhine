@@ -2,9 +2,7 @@
 Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 -}
 
-{-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
