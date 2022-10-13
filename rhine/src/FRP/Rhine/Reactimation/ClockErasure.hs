@@ -71,7 +71,7 @@ eraseClockSN initialTime (Sequential sn1 resBuf sn2) =
       maybeB <- eraseClockSN initialTime sn1 -< (time, tagL, maybeA)
       returnA -< Left <$> ((time, , ) <$> outTag proxy1 tagL <*> maybeB)
     Right tagR -> do
-      returnA -< Right <$> (time, ) <$> inTag proxy2 tagR
+      returnA -< Right . (time, ) <$> inTag proxy2 tagR
   maybeC <- mapMaybeS $ eraseClockResBuf (outProxy proxy1) (inProxy proxy2) initialTime resBuf -< resBufIn
   case tag of
     Left  _    -> do
