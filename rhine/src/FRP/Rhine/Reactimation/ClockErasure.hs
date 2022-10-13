@@ -29,11 +29,11 @@ import FRP.Rhine.SN
 --   accepting the timestamps and tags as explicit inputs.
 eraseClockClSF
   :: (Monad m, Clock m cl)
-  => ClockProxy cl -> Time cl
+  => Time cl
   -> ClSF m cl a b
   -> MSF m (Time cl, Tag cl, a) b
-eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
-  timeInfo <- genTimeInfo proxy initialTime -< (time, tag)
+eraseClockClSF initialTime clsf = proc (time, tag, a) -> do
+  timeInfo <- genTimeInfo' initialTime -< (time, tag)
   runReaderS clsf                           -< (timeInfo, a)
 
 -- | Run a signal network as a monadic stream function.
@@ -52,7 +52,7 @@ eraseClockSN
 
 -- A synchronous signal network is run by erasing the clock from the clocked signal function.
 eraseClockSN initialTime sn@(Synchronous clsf) = proc (time, tag, Just a) -> do
-  b <- eraseClockClSF (toClockProxy sn) initialTime clsf -< (time, tag, a)
+  b <- eraseClockClSF initialTime clsf -< (time, tag, a)
   returnA                                                -< Just b
 
 -- A sequentially composed signal network may either be triggered in its first component,
@@ -88,13 +88,13 @@ eraseClockSN initialTime (Postcompose sn clsf) =
     proxy = toClockProxy sn
   in proc input@(time, tag, _) -> do
   bMaybe <- eraseClockSN initialTime sn -< input
-  mapMaybeS $ eraseClockClSF (outProxy proxy) initialTime clsf -< (time, , ) <$> outTag proxy tag <*> bMaybe
+  mapMaybeS $ eraseClockClSF initialTime clsf -< (time, , ) <$> outTag proxy tag <*> bMaybe
 
 eraseClockSN initialTime (Precompose clsf sn) =
   let
     proxy = toClockProxy sn
   in proc (time, tag, aMaybe) -> do
-  bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time, , ) <$> inTag proxy tag <*> aMaybe
+  bMaybe <- mapMaybeS $ eraseClockClSF initialTime clsf -< (time, , ) <$> inTag proxy tag <*> aMaybe
   eraseClockSN initialTime sn -< (time, tag, bMaybe)
 
 eraseClockSN initialTime (Feedback buf0 sn) =
