@@ -10,6 +10,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE EmptyCase #-}
 module FRP.Rhine.SNGeneralization where
 import Data.Kind (Type)
 import FRP.Rhine.ClSF
@@ -20,7 +21,6 @@ import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Schedule (In, Out)
 import Data.Void
 import FRP.Rhine.Clock.Util (genTimeInfo, genTimeInfo')
-import Data.Constraint (Dict (Dict), mapDict, withDict)
 import Data.Bifunctor
 
 data Plug = Closed | Open Type
@@ -33,12 +33,7 @@ data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
     ClSF m cl a b ->
     SN td clocks m ->
     SN td ('Clocked (Open a) cl (Open b) ': clocks) m
-  ResamplingHere ::
-    (td ~ Time cl1, td ~ Time cl2) =>
-    ResBuf m cl1 cl2 a b ->
-    SN td ('Clocked (Open b) cl2 c ': 'Clocked d cl1 (Open a) ': clocks) m ->
-    SN td ('Clocked Closed cl2 c ': 'Clocked d cl1 Closed ': clocks) m
-  ResamplingSomewhere ::
+  Resampling ::
     (td ~ Time cl1, td ~ Time cl2) =>
     ResBuf m cl1 cl2 a b ->
     ClosingIn clocksBefore clocksIntermediate b cl2 ->
@@ -46,12 +41,14 @@ data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
     SN td clocksBefore m ->
     SN td clocksAfter m
   DoneIn ::
-    SN td ('Clocked (Open a) cl b ': clocks) m ->
-    SN td ('Clocked Closed cl b ': clocks) m
-  -- TODO Or do we want to be able to erase arbitrary output?
+    ClosingIn clocksBefore clocksAfter () cl ->
+    SN td clocksBefore m ->
+    SN td clocksAfter m
   DoneOut ::
-    SN td ('Clocked a cl (Open b) ': clocks) m ->
-    SN td ('Clocked a cl Closed ': clocks) m
+    ClosingOut clocksBefore clocksAfter () cl ->
+    SN td clocksBefore m ->
+    SN td clocksAfter m
+{-
   ConcatInNil ::
     TimeDomain td =>
     SN td clocks m ->
@@ -68,7 +65,7 @@ data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
   ConcatInConsCC ::
     SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked Closed cl Closed ': clocks) m ->
     SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HList bs)) ': clocks) m
-
+-}
 data Clocks (td :: Type) (cls :: [Type]) = Clocks (HList cls)
 
 instance TimeDomain td => Clock m (Clocks td '[]) where
@@ -172,6 +169,7 @@ clockErasure ::
   MSF m
     (td, TagClocked clocks, InClocked clocks)
     (OutClocked clocks)
+
 clockErasure initialTime (Synchronous clsf sn) = proc (time, tag, input) -> do
   case (analyseTag tag, analyseIn input) of
     (Left tagClSF, Left a) -> do
@@ -181,34 +179,8 @@ clockErasure initialTime (Synchronous clsf sn) = proc (time, tag, input) -> do
       output <- clockErasure initialTime sn -< (time, tagClocks, a)
       returnA -< OutThere output
     _ -> error "clockErasure: Impossible pattern in input (Left, Right)/(Right, Left)" -< ()
-clockErasure initialTime snAll@(ResamplingHere rb0 sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
-  (bMaybe, rb') <- case analyseTag tag of
-    Left tagL -> do
-      timeInfo <- withDict (isClocked snAll) $ genTimeInfo' initialTime -< (time, tagL)
-      (b, rb') <- arrM $ uncurry get -< (rb, timeInfo)
-      returnA -< (Just b, rb')
-    Right _ -> do
-      returnA -< (Nothing, rb)
-  -- FIXME naming
-  aMaybe <- case (analyseTag <$> analyseTag tag, thereIn <$> thereIn input) of
-    (Right (Right tagRR), Just (Just inputRR)) -> do
-      clockErasure initialTime sn -< (time, TagThere $ TagThere tagRR, InThere $ InThere inputRR)
-    _ -> error "Oh noez" -< ()
-  rb'' <- case (analyseTag <$> analyseTag tag, analyseOut <$> thereOut aMaybe) of
-    (Right (Left tagRL), Just (Left a)) -> do
-      timeInfo <- withDict (isClocked1 snAll) $ genTimeInfo' initialTime -< (time, tagRL)
-      arrM $ uncurry $ uncurry put -< ((rb', timeInfo), a)
-    _ -> do
-      returnA -< rb'
 
-  let
-    output = case (analyseTag <$> analyseTag tag, thereOut <$> thereOut aMaybe) of
-      (Left _, _) -> outNow aMaybe
-      (Right (Left _), _) -> OutThere OutNoop
-      (Right (Right _), Just (Just a)) -> OutThere $ OutThere a
-      _ -> error "Wrong"
-  returnA -< (output, rb'')
-clockErasure initialTime (ResamplingSomewhere rb0 closingIn closingOut sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
+clockErasure initialTime (Resampling rb0 closingIn closingOut sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
   let tagBefore = sendTag tag closingIn closingOut
   (inSN, rb') <- case (sendIn input closingIn closingOut, sendTag1 tag closingIn closingOut) of
     (Left mkInput, Left tagL) -> do
@@ -227,36 +199,44 @@ clockErasure initialTime (ResamplingSomewhere rb0 closingIn closingOut sn) = fee
     ((Nothing, output'), Right _) -> do
       returnA -< (output', rb')
     _ -> error "heieiei" -< ()
-clockErasure initialTime (ResamplingSomewhere rb0 ClosingInHere ClosingOutHere sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
-  (inSN, tagSN, rb', timeInfoMaybe) <- case (analyseTag tag, thereIn input) of
-    (Left tagHere, _) -> do
-      timeInfo <- genTimeInfo' initialTime -< (time, tagHere)
-      (b, rb') <- arrM $ uncurry get -< (rb, timeInfo)
-      returnA -< (InHere b, TagHere tagHere, rb', Just timeInfo)
-    (Right tagThere, Just inThere) -> do
-      returnA -< (InThere inThere, TagThere tagThere, rb, Nothing)
-    _ -> error "Can't be" -< ()
-  c <- clockErasure initialTime sn -< (time, tagSN, inSN)
-  case (c, timeInfoMaybe) of
-    (OutHere a, Just timeInfo) -> do
-      rb'' <- arrM $ uncurry $ uncurry put -< ((rb', timeInfo), a)
-      returnA -< (OutNoop, rb'')
-    (OutThere thing, Nothing) -> do
-      returnA -< (OutThere thing, rb')
-    _ -> do
-      error "nay" -< ()
-clockErasure initialTime (ResamplingSomewhere rb0 ClosingInHere (ClosingOutThere pointer) sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
-  (inSN, tagSN, rb') <- case (analyseTag tag, thereIn input) of
-    (Left tagHere, Nothing) -> do
-      timeInfo <- genTimeInfo' initialTime -< (time, tagHere)
-      (b, rb') <- arrM $ uncurry get -< (rb, timeInfo)
-      returnA -< (InHere b, TagHere tagHere, rb')
-    (Right tagThere, Just foo) -> do
-      returnA -< (_, _, rb)
-    _ -> error "noes" -< ()
-  c <- clockErasure initialTime sn -< (time, tagSN, inSN)
-  _ -< _
-clockErasure _ _ = error "not yet implemented"
+
+clockErasure initialTime (DoneIn closingIn sn) = proc (time, tag, input) -> do
+  output <- clockErasure initialTime sn -< (time, closingInDoesntMatterOnTagclocked tag closingIn, either ($ ()) id $ sendIn' input closingIn)
+  returnA -< closingInDoesntMatterOnOutclocked output closingIn
+
+clockErasure initialTime (DoneOut closingOut sn) = proc (time, tag, input) -> do
+  output <- clockErasure initialTime sn -< (time, closingOutDoesntMatterOnTagclocked tag closingOut, closingOutDoesntMatterOnInclocked input closingOut)
+  returnA -< snd $ sendOut' output closingOut
+
+clockErasure _initialTime Empty = proc (_, tag, _) -> do
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/22294
+  returnA -< case tag of
+    -- Empty input clocks => no input constructible
+
+{-
+clockErasure initialTime (ConcatInNil sn) = proc inputs -> do
+  case inputs of
+    (time, TagThere tag, InThere input) -> do
+      output <- clockErasure initialTime sn -< (time, tag, input)
+      returnA -< OutThere output
+    _ -> error "clockErasure initialTime (ConcatInNil sn): Impossible input" -< ()
+
+clockErasure initialTime (ConcatInConsOO sn) = proc (time, tag, input) -> do
+  let
+    tag' = case tag of
+      TagHere (Left tagHereL) -> TagThere $ TagHere tagHereL
+      TagHere (Right tagHereR) -> TagHere tagHereR
+      TagThere tagThere -> TagThere $ TagThere tagThere
+    input' = case input of
+      InHere a -> InThere $ InHere _
+      InThere x -> _
+  output <- clockErasure initialTime sn -< (time, tag', input')
+  returnA -< _
+
+clockErasure initialTime (ConcatInConsOC _) = _
+clockErasure initialTime (ConcatInConsCO _) = _
+clockErasure initialTime (ConcatInConsCC _) = _
+-}
 
 sendIn ::
   InClocked clocksAfter ->
@@ -370,22 +350,3 @@ closingInDoesntMatterOnTagclocked (TagHere tag) ClosingInHere = TagHere tag
 closingInDoesntMatterOnTagclocked (TagHere tag) (ClosingInThere _) = TagHere tag
 closingInDoesntMatterOnTagclocked (TagThere tagClocked) ClosingInHere = TagThere tagClocked
 closingInDoesntMatterOnTagclocked (TagThere tagClocked) (ClosingInThere closingInThere) = TagThere $ closingInDoesntMatterOnTagclocked tagClocked closingInThere
-
-isClocked :: SN td ('Clocked a cl b ': clocks) m -> Dict (Clock m cl)
-isClocked (Synchronous _ _) = Dict
-isClocked (ResamplingHere _ sn) = isClocked sn
-isClocked (DoneIn sn) = isClocked sn
-isClocked (DoneOut sn) = isClocked sn
-isClocked (ConcatInNil _) = Dict
-isClocked (ConcatInConsOO sn) = mapDict _ Dict
-isClocked _ = _
-
--- FIXME Abstract this?
-isClocked1 :: SN td (clocked ': 'Clocked a cl b ': clocks) m -> Dict (Clock m cl)
-isClocked1 (Synchronous _ sn) = isClocked sn
-isClocked1 (ResamplingHere _ sn) = isClocked1 sn
-isClocked1 (DoneIn sn) = isClocked1 sn
-isClocked1 (DoneOut sn) = isClocked1 sn
-isClocked1 (ConcatInNil sn) = isClocked sn
-isClocked1 (ConcatInConsOO sn) = _ -- FIXME I need isClocked2 etc. for this
-isClocked1 _ = _

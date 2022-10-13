@@ -113,7 +113,6 @@ library
                      , simple-affine-space
                      , time-domain
                      , HList
-                     , constraints
 
   -- Directories containing source files.
   hs-source-dirs:      src
