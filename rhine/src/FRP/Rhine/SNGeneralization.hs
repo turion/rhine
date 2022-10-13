@@ -19,8 +19,9 @@ import FRP.Rhine.Reactimation.ClockErasure (eraseClockClSF, eraseClockResBuf)
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Schedule (In, Out)
 import Data.Void
-import FRP.Rhine.Clock.Util (genTimeInfo)
+import FRP.Rhine.Clock.Util (genTimeInfo, genTimeInfo')
 import Data.Constraint (Dict (Dict), mapDict, withDict)
+import Data.Bifunctor
 
 data Plug = Closed | Open Type
 data Clocked = Clocked Plug Type Plug
@@ -28,7 +29,7 @@ data Clocked = Clocked Plug Type Plug
 data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
   Empty :: SN td '[] m
   Synchronous ::
-    (Clock m cl, td ~ Time cl, cl ~ In cl, cl ~ Out cl) =>
+    (Clock m cl, td ~ Time cl) =>
     ClSF m cl a b ->
     SN td clocks m ->
     SN td ('Clocked (Open a) cl (Open b) ': clocks) m
@@ -100,6 +101,7 @@ data ClosingOut (clocksBefore :: [Clocked]) (clocksAfter :: [Clocked]) b cl wher
   ClosingOutHere :: ClosingOut ('Clocked a cl (Open b) ': cls) ('Clocked a cl Closed ': cls) b cl
   ClosingOutThere :: ClosingOut clocksBefore clocksAfter b cl -> ClosingOut (clocked ': clocksBefore) (clocked ': clocksAfter) b cl
 
+-- FIXME I should combine input and tag?
 data InClocked (inClocks :: [Clocked]) where
   InHere :: a -> InClocked ('Clocked (Open a) cl b ': cls)
   InNoop :: InClocked ('Clocked Closed cl b ': cls)
@@ -164,7 +166,7 @@ data HeterogeneousSum (as :: [Type]) where
   HRight :: HeterogeneousSum as -> HeterogeneousSum (a ': as)
 
 clockErasure ::
-  Monad m =>
+  (Monad m, TimeDomain td) =>
   td ->
   SN td clocks m ->
   MSF m
@@ -173,7 +175,7 @@ clockErasure ::
 clockErasure initialTime (Synchronous clsf sn) = proc (time, tag, input) -> do
   case (analyseTag tag, analyseIn input) of
     (Left tagClSF, Left a) -> do
-      b <- eraseClockClSF LeafProxy initialTime clsf -< (time, tagClSF, a)
+      b <- eraseClockClSF initialTime clsf -< (time, tagClSF, a)
       returnA -< OutHere b
     (Right tagClocks, Right a) -> do
       output <- clockErasure initialTime sn -< (time, tagClocks, a)
@@ -182,7 +184,7 @@ clockErasure initialTime (Synchronous clsf sn) = proc (time, tag, input) -> do
 clockErasure initialTime snAll@(ResamplingHere rb0 sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
   (bMaybe, rb') <- case analyseTag tag of
     Left tagL -> do
-      timeInfo <- withDict (isClocked snAll) $ genTimeInfo LeafProxy initialTime -< (time, tagL)
+      timeInfo <- withDict (isClocked snAll) $ genTimeInfo' initialTime -< (time, tagL)
       (b, rb') <- arrM $ uncurry get -< (rb, timeInfo)
       returnA -< (Just b, rb')
     Right _ -> do
@@ -194,7 +196,7 @@ clockErasure initialTime snAll@(ResamplingHere rb0 sn) = feedback rb0 $ proc ((t
     _ -> error "Oh noez" -< ()
   rb'' <- case (analyseTag <$> analyseTag tag, analyseOut <$> thereOut aMaybe) of
     (Right (Left tagRL), Just (Left a)) -> do
-      timeInfo <- withDict (isClocked1 snAll) $ genTimeInfo LeafProxy initialTime -< (time, tagRL)
+      timeInfo <- withDict (isClocked1 snAll) $ genTimeInfo' initialTime -< (time, tagRL)
       arrM $ uncurry $ uncurry put -< ((rb', timeInfo), a)
     _ -> do
       returnA -< rb'
@@ -206,9 +208,168 @@ clockErasure initialTime snAll@(ResamplingHere rb0 sn) = feedback rb0 $ proc ((t
       (Right (Right _), Just (Just a)) -> OutThere $ OutThere a
       _ -> error "Wrong"
   returnA -< (output, rb'')
-clockErasure initialTime (ResamplingSomewhere rb ClosingInHere ClosingOutHere sn) = proc (time, tag, input) -> do
-   _ -< _
+clockErasure initialTime (ResamplingSomewhere rb0 closingIn closingOut sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
+  let tagBefore = sendTag tag closingIn closingOut
+  (inSN, rb') <- case (sendIn input closingIn closingOut, sendTag1 tag closingIn closingOut) of
+    (Left mkInput, Left tagL) -> do
+      timeInfo <- genTimeInfo' initialTime -< (time, tagL)
+      (b, rb') <- arrM $ uncurry get -< (rb, timeInfo)
+      returnA -< (mkInput b, rb')
+    (Right inSN, Right _) -> do
+      returnA -< (inSN, rb)
+    _ -> error "ui" -< ()
+  output <- clockErasure initialTime sn -< (time, tagBefore, inSN)
+  case (sendOut output closingIn closingOut, sendTag2 tag closingIn closingOut) of
+    ((Just a, output'), Left tagL) -> do
+      timeInfo <- genTimeInfo' initialTime -< (time, tagL)
+      rb'' <- arrM $ uncurry $ uncurry put -< ((rb', timeInfo), a)
+      returnA -< (output', rb'')
+    ((Nothing, output'), Right _) -> do
+      returnA -< (output', rb')
+    _ -> error "heieiei" -< ()
+clockErasure initialTime (ResamplingSomewhere rb0 ClosingInHere ClosingOutHere sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
+  (inSN, tagSN, rb', timeInfoMaybe) <- case (analyseTag tag, thereIn input) of
+    (Left tagHere, _) -> do
+      timeInfo <- genTimeInfo' initialTime -< (time, tagHere)
+      (b, rb') <- arrM $ uncurry get -< (rb, timeInfo)
+      returnA -< (InHere b, TagHere tagHere, rb', Just timeInfo)
+    (Right tagThere, Just inThere) -> do
+      returnA -< (InThere inThere, TagThere tagThere, rb, Nothing)
+    _ -> error "Can't be" -< ()
+  c <- clockErasure initialTime sn -< (time, tagSN, inSN)
+  case (c, timeInfoMaybe) of
+    (OutHere a, Just timeInfo) -> do
+      rb'' <- arrM $ uncurry $ uncurry put -< ((rb', timeInfo), a)
+      returnA -< (OutNoop, rb'')
+    (OutThere thing, Nothing) -> do
+      returnA -< (OutThere thing, rb')
+    _ -> do
+      error "nay" -< ()
+clockErasure initialTime (ResamplingSomewhere rb0 ClosingInHere (ClosingOutThere pointer) sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
+  (inSN, tagSN, rb') <- case (analyseTag tag, thereIn input) of
+    (Left tagHere, Nothing) -> do
+      timeInfo <- genTimeInfo' initialTime -< (time, tagHere)
+      (b, rb') <- arrM $ uncurry get -< (rb, timeInfo)
+      returnA -< (InHere b, TagHere tagHere, rb')
+    (Right tagThere, Just foo) -> do
+      returnA -< (_, _, rb)
+    _ -> error "noes" -< ()
+  c <- clockErasure initialTime sn -< (time, tagSN, inSN)
+  _ -< _
 clockErasure _ _ = error "not yet implemented"
+
+sendIn ::
+  InClocked clocksAfter ->
+  ClosingIn clocksBefore clocksIntermediate b cl2 ->
+  ClosingOut clocksIntermediate clocksAfter a cl1 ->
+  Either (b -> InClocked clocksBefore) (InClocked clocksBefore)
+sendIn inClocked closingIn closingOut = sendIn' (closingOutDoesntMatterOnInclocked inClocked closingOut) closingIn
+
+sendIn' ::
+  InClocked clocksIntermediate ->
+  ClosingIn clocksBefore clocksIntermediate b cl2 ->
+  Either (b -> InClocked clocksBefore) (InClocked clocksBefore)
+sendIn' InNoop ClosingInHere = Left InHere
+sendIn' InNoop (ClosingInThere _) = Right InNoop
+sendIn' (InHere a) (ClosingInThere _) = Right (InHere a)
+sendIn' (InThere inClocked) ClosingInHere = Right (InThere inClocked)
+sendIn' (InThere inClocked) (ClosingInThere pointer) = bimap (fmap InThere) InThere $ sendIn' inClocked pointer
+
+closingOutDoesntMatterOnInclocked ::
+  InClocked clocksAfter ->
+  ClosingOut clocksIntermediate clocksAfter a cl ->
+  InClocked clocksIntermediate
+closingOutDoesntMatterOnInclocked (InHere a) ClosingOutHere = InHere a
+closingOutDoesntMatterOnInclocked (InHere a) (ClosingOutThere _) = InHere a
+closingOutDoesntMatterOnInclocked InNoop ClosingOutHere = InNoop
+closingOutDoesntMatterOnInclocked InNoop (ClosingOutThere _) = InNoop
+closingOutDoesntMatterOnInclocked (InThere inClocked) ClosingOutHere = InThere inClocked
+closingOutDoesntMatterOnInclocked (InThere inClocked) (ClosingOutThere pointer) = InThere $ closingOutDoesntMatterOnInclocked inClocked pointer
+
+sendOut ::
+  OutClocked clocksBefore ->
+  ClosingIn clocksBefore clocksIntermediate a cl1 ->
+  ClosingOut clocksIntermediate clocksAfter b cl2 ->
+  (Maybe b, OutClocked clocksAfter)
+sendOut inClocked closingIn closingOut = sendOut' (closingInDoesntMatterOnOutclocked inClocked closingIn) closingOut
+
+sendOut' ::
+  OutClocked clocksIntermediate ->
+  ClosingOut clocksIntermediate clocksAfter b cl2 ->
+  (Maybe b, OutClocked clocksAfter)
+sendOut' (OutHere b) ClosingOutHere = (Just b, OutNoop)
+sendOut' OutNoop (ClosingOutThere _) = (Nothing, OutNoop)
+sendOut' (OutHere a) (ClosingOutThere _) = (Nothing, OutHere a)
+sendOut' (OutThere outClocked) ClosingOutHere = (Nothing, OutThere outClocked)
+sendOut' (OutThere outClocked) (ClosingOutThere closingOutThere) = OutThere <$> sendOut' outClocked closingOutThere
+
+closingInDoesntMatterOnOutclocked ::
+  OutClocked clocksBefore ->
+  ClosingIn clocksBefore clocksIntermediate a cl ->
+  OutClocked clocksIntermediate
+closingInDoesntMatterOnOutclocked (OutHere a) ClosingInHere = OutHere a
+closingInDoesntMatterOnOutclocked (OutHere a) (ClosingInThere _) = OutHere a
+closingInDoesntMatterOnOutclocked OutNoop ClosingInHere = OutNoop
+closingInDoesntMatterOnOutclocked OutNoop (ClosingInThere _) = OutNoop
+closingInDoesntMatterOnOutclocked (OutThere inClocked) ClosingInHere = OutThere inClocked
+closingInDoesntMatterOnOutclocked (OutThere inClocked) (ClosingInThere closingOutThere) = OutThere $ closingInDoesntMatterOnOutclocked inClocked closingOutThere
+
+sendTag ::
+  TagClocked clocksAfter ->
+  ClosingIn clocksBefore clocksIntermediate a cl1 ->
+  ClosingOut clocksIntermediate clocksAfter b cl2 ->
+  TagClocked clocksBefore
+sendTag tagClocked closingIn closingOut = closingInDoesntMatterOnTagclocked (closingOutDoesntMatterOnTagclocked tagClocked closingOut) closingIn
+
+sendTag1 ::
+  TagClocked clocksAfter ->
+  ClosingIn clocksBefore clocksIntermediate a cl1 ->
+  ClosingOut clocksIntermediate clocksAfter b cl2 ->
+  Either (Tag cl1) (TagClocked clocksBefore)
+sendTag1 tagClocked closingIn closingOut = sendTag1' (closingOutDoesntMatterOnTagclocked tagClocked closingOut) closingIn
+
+sendTag1' ::
+  TagClocked clocksIntermediate ->
+  ClosingIn clocksBefore clocksIntermediate a cl1 ->
+  Either (Tag cl1) (TagClocked clocksBefore)
+sendTag1' (TagHere tag) ClosingInHere = Left tag
+sendTag1' (TagHere tag) (ClosingInThere _) = Right (TagHere tag)
+sendTag1' (TagThere tagThere) ClosingInHere = Right (TagThere tagThere)
+sendTag1' (TagThere tagThere) (ClosingInThere closingInThere) = TagThere <$> sendTag1' tagThere closingInThere
+
+sendTag2 ::
+  TagClocked clocksAfter ->
+  ClosingIn clocksBefore clocksIntermediate a cl1 ->
+  ClosingOut clocksIntermediate clocksAfter b cl2 ->
+  Either (Tag cl2) (TagClocked clocksBefore)
+sendTag2 tagClocked closingIn closingOut = flip closingInDoesntMatterOnTagclocked closingIn <$> sendTag2' tagClocked closingOut
+
+sendTag2' ::
+  TagClocked clocksAfter ->
+  ClosingOut clocksIntermediate clocksAfter b cl2 ->
+  Either (Tag cl2) (TagClocked clocksIntermediate)
+sendTag2' (TagHere tag) ClosingOutHere = Left tag
+sendTag2' (TagHere tag) (ClosingOutThere _) = Right (TagHere tag)
+sendTag2' (TagThere tagThere) ClosingOutHere = Right (TagThere tagThere)
+sendTag2' (TagThere tagThere) (ClosingOutThere closingInThere) = TagThere <$> sendTag2' tagThere closingInThere
+
+closingOutDoesntMatterOnTagclocked ::
+  TagClocked clocksAfter ->
+  ClosingOut clocksIntermediate clocksAfter a cl ->
+  TagClocked clocksIntermediate
+closingOutDoesntMatterOnTagclocked (TagHere tag) ClosingOutHere = TagHere tag
+closingOutDoesntMatterOnTagclocked (TagHere tag) (ClosingOutThere _) = TagHere tag
+closingOutDoesntMatterOnTagclocked (TagThere tagClocked) ClosingOutHere = TagThere tagClocked
+closingOutDoesntMatterOnTagclocked (TagThere tagClocked) (ClosingOutThere closingOutThere) = TagThere $ closingOutDoesntMatterOnTagclocked tagClocked closingOutThere
+
+closingInDoesntMatterOnTagclocked ::
+  TagClocked clocksIntermediate ->
+  ClosingIn clocksBefore clocksIntermediate a cl ->
+  TagClocked clocksBefore
+closingInDoesntMatterOnTagclocked (TagHere tag) ClosingInHere = TagHere tag
+closingInDoesntMatterOnTagclocked (TagHere tag) (ClosingInThere _) = TagHere tag
+closingInDoesntMatterOnTagclocked (TagThere tagClocked) ClosingInHere = TagThere tagClocked
+closingInDoesntMatterOnTagclocked (TagThere tagClocked) (ClosingInThere closingInThere) = TagThere $ closingInDoesntMatterOnTagclocked tagClocked closingInThere
 
 isClocked :: SN td ('Clocked a cl b ': clocks) m -> Dict (Clock m cl)
 isClocked (Synchronous _ _) = Dict
