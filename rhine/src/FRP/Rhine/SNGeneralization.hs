@@ -48,24 +48,22 @@ data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
     ClosingOut clocksBefore clocksAfter () cl ->
     SN td clocksBefore m ->
     SN td clocksAfter m
-{-
   ConcatInNil ::
-    TimeDomain td =>
     SN td clocks m ->
-    SN td ('Clocked (Open (HList '[])) (Clocks td '[]) (Open (HList '[])) ': clocks) m
+    SN td ('Clocked (Open (HList '[])) (Clocks td '[]) (Open (HeterogeneousSum '[])) ': clocks) m
   ConcatInConsOO ::
-    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked (Open a) cl (Open b) ': clocks) m ->
-    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HList (b ': bs))) ': clocks) m
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HeterogeneousSum bs)) ': 'Clocked (Open a) cl (Open b) ': clocks) m ->
+    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HeterogeneousSum (b ': bs))) ': clocks) m
   ConcatInConsOC ::
-    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked (Open a) cl Closed ': clocks) m ->
-    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HList bs)) ': clocks) m
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HeterogeneousSum bs)) ': 'Clocked (Open a) cl Closed ': clocks) m ->
+    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HeterogeneousSum bs)) ': clocks) m
   ConcatInConsCO ::
-    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked Closed cl (Open b) ': clocks) m ->
-    SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HList (b ': bs))) ': clocks) m
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HeterogeneousSum bs)) ': 'Clocked Closed cl (Open b) ': clocks) m ->
+    SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HeterogeneousSum (b ': bs))) ': clocks) m
   ConcatInConsCC ::
-    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HList bs)) ': 'Clocked Closed cl Closed ': clocks) m ->
-    SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HList bs)) ': clocks) m
--}
+    SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HeterogeneousSum bs)) ': 'Clocked Closed cl Closed ': clocks) m ->
+    SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HeterogeneousSum bs)) ': clocks) m
+
 data Clocks (td :: Type) (cls :: [Type]) = Clocks (HList cls)
 
 instance TimeDomain td => Clock m (Clocks td '[]) where
@@ -213,7 +211,6 @@ clockErasure _initialTime Empty = proc (_, tag, _) -> do
   returnA -< case tag of
     -- Empty input clocks => no input constructible
 
-{-
 clockErasure initialTime (ConcatInNil sn) = proc inputs -> do
   case inputs of
     (time, TagThere tag, InThere input) -> do
@@ -223,20 +220,20 @@ clockErasure initialTime (ConcatInNil sn) = proc inputs -> do
 
 clockErasure initialTime (ConcatInConsOO sn) = proc (time, tag, input) -> do
   let
-    tag' = case tag of
-      TagHere (Left tagHereL) -> TagThere $ TagHere tagHereL
-      TagHere (Right tagHereR) -> TagHere tagHereR
-      TagThere tagThere -> TagThere $ TagThere tagThere
-    input' = case input of
-      InHere a -> InThere $ InHere _
-      InThere x -> _
+    (tag', input') = case (tag, input) of
+      (TagHere (Left tagHereL), InHere (HCons a _)) -> (TagThere $ TagHere tagHereL, InThere $ InHere a)
+      (TagHere (Right tagHereR), InHere (HCons _ as)) -> (TagHere tagHereR, InHere as)
+      (TagThere tagThere, InThere inThere) -> (TagThere $ TagThere tagThere, InThere $ InThere inThere)
+      _ -> error "clockErasure _ (ConcatInConsOO sn): Impossible input"
   output <- clockErasure initialTime sn -< (time, tag', input')
-  returnA -< _
+  returnA -< case output of
+    OutHere bs -> OutHere $ HRight bs
+    OutThere (OutHere b) -> OutHere $ HLeft b
+    OutThere (OutThere outThere) -> OutThere outThere
 
 clockErasure initialTime (ConcatInConsOC _) = _
 clockErasure initialTime (ConcatInConsCO _) = _
 clockErasure initialTime (ConcatInConsCC _) = _
--}
 
 sendIn ::
   InClocked clocksAfter ->
@@ -350,3 +347,33 @@ closingInDoesntMatterOnTagclocked (TagHere tag) ClosingInHere = TagHere tag
 closingInDoesntMatterOnTagclocked (TagHere tag) (ClosingInThere _) = TagHere tag
 closingInDoesntMatterOnTagclocked (TagThere tagClocked) ClosingInHere = TagThere tagClocked
 closingInDoesntMatterOnTagclocked (TagThere tagClocked) (ClosingInThere closingInThere) = TagThere $ closingInDoesntMatterOnTagclocked tagClocked closingInThere
+
+type family Concat (clocks1 :: [Clocked]) (clocks2 :: [Clocked]) :: [Clocked] where
+  Concat '[] clocks = clocks
+  Concat (clocked ': clocks1) clocks2 = clocked ': Concat clocks1 clocks2
+
+concatSN :: SN td clocks1 m -> SN td clocks2 m -> SN td (Concat clocks1 clocks2) m
+concatSN Empty sn2 = sn2
+concatSN (Synchronous clsf sn1) sn2 = Synchronous clsf $ concatSN sn1 sn2
+concatSN (Resampling rb closingIn closingOut sn1) sn2 = Resampling rb (concatClosingIn closingIn sn2) (concatClosingOut closingOut sn2) $ concatSN sn1 sn2
+concatSN (DoneIn closingIn sn1) sn2 = DoneIn (concatClosingIn closingIn sn2) $ concatSN sn1 sn2
+concatSN (DoneOut closingOut sn1) sn2 = DoneOut (concatClosingOut closingOut sn2) $ concatSN sn1 sn2
+concatSN (ConcatInNil sn1) sn2 = ConcatInNil $ concatSN sn1 sn2
+concatSN (ConcatInConsOO sn1) sn2 = ConcatInConsOO $ concatSN sn1 sn2
+concatSN (ConcatInConsOC sn1) sn2 = ConcatInConsOC $ concatSN sn1 sn2
+concatSN (ConcatInConsCO sn1) sn2 = ConcatInConsCO $ concatSN sn1 sn2
+concatSN (ConcatInConsCC sn1) sn2 = ConcatInConsCC $ concatSN sn1 sn2
+
+concatClosingIn ::
+  ClosingIn clocksBefore clocksIntermediate a cl ->
+  SN td clocks2 m ->
+  ClosingIn (Concat clocksBefore clocks2) (Concat clocksIntermediate clocks2) a cl
+concatClosingIn ClosingInHere _ = ClosingInHere
+concatClosingIn (ClosingInThere closingInThere) sn = ClosingInThere $ concatClosingIn closingInThere sn
+
+concatClosingOut ::
+  ClosingOut clocksBefore clocksOuttermediate a cl ->
+  SN td clocks2 m ->
+  ClosingOut (Concat clocksBefore clocks2) (Concat clocksOuttermediate clocks2) a cl
+concatClosingOut ClosingOutHere _ = ClosingOutHere
+concatClosingOut (ClosingOutThere closingOutThere) sn = ClosingOutThere $ concatClosingOut closingOutThere sn
