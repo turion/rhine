@@ -30,13 +30,18 @@ import Data.Bifunctor
 data Plug = Closed | Open Type
 data Clocked = Clocked Plug Type Plug
 
-data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
-  Empty :: SN td '[] m
+data ClSFs td (clocks :: [Clocked]) (m :: Type -> Type) where
+  Empty :: ClSFs td '[] m
   Synchronous ::
     (Clock m cl, td ~ Time cl) =>
     ClSF m cl a b ->
-    SN td clocks m ->
-    SN td ('Clocked (Open a) cl (Open b) ': clocks) m
+    ClSFs td clocks m ->
+    ClSFs td ('Clocked (Open a) cl (Open b) ': clocks) m
+
+data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
+  ClSFs ::
+    ClSFs td clocks m ->
+    SN td clocks m
   Resampling ::
     (td ~ Time cl1, td ~ Time cl2) =>
     ResBuf m cl1 cl2 a b ->
@@ -127,6 +132,29 @@ data HeterogeneousSum (as :: [Type]) where
   HLeft :: a -> HeterogeneousSum (a ': as)
   HRight :: HeterogeneousSum as -> HeterogeneousSum (a ': as)
 
+clockErasure' ::
+  (Monad m, TimeDomain td) =>
+  td ->
+  ClSFs td clocks m ->
+  MSF m
+    (td, TagClocked clocks, InClocked clocks)
+    (OutClocked clocks)
+
+clockErasure' initialTime (Synchronous clsf clsfs) = proc (time, tag, input) -> do
+  case (analyseTag tag, analyseIn input) of
+    (Left tagClSF, Left a) -> do
+      b <- eraseClockClSF initialTime clsf -< (time, tagClSF, a)
+      returnA -< OutHere b
+    (Right tagClocks, Right a) -> do
+      output <- clockErasure' initialTime clsfs -< (time, tagClocks, a)
+      returnA -< OutThere output
+    _ -> error "clockErasure': Impossible pattern in input (Left, Right)/(Right, Left)" -< ()
+
+clockErasure' _initialTime Empty = proc (_, tag, _) -> do
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/22294
+  returnA -< case tag of
+    -- Empty input clocks => no input constructible
+
 clockErasure ::
   (Monad m, TimeDomain td) =>
   td ->
@@ -135,15 +163,7 @@ clockErasure ::
     (td, TagClocked clocks, InClocked clocks)
     (OutClocked clocks)
 
-clockErasure initialTime (Synchronous clsf sn) = proc (time, tag, input) -> do
-  case (analyseTag tag, analyseIn input) of
-    (Left tagClSF, Left a) -> do
-      b <- eraseClockClSF initialTime clsf -< (time, tagClSF, a)
-      returnA -< OutHere b
-    (Right tagClocks, Right a) -> do
-      output <- clockErasure initialTime sn -< (time, tagClocks, a)
-      returnA -< OutThere output
-    _ -> error "clockErasure: Impossible pattern in input (Left, Right)/(Right, Left)" -< ()
+clockErasure initialTime (ClSFs clsfs) = clockErasure' initialTime clsfs
 
 clockErasure initialTime (Resampling rb0 closingIn closingOut sn) = feedback rb0 $ proc ((time, tag, input), rb) -> do
   let tagBefore = sendTag tag closingIn closingOut
@@ -172,11 +192,6 @@ clockErasure initialTime (DoneIn closingIn sn) = proc (time, tag, input) -> do
 clockErasure initialTime (DoneOut closingOut sn) = proc (time, tag, input) -> do
   output <- clockErasure initialTime sn -< (time, closingOutDoesntMatterOnTagclocked tag closingOut, closingOutDoesntMatterOnInclocked input closingOut)
   returnA -< snd $ sendOut' output closingOut
-
-clockErasure _initialTime Empty = proc (_, tag, _) -> do
-  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/22294
-  returnA -< case tag of
-    -- Empty input clocks => no input constructible
 
 clockErasure initialTime (ConcatInNil sn) = proc inputs -> do
   case inputs of
@@ -340,9 +355,29 @@ type family Concat (clocks1 :: [Clocked]) (clocks2 :: [Clocked]) :: [Clocked] wh
   Concat '[] clocks = clocks
   Concat (clocked ': clocks1) clocks2 = clocked ': Concat clocks1 clocks2
 
+concatClSFs :: ClSFs td clocks1 m -> ClSFs td clocks2 m -> ClSFs td (Concat clocks1 clocks2) m
+concatClSFs Empty sn2 = sn2
+concatClSFs (Synchronous clsf sn1) sn2 = Synchronous clsf $ concatClSFs sn1 sn2
+
+pushClosingInPastClSFs ::
+  ClosingIn clocksBefore clocksIntermediate a cl ->
+  ClSFs td clocks m ->
+  ClosingIn (Concat clocks clocksBefore) (Concat clocks clocksIntermediate) a cl
+pushClosingInPastClSFs closingIn (Synchronous _clsf clsfs) = ClosingInThere $ pushClosingInPastClSFs closingIn clsfs
+pushClosingInPastClSFs closingIn Empty = closingIn
+
+pushClosingOutPastClSFs ::
+  ClosingOut clocksIntermediate clocksAfter a cl ->
+  ClSFs td clocks m ->
+  ClosingOut (Concat clocks clocksIntermediate) (Concat clocks clocksAfter) a cl
+pushClosingOutPastClSFs closingIn (Synchronous _clsf clsfs) = ClosingOutThere $ pushClosingOutPastClSFs closingIn clsfs
+pushClosingOutPastClSFs closingIn Empty = closingIn
+
 concatSN :: SN td clocks1 m -> SN td clocks2 m -> SN td (Concat clocks1 clocks2) m
-concatSN Empty sn2 = sn2
-concatSN (Synchronous clsf sn1) sn2 = Synchronous clsf $ concatSN sn1 sn2
+concatSN (ClSFs clsfs) (Resampling rb closingIn closingOut sn1) = Resampling rb (pushClosingInPastClSFs closingIn clsfs) (pushClosingOutPastClSFs closingOut clsfs)
+  $ concatSN (ClSFs clsfs) sn1
+concatSN (ClSFs clsfs1) (ClSFs clsfs2) = ClSFs $ concatClSFs clsfs1 clsfs2
+concatSN (ClSFs clsfs) (DoneIn closingIn sn) = DoneIn (pushClosingInPastClSFs closingIn clsfs) $ concatSN clsfs sn
 concatSN (Resampling rb closingIn closingOut sn1) sn2 = Resampling rb (concatClosingIn closingIn sn2) (concatClosingOut closingOut sn2) $ concatSN sn1 sn2
 concatSN (DoneIn closingIn sn1) sn2 = DoneIn (concatClosingIn closingIn sn2) $ concatSN sn1 sn2
 concatSN (DoneOut closingOut sn1) sn2 = DoneOut (concatClosingOut closingOut sn2) $ concatSN sn1 sn2
