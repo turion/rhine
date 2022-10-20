@@ -4,23 +4,27 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE EmptyCase #-}
-module FRP.Rhine.SNGeneralization where
+{-# LANGUAGE LambdaCase #-}
+module FRP.Rhine.SNGeneralization
+  ( SN (..)
+  , Clocked (..)
+  , HeterogeneousSum (..)
+  , Clocks (..)
+  , clockErasure
+  , concatSN
+  ) where
 import Data.Kind (Type)
 import FRP.Rhine.ClSF
 import FRP.Rhine.ResamplingBuffer
 import Data.HList
-import FRP.Rhine.Reactimation.ClockErasure (eraseClockClSF, eraseClockResBuf)
-import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.Schedule (In, Out)
+import FRP.Rhine.Reactimation.ClockErasure (eraseClockClSF)
 import Data.Void
-import FRP.Rhine.Clock.Util (genTimeInfo, genTimeInfo')
+import FRP.Rhine.Clock.Util (genTimeInfo')
 import Data.Bifunctor
 
 data Plug = Closed | Open Type
@@ -56,7 +60,7 @@ data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
     SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HeterogeneousSum (b ': bs))) ': clocks) m
   ConcatInConsOC ::
     SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HeterogeneousSum bs)) ': 'Clocked (Open a) cl Closed ': clocks) m ->
-    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HeterogeneousSum bs)) ': clocks) m
+    SN td ('Clocked (Open (HList (a ': as))) (Clocks td (cl ': cls)) (Open (HeterogeneousSum (() ': bs))) ': clocks) m
   ConcatInConsCO ::
     SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HeterogeneousSum bs)) ': 'Clocked Closed cl (Open b) ': clocks) m ->
     SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HeterogeneousSum (b ': bs))) ': clocks) m
@@ -64,12 +68,12 @@ data SN td (clocks :: [Clocked]) (m :: Type -> Type) where
     SN td ('Clocked (Open (HList as)) (Clocks td cls) (Open (HeterogeneousSum bs)) ': 'Clocked Closed cl Closed ': clocks) m ->
     SN td ('Clocked (Open (HList as)) (Clocks td (cl ': cls)) (Open (HeterogeneousSum bs)) ': clocks) m
 
-data Clocks (td :: Type) (cls :: [Type]) = Clocks (HList cls)
+newtype Clocks (td :: Type) (cls :: [Type]) = Clocks (HList cls)
 
 instance TimeDomain td => Clock m (Clocks td '[]) where
   type Time (Clocks td '[]) = td
   type Tag (Clocks td '[]) = Void
-  initClock cl = error "Empty clock doesn't tick"
+  initClock _ = error "Empty clock doesn't tick"
 
 instance (TimeDomain td, Clock m cl, Clock m (Clocks td cls), Time cl ~ Time (Clocks td cls)) => Clock m (Clocks td (cl ': cls)) where
   type Time (Clocks td (cl ': cls)) = td
@@ -106,35 +110,10 @@ analyseIn :: InClocked ('Clocked (Open a) cl b ': cls) -> Either a (InClocked cl
 analyseIn (InHere a) = Left a
 analyseIn (InThere cls) = Right cls
 
--- FIXME Rewrite with lenses
-thereIn :: InClocked ('Clocked a cl b ': cls) -> Maybe (InClocked cls)
-thereIn (InHere _) = Nothing
-thereIn InNoop = Nothing
-thereIn (InThere cls) = Just cls
-
 data OutClocked (outClocks :: [Clocked]) where
   OutHere :: b -> OutClocked ('Clocked a cl (Open b) ': cls)
   OutNoop :: OutClocked ('Clocked a cl Closed ': cls)
   OutThere :: OutClocked cls -> OutClocked ('Clocked a cl b ': cls)
-
-analyseOut :: OutClocked ('Clocked a cl (Open b) ': cls) -> Either b (OutClocked cls)
-analyseOut (OutHere a) = Left a
-analyseOut (OutThere cls) = Right cls
-
-outNow :: OutClocked ('Clocked a cl b ': cls) -> OutClocked ('Clocked a' cl b ': cls')
-outNow (OutHere b) = OutHere b
-outNow OutNoop = OutNoop
-outNow (OutThere _) = error "outNow: OutThere"
-
-thereOut :: OutClocked ('Clocked a cl b ': cls) -> Maybe (OutClocked cls)
-thereOut (OutHere _) = Nothing
-thereOut OutNoop = Nothing
-thereOut (OutThere cls) = Just cls
-
-disregardIn :: OutClocked ('Clocked a cl b ': cls) -> OutClocked ('Clocked a' cl b ': cls)
-disregardIn (OutHere b) = OutHere b
-disregardIn OutNoop = OutNoop
-disregardIn (OutThere cls) = OutThere cls
 
 data TagClocked (clocks :: [Clocked]) where
   TagHere :: Tag cl -> TagClocked ('Clocked a cl b ': cls)
@@ -143,18 +122,6 @@ data TagClocked (clocks :: [Clocked]) where
 analyseTag :: TagClocked ('Clocked a cl b ': cls) -> Either (Tag cl) (TagClocked cls)
 analyseTag (TagHere tag) = Left tag
 analyseTag (TagThere cls) = Right cls
-
--- data ClockedData (clocked :: [Clocked]) where
---   CDLeft :: a -> ClockedData ('Clocked a cl ': clas)
---   CDRight :: ClockedData clas -> ClockedData ('Clocked a cl ': clas)
-
--- analyseCD :: ClockedData ('Clocked a cl ': cls) -> Either a (ClockedData cls)
--- analyseCD (CDLeft a) = Left a
--- analyseCD (CDRight cd) = Right cd
-
--- type family ClockedData (clocked :: [Clocked]) :: [Type] where
---   ClockedData '[] = '[]
---   ClockedData ('Clocked a _cl ': clocked) = a ': ClockedData clocked
 
 data HeterogeneousSum (as :: [Type]) where
   HLeft :: a -> HeterogeneousSum (a ': as)
@@ -231,8 +198,29 @@ clockErasure initialTime (ConcatInConsOO sn) = proc (time, tag, input) -> do
     OutThere (OutHere b) -> OutHere $ HLeft b
     OutThere (OutThere outThere) -> OutThere outThere
 
-clockErasure initialTime (ConcatInConsOC _) = _
-clockErasure initialTime (ConcatInConsCO _) = _
+clockErasure initialTime (ConcatInConsOC sn) = proc (time, tag, input) -> do
+  let
+    (tag', input') = case (tag, input) of
+      (TagHere (Left tagHereL), InHere (HCons a _)) -> (TagThere $ TagHere tagHereL, InThere $ InHere a)
+      (TagHere (Right tagHereR), InHere (HCons _ as)) -> (TagHere tagHereR, InHere as)
+      (TagThere tagThere, InThere inThere) -> (TagThere $ TagThere tagThere, InThere $ InThere inThere)
+      _ -> error "clockErasure _ (ConcatInConsOC sn): Impossible input"
+  output <- clockErasure initialTime sn -< (time, tag', input')
+  returnA -< case output of
+    OutHere bs -> OutHere $ HRight bs
+    OutThere OutNoop -> OutHere $ HLeft ()
+    OutThere (OutThere outThere) -> OutThere outThere
+clockErasure initialTime (ConcatInConsCO sn) = proc (time, tag, input) -> do
+  let
+    (tag', input') = case (tag, input) of
+      (TagHere (Right tagHereR), InHere as) -> (TagHere tagHereR, InHere as)
+      (TagThere tagThere, InThere inThere) -> (TagThere $ TagThere tagThere, InThere $ InThere inThere)
+      _ -> error "clockErasure _ (ConcatInConsOO sn): Impossible input"
+  output <- clockErasure initialTime sn -< (time, tag', input')
+  returnA -< case output of
+    OutHere bs -> OutHere $ HRight bs
+    OutThere (OutHere b) -> OutHere $ HLeft b
+    OutThere (OutThere outThere) -> OutThere outThere
 clockErasure initialTime (ConcatInConsCC _) = _
 
 sendIn ::
@@ -377,3 +365,45 @@ concatClosingOut ::
   ClosingOut (Concat clocksBefore clocks2) (Concat clocksOuttermediate clocks2) a cl
 concatClosingOut ClosingOutHere _ = ClosingOutHere
 concatClosingOut (ClosingOutThere closingOutThere) sn = ClosingOutThere $ concatClosingOut closingOutThere sn
+
+class InputMatchesOutput clocksIn clocksOut where
+  oi :: OutClocked clocksOut -> InClocked clocksIn
+
+instance InputMatchesOutput '[] '[] where
+  oi = \case
+
+instance InputMatchesOutput clocksIn clocksOut => InputMatchesOutput ('Clocked b cl c ': clocksIn) ('Clocked a cl b ': clocksOut) where
+
+-- FIXME this would be easier if I had one type that only collects ClSFs, then one that only attaches ResBufs, then one that does the remaining operations
+permuteSN ::
+  Permutation before after ->
+  SN td before m ->
+  SN td after m
+permuteSN Identity sn = sn
+permuteSN (SwapAnd Here permutation) (Synchronous clsf1 (Synchronous clsf2 sn)) = permuteSN permutation $ Synchronous clsf2 $ Synchronous clsf1 sn
+permuteSN (SwapAnd Here permutation) (Synchronous clsf (Resampling rb closingIn closingOut sn)) = _
+permuteSN (SwapAnd (There swap) permutation) (Synchronous clsf1 sn) = permuteSN permutation $ Synchronous clsf1 $ permuteSN (SwapAnd swap Identity) sn
+permuteSN (SwapAnd Here Identity) (Resampling rb ClosingInHere ClosingOutHere (Synchronous clsf1 (Synchronous clsf2 Empty))) =
+  Resampling rb (ClosingInThere ClosingInHere) (ClosingOutThere ClosingOutHere) $
+  Synchronous clsf2 $
+  Synchronous clsf1 Empty
+permuteSN permutation (Resampling rb closingIn closingOut sn) = _
+permuteSN permutation (DoneIn _ sn) = _
+permuteSN permutation (DoneOut _ sn) = _
+permuteSN permutation (ConcatInNil sn) = _
+permuteSN permutation (ConcatInConsCC sn) = _
+permuteSN permutation (ConcatInConsCO sn) = _
+permuteSN permutation (ConcatInConsOC sn) = _
+permuteSN permutation (ConcatInConsOO sn) = _
+
+skipClosingIn ::
+  ClosingIn (clockBefore ': clocksBefore) (clockIntermediate ': clocksIntermediate) a cl ->
+  ClosingIn (clockBefore ': clBetween ': clocksBefore) (clockIntermediate ': clBetween ': clocksIntermediate)  a cl
+skipClosingIn ClosingInHere = ClosingInHere
+skipClosingIn (ClosingInThere closingInThere) = ClosingInThere (ClosingInThere closingInThere)
+
+skipClosingOut ::
+  ClosingOut (clockBefore ': clocksBefore) (clockOuttermediate ': clocksOuttermediate) a cl ->
+  ClosingOut (clockBefore ': clBetween ': clocksBefore) (clockOuttermediate ': clBetween ': clocksOuttermediate)  a cl
+skipClosingOut ClosingOutHere = ClosingOutHere
+skipClosingOut (ClosingOutThere closingOutThere) = ClosingOutThere (ClosingOutThere closingOutThere)
