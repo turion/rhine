@@ -20,7 +20,7 @@ import FRP.Rhine
 
 -- FIXME Does this haddock work?
 -- | See 'Dunai.bayesFilter''
-bayesFilter' :: (MonadInfer m, SoftEq sensor) =>
+bayesFilter' :: (MonadMeasure m, SoftEq sensor) =>
   -- | model
   ClSF m cl input (sensor, state) ->
   -- | external sensor, data source
@@ -30,7 +30,7 @@ bayesFilter' = DunaiBayes.bayesFilter'
 
 -- FIXME Does this haddock work?
 -- | See 'Dunai.bayesFilter'
-bayesFilter :: (MonadInfer m, SoftEq sensor) =>
+bayesFilter :: (MonadMeasure m, SoftEq sensor) =>
   ClSF m cl input (sensor, latent) ->
   -- | external sensor, data source
   ClSF m cl (input, sensor) latent
@@ -45,23 +45,23 @@ runPopulationCl :: forall m cl a b . Monad m =>
   -> ClSF m cl a [(b, Log Double)]
 runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
 
-collapseCl :: MonadInfer m => ClSF (Population m) cl a b -> ClSF m cl a b
+collapseCl :: MonadMeasure m => ClSF (Population m) cl a b -> ClSF m cl a b
 collapseCl = hoistClSF collapse
 
 -- FIXME unit test. Does this what I think it does?
-properCl :: MonadSample m => ClSF (Population m) cl a b -> ClSF (Weighted m) cl a b
+properCl :: MonadDistribution m => ClSF (Population m) cl a b -> ClSF (Weighted m) cl a b
 properCl = hoistClSF proper
 
 -- * Short standard library of stochastic processes
 
 -- FIXME multivariate version
 -- | White noise, that is, an independent normal distribution at every time step
-whiteNoise :: MonadSample m => Double -> Behaviour m td Double
+whiteNoise :: MonadDistribution m => Double -> Behaviour m td Double
 whiteNoise sigma = constMCl $ normal 0 sigma
 
 -- | Construct a Lévy process from the increment between time steps
 levy ::
-  (MonadSample m, VectorSpace v (Diff td)) =>
+  (MonadDistribution m, VectorSpace v (Diff td)) =>
   -- | The increment function at every time step. The argument is the difference between times.
   (Diff td -> m v) ->
   Behaviour m td v
@@ -92,7 +92,7 @@ instance VectorSpaceWithBasis Float Float where
 -- For now it is 1-d.
 -- wiener :: VectorSpaceWithBasis v (Diff td) =>
 wiener ::
-  (MonadSample m, Diff td ~ Double) =>
+  (MonadDistribution m, Diff td ~ Double) =>
   -- | Time scale of variance
   Diff td ->
     -- FIXME Do I need a further parameter

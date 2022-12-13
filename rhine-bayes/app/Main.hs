@@ -15,10 +15,10 @@ import Control.Monad.Morph
 import Numeric.Log hiding (sum)
 
 -- monad-bayes
-import Control.Monad.Bayes.Class
+import Control.Monad.Bayes.Class hiding (prior, posterior)
 -- FIXME They should implement MMorph
 import Control.Monad.Bayes.Population hiding (hoist)
-import Control.Monad.Bayes.Sampler
+import Control.Monad.Bayes.Sampler.Strict
 
 -- rhine
 import FRP.Rhine
@@ -39,7 +39,7 @@ type Sensor = Pos
 -- ** Prior
 
 -- | Harmonic oscillator with white noise
-prior1d :: (MonadSample m, Diff td ~ Double) =>
+prior1d :: (MonadDistribution m, Diff td ~ Double) =>
   -- | Starting position
   Double ->
   -- | Starting velocity
@@ -50,12 +50,12 @@ prior1d initialPosition initialVelocity = feedback 0 $ proc (stdDev, position') 
   -- FIXME make -3 input, sample once at the beginning, or on every key stroke
   let acceleration = (-3) * position' + impulse
   -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
-  velocity <- arr (+ initialPosition) <<< decayIntegral 100 -< acceleration
-  position <- integralFrom initialVelocity -< velocity
+  velocity <- arr (+ initialVelocity) <<< decayIntegral 100 -< acceleration
+  position <- integralFrom initialPosition -< velocity
   returnA -< (position, position)
 
 -- | 2D harmonic oscillator with noise
-prior :: (MonadSample m, Diff td ~ Double) => BehaviourF m td StdDev Pos
+prior :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td StdDev Pos
 prior = prior1d 10 0 &&& prior1d 0 10
 
 -- ** Observation
@@ -66,10 +66,10 @@ double2FloatTuple = double2Float *** double2Float
 decayIntegral :: (VectorSpace v (Diff td), Monad m) => Diff td -> BehaviourF m td v v
 decayIntegral timeConstant = average timeConstant >>> arr (timeConstant *^)
 
-noise :: MonadSample m => Behaviour m td Pos
-noise = let stdDev = 5 in whiteNoise stdDev &&& whiteNoise stdDev
+noise :: MonadDistribution m => Behaviour m td Pos
+noise = let stdDev = 1 in whiteNoise stdDev &&& whiteNoise stdDev
 
-generativeModel :: (MonadSample m, Diff td ~ Double) => BehaviourF m td Pos Sensor
+generativeModel :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td Pos Sensor
 generativeModel = proc latent -> do
   noiseNow <- noise -< ()
   returnA -< latent ^+^ noiseNow
@@ -79,13 +79,13 @@ generativeModel = proc latent -> do
 -- FIXME make parameters like n particles/spawn, softeq interactive!
 -- That means it'll not be a ClSF anymore
 
-model :: (MonadSample m, Diff td ~ Double) => BehaviourF m td StdDev (Sensor, Pos)
+model :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td StdDev (Sensor, Pos)
 model = proc stdDev -> do
   latent <- prior -< stdDev
   sensor <- generativeModel -< latent
   returnA -< (sensor, latent)
 
-posterior :: (MonadInfer m, Diff td ~ Double) => BehaviourF m td (StdDev, Sensor) Pos
+posterior :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td (StdDev, Sensor) Pos
 posterior = bayesFilter model
 
 -- FIXME Want ExceptT so we can exit with escape
@@ -161,7 +161,7 @@ glossSettings = defaultSettings
 
 -- FIXME Make interactive
 stdDev :: Double
-stdDev = 5
+stdDev = 7
 
 -- ** Single-rate : One sim step = one infer step = one display step
 
@@ -188,7 +188,7 @@ mainSingleRate = void
 
 -- TODO It's not so nice I need to morphS every component, but as long as I haven't gotten rid of schedules, I can't simplify this much
 modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) StdDev (StdDev, (Sensor, Pos))
--- modelRhine :: MonadSample m => Rhine m (Millisecond 100) StdDev (Sensor, Pos)
+-- modelRhine :: MonadDistribution m => Rhine m (Millisecond 100) StdDev (Sensor, Pos)
 modelRhine = hoistClSF sampleIOGloss (clId &&& model) @@ liftClock waitClock
 
 -- FIXME I still compute inference in the same thread. I should push calculation itself to a background thread, and force it there completely.
@@ -198,11 +198,15 @@ inference :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (StdDev, (Sens
 -- FIXME abstract that bracket
 inference = hoistClSF sampleIOGloss thing @@ liftClock Busy
   where
-    thing :: (MonadSample m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
+    thing :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
     thing = proc (stdDev, (measured, latent)) -> do
       particles <- runPopulationCl 100 resampleSystematic posterior -< (stdDev, measured)
       returnA -< Result { measured, latent, particles }
 
+-- TODO More interactive ideas:
+-- * sensor
+-- * Matthias Heinzel: Click somewhere to create gravity to move the point somewhere, so the generative model doesn't capture the whole actual model
+-- * Enrico: Add some graphs showing model performance
 
 visualisationRhine :: Rhine (GlossConcT IO) GlossClockUTC Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC
@@ -217,15 +221,12 @@ mainMultiRate = void
 
 -- * Utilities
 
--- FIXME should be in monad-bayes
--- In fact there should be a newtype for lifting MonadSample along a transformer,
+-- FIXME there should be a newtype for lifting MonadDistribution along a transformer,
 -- and then all instances derived via it
-instance MonadSample m => MonadSample (ExceptT e m) where
-  random = lift random
 
 -- See, this is why we need effect frameworks.
 -- Or why monad-bayes needs newtypes for monad transformers
-instance MonadSample m => MonadSample (GlossConcT m) where
+instance MonadDistribution m => MonadDistribution (GlossConcT m) where
   random = lift random
   -- FIXME Other PDs?
 
