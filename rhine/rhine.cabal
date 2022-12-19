@@ -99,7 +99,7 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base         >= 4.13 && < 4.16
+  build-depends:       base         >= 4.13 && < 4.17
                      , dunai        >= 0.8
                      , transformers >= 0.5
                      , time         >= 1.8
