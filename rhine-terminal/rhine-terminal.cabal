@@ -19,11 +19,11 @@ cabal-version:       1.18
 
 source-repository head
   type:     git
-  location: git@github.com:turion/rhine.git
+  location: https://github.com/turion/rhine.git
 
 source-repository this
   type:     git
-  location: git@github.com:turion/rhine.git
+  location: https://github.com/turion/rhine.git
   tag:      v0.8.1
 
 library
