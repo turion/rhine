@@ -28,6 +28,8 @@ jobs:
           key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles(env.cabal_project_freeze) }}
           restore-keys: |
             ${{ runner.os }}-cabal-${{ matrix.ghc }}
+      - name: Cabal update
+        run: cabal update
       - name: Cabal build dependencies
         run: |
           cabal build all  --enable-tests --only-dependencies --project-file=cabal.project.${{ matrix.ghc }}
