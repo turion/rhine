@@ -36,7 +36,7 @@ library
     FRP.Rhine.Gloss.IO
     FRP.Rhine.Gloss.Pure
     FRP.Rhine.Gloss.Pure.Combined
-  build-depends:       base         >= 4.11 && < 4.16
+  build-depends:       base         >= 4.11 && < 4.17
                      , transformers >= 0.5
                      , rhine        == 0.8.0.1
                      , dunai        >= 0.8
