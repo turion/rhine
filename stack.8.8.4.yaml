@@ -13,3 +13,8 @@ extra-deps:
 - text-1.2.5.0@sha256:791f0f6c97ed96113f17ab520cf0efe1a3a4f883a8c85910a5660567c8241c40,7895
 - Cabal-3.4.1.0@sha256:48e64c97688149fac15445803830177248f15a9b1a783389efed5e375d70d2d0,31402
 - parsec-3.1.15.1@sha256:8c7a36aaadff12a38817fc3c4ff6c87e3352cffd1a58df640de7ed7a97ad8fa3,4601
+
+nix:
+  packages:
+    - libGL
+    - libGLU
