@@ -4,6 +4,11 @@ The version numbering follows the package `dunai`.
 Since `rhine` reexports modules from `dunai`,
 every major version in `dunai` triggers a major version in `rhine`.
 
+## 0.8.1
+
+* Support for GHC 9.2.4
+* Added `FirstResampling` and `Feedback` constructors to `SN`
+
 ## 0.8.0.0
 
 * Documentation improvements
