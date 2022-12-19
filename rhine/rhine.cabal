@@ -1,6 +1,6 @@
 name:                rhine
 
-version:             0.8.0.1
+version:             0.8.1
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -41,12 +41,12 @@ cabal-version:       1.18
 
 source-repository head
   type:     git
-  location: git@github.com:turion/rhine.git
+  location: https://github.com/turion/rhine.git
 
 source-repository this
   type:     git
-  location: git@github.com:turion/rhine.git
-  tag:      v0.8.0.1
+  location: https://github.com/turion/rhine.git
+  tag:      v0.8.1
 
 
 library

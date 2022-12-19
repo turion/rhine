@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-gloss
-version:             0.8.0.1
+version:             0.8.1
 synopsis:            Gloss backend for Rhine
 description:
   This package provides a simple wrapper for the `gloss` library,
@@ -21,12 +21,12 @@ cabal-version:       1.18
 
 source-repository head
   type:     git
-  location: git@github.com:turion/rhine.git
+  location: https://github.com/turion/rhine.git
 
 source-repository this
   type:     git
-  location: git@github.com:turion/rhine.git
-  tag:      v0.8.0.1
+  location: https://github.com/turion/rhine.git
+  tag:      v0.8.1
 
 
 library
@@ -38,7 +38,7 @@ library
     FRP.Rhine.Gloss.Pure.Combined
   build-depends:       base         >= 4.11 && < 4.17
                      , transformers >= 0.5
-                     , rhine        == 0.8.0.1
+                     , rhine        == 0.8.1
                      , dunai        >= 0.8
                      , gloss        >= 1.12
   hs-source-dirs:      src
