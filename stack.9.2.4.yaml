@@ -8,3 +8,8 @@ packages:
 
 extra-deps:
 - terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
+
+nix:
+  packages:
+    - libGL
+    - libGLU
