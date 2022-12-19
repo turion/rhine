@@ -1,4 +1,4 @@
-resolver: lts-19.08
+resolver: lts-20.04
 
 packages:
 - rhine
@@ -7,7 +7,6 @@ packages:
 - rhine-terminal
 
 extra-deps:
-- time-domain-0.1.0.0@sha256:48146872e85f46399e8b8d7ff7c3d3b7f530e2de167b6893ba3ce649ba2e2e75,800
 - terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
 
 nix:
