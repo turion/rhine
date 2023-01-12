@@ -28,8 +28,9 @@ linear
   :: ( Monad m, Clock m cl1, Clock m cl2
      , VectorSpace v s
      , s ~ Diff (Time cl1)
-     , s ~ Diff (Time cl2)
+     , s ~ Diff (Time cl2),
      , Data v
+     , Num s
      )
   => v -- ^ The initial velocity (derivative of the signal)
   -> v -- ^ The initial position
@@ -89,6 +90,7 @@ cubic
      , s ~ Diff (Time cl1)
      , s ~ Diff (Time cl2)
      , Data s, Data v
+     , Num s, Fractional s
      )
   => ResamplingBuffer m cl1 cl2 v v
 cubic = ((iPre zeroVector &&& threePointDerivative) &&& (sinceInitS >-> iPre 0))

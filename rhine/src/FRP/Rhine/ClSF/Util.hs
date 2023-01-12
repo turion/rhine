@@ -188,8 +188,10 @@ derivative = derivativeFrom zeroVector
 --   Consequently, it is delayed by one sample.
 threePointDerivativeFrom
   :: ( Monad m, VectorSpace v s
+     , Num s
      , Data v
-     , s ~ Diff td, Num s)
+     , s ~ Diff td
+     )
   => v -- ^ The initial position
   -> BehaviorF m td v v
 threePointDerivativeFrom v0 = proc v -> do
@@ -201,8 +203,10 @@ threePointDerivativeFrom v0 = proc v -> do
 --   but with the initial position initialised to 'zeroVector'.
 threePointDerivative
   :: ( Monad m, VectorSpace v s
+     , Num s
      , Data v
-     , s ~ Diff td, Num s)
+     , s ~ Diff td
+     )
   => BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
 
@@ -217,8 +221,9 @@ threePointDerivative = threePointDerivativeFrom zeroVector
 --   whereas a weight of 0 outputs the current value.
 weightedAverageFrom
   :: ( Monad m, VectorSpace v s
+     , Num s
      , s ~ Diff td
-     , Data v, Num s
+     , Data v
      )
   => v -- ^ The initial position
   -> BehaviorF m td (v, s) v
@@ -262,8 +267,9 @@ average = averageFrom zeroVector
 --   than the average time difference between two ticks.
 averageLinFrom
   :: ( Monad m, VectorSpace v s
+     , Fractional s
      , s ~ Diff td
-     , Data v, Fractional s
+     , Data v
      )
   => v -- ^ The initial position
   -> Diff td -- ^ The time scale on which the signal is averaged
@@ -277,8 +283,9 @@ averageLinFrom v0 t = proc v -> do
 -- | Linearised version of 'average'.
 averageLin
   :: ( Monad m, VectorSpace v s
+     , Fractional s
      , s ~ Diff td
-     , Data v, Fractional s
+     , Data v
      )
   => Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviourF m td v v
@@ -301,7 +308,9 @@ highPass
   :: ( Monad m, VectorSpace v s
      , Data v
      , Floating s
-     , s ~ Diff td, Eq s)
+     , Eq s
+     , s ~ Diff td
+     )
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
 highPass t = clId ^-^ lowPass t
@@ -311,7 +320,9 @@ bandPass
   :: ( Monad m, VectorSpace v s
      , Data v
      , Floating s
-     , s ~ Diff td, Eq s)
+     , Eq s
+     , s ~ Diff td
+     )
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
 bandPass t = lowPass t >>> highPass t
@@ -320,7 +331,8 @@ bandPass t = lowPass t >>> highPass t
 bandStop
   :: ( Monad m, VectorSpace v s
      , Data v
-     , Floating s, Eq s
+     , Floating s
+     , Eq s
      , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
