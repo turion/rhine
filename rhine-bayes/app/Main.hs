@@ -1,4 +1,5 @@
 -- base
+{-# LANGUAGE TupleSections #-}
 import Control.Monad (void)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Product(getProduct, Product))
@@ -77,19 +78,34 @@ generativeModel = proc latent -> do
   noiseNow <- noise -< ()
   returnA -< latent ^+^ noiseNow
 
+-- ** User behaviour
+
+initialTemperature :: StdDev
+initialTemperature = 7
+
+-- FIXME maybe the ln exp thing ough to move inside the library so users don't have to have a direct log-domain dependency?
+temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () StdDev
+temperatureProcess = wienerLogDomain 60 >>> arr (ln >>> exp >>> (* initialTemperature))
+
 -- * Filtering
 
 -- FIXME make parameters like n particles/spawn, softeq interactive!
 -- That means it'll not be a ClSF anymore
 
-model :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td StdDev (Sensor, Pos)
-model = proc stdDev -> do
+model :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () (Sensor, (StdDev, Pos))
+model = proc () -> do
+  stdDev <- temperatureProcess -< ()
+  (sensor, pos) <- modelWithoutTemperature -< stdDev
+  returnA -< (sensor, (stdDev, pos))
+
+modelWithoutTemperature :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td StdDev (Sensor, Pos)
+modelWithoutTemperature = proc stdDev -> do
   latent <- prior -< stdDev
   sensor <- generativeModel -< latent
   returnA -< (sensor, latent)
 
-posterior :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td (StdDev, Sensor) Pos
-posterior = bayesFilter model
+posterior :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td Sensor (StdDev, Pos)
+posterior = arr ((), ) >>> bayesFilter model
 
 -- FIXME Want ExceptT so we can exit with escape
 type MySmallMonad = GlossConcT SamplerIO
@@ -98,14 +114,14 @@ data Result = Result
   { temperature :: StdDev
   , measured :: Sensor
   , latent :: Pos
-  , particles :: [(Pos, Log Double)]
+  , particles :: [((StdDev, Pos), Log Double)]
   }
   deriving Show
 
-filtered :: Diff td ~ Double => BehaviourF MySmallMonad td StdDev Result
-filtered = proc stdDev -> do
-  (measuredPosition, actualPosition) <- model -< stdDev
-  samples <- runPopulationCl 100 resampleSystematic posterior -< (stdDev, measuredPosition)
+filtered :: Diff td ~ Double => BehaviourF MySmallMonad td () Result
+filtered = proc () -> do
+  (measuredPosition, (stdDev, actualPosition)) <- model -< ()
+  samples <- runPopulationCl 100 resampleSystematic posterior -< measuredPosition
   returnA -< Result
     { temperature = stdDev
     , measured = measuredPosition
@@ -115,6 +131,7 @@ filtered = proc stdDev -> do
 
 -- * Visualization
 
+-- FIXME visualize temperature on a scale, and draw temperature particles on that scale
 -- TODO FPS counter so we can see how too many particles bog down performance.
 -- Or rather decouple simulation and graphics, and then make simulation a busy loop (with a little sleep) and display the simulation rate.
 visualisation :: BehaviourF MySmallMonad td Result ()
@@ -174,7 +191,7 @@ stdDev = 7
 
 mainClSF :: Diff td ~ Double => BehaviourF MySmallMonad td () ()
 mainClSF = proc () -> do
-  output <- filtered -< stdDev
+  output <- filtered -< ()
   visualisation -< output
 
 type GlossClock = RescaledClock GlossSimClockIO Double
@@ -196,7 +213,7 @@ mainSingleRate = void
 -- TODO It's not so nice I need to morphS every component, but as long as I haven't gotten rid of schedules, I can't simplify this much
 modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) StdDev (StdDev, (Sensor, Pos))
 -- modelRhine :: MonadDistribution m => Rhine m (Millisecond 100) StdDev (Sensor, Pos)
-modelRhine = hoistClSF sampleIOGloss (clId &&& model) @@ liftClock waitClock
+modelRhine = hoistClSF sampleIOGloss (clId &&& modelWithoutTemperature) @@ liftClock waitClock
 
 userStdDev :: ClSF (GlossConcT IO) (GlossClockUTC GlossEventClockIO) () StdDev
 userStdDev = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* stdDev))
