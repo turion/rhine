@@ -54,6 +54,7 @@ properCl = hoistClSF proper
 
 -- * Short standard library of stochastic processes
 
+-- FIXME The dimension of this is square root of time! Is it possible to capture that in a type, related to time-domain?
 -- FIXME multivariate version
 -- | White noise, that is, an independent normal distribution at every time step
 whiteNoise :: MonadDistribution m => Double -> Behaviour m td Double
@@ -91,10 +92,20 @@ instance VectorSpaceWithBasis Float Float where
 -- | The Wiener process, also known as Brownian motion.
 -- For now it is 1-d.
 -- wiener :: VectorSpaceWithBasis v (Diff td) =>
-wiener ::
+wiener, brownianMotion ::
   (MonadDistribution m, Diff td ~ Double) =>
   -- | Time scale of variance
   Diff td ->
     -- FIXME Do I need a further parameter
   Behaviour m td Double
-wiener timescale = levy $ \diffTime -> normal 0 $ diffTime / timescale
+wiener timescale = levy $ \diffTime -> normal 0 $ sqrt $ diffTime / timescale
+
+brownianMotion = wiener
+
+-- Also maybe called geometric Wiener process
+wienerLogDomain ::
+  (MonadDistribution m, Diff td ~ Double) =>
+  -- | Time scale of variance
+  Diff td ->
+  Behaviour m td (Log Double)
+wienerLogDomain timescale = wiener timescale >>> arr Exp
