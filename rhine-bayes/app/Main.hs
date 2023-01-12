@@ -1,6 +1,9 @@
 -- base
 import Control.Monad (void)
+import Data.Maybe (fromMaybe)
+import Data.Monoid (Product(getProduct, Product))
 import GHC.Float (float2Double, double2Float)
+import Text.Printf (printf)
 
 -- transformers
 import Control.Monad.Trans.Class
@@ -50,7 +53,7 @@ prior1d initialPosition initialVelocity = feedback 0 $ proc (stdDev, position') 
   -- FIXME make -3 input, sample once at the beginning, or on every key stroke
   let acceleration = (-3) * position' + impulse
   -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
-  velocity <- arr (+ initialVelocity) <<< decayIntegral 100 -< acceleration
+  velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
   position <- integralFrom initialPosition -< velocity
   returnA -< (position, position)
 
@@ -92,7 +95,8 @@ posterior = bayesFilter model
 type MySmallMonad = GlossConcT SamplerIO
 
 data Result = Result
-  { measured :: Sensor
+  { temperature :: StdDev
+  , measured :: Sensor
   , latent :: Pos
   , particles :: [(Pos, Log Double)]
   }
@@ -103,7 +107,8 @@ filtered = proc stdDev -> do
   (measuredPosition, actualPosition) <- model -< stdDev
   samples <- runPopulationCl 100 resampleSystematic posterior -< (stdDev, measuredPosition)
   returnA -< Result
-    { measured = measuredPosition
+    { temperature = stdDev
+    , measured = measuredPosition
     , latent = actualPosition
     , particles = samples
     }
@@ -113,8 +118,9 @@ filtered = proc stdDev -> do
 -- TODO FPS counter so we can see how too many particles bog down performance.
 -- Or rather decouple simulation and graphics, and then make simulation a busy loop (with a little sleep) and display the simulation rate.
 visualisation :: BehaviourF MySmallMonad td Result ()
-visualisation = proc Result { measured, latent, particles } -> do
+visualisation = proc Result { temperature, measured, latent, particles } -> do
   constMCl clearIO -< ()
+  arrMCl paintIO -< translate (-200) 200 $ scale 0.2 0.2 $ color white $ text $ printf "Temperature: %.2f" temperature
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
   drawParticles -< particles
@@ -135,14 +141,14 @@ drawParticles = proc particles -> do
       drawParticle -< p
       drawParticles -< ps
 
-type GlossClockUTC = RescaledClockS (GlossConcT IO) GlossSimClockIO UTCTime ()
+type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
 
-glossClockUTC :: GlossClockUTC
-glossClockUTC = RescaledClockS
-  { unscaledClockS = GlossSimClockIO
+glossClockUTC :: Real (Time cl) => cl -> GlossClockUTC cl
+glossClockUTC cl = RescaledClockS
+  { unscaledClockS = cl
   , rescaleS = const $ do
       now <- liftIO getCurrentTime
-      return (arr $ \(timePassed, ()) -> (addUTCTime (realToFrac timePassed) now, ()), now)
+      return (arr $ \(timePassed, event) -> (addUTCTime (realToFrac timePassed) now, event), now)
   }
 
 -- * Integration
@@ -159,6 +165,7 @@ glossSettings :: GlossSettings
 glossSettings = defaultSettings
   { display = InWindow "rhine-bayes" (1024, 960) (10, 10) }
 
+-- FIXME rename to temperature?
 -- FIXME Make interactive
 stdDev :: Double
 stdDev = 7
@@ -191,6 +198,13 @@ modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) 
 -- modelRhine :: MonadDistribution m => Rhine m (Millisecond 100) StdDev (Sensor, Pos)
 modelRhine = hoistClSF sampleIOGloss (clId &&& model) @@ liftClock waitClock
 
+userStdDev :: ClSF (GlossConcT IO) (GlossClockUTC GlossEventClockIO) () StdDev
+userStdDev = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* stdDev))
+  where
+    selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
+    selector (EventKey (SpecialKey KeyDown) Down _ _) = Just (1 / 1.2)
+    selector _ = Nothing
+
 -- FIXME I still compute inference in the same thread. I should push calculation itself to a background thread, and force it there completely.
 -- A bit tricky with laziness...
 -- TODO It's silly that I need GlossConcT here
@@ -201,18 +215,18 @@ inference = hoistClSF sampleIOGloss thing @@ liftClock Busy
     thing :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
     thing = proc (stdDev, (measured, latent)) -> do
       particles <- runPopulationCl 100 resampleSystematic posterior -< (stdDev, measured)
-      returnA -< Result { measured, latent, particles }
+      returnA -< Result { temperature = stdDev, measured, latent, particles }
 
 -- TODO More interactive ideas:
 -- * sensor
 -- * Matthias Heinzel: Click somewhere to create gravity to move the point somewhere, so the generative model doesn't capture the whole actual model
 -- * Enrico: Add some graphs showing model performance
 
-visualisationRhine :: Rhine (GlossConcT IO) GlossClockUTC Result ()
-visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC
+visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
+visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
 
 -- FIXME I need https://github.com/turion/rhine/pull/187 or similar in order to pass the model faster to the graphics even if inference takes longer
-mainRhine = const stdDev ^>>@ modelRhine >-- keepLast (stdDev, (zeroVector, zeroVector)) -@- glossConcurrently --> inference >-- keepLast Result { measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently --> visualisationRhine
+mainRhine = userStdDev @@ glossClockUTC GlossEventClockIO >-- keepLast stdDev -@- glossConcurrently --> modelRhine >-- keepLast (stdDev, (zeroVector, zeroVector)) -@- glossConcurrently --> inference >-- keepLast Result { temperature = stdDev, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently --> visualisationRhine
 
 mainMultiRate :: IO ()
 mainMultiRate = void
