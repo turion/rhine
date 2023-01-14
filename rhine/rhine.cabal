@@ -126,7 +126,12 @@ library
     ghc-options: -Werror
 
   default-extensions:
-      NoStarIsType
+      FlexibleContexts
+    , FlexibleInstances
+    , NamedFieldPuns
+    , MultiParamTypeClasses
+    , NoStarIsType
+    , TypeFamilies
     , TypeOperators
 
   -- Base language which the package is written in.

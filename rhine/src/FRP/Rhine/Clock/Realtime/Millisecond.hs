@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -9,6 +10,7 @@ module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
 import Control.Concurrent (threadDelay)
+import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock
 import GHC.TypeLits
@@ -20,6 +22,7 @@ import Data.Vector.Sized (Vector, fromList)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.Clock.Proxy
+import FRP.Rhine.Clock.Unschedule
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
@@ -35,7 +38,7 @@ The tag of this clock is 'Bool',
 where 'True' represents successful realtime,
 and 'False' a lag.
 -}
-newtype Millisecond (n :: Nat) = Millisecond (RescaledClockS IO (FixedStep n) UTCTime Bool)
+newtype Millisecond (n :: Nat) = Millisecond (RescaledClockS IO (UnscheduleClock IO (FixedStep n)) UTCTime Bool)
 
 -- TODO Consider changing the tag to Maybe Double
 
@@ -62,10 +65,10 @@ instance GetClockProxy (Millisecond n)
    the wait time, up to no wait time at all, to catch up when a tick is missed.
 -}
 waitClock :: KnownNat n => Millisecond n
-waitClock = Millisecond $ RescaledClockS FixedStep $ \_ -> do
-  initTime <- getCurrentTime
+waitClock = Millisecond $ RescaledClockS (unyieldClock FixedStep) $ \_ -> do
+  initTime <- liftIO getCurrentTime
   let
-    runningClock = arrM $ \(n, ()) -> do
+    runningClock = arrM $ \(n, ()) -> liftIO $ do
       beforeSleep <- getCurrentTime
       let
         diff :: Double
@@ -84,9 +87,4 @@ downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
   where
     assumeSize =
       fromMaybe $
-        error $
-          unwords
-            [ "You are using an incorrectly implemented schedule"
-            , "for two Millisecond clocks."
-            , "Use a correct schedule like downsampleMillisecond."
-            ]
+        error "downsampleMillisecond: Internal error. Please report this as a bug: https://github.com/turion/rhine/issues"
