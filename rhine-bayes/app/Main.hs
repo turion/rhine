@@ -170,6 +170,7 @@ drawParticle = proc ((stdDev, position), probability) -> do
   drawBall -< (position, 0.1, withAlpha (double2Float $ exp $ 0.2 * ln probability) white)
   arrMCl paintIO -< toThermometer $ translate 0 (double2Float stdDev * thermometerScale) $ color (withAlpha (double2Float $ exp $ 0.2 * ln probability) white) $ rectangleSolid thermometerWidth 2
 
+-- FIXME use arrow utils
 drawParticles :: BehaviourF MySmallMonad td [((StdDev, Pos), Log Double)] ()
 drawParticles = proc particles -> do
   case particles of
