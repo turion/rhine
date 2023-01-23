@@ -135,12 +135,28 @@ filtered = proc () -> do
 -- * Visualization
 
 -- FIXME visualize temperature on a scale, and draw temperature particles on that scale
+
+thermometerPos :: (Float, Float)
+thermometerPos = (-300, -300)
+
+toThermometer :: Picture -> Picture
+toThermometer = uncurry translate thermometerPos
+
+thermometerScale :: Float
+thermometerScale = 20
+
+thermometerWidth :: Float
+thermometerWidth = 20
+
 -- TODO FPS counter so we can see how too many particles bog down performance.
 -- Or rather decouple simulation and graphics, and then make simulation a busy loop (with a little sleep) and display the simulation rate.
 visualisation :: BehaviourF MySmallMonad td Result ()
 visualisation = proc Result { temperature, measured, latent, particles } -> do
   constMCl clearIO -< ()
-  arrMCl paintIO -< translate (-200) 200 $ scale 0.2 0.2 $ color white $ text $ printf "Temperature: %.2f" temperature
+  arrMCl paintIO -< toThermometer $ pictures
+    [ translate 0 (-40) $ scale 0.2 0.2 $ color white $ text $ printf "Temperature: %.2f" temperature
+    , color red $ rectangleUpperSolid thermometerWidth $ double2Float temperature * thermometerScale
+    ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
   drawParticles -< particles
@@ -149,11 +165,12 @@ drawBall :: BehaviourF MySmallMonad td (Pos, Double, Color) ()
 drawBall = proc (position, width, theColor) -> do
   arrMCl paintIO -< scale 20 20 $ uncurry translate (double2FloatTuple position) $ color theColor $ circleSolid $ double2Float width
 
-drawParticle :: BehaviourF MySmallMonad td (Pos, Log Double) ()
-drawParticle = proc (position, probability) -> do
+drawParticle :: BehaviourF MySmallMonad td ((StdDev, Pos), Log Double) ()
+drawParticle = proc ((stdDev, position), probability) -> do
   drawBall -< (position, 0.1, withAlpha (double2Float $ exp $ 0.2 * ln probability) white)
+  arrMCl paintIO -< toThermometer $ translate 0 (double2Float stdDev * thermometerScale) $ color (withAlpha (double2Float $ exp $ 0.2 * ln probability) white) $ rectangleSolid thermometerWidth 2
 
-drawParticles :: BehaviourF MySmallMonad td [(Pos, Log Double)] ()
+drawParticles :: BehaviourF MySmallMonad td [((StdDev, Pos), Log Double)] ()
 drawParticles = proc particles -> do
   case particles of
     [] -> returnA -< ()
