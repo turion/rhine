@@ -85,7 +85,7 @@ initialTemperature = 7
 
 -- FIXME maybe the ln exp thing ough to move inside the library so users don't have to have a direct log-domain dependency?
 temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () StdDev
-temperatureProcess = wienerLogDomain 60 >>> arr (ln >>> exp >>> (* initialTemperature))
+temperatureProcess = wienerLogDomain 20 >>> arr (ln >>> exp >>> (* initialTemperature))
 
 -- * Filtering
 
