@@ -1,5 +1,5 @@
 name:                rhine-bayes
-version:             0.8.0.1
+version:             0.8.1
 synopsis:            monad-bayes backend for Rhine
 description:
   This package provides a backend to the `monad-bayes` library,
@@ -22,15 +22,15 @@ source-repository head
 source-repository this
   type:     git
   location: git@github.com:turion/rhine.git
-  tag:      v0.8.0.1
+  tag:      v0.8.1
 
 
 library
   exposed-modules:
     FRP.Rhine.Bayes
-  build-depends:       base         >= 4.11 && < 4.16
+  build-depends:       base         >= 4.11 && < 4.17
                      , transformers >= 0.5
-                     , rhine        == 0.8.0.1
+                     , rhine        == 0.8.1
                      , dunai        >= 0.9
                      , log-domain   >= 0.12
                      , monad-bayes
