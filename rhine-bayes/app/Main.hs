@@ -118,10 +118,13 @@ data Result = Result
   }
   deriving Show
 
+nParticles :: Int
+nParticles = 100
+
 filtered :: Diff td ~ Double => BehaviourF MySmallMonad td () Result
 filtered = proc () -> do
   (measuredPosition, (stdDev, actualPosition)) <- model -< ()
-  samples <- runPopulationCl 100 resampleSystematic posterior -< measuredPosition
+  samples <- runPopulationCl nParticles resampleSystematic posterior -< measuredPosition
   returnA -< Result
     { temperature = stdDev
     , measured = measuredPosition
@@ -231,7 +234,7 @@ inference = hoistClSF sampleIOGloss thing @@ liftClock Busy
   where
     thing :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
     thing = proc (stdDev, (measured, latent)) -> do
-      particles <- runPopulationCl 100 resampleSystematic posterior -< (stdDev, measured)
+      particles <- runPopulationCl nParticles resampleSystematic posterior -< measured
       returnA -< Result { temperature = stdDev, measured, latent, particles }
 
 -- TODO More interactive ideas:
