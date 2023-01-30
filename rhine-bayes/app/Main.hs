@@ -68,7 +68,7 @@ double2FloatTuple :: (Double, Double) -> (Float, Float)
 double2FloatTuple = double2Float *** double2Float
 
 decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td)) => Diff td -> BehaviourF m td v v
-decayIntegral timeConstant = average timeConstant >>> arr (timeConstant *^)
+decayIntegral timeConstant = (timeConstant *^) <$> average timeConstant
 
 noise :: MonadDistribution m => Behaviour m td Pos
 noise = let stdDev = 1 in whiteNoise stdDev &&& whiteNoise stdDev
