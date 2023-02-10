@@ -87,6 +87,7 @@ library
     FRP.Rhine.ResamplingBuffer.MSF
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
+    FRP.Rhine.StateConstraint
     FRP.Rhine.Schedule
     FRP.Rhine.Schedule.Concurrently
     -- FRP.Rhine.Schedule.Trans
@@ -135,8 +136,10 @@ library
   if flag(livecoding)
     build-depends: dunai-live >= 0.6
                  , essence-of-live-coding >= 0.1
+    hs-source-dirs: flags/livecoding/essence-of-live-coding
   else
     build-depends: dunai      >= 0.6
+    hs-source-dirs: flags/livecoding/dunai
 
   -- Directories containing source files.
   hs-source-dirs:      src
