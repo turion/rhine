@@ -104,23 +104,6 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-<<<<<<< HEAD
-  build-depends:       base         >= 4.13 && < 4.17
-                     , monadic-arrow >= 0.1
-                     , dunai        >= 0.8
-                     , transformers >= 0.5
-                     , time         >= 1.8
-                     , free         >= 5.1
-                     , containers   >= 0.5
-                     , vector-sized >= 1.4
-                     , deepseq      >= 1.4
-                     , random       >= 1.1
-                     , MonadRandom  >= 0.5
-                     -- Remove version pin when https://github.com/ivanperez-keera/dunai/issues/298 is resolved:
-                     , simple-affine-space == 0.1.1
-                     , time-domain
-
-=======
   build-depends:       base                >= 4.9 && < 5
                      , transformers        == 0.5.*
                      , time                >= 1.8
@@ -131,7 +114,7 @@ library
                      , random              == 1.1.*
                      , MonadRandom         == 0.5.*
                      , simple-affine-space >= 0.1
->>>>>>> 6462139 (WIP)
+                     , time-domain         >= 0.1
 
   if flag(livecoding)
     build-depends: dunai-live >= 0.6

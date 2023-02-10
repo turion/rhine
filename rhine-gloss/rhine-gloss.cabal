@@ -39,16 +39,9 @@ library
     FRP.Rhine.Gloss.IO
     FRP.Rhine.Gloss.Pure
     FRP.Rhine.Gloss.Pure.Combined
-<<<<<<< HEAD
   build-depends:       base         >= 4.11 && < 4.17
                      , transformers >= 0.5
                      , rhine        == 0.8.1
-                     , dunai        >= 0.8
-=======
-  build-depends:       base         >= 4.9 && < 5
-                     , transformers == 0.5.*
-                     , rhine        == 0.6.*
->>>>>>> 6462139 (WIP)
                      , gloss        >= 1.12
   if flag(livecoding)
     build-depends: dunai-live >= 0.6
