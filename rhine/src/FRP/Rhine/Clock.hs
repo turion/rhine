@@ -137,7 +137,7 @@ data RescaledClock cl time = RescaledClock
   }
 
 
-instance (Monad m, TimeDomain time, Clock m cl)
+instance (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl)
       => Clock m (RescaledClock cl time) where
   type Time (RescaledClock cl time) = time
   type Tag  (RescaledClock cl time) = Tag cl
@@ -157,7 +157,7 @@ data RescaledClockM m cl time = RescaledClockM
   -- ^ Computing the new time effectfully from the old time
   }
 
-instance (Monad m, TimeDomain time, Clock m cl)
+instance (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl)
       => Clock m (RescaledClockM m cl time) where
   type Time (RescaledClockM m cl time) = time
   type Tag  (RescaledClockM m cl time) = Tag cl
