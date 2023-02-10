@@ -6,7 +6,7 @@ import Numeric.Log hiding (sum)
 -- monad-bayes
 import Control.Monad.Bayes.Class
 import Control.Monad.Bayes.Population
-import Control.Monad.Bayes.Weighted hiding (flatten)
+import Control.Monad.Bayes.Weighted
 
 -- dunai
 import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
