@@ -9,6 +9,7 @@ and is thus not exported from 'FRP.Rhine'.
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module FRP.Rhine.Reactimation.ClockErasure where
 
 -- base
@@ -27,7 +28,6 @@ import FRP.Rhine.ClSF hiding (Feedback, runReaderS)
 import FRP.Rhine.ResamplingBuffer hiding (Feedback)
 import FRP.Rhine.SN
 import FRP.Rhine.Schedule (In, Out)
-import FRP.Rhine.Type (Rhine)
 
 -- | Run a clocked signal function as a monadic stream function,
 --   accepting the timestamps and tags as explicit inputs.
@@ -105,10 +105,10 @@ eraseClockSN initialTime (Precompose clsf sn) =
   bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time, , ) <$> inTag proxy tag <*> aMaybe
   eraseClockSN initialTime sn -< (time, tag, bMaybe)
 
-eraseClockSN initialTime (Feedback buf0 sn) =
+eraseClockSN initialTime (Feedback ResamplingBuffer {resamplingState, put, get} sn) =
   let
     proxy = toClockProxy sn
-  in feedback buf0 $ proc ((time, tag, aMaybe), buf) -> do
+  in feedback resamplingState $ proc ((time, tag, aMaybe), buf) -> do
   (cMaybe, buf') <- case inTag proxy tag of
     Nothing -> do
       returnA -< (Nothing, buf)
@@ -162,17 +162,6 @@ eraseClockResBuf proxy1 proxy2 initialTime ResamplingBuffer { .. } = feedback re
       timeInfo2    <- genTimeInfo proxy2 initialTime -< (time2, tag2)
       (b, resState') <- arrM (uncurry get)           -< (resState, timeInfo2)
       returnA                                        -< (Just b, resState')
-
-eraseClockRhine
-  :: ( Monad m, Clock m cl
-     , GetClockProxy cl
-     , Time cl ~ Time (In  cl)
-     , Time cl ~ Time (Out cl)
-     )
-  => Rhine m cl () () -> m (MSF m () ())
-eraseClockRhine Rhine {..} = do
-  (runningClock, initTime) <- initClock clock
-  return $ eraseClockRunningAndSN runningClock initTime sn
 
 eraseClockRunningAndSN
   :: ( Monad m, Clock m cl

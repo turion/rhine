@@ -20,6 +20,8 @@ module FRP.Rhine.ResamplingBuffer
 import Control.Arrow (second)
 import Data.Data
 
+import Data.MonadicStreamFunction
+
 -- rhine
 import FRP.Rhine.Clock
 

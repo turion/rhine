@@ -16,13 +16,10 @@ module Main
   ) where
 
 -- base
-<<<<<<< HEAD
-=======
 import qualified Control.Category as Category
 import Control.Concurrent
 import Control.Monad (void)
 import Data.Data
->>>>>>> 6462139 (WIP)
 import Data.Maybe (maybeToList)
 
 -- transformers
@@ -75,13 +72,10 @@ main = do
     1 -> flowGloss defaultSettings pureClSF
     2 -> flowGlossCombined defaultSettings pureRhine
     3 -> flowGlossIO defaultSettings ioRhine
-<<<<<<< HEAD
-    _ -> error "Invalid input"
-=======
     4 -> do
       void $ flowGlossLive defaultSettings ioRhine
       void $ getLine
->>>>>>> 6462139 (WIP)
+    _ -> error "Invalid input"
 
 -- | Run the gears simulation with the pure backend synchronously.
 pureClSF = currentEvent >>> arr maybeToList >>> sim

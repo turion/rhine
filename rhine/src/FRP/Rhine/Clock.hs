@@ -32,7 +32,7 @@ import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Trans.Class (lift, MonadTrans)
 
 -- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>), Feedback)
 
 -- time-domain
 import Data.TimeDomain as X
@@ -135,7 +135,6 @@ data RescaledClock cl time = RescaledClock
   { unscaledClock :: cl
   , rescale       :: Rescaling cl time
   }
-
 
 instance (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl)
       => Clock m (RescaledClock cl time) where

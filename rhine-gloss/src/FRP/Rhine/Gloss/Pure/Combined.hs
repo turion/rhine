@@ -11,21 +11,9 @@ As an easy starter, you can use the helper function 'buildGlossRhine'.
 
 module FRP.Rhine.Gloss.Pure.Combined where
 
-<<<<<<< HEAD
-=======
 -- base
 import Data.Data
 
--- transformers
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Writer
-
--- dunai
-import qualified Control.Monad.Trans.MSF.Reader as MSFReader
-import Data.MonadicStreamFunction.InternalCore
-
->>>>>>> 6462139 (WIP)
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.Reactimation.ClockErasure

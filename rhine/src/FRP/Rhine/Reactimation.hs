@@ -4,6 +4,7 @@ as main loops.
 -}
 
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation where
 
 -- base
@@ -19,6 +20,7 @@ import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type
+import FRP.Rhine.Reactimation.ClockErasure (eraseClockRunningAndSN)
 
 -- * Running a Rhine
 
@@ -68,3 +70,14 @@ reactimateCl
      )
   => cl -> ClSF m cl () () -> m ()
 reactimateCl cl clsf = flow $ clsf @@ cl
+
+eraseClockRhine
+  :: ( Monad m, Clock m cl
+     , GetClockProxy cl
+     , Time cl ~ Time (In  cl)
+     , Time cl ~ Time (Out cl)
+     )
+  => Rhine m cl () () -> m (MSF m () ())
+eraseClockRhine Rhine {..} = do
+  (runningClock, initTime) <- initClock clock
+  return $ eraseClockRunningAndSN runningClock initTime sn
