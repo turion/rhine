@@ -153,7 +153,7 @@ data RescaledClock cl time = RescaledClock
   }
 
 instance
-  (Monad m, TimeDomain time, Clock m cl) =>
+  (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl) =>
   Clock m (RescaledClock cl time)
   where
   type Time (RescaledClock cl time) = time
@@ -176,7 +176,7 @@ data RescaledClockM m cl time = RescaledClockM
   }
 
 instance
-  (Monad m, TimeDomain time, Clock m cl) =>
+  (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl) =>
   Clock m (RescaledClockM m cl time)
   where
   type Time (RescaledClockM m cl time) = time

@@ -1,6 +1,7 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
 {- |
@@ -17,17 +18,18 @@ import Data.Data
 
 -- dunai
 import Control.Monad.Trans.MSF.Reader
-import Data.MonadicStreamFunction
+import Data.MonadicStreamFunction hiding (Feedback)
 
 -- rhine
 
 import FRP.Rhine.ClSF hiding (runReaderS)
-import FRP.Rhine.Clock
+import FRP.Rhine.Clock hiding (Feedback)
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Util
-import FRP.Rhine.ResamplingBuffer
+import FRP.Rhine.ResamplingBuffer hiding (Feedback)
 import FRP.Rhine.SN
-import FRP.Rhine.Type
+import FRP.Rhine.Schedule (In, Out)
+import FRP.Rhine.Type (Rhine)
 
 {- | Run a clocked signal function as a monadic stream function,
    accepting the timestamps and tags as explicit inputs.

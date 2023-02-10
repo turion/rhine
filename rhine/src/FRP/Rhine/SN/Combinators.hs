@@ -7,7 +7,7 @@ Combinators for composing signal networks sequentially and parallely.
 module FRP.Rhine.SN.Combinators where
 
 -- rhine
-import FRP.Rhine.ClSF.Core
+import FRP.Rhine.ClSF.Core hiding (Feedback)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer.Util
