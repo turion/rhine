@@ -189,7 +189,7 @@ derivative = derivativeFrom zeroVector
 threePointDerivativeFrom
   :: ( Monad m, VectorSpace v s
      , Data v
-     , s ~ Diff td)
+     , s ~ Diff td, Num s)
   => v -- ^ The initial position
   -> BehaviorF m td v v
 threePointDerivativeFrom v0 = proc v -> do
@@ -202,7 +202,7 @@ threePointDerivativeFrom v0 = proc v -> do
 threePointDerivative
   :: ( Monad m, VectorSpace v s
      , Data v
-     , s ~ Diff td)
+     , s ~ Diff td, Num s)
   => BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
 
@@ -218,7 +218,7 @@ threePointDerivative = threePointDerivativeFrom zeroVector
 weightedAverageFrom
   :: ( Monad m, VectorSpace v s
      , s ~ Diff td
-     , Data v
+     , Data v, Num s
      )
   => v -- ^ The initial position
   -> BehaviorF m td (v, s) v
@@ -263,7 +263,7 @@ average = averageFrom zeroVector
 averageLinFrom
   :: ( Monad m, VectorSpace v s
      , s ~ Diff td
-     , Data v
+     , Data v, Fractional s
      )
   => v -- ^ The initial position
   -> Diff td -- ^ The time scale on which the signal is averaged
@@ -278,7 +278,7 @@ averageLinFrom v0 t = proc v -> do
 averageLin
   :: ( Monad m, VectorSpace v s
      , s ~ Diff td
-     , Data v
+     , Data v, Fractional s
      )
   => Diff td -- ^ The time scale on which the signal is averaged
   -> BehaviourF m td v v
@@ -301,7 +301,7 @@ highPass
   :: ( Monad m, VectorSpace v s
      , Data v
      , Floating s
-     , s ~ Diff td)
+     , s ~ Diff td, Eq s)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
 highPass t = clId ^-^ lowPass t
@@ -311,7 +311,7 @@ bandPass
   :: ( Monad m, VectorSpace v s
      , Data v
      , Floating s
-     , s ~ Diff td)
+     , s ~ Diff td, Eq s)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v
 bandPass t = lowPass t >>> highPass t
@@ -320,7 +320,7 @@ bandPass t = lowPass t >>> highPass t
 bandStop
   :: ( Monad m, VectorSpace v s
      , Data v
-     , Floating s
+     , Floating s, Eq s
      , s ~ Diff td)
   => Diff td -- ^ The time constant @t@
   -> BehaviourF m td v v

@@ -37,7 +37,7 @@ import Graphics.Gloss.Interface.IO.Game
 -- essence-of-live-coding
 import LiveCoding.Cell
 import LiveCoding.LiveProgram
-import LiveCoding.RuntimeIO
+import LiveCoding.RuntimeIO.Launch
 
 -- rhine
 import FRP.Rhine
@@ -169,7 +169,7 @@ flowGlossLive
      )
   => GlossSettings
   -> Rhine (GlossConcT IO) cl () ()
-  -> IO (MVar (LiveProgram IO))
+  -> IO (LaunchedProgram IO)
 flowGlossLive settings rhine = do
   vars <- launchGlossThread settings
   cell <- runGlossConcT (eraseClockRhine rhine) vars
