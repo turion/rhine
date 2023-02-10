@@ -19,7 +19,7 @@ import Foreign.Store
 -- essence-of-live-coding
 import LiveCoding.Cell
 import LiveCoding.LiveProgram
-import LiveCoding.RuntimeIO
+import LiveCoding.RuntimeIO.Launch
 
 -- rhine
 import FRP.Rhine.Reactimation.ClockErasure

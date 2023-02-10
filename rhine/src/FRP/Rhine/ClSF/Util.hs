@@ -205,6 +205,7 @@ threePointDerivativeFrom ::
   , VectorSpace v s
   , Data v
   , s ~ Diff td
+  , Num s
   ) =>
   -- | The initial position
   v ->
@@ -222,6 +223,7 @@ threePointDerivative ::
   , VectorSpace v s
   , Data v
   , s ~ Diff td
+  , Num s
   ) =>
   BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
@@ -241,6 +243,7 @@ weightedAverageFrom ::
   , VectorSpace v s
   , s ~ Diff td
   , Data v
+  , Num s
   ) =>
   -- | The initial position
   v ->
@@ -296,6 +299,7 @@ averageLinFrom ::
   , VectorSpace v s
   , s ~ Diff td
   , Data v
+  , Fractional s
   ) =>
   -- | The initial position
   v ->
@@ -314,6 +318,7 @@ averageLin ::
   , VectorSpace v s
   , s ~ Diff td
   , Data v
+  , Fractional s
   ) =>
   -- | The time scale on which the signal is averaged
   Diff td ->
@@ -341,6 +346,7 @@ highPass ::
   , Data v
   , Floating s
   , s ~ Diff td
+  , Eq s
   ) =>
   -- | The time constant @t@
   Diff td ->
@@ -354,6 +360,7 @@ bandPass ::
   , Data v
   , Floating s
   , s ~ Diff td
+  , Eq s
   ) =>
   -- | The time constant @t@
   Diff td ->
@@ -366,6 +373,7 @@ bandStop ::
   , VectorSpace v s
   , Data v
   , Floating s
+  , Eq s
   , s ~ Diff td
   ) =>
   -- | The time constant @t@
