@@ -14,7 +14,7 @@ main = flow \$ constMCl (putStrLn \"Hello World!\") \@\@ (waitClock :: Milliseco
 module FRP.Rhine (module X) where
 
 -- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+import Data.MonadicStreamFunction as X hiding (Feedback, (>>>^), (^>>>))
 import Data.VectorSpace as X
 
 -- rhine

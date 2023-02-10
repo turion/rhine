@@ -33,7 +33,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
 -- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+import Data.MonadicStreamFunction as X hiding (Feedback, (>>>^), (^>>>))
 
 -- time-domain
 import Data.TimeDomain as X

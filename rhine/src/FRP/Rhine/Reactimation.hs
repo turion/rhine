@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RecordWildCards #-}
 
 {- |
 Run closed 'Rhine's (which are signal functions together with matching clocks)
@@ -16,6 +17,7 @@ import Data.MonadicStreamFunction.InternalCore
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import FRP.Rhine.Reactimation.ClockErasure (eraseClockRunningAndSN)
 import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type
