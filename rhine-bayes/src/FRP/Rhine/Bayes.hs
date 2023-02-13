@@ -70,7 +70,7 @@ whiteNoise sigma = constMCl $ normal 0 sigma
 
 -- | Construct a Lévy process from the increment between time steps
 levy ::
-  (MonadDistribution m, VectorSpace v (Diff td)) =>
+  (MonadDistribution m, VectorSpace v (Diff td), Num v, Data v) =>
   -- | The increment function at every time step. The argument is the difference between times.
   (Diff td -> m v) ->
   Behaviour m td v

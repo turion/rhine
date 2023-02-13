@@ -69,7 +69,7 @@ prior = prior1d 10 0 &&& prior1d 0 10
 double2FloatTuple :: (Double, Double) -> (Float, Float)
 double2FloatTuple = double2Float *** double2Float
 
-decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td)) => Diff td -> BehaviourF m td v v
+decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td), Data v) => Diff td -> BehaviourF m td v v
 decayIntegral timeConstant = (timeConstant *^) <$> average timeConstant
 
 noise :: MonadDistribution m => Behaviour m td Pos
