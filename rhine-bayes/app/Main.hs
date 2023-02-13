@@ -229,7 +229,7 @@ glossClock = RescaledClock
   -- TODO would like push
 mainSingleRate = void
   $ sampleIO
-  $ launchGlossThread glossSettings
+  $ launchInGlossThread glossSettings
   $ reactimateCl glossClock mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
@@ -271,7 +271,7 @@ mainRhine = userStdDev @@ glossClockUTC GlossEventClockIO >-- keepLast stdDev -@
 
 mainMultiRate :: IO ()
 mainMultiRate = void
-  $ launchGlossThread glossSettings
+  $ launchInGlossThread glossSettings
   $ flow mainRhine
 
 mainLive :: IO ()

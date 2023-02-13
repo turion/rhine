@@ -15,6 +15,7 @@ module FRP.Rhine.Gloss.IO
   , paintAllIO
   , GlossEventClockIO (..)
   , GlossSimClockIO (..)
+  , launchInGlossThread
   , launchGlossThread
   , flowGlossIO
   , flowGlossLive

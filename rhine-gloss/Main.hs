@@ -72,7 +72,7 @@ main = do
     1 -> flowGloss defaultSettings pureClSF
     2 -> flowGlossCombined defaultSettings pureRhine
     3 -> flowGlossIO defaultSettings ioRhine
-    4 -> launchGlossThread defaultSettings $ reactimateCl GlossSimClockIO $ arr (const []) >-> sim >-> arrMCl paintAllIO
+    4 -> launchInGlossThread defaultSettings $ reactimateCl GlossSimClockIO $ arr (const []) >-> sim >-> arrMCl paintAllIO
     5 -> do
       void $ flowGlossLive defaultSettings ioRhine
       void $ getLine
