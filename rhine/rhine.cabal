@@ -119,7 +119,7 @@ library
                      , containers   >= 0.5
                      , vector-sized >= 1.4
                      , deepseq      >= 1.4
-                     , random       >= 1.1
+                     , random       ^>= 1.2
                      , MonadRandom  >= 0.5
                      -- Remove version pin when https://github.com/ivanperez-keera/dunai/issues/298 is resolved:
                      , simple-affine-space == 0.1.1
