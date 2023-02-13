@@ -15,9 +15,37 @@ import qualified Data.Automaton.Trans.Reader as AutomatonReader
 
 -- rhine-bayes
 import qualified Data.Automaton.Bayes as AutomatonBayes
+-- FIXME Need to excavate these from dunai-bayes? Or do we never need this?
+import Data.MonadicStreamFunction.Bayes (SoftEq, similarity)
 
 -- rhine
 import FRP.Rhine
+
+bayesFilter' ::
+  (MonadMeasure m, SoftEq sensor) =>
+  -- | model
+  ClSF m cl input (sensor, state) ->
+  -- | external sensor, data source
+  ClSF m cl input sensor ->
+  ClSF m cl input (sensor, state)
+bayesFilter' model sensor = proc input -> do
+  output <- sensor -< input
+  estimatedState <- bayesFilter model -< (input, output)
+  returnA -< (output, estimatedState)
+
+{- | Condition on one output of a distribution.
+
+   p(x,y | theta) ~> p(x | y, theta)
+-}
+bayesFilter ::
+  (MonadMeasure m, SoftEq sensor) =>
+  ClSF m cl input (sensor, latent) ->
+  -- | external sensor, data source
+  ClSF m cl (input, sensor) latent
+bayesFilter model = proc (input, measuredOutput) -> do
+  (estimatedOutput, estimatedState) <- model -< input
+  arrM score -< similarity estimatedOutput measuredOutput
+  returnA -< estimatedState
 
 -- * Inference methods
 
