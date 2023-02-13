@@ -37,7 +37,7 @@ extra-source-files:  ChangeLog.md
 
 extra-doc-files:     README.md
 
-cabal-version:       1.18
+cabal-version:       2.0
 
 source-repository head
   type:     git
@@ -111,7 +111,7 @@ library
                      , containers          >= 0.5
                      , vector-sized        == 1.4.*
                      , deepseq             == 1.4.*
-                     , random              == 1.1.*
+                     , random              ^>= 1.2
                      , MonadRandom         == 0.5.*
                      , simple-affine-space >= 0.1
                      , time-domain         >= 0.1
