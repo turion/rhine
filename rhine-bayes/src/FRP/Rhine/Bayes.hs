@@ -8,33 +8,41 @@ import Control.Monad.Bayes.Class
 import Control.Monad.Bayes.Population
 import Control.Monad.Bayes.Weighted
 
--- dunai
-import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
-
--- dunai
-import Data.MonadicStreamFunction.Bayes (SoftEq)
-import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
+-- dunai-bayes
+import Data.MonadicStreamFunction.Bayes (similarity)
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (readerS, runReaderS)
 
--- FIXME Does this haddock work?
--- | See 'Dunai.bayesFilter''
-bayesFilter' :: (MonadMeasure m, SoftEq sensor) =>
+-- rhine-bayes
+import FRP.Rhine.Bayes.Internal
+import Data.Data (Data)
+
+bayesFilter' ::
+  (MonadMeasure m, SoftEq sensor) =>
   -- | model
   ClSF m cl input (sensor, state) ->
   -- | external sensor, data source
   ClSF m cl input sensor ->
   ClSF m cl input (sensor, state)
-bayesFilter' = DunaiBayes.bayesFilter'
+bayesFilter' model sensor = proc input -> do
+  output <- sensor -< input
+  estimatedState <- bayesFilter model -< (input, output)
+  returnA -< (output, estimatedState)
 
--- FIXME Does this haddock work?
--- | See 'Dunai.bayesFilter'
-bayesFilter :: (MonadMeasure m, SoftEq sensor) =>
+{- | Condition on one output of a distribution.
+
+   p(x,y | theta) ~> p(x | y, theta)
+-}
+bayesFilter ::
+  (MonadMeasure m, SoftEq sensor) =>
   ClSF m cl input (sensor, latent) ->
   -- | external sensor, data source
   ClSF m cl (input, sensor) latent
-bayesFilter = DunaiBayes.bayesFilter
+bayesFilter model = proc (input, measuredOutput) -> do
+  (estimatedOutput, estimatedState) <- model -< input
+  arrM score -< similarity estimatedOutput measuredOutput
+  returnA -< estimatedState
 
 runPopulationCl :: forall m cl a b . Monad m =>
   -- | Number of particles
@@ -43,7 +51,7 @@ runPopulationCl :: forall m cl a b . Monad m =>
   (forall x . Population m x -> Population m x)
   -> ClSF (Population m) cl a b
   -> ClSF m cl a [(b, Log Double)]
-runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
+runPopulationCl nParticles resampler = readerS . runPopulationS nParticles resampler . runReaderS
 
 collapseCl :: MonadMeasure m => ClSF (Population m) cl a b -> ClSF m cl a b
 collapseCl = hoistClSF collapse

@@ -1,5 +1,6 @@
 -- base
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 import Control.Monad (void)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Product(getProduct, Product))
@@ -33,6 +34,7 @@ import FRP.Rhine.Gloss.IO
 -- rhine-bayes
 import FRP.Rhine.Bayes
 import FRP.Rhine.Gloss.Common
+import Data.Data (Data)
 
 type StdDev = Double
 type Pos = (Double, Double)
@@ -116,7 +118,7 @@ data Result = Result
   , latent :: Pos
   , particles :: [((StdDev, Pos), Log Double)]
   }
-  deriving Show
+  deriving (Data, Show)
 
 nParticles :: Int
 nParticles = 100
@@ -192,11 +194,12 @@ glossClockUTC cl = RescaledClockS
 -- * Integration
 
 main = do
-  putStrLn "Choose between single rate (1) and multi rate (2):"
+  putStrLn "Choose between single rate (1), multi rate (2), livecoding (3):"
   choice <- read <$> getLine
   case choice of
     1 -> mainSingleRate
     2 -> mainMultiRate
+    3 -> mainLive
     _ -> putStrLn "invalid choice" >> main
 
 glossSettings :: GlossSettings
@@ -270,6 +273,11 @@ mainMultiRate :: IO ()
 mainMultiRate = void
   $ launchGlossThread glossSettings
   $ flow mainRhine
+
+mainLive :: IO ()
+mainLive = do
+  void $ flowGlossLive glossSettings mainRhine
+  void getLine
 
 -- * Utilities
 
