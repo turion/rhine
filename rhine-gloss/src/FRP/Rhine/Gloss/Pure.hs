@@ -25,6 +25,7 @@ module FRP.Rhine.Gloss.Pure
 
 -- base
 import qualified Control.Category as Category
+import Data.Data
 
 -- transformers
 import Control.Monad.Trans.Class

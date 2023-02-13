@@ -8,6 +8,9 @@ module FRP.Rhine.ResamplingBuffer.Timeless where
 
 import FRP.Rhine.ResamplingBuffer
 
+-- base
+import Data.Data
+
 -- | An asynchronous, effectful Mealy machine description.
 --   (Input and output do not happen simultaneously.)
 --   It can be used to create 'ResamplingBuffer's.
@@ -23,19 +26,14 @@ data AsyncMealy m s a b = AsyncMealy
 --   the method 'amGet' is called on @machine@ with state @s@,
 --   discarding the time stamp. Analogously for 'put'.
 timelessResamplingBuffer
-  :: Monad m
+  :: (Monad m, Data s)
   => AsyncMealy m s a b -- The asynchronous Mealy machine from which the buffer is built
   -> s -- ^ The initial state
   -> ResamplingBuffer m cl1 cl2 a b
-timelessResamplingBuffer AsyncMealy {..} = go
+timelessResamplingBuffer AsyncMealy {..} resamplingState = ResamplingBuffer {..}
   where
-    go s =
-      let
-        put _ a = go <$> amPut s a
-        get _   = do
-          (b, s') <- amGet s
-          return (b, go s')
-      in ResamplingBuffer {..}
+    put s _ a = amPut s a
+    get s _   = amGet s
 
 -- | A resampling buffer that only accepts and emits units.
 trivialResamplingBuffer :: Monad m => ResamplingBuffer m cl1 cl2 () ()

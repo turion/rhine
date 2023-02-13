@@ -4,7 +4,11 @@ as main loops.
 -}
 
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RecordWildCards #-}
 module FRP.Rhine.Reactimation where
+
+-- base
+import Control.Monad ((>=>))
 
 -- dunai
 import Data.MonadicStreamFunction.InternalCore
@@ -16,6 +20,7 @@ import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type
+import FRP.Rhine.Reactimation.ClockErasure (eraseClockRunningAndSN)
 
 -- * Running a Rhine
 
@@ -54,9 +59,7 @@ flow
      , Time cl ~ Time (Out cl)
      )
   => Rhine m cl () () -> m ()
-flow rhine = do
-  msf <- eraseClock rhine
-  reactimate $ msf >>> arr (const ())
+flow = eraseClockRhine >=> reactimate
 
 -- | Run a synchronous 'ClSF' with its clock as a main loop,
 --   similar to Yampa's, or Dunai's, 'reactimate'.
@@ -67,3 +70,14 @@ reactimateCl
      )
   => cl -> ClSF m cl () () -> m ()
 reactimateCl cl clsf = flow $ clsf @@ cl
+
+eraseClockRhine
+  :: ( Monad m, Clock m cl
+     , GetClockProxy cl
+     , Time cl ~ Time (In  cl)
+     , Time cl ~ Time (Out cl)
+     )
+  => Rhine m cl () () -> m (MSF m () ())
+eraseClockRhine Rhine {..} = do
+  (runningClock, initTime) <- initClock clock
+  return $ eraseClockRunningAndSN runningClock initTime sn

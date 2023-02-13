@@ -31,6 +31,7 @@ module FRP.Rhine.Clock.Realtime.Event
 
 -- base
 import Control.Concurrent.Chan
+import Data.Data
 import Data.Time.Clock
 
 -- deepseq
@@ -146,7 +147,7 @@ data EventClock event = EventClock
 instance Semigroup (EventClock event) where
   (<>) _ _ = EventClock
 
-instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
+instance (Data event, MonadIO m) => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime
   type Tag  (EventClock event) = event
   initClock _ = do

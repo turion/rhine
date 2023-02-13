@@ -37,7 +37,7 @@ extra-source-files:  ChangeLog.md
 
 extra-doc-files:     README.md
 
-cabal-version:       1.18
+cabal-version:       2.0
 
 source-repository head
   type:     git
@@ -48,6 +48,9 @@ source-repository this
   location: https://github.com/turion/rhine.git
   tag:      v0.8.1
 
+flag livecoding
+  description: Use the livecoding backend. See https://github.com/turion/essence-of-live-coding.
+  default: True
 
 library
   exposed-modules:
@@ -57,7 +60,7 @@ library
     FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
     FRP.Rhine.Clock.Proxy
-    FRP.Rhine.Clock.Realtime.Audio
+    -- FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Event
     FRP.Rhine.Clock.Realtime.Millisecond
@@ -69,23 +72,25 @@ library
     FRP.Rhine.ClSF.Except
     FRP.Rhine.ClSF.Random
     FRP.Rhine.ClSF.Reader
-    FRP.Rhine.ClSF.Upsample
+    -- FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.ClockErasure
     FRP.Rhine.Reactimation.Combinators
+    FRP.Rhine.Reactimation.Live
     FRP.Rhine.ResamplingBuffer
     FRP.Rhine.ResamplingBuffer.Collect
     FRP.Rhine.ResamplingBuffer.FIFO
-    FRP.Rhine.ResamplingBuffer.Interpolation
+    -- FRP.Rhine.ResamplingBuffer.Interpolation
     FRP.Rhine.ResamplingBuffer.KeepLast
     FRP.Rhine.ResamplingBuffer.LIFO
     FRP.Rhine.ResamplingBuffer.MSF
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
+    FRP.Rhine.StateConstraint
     FRP.Rhine.Schedule
     FRP.Rhine.Schedule.Concurrently
-    FRP.Rhine.Schedule.Trans
+    -- FRP.Rhine.Schedule.Trans
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
     FRP.Rhine.Type
@@ -99,19 +104,25 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base         >= 4.13 && < 4.17
-                     , dunai        >= 0.8
-                     , transformers >= 0.5
-                     , time         >= 1.8
-                     , free         >= 5.1
-                     , containers   >= 0.5
-                     , vector-sized >= 1.4
-                     , deepseq      >= 1.4
-                     , random       >= 1.1
-                     , MonadRandom  >= 0.5
-                     -- Remove version pin when https://github.com/ivanperez-keera/dunai/issues/298 is resolved:
-                     , simple-affine-space == 0.1.1
-                     , time-domain
+  build-depends:       base                >= 4.9 && < 5
+                     , transformers        == 0.5.*
+                     , time                >= 1.8
+                     , free                == 5.1.*
+                     , containers          >= 0.5
+                     , vector-sized        == 1.4.*
+                     , deepseq             == 1.4.*
+                     , random              ^>= 1.2
+                     , MonadRandom         == 0.5.*
+                     , simple-affine-space >= 0.1
+                     , time-domain         >= 0.1
+
+  if flag(livecoding)
+    build-depends: dunai-live >= 0.6
+                 , essence-of-live-coding >= 0.1
+    hs-source-dirs: flags/livecoding/essence-of-live-coding
+  else
+    build-depends: dunai      >= 0.6
+    hs-source-dirs: flags/livecoding/dunai
 
   -- Directories containing source files.
   hs-source-dirs:      src

@@ -7,13 +7,16 @@ This module provides the 'Clock' type class, several utilities,
 and certain general constructions of 'Clock's,
 such as clocks lifted along monad morphisms or time rescalings.
 -}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 module FRP.Rhine.Clock
   ( module FRP.Rhine.Clock
   , module X
@@ -22,13 +25,14 @@ where
 
 -- base
 import qualified Control.Category as Category
+import Data.Data
 
 -- transformers
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Trans.Class (lift, MonadTrans)
 
 -- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>), Feedback)
 
 -- time-domain
 import Data.TimeDomain as X
@@ -56,7 +60,10 @@ Different values of the same clock type should tick at the same speed,
 and only differ in implementation details.
 Often, clocks are singletons.
 -}
-class TimeDomain (Time cl) => Clock m cl where
+class
+  ( TimeDomain (Time cl)
+  , Data (Time cl), Data (Diff (Time cl)), Data (Tag cl)
+  ) => Clock m cl where
   -- | The time domain, i.e. type of the time stamps the clock creates.
   type Time cl
   -- | Additional information that the clock may output at each tick,
@@ -82,6 +89,8 @@ data TimeInfo cl = TimeInfo
     -- | The tag annotation of the current tick
   , tag       :: Tag cl
   }
+
+deriving instance (Data cl, Data (Diff (Time cl)), Data (Time cl), Data (Tag cl)) => Data (TimeInfo cl)
 
 -- | A utility that changes the tag of a 'TimeInfo'.
 retag
@@ -127,8 +136,7 @@ data RescaledClock cl time = RescaledClock
   , rescale       :: Rescaling cl time
   }
 
-
-instance (Monad m, TimeDomain time, Clock m cl)
+instance (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl)
       => Clock m (RescaledClock cl time) where
   type Time (RescaledClock cl time) = time
   type Tag  (RescaledClock cl time) = Tag cl
@@ -148,7 +156,7 @@ data RescaledClockM m cl time = RescaledClockM
   -- ^ Computing the new time effectfully from the old time
   }
 
-instance (Monad m, TimeDomain time, Clock m cl)
+instance (Monad m, TimeDomain time, Data time, Data (Diff time), Clock m cl)
       => Clock m (RescaledClockM m cl time) where
   type Time (RescaledClockM m cl time) = time
   type Tag  (RescaledClockM m cl time) = Tag cl
@@ -178,7 +186,7 @@ data RescaledClockS m cl time tag = RescaledClockS
   --   depending on the initial time before rescaling
   }
 
-instance (Monad m, TimeDomain time, Clock m cl)
+instance (Monad m, TimeDomain time, Clock m cl, Data (Diff time), Data time, Data tag)
       => Clock m (RescaledClockS m cl time tag) where
   type Time (RescaledClockS m cl time tag) = time
   type Tag  (RescaledClockS m cl time tag) = tag

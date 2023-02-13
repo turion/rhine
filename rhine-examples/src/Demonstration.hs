@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 
-import FRP.Rhine
+import FRP.Rhine hiding (printEverySecond)
 
 -- | Create a simple message containing the time stamp since initialisation,
 --   for each tick of the clock.

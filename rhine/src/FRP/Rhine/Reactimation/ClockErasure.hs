@@ -8,27 +8,33 @@ and is thus not exported from 'FRP.Rhine'.
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module FRP.Rhine.Reactimation.ClockErasure where
 
 -- base
-import Control.Monad (join)
+import Control.Monad (join, void)
+import Data.Data
 
 -- dunai
 import Control.Monad.Trans.MSF.Reader
-import Data.MonadicStreamFunction
+import Data.MonadicStreamFunction hiding (Feedback)
 
 -- rhine
-import FRP.Rhine.Clock
+import FRP.Rhine.Clock hiding (Feedback)
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Util
-import FRP.Rhine.ClSF hiding (runReaderS)
-import FRP.Rhine.ResamplingBuffer
+import FRP.Rhine.ClSF hiding (Feedback, runReaderS)
+import FRP.Rhine.ResamplingBuffer hiding (Feedback)
 import FRP.Rhine.SN
+import FRP.Rhine.Schedule (In, Out)
 
 -- | Run a clocked signal function as a monadic stream function,
 --   accepting the timestamps and tags as explicit inputs.
 eraseClockClSF
-  :: (Monad m, Clock m cl)
+  :: ( Monad m, Clock m cl
+     , Data (Tag cl), Data (Time cl)
+     )
   => ClockProxy cl -> Time cl
   -> ClSF m cl a b
   -> MSF m (Time cl, Tag cl, a) b
@@ -45,7 +51,9 @@ eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
 --   There are thus possible invalid inputs,
 --   which 'eraseClockSN' does not gracefully handle.
 eraseClockSN
-  :: (Monad m, Clock m cl, GetClockProxy cl)
+  :: ( Monad m, Clock m cl, GetClockProxy cl
+     , Data (Tag cl), Data (Time cl)
+     )
   => Time cl
   -> SN m cl a b
   -> MSF m (Time cl, Tag cl, Maybe a) (Maybe b)
@@ -97,10 +105,10 @@ eraseClockSN initialTime (Precompose clsf sn) =
   bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time, , ) <$> inTag proxy tag <*> aMaybe
   eraseClockSN initialTime sn -< (time, tag, bMaybe)
 
-eraseClockSN initialTime (Feedback buf0 sn) =
+eraseClockSN initialTime (Feedback ResamplingBuffer {resamplingState, put, get} sn) =
   let
     proxy = toClockProxy sn
-  in feedback buf0 $ proc ((time, tag, aMaybe), buf) -> do
+  in feedback resamplingState $ proc ((time, tag, aMaybe), buf) -> do
   (cMaybe, buf') <- case inTag proxy tag of
     Nothing -> do
       returnA -< (Nothing, buf)
@@ -138,17 +146,31 @@ eraseClockResBuf
   :: ( Monad m
      , Clock m cl1, Clock m cl2
      , Time cl1 ~ Time cl2
+     , Data (Tag cl1), Data (Tag cl2)
+     , Data (Time cl1), Data (Time cl2)
      )
   => ClockProxy cl1 -> ClockProxy cl2 -> Time cl1
   -> ResBuf m cl1 cl2 a b
   -> MSF m (Either (Time cl1, Tag cl1, a) (Time cl2, Tag cl2)) (Maybe b)
-eraseClockResBuf proxy1 proxy2 initialTime resBuf0 = feedback resBuf0 $ proc (input, resBuf) -> do
+eraseClockResBuf proxy1 proxy2 initialTime ResamplingBuffer { .. } = feedback resamplingState $ proc (input, resState) -> do
   case input of
     Left (time1, tag1, a) -> do
       timeInfo1 <- genTimeInfo proxy1 initialTime   -< (time1, tag1)
-      resBuf'   <- arrM (uncurry $ uncurry put)     -< ((resBuf, timeInfo1), a)
-      returnA                                       -< (Nothing, resBuf')
+      resState'   <- arrM (uncurry $ uncurry put)   -< ((resState, timeInfo1), a)
+      returnA                                       -< (Nothing, resState')
     Right (time2, tag2) -> do
       timeInfo2    <- genTimeInfo proxy2 initialTime -< (time2, tag2)
-      (b, resBuf') <- arrM (uncurry get)             -< (resBuf, timeInfo2)
-      returnA                                        -< (Just b, resBuf')
+      (b, resState') <- arrM (uncurry get)           -< (resState, timeInfo2)
+      returnA                                        -< (Just b, resState')
+
+eraseClockRunningAndSN
+  :: ( Monad m, Clock m cl
+     , GetClockProxy cl
+     , Time cl ~ Time (In  cl)
+     , Time cl ~ Time (Out cl)
+     )
+  => RunningClock m (Time cl) (Tag cl) -> Time cl -> SN m cl () () -> MSF m () ()
+eraseClockRunningAndSN runningClock initTime sn = proc () -> do
+    (time, tag) <- runningClock -< ()
+    eraseClockSN initTime sn -< (time, tag, void $ inTag (toClockProxy sn) tag)
+    returnA -< ()

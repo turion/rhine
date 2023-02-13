@@ -8,6 +8,8 @@
 {-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Gloss.IO
   ( GlossConcT
+  , GlossEnv
+  , runGlossConcT
   , paintIO
   , clearIO
   , paintAllIO
@@ -15,6 +17,7 @@ module FRP.Rhine.Gloss.IO
   , GlossSimClockIO (..)
   , launchGlossThread
   , flowGlossIO
+  , flowGlossLive
   , glossConcurrently
   )
   where
@@ -31,8 +34,14 @@ import Control.Monad.Trans.Reader
 -- gloss
 import Graphics.Gloss.Interface.IO.Game
 
+-- essence-of-live-coding
+import LiveCoding.Cell
+import LiveCoding.LiveProgram
+import LiveCoding.RuntimeIO.Launch
+
 -- rhine
 import FRP.Rhine
+import FRP.Rhine.Reactimation.ClockErasure
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -112,12 +121,20 @@ instance GetClockProxy GlossSimClockIO
 --   so you can handle all occurring effects as needed.
 --   If you only use @gloss@ in your whole signal network,
 --   you can use 'flowGlossIO' instead.
-launchGlossThread
+launchInGlossThread
   :: MonadIO    m
   => GlossSettings
   -> GlossConcT m a
   ->            m a
-launchGlossThread GlossSettings { .. } glossLoop = do
+launchInGlossThread settings glossLoop = do
+  vars <- launchGlossThread settings
+  runGlossConcT glossLoop vars
+
+runGlossConcT :: GlossConcT m a -> GlossEnv -> m a
+runGlossConcT thing vars = runReaderT (unGlossConcT thing) vars
+
+launchGlossThread :: MonadIO m => GlossSettings -> m GlossEnv
+launchGlossThread GlossSettings { .. } = do
   vars <- liftIO $ ( , , , ) <$> newEmptyMVar <*> newEmptyMVar <*> newIORef 0 <*> newIORef Blank
   let
       getPic               (_, _, _, picRef)   = readIORef picRef
@@ -129,11 +146,23 @@ launchGlossThread GlossSettings { .. } glossLoop = do
         void $ tryPutMVar timeVar diffTime
         return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
-  runReaderT (unGlossConcT glossLoop) vars
+  return vars
 
 -- | Run a 'Rhine' in the 'GlossConcT' monad by launching a separate thread for the @gloss@ backend,
 --   and reactimate in the foreground.
 flowGlossIO
+  :: ( MonadIO m
+     , Clock (GlossConcT m) cl
+     , GetClockProxy cl
+     , Time cl ~ Time (In  cl)
+     , Time cl ~ Time (Out cl)
+     )
+  => GlossSettings
+  -> Rhine (GlossConcT m) cl () ()
+  -> m ()
+flowGlossIO settings = launchInGlossThread settings . flow
+
+flowGlossLive
   :: ( Clock (GlossConcT IO) cl
      , GetClockProxy cl
      , Time cl ~ Time (In  cl)
@@ -141,14 +170,16 @@ flowGlossIO
      )
   => GlossSettings
   -> Rhine (GlossConcT IO) cl () ()
-  -> IO ()
-flowGlossIO settings = launchGlossThread settings . flow
+  -> IO (LaunchedProgram IO)
+flowGlossLive settings rhine = do
+  vars <- launchGlossThread settings
+  cell <- runGlossConcT (eraseClockRhine rhine) vars
+  launch $ liveCell $ morphS (flip runGlossConcT vars) cell
 
 -- | A schedule in the 'GlossConcT' transformer,
 --   supplying the same backend connection to its scheduled clocks.
 glossConcurrently
-  :: ( Monad IO
-     , Clock (GlossConcT IO) cl1, Clock (GlossConcT IO) cl2
+  :: ( Clock (GlossConcT IO) cl1, Clock (GlossConcT IO) cl2
      , Time cl1 ~ Time cl2
      )
   => Schedule (GlossConcT IO) cl1 cl2
