@@ -1,4 +1,12 @@
-on: [pull_request]
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: '23 14 * * 2'
+  release:
 name: build
 jobs:
   build:
