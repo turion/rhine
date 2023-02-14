@@ -39,6 +39,11 @@ extra-doc-files:     README.md
 
 cabal-version:       1.18
 
+tested-with:
+  GHC == 8.8.4
+  GHC == 8.10.7
+  GHC == 9.0.2
+
 source-repository head
   type:     git
   location: https://github.com/turion/rhine.git
@@ -47,7 +52,6 @@ source-repository this
   type:     git
   location: https://github.com/turion/rhine.git
   tag:      v0.8.1
-
 
 library
   exposed-modules:
