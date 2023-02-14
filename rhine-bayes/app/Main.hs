@@ -218,7 +218,30 @@ thermometerScale = 20
 thermometerWidth :: Float
 thermometerWidth = 20
 
--- ** Helpers for drawing elements of the visualization
+-- TODO FPS counter so we can see how too many particles bog down performance.
+-- Or rather decouple simulation and graphics, and then make simulation a busy loop (with a little sleep) and display the simulation rate.
+visualisation :: Diff td ~ Double => BehaviourF MySmallMonad td Result ()
+visualisation = proc Result{temperature, measured, latent, particles} -> do
+  constMCl clearIO -< ()
+  time <- sinceInitS -< ()
+  arrMCl paintIO
+    -<
+      toThermometer $
+        pictures
+          [ translate 0 (-40) $ scale 0.2 0.2 $ color white $ pictures $ do
+              (n, message) <-
+                zip
+                  [0 ..]
+                  [ printf "Temperature: %.2f" temperature
+                  , printf "Particles: %i" $ length particles
+                  , printf "Time: %.1f" time
+                  ]
+              return $ translate 0 ((-150) * n) $ text message
+          , color red $ rectangleUpperSolid thermometerWidth $ double2Float temperature * thermometerScale
+          ]
+  drawBall -< (measured, 0.3, red)
+  drawBall -< (latent, 0.3, green)
+  drawParticles -< particles
 
 drawBall :: BehaviourF App td (Pos, Double, Color) ()
 drawBall = proc (position, width, theColor) -> do
@@ -235,14 +258,16 @@ drawParticleTemperature = proc (temperature, probability) -> do
 drawParticles :: BehaviourF App td [(Pos, Log Double)] ()
 drawParticles = traverseS_ drawParticle
 
--- FIXME abstract using a library
 drawParticlesTemperature :: BehaviourF App td [(Temperature, Log Double)] ()
 drawParticlesTemperature = traverseS_ drawParticleTemperature
 
-glossSettings :: GlossSettings
-glossSettings =
-  defaultSettings
-    { display = InWindow "rhine-bayes" (1024, 960) (10, 10)
+glossClockUTC :: Real (Time cl) => cl -> GlossClockUTC cl
+glossClockUTC cl =
+  RescaledClockS
+    { unscaledClockS = cl
+    , rescaleS = const $ do
+        now <- liftIO getCurrentTime
+        return (arr $ \(timePassed, event) -> (addUTCTime (realToFrac timePassed) now, event), now)
     }
 
 -- * Integration
@@ -251,8 +276,10 @@ glossSettings =
 mains :: [(String, IO ())]
 mains =
   [ ("single rate", mainSingleRate)
-  , ("single rate, parameter collapse", mainSingleRateCollapse)
-  , ("multi rate, temperature process", mainMultiRate)
+  , ("multi rate, temperature process", mainMultiRateTemperatureProcess)
+  , ("multi rate, simple parameter guess (particle collapse)", mainMultiRateSimpleParam)
+  , ("multi rate, Dirichlet parameter guess (constant #particles)", mainMultiRateDirichletConstant)
+  , ("multi rate, Dirichlet parameter guess (elastic #particles)", mainMultiRateDirichletElastic)
   ]
 
 main :: IO ()
@@ -260,6 +287,12 @@ main = do
   putStrLn $ ("Choose between: " ++) $ unwords $ zipWith (\n (title, _program) -> "\n" ++ show n ++ ": " ++ title) [1 ..] mains
   choice <- read <$> getLine
   map snd mains !! (choice - 1)
+
+glossSettings :: GlossSettings
+glossSettings =
+  defaultSettings
+    { display = InWindow "rhine-bayes" (1024, 960) (10, 10)
+    }
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
@@ -395,11 +428,78 @@ mainRhineMultiRate =
 {- FOURMOLU_ENABLE -}
 
 mainMultiRate :: IO ()
-mainMultiRate =
++mainMultiRate =
   void $
     sampleIO $
       launchInGlossThread glossSettings $
         flow mainRhineMultiRate
+-- * Matthias Heinzel: Click somewhere to create gravity to move the point somewhere, so the generative model doesn't capture the whole actual model
+
+-- * Enrico: Add some graphs showing model performance
+
+visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
+visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
+
+-- FIXME I need https://github.com/turion/rhine/pull/187 or similar in order to pass the model faster to the graphics even if inference takes longer
+mainRhineTemperatureProcess = userStdDev @@ glossClockUTC GlossEventClockIO >-- keepLast stdDev -@- glossConcurrently --> modelRhine >-- keepLast (stdDev, (zeroVector, zeroVector)) -@- glossConcurrently --> inference >-- keepLast Result{temperature = stdDev, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently --> visualisationRhine
+
+mainMultiRateTemperatureProcess :: IO ()
+mainMultiRateTemperatureProcess =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineTemperatureProcess
+
+inferenceSimpleParam :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (StdDev, (Sensor, Pos)) Result
+-- FIXME abstract that bracket
+inferenceSimpleParam = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+ where
+  inferenceBehaviour :: (MonadIO m, MonadDistribution m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
+  inferenceBehaviour = proc (stdDev, (measured, latent)) -> do
+    particles <- map (first swap) <$> runPopulationParamSimple nParticles resampleSystematic temperaturePrior (bayesFilter modelWithoutTemperature) -< measured
+    returnA -< Result{temperature = stdDev, measured, latent, particles}
+
+mainRhineSimpleParam = userStdDev @@ glossClockUTC GlossEventClockIO >-- keepLast stdDev -@- glossConcurrently --> modelRhine >-- keepLast (stdDev, (zeroVector, zeroVector)) -@- glossConcurrently --> inferenceSimpleParam >-- keepLast Result{temperature = stdDev, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently --> visualisationRhine
+
+mainMultiRateSimpleParam :: IO ()
+mainMultiRateSimpleParam =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineSimpleParam
+
+inferenceDirichletConstant :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (StdDev, (Sensor, Pos)) Result
+-- FIXME abstract that bracket
+inferenceDirichletConstant = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+ where
+  inferenceBehaviour :: (MonadIO m, MonadDistribution m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
+  inferenceBehaviour = proc (stdDev, (measured, latent)) -> do
+    particles <- map (first swap) <$> runPopulationParamDirichletConstant nParticles 1 20 resampleSystematic temperaturePrior (bayesFilter modelWithoutTemperature) -< measured
+    -- arrM $ liftIO . print -< particles
+    returnA -< Result{temperature = stdDev, measured, latent, particles}
+
+mainRhineDirichletConstant = userStdDev @@ glossClockUTC GlossEventClockIO >-- keepLast stdDev -@- glossConcurrently --> modelRhine >-- keepLast (stdDev, (zeroVector, zeroVector)) -@- glossConcurrently --> inferenceDirichletConstant >-- keepLast Result{temperature = stdDev, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently --> visualisationRhine
+
+mainMultiRateDirichletConstant :: IO ()
+mainMultiRateDirichletConstant =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineDirichletConstant
+
+inferenceDirichletElastic :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (StdDev, (Sensor, Pos)) Result
+-- FIXME abstract that bracket
+inferenceDirichletElastic = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+ where
+  inferenceBehaviour :: (MonadIO m, MonadDistribution m, Diff td ~ Double) => BehaviourF m td (StdDev, (Sensor, Pos)) Result
+  inferenceBehaviour = proc (stdDev, (measured, latent)) -> do
+    particles <- map (first swap) <$> runPopulationParamDirichletElastic 10 0.2 5 resampleSystematic temperaturePrior (bayesFilter modelWithoutTemperature) -< measured
+    returnA -< Result{temperature = stdDev, measured, latent, particles}
+
+mainRhineDirichletElastic = userStdDev @@ glossClockUTC GlossEventClockIO >-- keepLast stdDev -@- glossConcurrently --> modelRhine >-- keepLast (stdDev, (zeroVector, zeroVector)) -@- glossConcurrently --> inferenceDirichletElastic >-- keepLast Result{temperature = stdDev, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently --> visualisationRhine
+
+mainMultiRateDirichletElastic :: IO ()
+mainMultiRateDirichletElastic =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineDirichletElastic
 
 -- * Utilities
 

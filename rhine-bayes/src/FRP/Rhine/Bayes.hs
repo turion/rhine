@@ -65,6 +65,73 @@ runPopulationCl ::
   ClSF m cl a [(b, Log Double)]
 runPopulationCl nParticles resampler = AutomatonReader.readerS . AutomatonBayes.runPopulationS nParticles resampler . AutomatonReader.runReaderS
 
+-- FIXME We could simply not output the param here, then the user can decide to do that or not in b
+runPopulationParamSimple :: Monad m =>
+  -- | Number of particles
+  Int ->
+  -- | Resampler
+  (forall x. Population m x -> Population m x) ->
+  m param ->
+  ClSF (Population m) cl (param, a) b ->
+  -- FIXME Why not ClSF m a (Population b)
+  ClSF m cl a [((b, param), Log Double)]
+runPopulationParamSimple nParticles resampler param = DunaiReader.readerS . DunaiBayes.runPopulationParamSimpleS nParticles resampler param . (arr (\(param, (timeInfo, a)) -> (timeInfo, (param, a))) >>>) . DunaiReader.runReaderS
+
+runPopulationParamDirichletConstant ::
+  (Monad m, Real (Diff (Time cl)), Fractional (Diff (Time cl))) =>
+  -- | Number of particles
+  Int ->
+  -- | Dirichlet time constant: The time interval after which you require a good estimate of your parameter
+  Diff (Time cl) ->
+  -- | Initial time: A small time above 0 that we can consider passed at the first sample
+  Diff (Time cl) ->
+  -- | Resampler
+  (forall x. Population m x -> Population m x) ->
+  m param ->
+  ClSF (Population m) cl (param, a) b ->
+  -- FIXME Why not MSF m a (Population b)
+  ClSF m cl a [((b, param), Log Double)]
+runPopulationParamDirichletConstant nParticles t t0 resampler param clsf = proc a -> do
+  tCurrent <- sinceInitS -< ()
+  let pNew = realToFrac $ t / (tCurrent + t0)
+  DunaiReader.readerS $ (<<< arr assoc2) $ DunaiBayes.runPopulationParamDirichletConstant nParticles resampler param $ (<<< arr assoc) $ DunaiReader.runReaderS clsf -< (pNew, a)
+
+-- FIXME I shouldn't need nParticles. When I sample from the prior predictive, I should be able to start with 0 basically and let t0 manage how many I sample on the first step
+runPopulationParamDirichletElastic ::
+  (Monad m, Real (Diff (Time cl)), Fractional (Diff (Time cl)), RealFrac (Diff (Time cl))) =>
+  -- | Number of particles after time constant
+  Int ->
+  -- | Dirichlet time constant: The time interval after which you require a good estimate of your parameter
+  Diff (Time cl) ->
+  -- | Initial time: A small time above 0 that we can consider passed at the first sample
+  Diff (Time cl) ->
+  -- | Resampler
+  (forall x. Population m x -> Population m x) ->
+  m param ->
+  ClSF (Population m) cl (param, a) b ->
+  -- FIXME Why not MSF m a (Population b)
+  ClSF m cl a [((b, param), Log Double)]
+runPopulationParamDirichletElastic nParticles t t0 resampler param clsf = proc a -> do
+  tCurrent <- sinceInitS -< ()
+  -- let pNew = realToFrac $ t / (tCurrent + t0)
+  pAccumulated <- arr getSum <<< mappendS -< Sum $ t / (tCurrent + t0)
+  pLast <- iPre 0 -< pAccumulated
+  let nNew = floor (fromIntegral nParticles * pAccumulated) - floor (fromIntegral nParticles * pLast)
+  DunaiReader.readerS $ (<<< arr assoc2) $ DunaiBayes.runPopulationParamDirichletElastic nParticles resampler param $ (<<< arr assoc) $ DunaiReader.runReaderS clsf -< (nNew, a)
+
+assoc :: (param, (TimeInfo cl, a)) -> (TimeInfo cl, (param, a))
+assoc (param, (timeInfo, a)) = (timeInfo, (param, a))
+
+assoc2 :: (TimeInfo cl, (p, a)) -> (p, (TimeInfo cl, a))
+assoc2 (timeInfo, (p, a)) = (p, (timeInfo, a))
+
+collapseCl :: MonadMeasure m => ClSF (Population m) cl a b -> ClSF m cl a b
+collapseCl = hoistClSF collapse
+
+-- FIXME unit test. Does this what I think it does?
+properCl :: MonadDistribution m => ClSF (Population m) cl a b -> ClSF (Weighted m) cl a b
+properCl = hoistClSF proper
+
 -- * Short standard library of stochastic processes
 
 -- | A stochastic process is a behaviour that uses, as only effect, random sampling.
