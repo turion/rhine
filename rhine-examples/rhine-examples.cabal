@@ -22,6 +22,8 @@ executable HelloWorld
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.1
   default-language:    Haskell2010
+  default-extensions:
+     TypeOperators
   if flag(dev)
     ghc-options: -Werror
 
@@ -32,6 +34,8 @@ executable Demonstration
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.1
   default-language:    Haskell2010
+  default-extensions:
+     TypeOperators
   if flag(dev)
     ghc-options: -Werror
 
@@ -42,6 +46,8 @@ executable ADSR
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.1
   default-language:    Haskell2010
+  default-extensions:
+     TypeOperators
   if flag(dev)
     ghc-options: -Werror
 
@@ -53,6 +59,8 @@ executable Periodic
                      , rhine        == 0.8.1
                      , transformers >= 0.5
   default-language:    Haskell2010
+  default-extensions:
+     TypeOperators
   if flag(dev)
     ghc-options: -Werror
 
@@ -64,6 +72,8 @@ executable EventClock
                      , rhine        == 0.8.1
                      , random       >= 1.1
   default-language:    Haskell2010
+  default-extensions:
+     TypeOperators
   if flag(dev)
     ghc-options: -Werror
 
@@ -74,6 +84,8 @@ executable Sawtooth
   build-depends:       base         >= 4.9 && < 5
                      , rhine        == 0.8.1
   default-language:    Haskell2010
+  default-extensions:
+     TypeOperators
   if flag(dev)
     ghc-options: -Werror
 
@@ -86,6 +98,8 @@ executable RandomWalk
                      , random       >= 1.1
                      , simple-affine-space
   default-language:    Haskell2010
+  default-extensions:
+     TypeOperators
   if flag(dev)
     ghc-options: -Werror
 

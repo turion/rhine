@@ -27,7 +27,7 @@
   If in doubt, use `cabal` and `nix` (preferably flakes with `nix develop`).
 * Rhine does not make an effort to support old GHC versions,
   but it does make an effort to support _new_ versions.
-  Check `.travis.yml` for supported GHC versions.
+  Check `rhine/rhine.cabal` for supported GHC versions.
 * The default GHC version is the newest officially released version.
 * Rhine aims to be available through [`stackage`](https://www.stackage.org/package/rhine) and [`nixpkgs`/Nixos](https://github.com/NixOS/nixpkgs/).
   If you find that it is not available through these channels,
@@ -66,8 +66,8 @@
 
 In a pull request, do the following:
 
-1. Add new GHC to `.travis.yml`, remove old ones
-2. Update currently supported and default GHCs in this document
+1. Add new GHC to `rhine/rhine.cabal`
+2. Add corresponding `stack.*.yaml` file
 
 ## Library layout
 
@@ -92,6 +92,13 @@ and will always be up to date with that version of the main library.
 
 Contributed backend libraries are of course free to adopt whatever versioning schema they want.
 
+#### Backend library addition checklist
+
+* Add to all `stack.*.yaml` files
+* Add to `flake.nix`
+* Add to `README.md`
+* Add to `.github/workflows/ci.yml`
+
 ## Contributors
 
 Thanks go to:
@@ -104,3 +111,5 @@ Thanks go to:
 * https://github.com/walseb/
 * https://github.com/smunix/
 * https://github.com/freckletonj
+* https://github.com/jmatsushita
+* https://github.com/miguel-negrao
