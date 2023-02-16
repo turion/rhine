@@ -19,7 +19,7 @@ executable HelloWorld
   hs-source-dirs:      src
   main-is:             HelloWorld.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9 && < 5
+  build-depends:       base         >= 4.14 && < 4.18
                      , rhine        == 0.8.1
   default-language:    Haskell2010
   default-extensions:
@@ -31,7 +31,7 @@ executable Demonstration
   hs-source-dirs:      src
   main-is:             Demonstration.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9 && < 5
+  build-depends:       base         >= 4.14 && < 4.18
                      , rhine        == 0.8.1
   default-language:    Haskell2010
   default-extensions:
@@ -43,7 +43,7 @@ executable ADSR
   hs-source-dirs:      src
   main-is:             ADSR.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9 && < 5
+  build-depends:       base         >= 4.14 && < 4.18
                      , rhine        == 0.8.1
   default-language:    Haskell2010
   default-extensions:
@@ -55,7 +55,7 @@ executable Periodic
   hs-source-dirs:      src
   main-is:             Periodic.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9 && < 5
+  build-depends:       base         >= 4.14 && < 4.18
                      , rhine        == 0.8.1
                      , transformers >= 0.5
   default-language:    Haskell2010
@@ -68,7 +68,7 @@ executable EventClock
   hs-source-dirs:      src
   main-is:             EventClock.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9 && < 5
+  build-depends:       base         >= 4.14 && < 4.18
                      , rhine        == 0.8.1
                      , random       >= 1.1
   default-language:    Haskell2010
@@ -81,7 +81,7 @@ executable Sawtooth
   hs-source-dirs:      src
   main-is:             Sawtooth.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9 && < 5
+  build-depends:       base         >= 4.14 && < 4.18
                      , rhine        == 0.8.1
   default-language:    Haskell2010
   default-extensions:
@@ -93,7 +93,7 @@ executable RandomWalk
   hs-source-dirs:      src
   main-is:             RandomWalk.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.9 && < 5
+  build-depends:       base         >= 4.14 && < 4.18
                      , rhine        == 0.8.1
                      , random       >= 1.1
                      , simple-affine-space
