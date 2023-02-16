@@ -13,7 +13,6 @@
 
     haskell-flake-utils = {
       url = "github:ivanovs-4/haskell-flake-utils";
-      inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
   };
