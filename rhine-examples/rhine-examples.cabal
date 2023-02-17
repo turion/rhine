@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                rhine-examples
-version:             0.8.1
+version:             0.8.1.1
 -- synopsis:
 -- description:
 license:             BSD3
@@ -20,7 +20,7 @@ executable HelloWorld
   main-is:             HelloWorld.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.8.1
+                     , rhine        == 0.8.1.1
   default-language:    Haskell2010
   default-extensions:
      TypeOperators
@@ -32,7 +32,7 @@ executable Demonstration
   main-is:             Demonstration.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.8.1
+                     , rhine        == 0.8.1.1
   default-language:    Haskell2010
   default-extensions:
      TypeOperators
@@ -44,7 +44,7 @@ executable ADSR
   main-is:             ADSR.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.8.1
+                     , rhine        == 0.8.1.1
   default-language:    Haskell2010
   default-extensions:
      TypeOperators
@@ -56,7 +56,7 @@ executable Periodic
   main-is:             Periodic.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.8.1
+                     , rhine        == 0.8.1.1
                      , transformers >= 0.5
   default-language:    Haskell2010
   default-extensions:
@@ -69,7 +69,7 @@ executable EventClock
   main-is:             EventClock.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.8.1
+                     , rhine        == 0.8.1.1
                      , random       >= 1.1
   default-language:    Haskell2010
   default-extensions:
@@ -82,7 +82,7 @@ executable Sawtooth
   main-is:             Sawtooth.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.8.1
+                     , rhine        == 0.8.1.1
   default-language:    Haskell2010
   default-extensions:
      TypeOperators
@@ -94,7 +94,7 @@ executable RandomWalk
   main-is:             RandomWalk.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 0.8.1
+                     , rhine        == 0.8.1.1
                      , random       >= 1.1
                      , simple-affine-space
   default-language:    Haskell2010
