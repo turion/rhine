@@ -1,7 +1,6 @@
-{-|
+{- |
 Utilities for 'FRP.Rhine.ClSF.Except' that need not be exported.
 -}
-
 module FRP.Rhine.ClSF.Except.Util where
 
 -- transformers

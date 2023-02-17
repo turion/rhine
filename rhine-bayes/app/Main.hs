@@ -13,6 +13,7 @@ In this example, you will find the following:
   * A more scalable, modular, interactive architecture, where all these three systems run on separate clocks,
     and the user can interactively change the temperature of the heat bath
 -}
+module Main where
 
 -- base
 import Control.Monad (void)
@@ -166,7 +167,7 @@ type App = GlossConcT SamplerIO
 
 -- | Draw the results of the simulation and inference
 visualisation :: Diff td ~ Double => BehaviourF App td Result ()
-visualisation = proc Result{temperature, measured, latent, particles} -> do
+visualisation = proc Result {temperature, measured, latent, particles} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
   arrMCl paintIO
@@ -305,26 +306,27 @@ modelRhine = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature) @@ li
 -- | The user can change the temperature by pressing the up and down arrow keys.
 userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC GlossEventClockIO) () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
- where
-  selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
-  selector (EventKey (SpecialKey KeyDown) Down _ _) = Just (1 / 1.2)
-  selector _ = Nothing
+  where
+    selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
+    selector (EventKey (SpecialKey KeyDown) Down _ _) = Just (1 / 1.2)
+    selector _ = Nothing
 
 {- | This part performs the inference (and passes along temperature, sensor and position simulations).
    It runs as fast as possible, so this will potentially drain the CPU.
 -}
 inference :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
 inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
- where
-  inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
-  inferenceBehaviour = proc (temperature, (measured, latent)) -> do
-    particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
-    returnA -< Result{temperature, measured, latent, particles}
+  where
+    inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+    inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+      particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
+      returnA -< Result {temperature, measured, latent, particles}
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
 
+{- FOURMOLU_DISABLE -}
 -- | Compose all four asynchronous components to a single 'Rhine'.
 mainRhineMultiRate =
   userTemperature
@@ -333,8 +335,9 @@ mainRhineMultiRate =
         modelRhine
         >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
           inference
-            >-- keepLast Result{temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
               visualisationRhine
+{- FOURMOLU_ENABLE -}
 
 mainMultiRate :: IO ()
 mainMultiRate =

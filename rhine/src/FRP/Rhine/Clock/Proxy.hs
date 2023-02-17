@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module FRP.Rhine.Clock.Proxy where
 
 -- base
@@ -11,20 +12,21 @@ import Data.Kind (Type)
 import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 
--- | Witnesses the structure of a clock type,
---   in particular whether 'SequentialClock's or 'ParallelClock's are involved.
+{- | Witnesses the structure of a clock type,
+   in particular whether 'SequentialClock's or 'ParallelClock's are involved.
+-}
 data ClockProxy cl where
-  LeafProxy
-    :: (cl ~ In cl, cl ~ Out cl)
-    => ClockProxy cl
-  SequentialProxy
-    :: ClockProxy cl1
-    -> ClockProxy cl2
-    -> ClockProxy (SequentialClock m cl1 cl2)
-  ParallelProxy
-    :: ClockProxy clL
-    -> ClockProxy clR
-    -> ClockProxy (ParallelClock m clL clR)
+  LeafProxy ::
+    (cl ~ In cl, cl ~ Out cl) =>
+    ClockProxy cl
+  SequentialProxy ::
+    ClockProxy cl1 ->
+    ClockProxy cl2 ->
+    ClockProxy (SequentialClock m cl1 cl2)
+  ParallelProxy ::
+    ClockProxy clL ->
+    ClockProxy clR ->
+    ClockProxy (ParallelClock m clL clR)
 
 inProxy :: ClockProxy cl -> ClockProxy (In cl)
 inProxy LeafProxy = LeafProxy
@@ -36,33 +38,35 @@ outProxy LeafProxy = LeafProxy
 outProxy (SequentialProxy _ p2) = outProxy p2
 outProxy (ParallelProxy pL pR) = ParallelProxy (outProxy pL) (outProxy pR)
 
--- | Return the incoming tag, assuming that the incoming clock is ticked,
---   and 'Nothing' otherwise.
+{- | Return the incoming tag, assuming that the incoming clock is ticked,
+   and 'Nothing' otherwise.
+-}
 inTag :: ClockProxy cl -> Tag cl -> Maybe (Tag (In cl))
-inTag (SequentialProxy p1 _) (Left  tag1) = inTag p1 tag1
-inTag (SequentialProxy _  _) (Right _)    = Nothing
-inTag (ParallelProxy pL _) (Left  tagL) = Left  <$> inTag pL tagL
+inTag (SequentialProxy p1 _) (Left tag1) = inTag p1 tag1
+inTag (SequentialProxy _ _) (Right _) = Nothing
+inTag (ParallelProxy pL _) (Left tagL) = Left <$> inTag pL tagL
 inTag (ParallelProxy _ pR) (Right tagR) = Right <$> inTag pR tagR
 inTag LeafProxy tag = Just tag
 
--- | Return the incoming tag, assuming that the outgoing clock is ticked,
---   and 'Nothing' otherwise.
+{- | Return the incoming tag, assuming that the outgoing clock is ticked,
+   and 'Nothing' otherwise.
+-}
 outTag :: ClockProxy cl -> Tag cl -> Maybe (Tag (Out cl))
-outTag (SequentialProxy _ _ ) (Left  _)    = Nothing
+outTag (SequentialProxy _ _) (Left _) = Nothing
 outTag (SequentialProxy _ p2) (Right tag2) = outTag p2 tag2
-outTag (ParallelProxy pL _) (Left  tagL) = Left  <$> outTag pL tagL
+outTag (ParallelProxy pL _) (Left tagL) = Left <$> outTag pL tagL
 outTag (ParallelProxy _ pR) (Right tagR) = Right <$> outTag pR tagR
 outTag LeafProxy tag = Just tag
 
 -- TODO Should this be a superclass with default implementation of clocks? But then we have a circular dependency...
 -- No we don't, Schedule should not depend on clock (the type).
+
 -- | Clocks should be able to automatically generate a proxy for themselves.
 class GetClockProxy cl where
   getClockProxy :: ClockProxy cl
-
-  default getClockProxy
-    :: (cl ~ In cl, cl ~ Out cl)
-    => ClockProxy cl
+  default getClockProxy ::
+    (cl ~ In cl, cl ~ Out cl) =>
+    ClockProxy cl
   getClockProxy = LeafProxy
 
 instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (SequentialClock m cl1 cl2) where
@@ -81,8 +85,8 @@ class ToClockProxy a where
   type Cl a :: Type
 
   toClockProxy :: a -> ClockProxy (Cl a)
-
-  default toClockProxy
-    :: GetClockProxy (Cl a)
-    => a -> ClockProxy (Cl a)
+  default toClockProxy ::
+    GetClockProxy (Cl a) =>
+    a ->
+    ClockProxy (Cl a)
   toClockProxy _ = getClockProxy

@@ -1,3 +1,7 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
+
 {- |
 This module introduces 'ResamplingBuffer's,
 which are primitives that consume and produce data at different rates.
@@ -5,15 +9,11 @@ Just as schedules form the boundaries between different clocks,
 (resampling) buffers form the boundaries between
 synchronous signal functions ticking at different speeds.
 -}
-
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies #-}
-module FRP.Rhine.ResamplingBuffer
-  ( module FRP.Rhine.ResamplingBuffer
-  , module FRP.Rhine.Clock
-  )
-  where
+module FRP.Rhine.ResamplingBuffer (
+  module FRP.Rhine.ResamplingBuffer,
+  module FRP.Rhine.Clock,
+)
+where
 
 -- rhine
 import FRP.Rhine.Clock
@@ -37,30 +37,30 @@ or specific to certain clocks.
 * 'b': The output type
 -}
 data ResamplingBuffer m cla clb a b = ResamplingBuffer
-  { put
-      :: TimeInfo cla
-      -> a
-      -> m (   ResamplingBuffer m cla clb a b)
-    -- ^ Store one input value of type 'a' at a given time stamp,
-    --   and return a continuation.
-  , get
-      :: TimeInfo clb
-      -> m (b, ResamplingBuffer m cla clb a b)
-    -- ^ Retrieve one output value of type 'b' at a given time stamp,
-    --   and a continuation.
+  { put ::
+      TimeInfo cla ->
+      a ->
+      m (ResamplingBuffer m cla clb a b)
+  -- ^ Store one input value of type 'a' at a given time stamp,
+  --   and return a continuation.
+  , get ::
+      TimeInfo clb ->
+      m (b, ResamplingBuffer m cla clb a b)
+  -- ^ Retrieve one output value of type 'b' at a given time stamp,
+  --   and a continuation.
   }
 
 -- | A type synonym to allow for abbreviation.
 type ResBuf m cla clb a b = ResamplingBuffer m cla clb a b
 
-
 -- | Hoist a 'ResamplingBuffer' along a monad morphism.
-hoistResamplingBuffer
-  :: (Monad m1, Monad m2)
-  => (forall c. m1 c -> m2 c)
-  -> ResamplingBuffer m1 cla clb a b
-  -> ResamplingBuffer m2 cla clb a b
-hoistResamplingBuffer hoist ResamplingBuffer {..} = ResamplingBuffer
-  { put = (((hoistResamplingBuffer hoist <$>) . hoist) .) . put
-  , get = (second (hoistResamplingBuffer hoist) <$>) . hoist . get
-  }
+hoistResamplingBuffer ::
+  (Monad m1, Monad m2) =>
+  (forall c. m1 c -> m2 c) ->
+  ResamplingBuffer m1 cla clb a b ->
+  ResamplingBuffer m2 cla clb a b
+hoistResamplingBuffer hoist ResamplingBuffer {..} =
+  ResamplingBuffer
+    { put = (((hoistResamplingBuffer hoist <$>) . hoist) .) . put
+    , get = (second (hoistResamplingBuffer hoist) <$>) . hoist . get
+    }

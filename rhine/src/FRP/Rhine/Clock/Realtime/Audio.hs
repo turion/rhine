@@ -1,8 +1,3 @@
-{- |
-Provides several clocks to use for audio processing,
-for realtime as well as for batch/file processing.
--}
-
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -12,23 +7,26 @@ for realtime as well as for batch/file processing.
 -- {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -- TODO Find out exact version of cabal? GHC? that have a problem with this
 
-module FRP.Rhine.Clock.Realtime.Audio
-  ( AudioClock (..)
-  , AudioRate (..)
-  , PureAudioClock (..)
-  , PureAudioClockF
-  , pureAudioClockF
-  )
-  where
+{- |
+Provides several clocks to use for audio processing,
+for realtime as well as for batch/file processing.
+-}
+module FRP.Rhine.Clock.Realtime.Audio (
+  AudioClock (..),
+  AudioRate (..),
+  PureAudioClock (..),
+  PureAudioClockF,
+  pureAudioClockF,
+)
+where
 
 -- base
-import GHC.Float       (double2Float)
-import GHC.TypeLits    (Nat, natVal, KnownNat)
 import Data.Time.Clock
+import GHC.Float (double2Float)
+import GHC.TypeLits (KnownNat, Nat, natVal)
 
 -- transformers
 import Control.Monad.IO.Class
-
 
 -- dunai
 import Control.Monad.Trans.MSF.Except hiding (step)
@@ -49,8 +47,8 @@ rateToIntegral Hz44100 = 44100
 rateToIntegral Hz48000 = 48000
 rateToIntegral Hz96000 = 96000
 
-
 -- TODO Test extensively
+
 {- |
 A clock for audio analysis and synthesis.
 It internally processes samples in buffers of size 'bufferSize',
@@ -86,35 +84,37 @@ instance AudioClockRate Hz48000 where
 instance AudioClockRate Hz96000 where
   theRate _ = Hz96000
 
-
-theBufferSize
-  :: (KnownNat bufferSize, Integral a)
-  => AudioClock rate bufferSize -> a
+theBufferSize ::
+  (KnownNat bufferSize, Integral a) =>
+  AudioClock rate bufferSize ->
+  a
 theBufferSize = fromInteger . natVal
 
-
-instance (MonadIO m, KnownNat bufferSize, AudioClockRate rate)
-      => Clock m (AudioClock rate bufferSize) where
+instance
+  (MonadIO m, KnownNat bufferSize, AudioClockRate rate) =>
+  Clock m (AudioClock rate bufferSize)
+  where
   type Time (AudioClock rate bufferSize) = UTCTime
-  type Tag  (AudioClock rate bufferSize) = Maybe Double
+  type Tag (AudioClock rate bufferSize) = Maybe Double
 
   initClock audioClock = do
     let
-      step       = picosecondsToDiffTime -- The only sufficiently precise conversion function
-                     $ round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
+      step =
+        picosecondsToDiffTime $ -- The only sufficiently precise conversion function
+          round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
       bufferSize = theBufferSize audioClock
 
       runningClock :: MonadIO m => UTCTime -> Maybe Double -> MSF m () (UTCTime, Maybe Double)
       runningClock initialTime maybeWasLate = safely $ do
         bufferFullTime <- try $ proc () -> do
-          n <- count    -< ()
+          n <- count -< ()
           let nextTime = (realToFrac step * fromIntegral (n :: Int)) `addUTCTime` initialTime
           _ <- throwOn' -< (n >= bufferSize, nextTime)
-          returnA       -< (nextTime, if n == 0 then maybeWasLate else Nothing)
+          returnA -< (nextTime, if n == 0 then maybeWasLate else Nothing)
         currentTime <- once_ $ liftIO getCurrentTime
         let
           lateDiff = currentTime `diffTime` bufferFullTime
-          late     = if lateDiff > 0 then Just lateDiff else Nothing
+          late = if lateDiff > 0 then Just lateDiff else Nothing
         safe $ runningClock bufferFullTime late
     initialTime <- liftIO getCurrentTime
     return
@@ -141,26 +141,27 @@ class PureAudioClockRate (rate :: AudioRate) where
   thePureRateNum :: Num a => PureAudioClock rate -> a
   thePureRateNum = fromInteger . thePureRateIntegral
 
-
 instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) where
   type Time (PureAudioClock rate) = Double
-  type Tag  (PureAudioClock rate) = ()
+  type Tag (PureAudioClock rate) = ()
 
-  initClock audioClock = return
-    ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
-    , 0
-    )
+  initClock audioClock =
+    return
+      ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
+      , 0
+      )
 
 instance GetClockProxy (PureAudioClock rate)
 
 -- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float'.
 type PureAudioClockF (rate :: AudioRate) = RescaledClock (PureAudioClock rate) Float
 
-
--- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float',
---   using 'double2Float' to rescale.
+{- | A rescaled version of 'PureAudioClock' with 'TimeDomain' 'Float',
+   using 'double2Float' to rescale.
+-}
 pureAudioClockF :: PureAudioClockF rate
-pureAudioClockF = RescaledClock
-  { unscaledClock = PureAudioClock
-  , rescale       = double2Float
-  }
+pureAudioClockF =
+  RescaledClock
+    { unscaledClock = PureAudioClock
+    , rescale = double2Float
+    }

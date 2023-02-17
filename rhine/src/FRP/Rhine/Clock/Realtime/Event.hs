@@ -1,3 +1,10 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
+
 {- |
 This module provides two things:
 
@@ -15,22 +22,17 @@ and constitute the recommended way of communication between threads in Rhine.
 
 A simple example using events and threads can be found in rhine-examples.
 -}
-
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeFamilies #-}
-module FRP.Rhine.Clock.Realtime.Event
-  ( module FRP.Rhine.Clock.Realtime.Event
-  , module Control.Monad.IO.Class
-  , newChan
-  )
-  where
+module FRP.Rhine.Clock.Realtime.Event (
+  module FRP.Rhine.Clock.Realtime.Event,
+  module Control.Monad.IO.Class,
+  newChan,
+)
+where
 
 -- base
 import Control.Concurrent.Chan
+
+-- time
 import Data.Time.Clock
 
 -- deepseq
@@ -41,21 +43,20 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 
 -- rhine
-import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ClSF
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Schedule
 import FRP.Rhine.Schedule.Concurrently
-
-
 
 -- * Monads allowing for event emission and handling
 
 -- | A monad transformer in which events can be emitted onto a 'Chan'.
 type EventChanT event m = ReaderT (Chan event) m
 
--- | Escape the 'EventChanT' layer by explicitly providing a channel
---   over which events are sent.
---   Often this is not needed, and 'runEventChanT' can be used instead.
+{- | Escape the 'EventChanT' layer by explicitly providing a channel
+   over which events are sent.
+   Often this is not needed, and 'runEventChanT' can be used instead.
+-}
 withChan :: Chan event -> EventChanT event m a -> m a
 withChan = flip runReaderT
 
@@ -87,11 +88,11 @@ then, by using this function,
 pass the channel to every behaviour or 'ClSF' that wants to emit events,
 and, by using 'eventClockOn', to every clock that should tick on the event.
 -}
-withChanS
-  :: Monad m
-  => Chan event
-  -> ClSF (EventChanT event m) cl a b
-  -> ClSF m cl a b
+withChanS ::
+  Monad m =>
+  Chan event ->
+  ClSF (EventChanT event m) cl a b ->
+  ClSF m cl a b
 withChanS = flip runReaderS_
 
 -- * Event emission
@@ -118,29 +119,30 @@ emitSMaybe = mapMaybe emitS >>> arr (const ())
 
 -- | Like 'emit', but completely evaluates the event before emitting it.
 emit' :: (NFData event, MonadIO m) => event -> EventChanT event m ()
-emit' event = event `deepseq` do
-  chan <- ask
-  liftIO $ writeChan chan event
+emit' event =
+  event `deepseq` do
+    chan <- ask
+    liftIO $ writeChan chan event
 
 -- | Like 'emitS', but completely evaluates the event before emitting it.
 emitS' :: (NFData event, MonadIO m) => ClSF (EventChanT event m) cl event ()
 emitS' = arrMCl emit'
 
 -- | Like 'emitSMaybe', but completely evaluates the event before emitting it.
-emitSMaybe'
-  :: (NFData event, MonadIO m)
-  => ClSF (EventChanT event m) cl (Maybe event) ()
+emitSMaybe' ::
+  (NFData event, MonadIO m) =>
+  ClSF (EventChanT event m) cl (Maybe event) ()
 emitSMaybe' = mapMaybe emitS' >>> arr (const ())
-
 
 -- * Event clocks and schedules
 
--- | A clock that ticks whenever an @event@ is emitted.
---   It is not yet bound to a specific channel,
---   since ideally, the correct channel is created automatically
---   by 'runEventChanT'.
---   If you want to create the channel manually and bind the clock to it,
---   use 'eventClockOn'.
+{- | A clock that ticks whenever an @event@ is emitted.
+   It is not yet bound to a specific channel,
+   since ideally, the correct channel is created automatically
+   by 'runEventChanT'.
+   If you want to create the channel manually and bind the clock to it,
+   use 'eventClockOn'.
+-}
 data EventClock event = EventClock
 
 instance Semigroup (EventClock event) where
@@ -148,31 +150,33 @@ instance Semigroup (EventClock event) where
 
 instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime
-  type Tag  (EventClock event) = event
+  type Tag (EventClock event) = event
   initClock _ = do
     initialTime <- liftIO getCurrentTime
     return
       ( constM $ do
-          chan  <- ask
+          chan <- ask
           event <- liftIO $ readChan chan
-          time  <- liftIO getCurrentTime
+          time <- liftIO getCurrentTime
           return (time, event)
       , initialTime
       )
 
 instance GetClockProxy (EventClock event)
 
--- | Create an event clock that is bound to a specific event channel.
---   This is usually only useful if you can't apply 'runEventChanT'
---   to the main loop (see 'withChanS').
-eventClockOn
-  :: MonadIO m
-  => Chan event
-  -> HoistClock (EventChanT event m) m (EventClock event)
-eventClockOn chan = HoistClock
-  { unhoistedClock = EventClock
-  , monadMorphism  = withChan chan
-  }
+{- | Create an event clock that is bound to a specific event channel.
+   This is usually only useful if you can't apply 'runEventChanT'
+   to the main loop (see 'withChanS').
+-}
+eventClockOn ::
+  MonadIO m =>
+  Chan event ->
+  HoistClock (EventChanT event m) m (EventClock event)
+eventClockOn chan =
+  HoistClock
+    { unhoistedClock = EventClock
+    , monadMorphism = withChan chan
+    }
 
 {- |
 Given two clocks with an 'EventChanT' layer directly atop the 'IO' monad,
@@ -187,10 +191,10 @@ Typical use cases:
 * An event clock and other event-unaware clocks in the 'IO' monad,
   which are lifted using 'liftClock'.
 -}
-concurrentlyWithEvents
-  :: ( Time cl1 ~ Time cl2
-     , Clock (EventChanT event IO) cl1
-     , Clock (EventChanT event IO) cl2
-     )
-  => Schedule (EventChanT event IO) cl1 cl2
+concurrentlyWithEvents ::
+  ( Time cl1 ~ Time cl2
+  , Clock (EventChanT event IO) cl1
+  , Clock (EventChanT event IO) cl2
+  ) =>
+  Schedule (EventChanT event IO) cl1 cl2
 concurrentlyWithEvents = readerSchedule concurrently

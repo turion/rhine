@@ -1,12 +1,12 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+
 {- |
 In Rhine, event sources are clocks, and so is the console.
 If this clock is used,
 every input line on the console triggers one tick of the 'StdinClock'.
 -}
-
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
 module FRP.Rhine.Clock.Realtime.Stdin where
 
 -- time
@@ -27,7 +27,7 @@ data StdinClock = StdinClock
 
 instance MonadIO m => Clock m StdinClock where
   type Time StdinClock = UTCTime
-  type Tag  StdinClock = String
+  type Tag StdinClock = String
 
   initClock _ = do
     initialTime <- liftIO getCurrentTime

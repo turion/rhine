@@ -1,3 +1,7 @@
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+
 {- |
 Combinators to create 'Rhine's (main programs) from basic components
 such as 'ClSF's, clocks, 'ResamplingBuffer's and 'Schedule's.
@@ -11,43 +15,44 @@ The general mnemonic for combinator names is:
 * @*@ composes parallely.
 * @>@ composes sequentially.
 -}
-
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module FRP.Rhine.Reactimation.Combinators where
 
-
 -- rhine
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
-import FRP.Rhine.Schedule
 import FRP.Rhine.SN
 import FRP.Rhine.SN.Combinators
+import FRP.Rhine.Schedule
 import FRP.Rhine.Type
-
 
 -- * Combinators and syntactic sugar for high-level composition of signal networks.
 
-
 infix 5 @@
--- | Create a synchronous 'Rhine' by combining a clocked signal function with a matching clock.
---   Synchronicity is ensured by requiring that data enters (@In cl@)
---   and leaves (@Out cl@) the system at the same as it is processed (@cl@).
-(@@) :: ( cl ~ In cl
-        , cl ~ Out cl )
-     => ClSF m cl a b -> cl -> Rhine m cl a b
+
+{- FOURMOLU_DISABLE -}
+{- | Create a synchronous 'Rhine' by combining a clocked signal function with a matching clock.
+   Synchronicity is ensured by requiring that data enters (@In cl@)
+   and leaves (@Out cl@) the system at the same as it is processed (@cl@).
+-}
+(@@) ::
+  ( cl ~ In cl
+  , cl ~ Out cl
+  ) =>
+  ClSF  m cl a b ->
+          cl     ->
+  Rhine m cl a b
 (@@) = Rhine . Synchronous
 
+{- | A point at which sequential asynchronous composition
+   ("resampling") of signal networks can happen.
+-}
+data ResamplingPoint m cla clb a b
+  = ResamplingPoint
+      (ResamplingBuffer m (Out cla) (In clb) a b)
+      (Schedule m cla clb)
 
--- | A point at which sequential asynchronous composition
---   ("resampling") of signal networks can happen.
-data ResamplingPoint m cla clb a b = ResamplingPoint
-  (ResamplingBuffer m (Out cla) (In clb) a b)
-  (Schedule m cla clb)
 -- TODO Make a record out of it?
 -- TODO This is aesthetically displeasing.
 --      For the buffer, the associativity doesn't matter, but for the Schedule,
@@ -57,21 +62,26 @@ data ResamplingPoint m cla clb a b = ResamplingPoint
 
 -- | Syntactic sugar for 'ResamplingPoint'.
 infix 8 -@-
-(-@-) :: ResamplingBuffer m (Out cl1) (In cl2) a b
-      -> Schedule         m      cl1      cl2
-      -> ResamplingPoint  m      cl1      cl2  a b
+(-@-) ::
+  ResamplingBuffer m (Out cl1) (In cl2) a b ->
+  Schedule         m      cl1      cl2      ->
+  ResamplingPoint  m      cl1      cl2  a b
 (-@-) = ResamplingPoint
 
--- | A purely syntactical convenience construction
---   enabling quadruple syntax for sequential composition, as described below.
+{- | A purely syntactical convenience construction
+   enabling quadruple syntax for sequential composition, as described below.
+-}
 infix 2 >--
-data RhineAndResamplingPoint m cl1 cl2 a c = forall b.
-     RhineAndResamplingPoint (Rhine m cl1 a b) (ResamplingPoint m cl1 cl2 b c)
+
+data RhineAndResamplingPoint m cl1 cl2 a c
+  = forall b.
+    RhineAndResamplingPoint (Rhine m cl1 a b) (ResamplingPoint m cl1 cl2 b c)
 
 -- | Syntactic sugar for 'RhineAndResamplingPoint'.
-(>--) :: Rhine                   m cl1     a b
-      -> ResamplingPoint         m cl1 cl2   b c
-      -> RhineAndResamplingPoint m cl1 cl2 a   c
+(>--) ::
+  Rhine                   m cl1     a b   ->
+  ResamplingPoint         m cl1 cl2   b c ->
+  RhineAndResamplingPoint m cl1 cl2 a   c
 (>--) = RhineAndResamplingPoint
 
 {- | The combinators for sequential composition allow for the following syntax:
@@ -94,18 +104,19 @@ rh    =  rh1 >-- rb -@- sched --> rh2
 @
 -}
 infixr 1 -->
-(-->) :: ( Clock m cl1
-         , Clock m cl2
-         , Time cl1 ~ Time cl2
-         , Time (Out cl1) ~ Time cl1
-         , Time (In  cl2) ~ Time cl2
-         , Clock m (Out cl1), Clock m (Out cl2)
-         , Clock m (In  cl1), Clock m (In  cl2)
-         , GetClockProxy cl1, GetClockProxy cl2
-         )
-      => RhineAndResamplingPoint   m cl1 cl2  a b
-      -> Rhine m                         cl2    b c
-      -> Rhine m  (SequentialClock m cl1 cl2) a   c
+(-->) ::
+  ( Clock m cl1
+  , Clock m cl2
+  , Time cl1 ~ Time cl2
+  , Time (Out cl1) ~ Time cl1
+  , Time (In  cl2) ~ Time cl2
+  , Clock m (Out cl1), Clock m (Out cl2)
+  , Clock m (In  cl1), Clock m (In  cl2)
+  , GetClockProxy cl1, GetClockProxy cl2
+  ) =>
+  RhineAndResamplingPoint   m cl1 cl2  a b ->
+  Rhine m                         cl2    b c ->
+  Rhine m  (SequentialClock m cl1 cl2) a   c
 RhineAndResamplingPoint (Rhine sn1 cl1) (ResamplingPoint rb cc) --> (Rhine sn2 cl2)
  = Rhine (Sequential sn1 rb sn2) (SequentialClock cl1 cl2 cc)
 
@@ -116,10 +127,10 @@ data RhineParallelAndSchedule m clL clR a b
 
 -- | Syntactic sugar for 'RhineParallelAndSchedule'.
 infix 4 ++@
-(++@)
-  :: Rhine                    m clL     a b
-  -> Schedule                 m clL clR
-  -> RhineParallelAndSchedule m clL clR a b
+(++@) ::
+  Rhine                    m clL     a b ->
+  Schedule                 m clL clR     ->
+  RhineParallelAndSchedule m clL clR a b
 (++@) = RhineParallelAndSchedule
 
 {- | The combinators for parallel composition allow for the following syntax:
@@ -139,26 +150,26 @@ rh    =  rh1 ++\@ sched \@++ rh2
 @
 -}
 infix 3 @++
-(@++)
-  :: ( Monad m, Clock m clL, Clock m clR
-     , Clock m (Out clL), Clock m (Out clR)
-     , GetClockProxy clL, GetClockProxy clR
-     , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
-     , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
-     , Time clL ~ Time clR
-     )
-       => RhineParallelAndSchedule m clL clR  a b
-       -> Rhine                    m     clR  a c
-       -> Rhine m (ParallelClock   m clL clR) a (Either b c)
+(@++) ::
+  ( Monad m, Clock m clL, Clock m clR
+  , Clock m (Out clL), Clock m (Out clR)
+  , GetClockProxy clL, GetClockProxy clR
+  , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
+  , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
+  , Time clL ~ Time clR
+  ) =>
+  RhineParallelAndSchedule m clL clR  a         b    ->
+  Rhine                    m     clR  a            c ->
+  Rhine m (ParallelClock   m clL clR) a (Either b c)
 RhineParallelAndSchedule (Rhine sn1 clL) schedule @++ (Rhine sn2 clR)
   = Rhine (sn1 ++++ sn2) (ParallelClock clL clR schedule)
 
 -- | Further syntactic sugar for 'RhineParallelAndSchedule'.
 infix 4 ||@
-(||@)
-  :: Rhine                    m clL     a b
-  -> Schedule                 m clL clR
-  -> RhineParallelAndSchedule m clL clR a b
+(||@) ::
+  Rhine                    m clL     a b ->
+  Schedule                 m clL clR     ->
+  RhineParallelAndSchedule m clL clR a b
 (||@) = RhineParallelAndSchedule
 
 {- | The combinators for parallel composition allow for the following syntax:
@@ -178,53 +189,54 @@ rh    =  rh1 ||\@ sched \@|| rh2
 @
 -}
 infix 3 @||
-(@||)
-  :: ( Monad m, Clock m clL, Clock m clR
-     , Clock m (Out clL), Clock m (Out clR)
-     , GetClockProxy clL, GetClockProxy clR
-     , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
-     , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
-     , Time clL ~ Time clR
-     )
-       => RhineParallelAndSchedule m clL clR  a b
-       -> Rhine                    m     clR  a b
-       -> Rhine m (ParallelClock   m clL clR) a b
+(@||) ::
+  ( Monad m, Clock m clL, Clock m clR
+  , Clock m (Out clL), Clock m (Out clR)
+  , GetClockProxy clL, GetClockProxy clR
+  , Time clL ~ Time (Out clL), Time clR ~ Time (Out clR)
+  , Time clL ~ Time (In  clL), Time clR ~ Time (In  clR)
+  , Time clL ~ Time clR
+  ) =>
+  RhineParallelAndSchedule m clL clR  a b ->
+  Rhine                    m     clR  a b ->
+  Rhine m (ParallelClock   m clL clR) a b
 RhineParallelAndSchedule (Rhine sn1 clL) schedule @|| (Rhine sn2 clR)
   = Rhine (sn1 |||| sn2) (ParallelClock clL clR schedule)
 
 
 -- | Postcompose a 'Rhine' with a pure function.
-(@>>^)
-  :: Monad m
-  => Rhine m cl a b
-  ->             (b -> c)
-  -> Rhine m cl a      c
+(@>>^) ::
+  Monad m =>
+  Rhine m cl a b       ->
+              (b -> c) ->
+  Rhine m cl a      c
 Rhine sn cl @>>^ f = Rhine (sn >>>^ f) cl
 
 -- | Precompose a 'Rhine' with a pure function.
-(^>>@)
-  :: Monad m
-  =>           (a -> b)
-  -> Rhine m cl      b c
-  -> Rhine m cl a      c
+(^>>@) ::
+  Monad m =>
+            (a -> b)  ->
+  Rhine m cl      b c ->
+  Rhine m cl a      c
 f ^>>@ Rhine sn cl = Rhine (f ^>>> sn) cl
 
 -- | Postcompose a 'Rhine' with a 'ClSF'.
-(@>-^)
-  :: ( Clock m (Out cl)
-     , Time cl ~ Time (Out cl)
-     )
-  => Rhine m      cl  a b
-  -> ClSF  m (Out cl)   b c
-  -> Rhine m      cl  a   c
+(@>-^) ::
+  ( Clock m (Out cl)
+  , Time cl ~ Time (Out cl)
+  ) =>
+  Rhine m      cl  a b   ->
+  ClSF  m (Out cl)   b c ->
+  Rhine m      cl  a   c
 Rhine sn cl @>-^ clsf = Rhine (sn >--^ clsf) cl
 
 -- | Precompose a 'Rhine' with a 'ClSF'.
-(^->@)
-  :: ( Clock m (In cl)
-     , Time cl ~ Time (In cl)
-     )
-  => ClSF  m (In cl) a b
-  -> Rhine m     cl    b c
-  -> Rhine m     cl  a   c
+(^->@) ::
+  ( Clock m (In cl)
+  , Time cl ~ Time (In cl)
+  ) =>
+  ClSF  m (In cl) a b   ->
+  Rhine m     cl    b c ->
+  Rhine m     cl  a   c
 clsf ^->@ Rhine sn cl = Rhine (clsf ^--> sn) cl
+{- FOURMOLU_ENABLE -}

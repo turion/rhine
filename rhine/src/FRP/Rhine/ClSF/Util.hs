@@ -1,18 +1,16 @@
-{- |
-Utilities to create 'ClSF's.
-The fundamental effect that 'ClSF's have is
-reading the time information of the clock.
-It can be used for many purposes, for example digital signal processing.
--}
-
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- |
+Utilities to create 'ClSF's.
+The fundamental effect that 'ClSF's have is
+reading the time information of the clock.
+It can be used for many purposes, for example digital signal processing.
+-}
 module FRP.Rhine.ClSF.Util where
-
 
 -- base
 import Control.Arrow
@@ -37,7 +35,6 @@ import Data.VectorSpace
 -- rhine
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except
-
 
 -- * Read time information
 
@@ -91,14 +88,15 @@ it will usually hang after one second,
 since it doesn't reset after restarting the sawtooth.
 -}
 sinceStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
-sinceStart = absoluteS >>> proc time -> do
-  startTime <- keepFirst -< time
-  returnA                -< time `diffTime` startTime
-
+sinceStart =
+  absoluteS >>> proc time -> do
+    startTime <- keepFirst -< time
+    returnA -< time `diffTime` startTime
 
 -- * Useful aliases
 
 -- TODO Is it cleverer to generalise to Arrow?
+
 {- | Alias for 'Control.Category.>>>' (sequential composition)
 with higher operator precedence, designed to work with the other operators, e.g.:
 
@@ -109,18 +107,22 @@ The type signature specialises e.g. to
 > (>->) :: Monad m => ClSF m cl a b -> ClSF m cl b c -> ClSF m cl a c
 -}
 infixr 6 >->
-(>->) :: Category cat
-      => cat a b
-      -> cat   b c
-      -> cat a   c
+
+(>->) ::
+  Category cat =>
+  cat a b ->
+  cat b c ->
+  cat a c
 (>->) = (>>>)
 
 -- | Alias for 'Control.Category.<<<'.
 infixl 6 <-<
-(<-<) :: Category cat
-      => cat   b c
-      -> cat a b
-      -> cat a   c
+
+(<-<) ::
+  Category cat =>
+  cat b c ->
+  cat a b ->
+  cat a c
 (<-<) = (<<<)
 
 {- | Output a constant value.
@@ -131,182 +133,226 @@ Specialises e.g. to this type signature:
 arr_ :: Arrow a => b -> a c b
 arr_ = arr . const
 
-
 -- | The identity synchronous stream function.
 clId :: Monad m => ClSF m cl a a
 clId = Control.Category.id
-
 
 -- * Basic signal processing components
 
 -- ** Integration and differentiation
 
--- | The output of @integralFrom v0@ is the numerical Euler integral
---   of the input, with initial offset @v0@.
-integralFrom
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => v -> BehaviorF m td v v
+{- | The output of @integralFrom v0@ is the numerical Euler integral
+   of the input, with initial offset @v0@.
+-}
+integralFrom ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  v ->
+  BehaviorF m td v v
 integralFrom v0 = proc v -> do
   _sinceLast <- timeInfoOf sinceLast -< ()
-  sumFrom v0                         -< _sinceLast *^ v
+  sumFrom v0 -< _sinceLast *^ v
 
 -- | Euler integration, with zero initial offset.
-integral
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => BehaviorF m td v v
+integral ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  BehaviorF m td v v
 integral = integralFrom zeroVector
 
-
--- | The output of @derivativeFrom v0@ is the numerical derivative of the input,
---   with a Newton difference quotient.
---   The input is initialised with @v0@.
-derivativeFrom
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => v -> BehaviorF m td v v
+{- | The output of @derivativeFrom v0@ is the numerical derivative of the input,
+   with a Newton difference quotient.
+   The input is initialised with @v0@.
+-}
+derivativeFrom ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  v ->
+  BehaviorF m td v v
 derivativeFrom v0 = proc v -> do
-  vLast         <- iPre v0  -< v
+  vLast <- iPre v0 -< v
   TimeInfo {..} <- timeInfo -< ()
-  returnA                   -< (v ^-^ vLast) ^/ sinceLast
+  returnA -< (v ^-^ vLast) ^/ sinceLast
 
 -- | Numerical derivative with input initialised to zero.
-derivative
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => BehaviorF m td v v
+derivative ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  BehaviorF m td v v
 derivative = derivativeFrom zeroVector
 
--- | Like 'derivativeFrom', but uses three samples to compute the derivative.
---   Consequently, it is delayed by one sample.
-threePointDerivativeFrom
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => v -- ^ The initial position
-  -> BehaviorF m td v v
+{- | Like 'derivativeFrom', but uses three samples to compute the derivative.
+   Consequently, it is delayed by one sample.
+-}
+threePointDerivativeFrom ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  -- | The initial position
+  v ->
+  BehaviorF m td v v
 threePointDerivativeFrom v0 = proc v -> do
-  dv  <- derivativeFrom v0 -< v
-  dv' <- iPre zeroVector   -< dv
-  returnA                  -< (dv ^+^ dv') ^/ 2
+  dv <- derivativeFrom v0 -< v
+  dv' <- iPre zeroVector -< dv
+  returnA -< (dv ^+^ dv') ^/ 2
 
--- | Like 'threePointDerivativeFrom',
---   but with the initial position initialised to 'zeroVector'.
-threePointDerivative
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => BehaviorF m td v v
+{- | Like 'threePointDerivativeFrom',
+   but with the initial position initialised to 'zeroVector'.
+-}
+threePointDerivative ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
 
 -- ** Averaging and filters
 
--- | A weighted moving average signal function.
---   The output is the average of the first input,
---   weighted by the second input
---   (which is assumed to be always between 0 and 1).
---   The weight is applied to the average of the last tick,
---   so a weight of 1 simply repeats the past value unchanged,
---   whereas a weight of 0 outputs the current value.
-weightedAverageFrom
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => v -- ^ The initial position
-  -> BehaviorF m td (v, s) v
+{- | A weighted moving average signal function.
+   The output is the average of the first input,
+   weighted by the second input
+   (which is assumed to be always between 0 and 1).
+   The weight is applied to the average of the last tick,
+   so a weight of 1 simply repeats the past value unchanged,
+   whereas a weight of 0 outputs the current value.
+-}
+weightedAverageFrom ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  -- | The initial position
+  v ->
+  BehaviorF m td (v, s) v
 weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
   let
     vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
   returnA -< (vAvg', vAvg')
 
--- | An exponential moving average, or low pass.
---   It will average out, or filter,
---   all features below a given time constant @t@.
---   (Equivalently, it filters out frequencies above @1 / (2 * pi * t)@.)
-averageFrom
-  :: ( Monad m, VectorSpace v s
-     , Floating s
-     , s ~ Diff td)
-  => v -- ^ The initial position
-  -> Diff td -- ^ The time scale on which the signal is averaged
-  -> BehaviorF m td v v
+{- | An exponential moving average, or low pass.
+   It will average out, or filter,
+   all features below a given time constant @t@.
+   (Equivalently, it filters out frequencies above @1 / (2 * pi * t)@.)
+-}
+averageFrom ::
+  ( Monad m
+  , VectorSpace v s
+  , Floating s
+  , s ~ Diff td
+  ) =>
+  -- | The initial position
+  v ->
+  -- | The time scale on which the signal is averaged
+  Diff td ->
+  BehaviorF m td v v
 averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = exp $ - (sinceLast / t)
-  weightedAverageFrom v0    -< (v, weight)
-
+    weight = exp $ -(sinceLast / t)
+  weightedAverageFrom v0 -< (v, weight)
 
 -- | An average, or low pass, initialised to zero.
-average
-  :: ( Monad m, VectorSpace v s
-     , Floating s
-     , s ~ Diff td)
-  => Diff td -- ^ The time scale on which the signal is averaged
-  -> BehaviourF m td v v
+average ::
+  ( Monad m
+  , VectorSpace v s
+  , Floating s
+  , s ~ Diff td
+  ) =>
+  -- | The time scale on which the signal is averaged
+  Diff td ->
+  BehaviourF m td v v
 average = averageFrom zeroVector
 
--- | A linearised version of 'averageFrom'.
---   It is more efficient, but only accurate
---   if the supplied time scale is much bigger
---   than the average time difference between two ticks.
-averageLinFrom
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => v -- ^ The initial position
-  -> Diff td -- ^ The time scale on which the signal is averaged
-  -> BehaviourF m td v v
+{- | A linearised version of 'averageFrom'.
+   It is more efficient, but only accurate
+   if the supplied time scale is much bigger
+   than the average time difference between two ticks.
+-}
+averageLinFrom ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  -- | The initial position
+  v ->
+  -- | The time scale on which the signal is averaged
+  Diff td ->
+  BehaviourF m td v v
 averageLinFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
     weight = t / (sinceLast + t)
-  weightedAverageFrom v0    -< (v, weight)
+  weightedAverageFrom v0 -< (v, weight)
 
 -- | Linearised version of 'average'.
-averageLin
-  :: ( Monad m, VectorSpace v s
-     , s ~ Diff td)
-  => Diff td -- ^ The time scale on which the signal is averaged
-  -> BehaviourF m td v v
+averageLin ::
+  ( Monad m
+  , VectorSpace v s
+  , s ~ Diff td
+  ) =>
+  -- | The time scale on which the signal is averaged
+  Diff td ->
+  BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
 
 -- *** First-order filters
 
 -- | Alias for 'average'.
-lowPass
-  :: ( Monad m, VectorSpace v s
-     , Floating s
-     , s ~ Diff td)
-  => Diff td
-  -> BehaviourF m td v v
+lowPass ::
+  ( Monad m
+  , VectorSpace v s
+  , Floating s
+  , s ~ Diff td
+  ) =>
+  Diff td ->
+  BehaviourF m td v v
 lowPass = average
 
 -- | Filters out frequencies below @1 / (2 * pi * t)@.
-highPass
-  :: ( Monad m, VectorSpace v s
-     , Floating s
-     , s ~ Diff td)
-  => Diff td -- ^ The time constant @t@
-  -> BehaviourF m td v v
+highPass ::
+  ( Monad m
+  , VectorSpace v s
+  , Floating s
+  , s ~ Diff td
+  ) =>
+  -- | The time constant @t@
+  Diff td ->
+  BehaviourF m td v v
 highPass t = clId ^-^ lowPass t
 
 -- | Filters out frequencies other than @1 / (2 * pi * t)@.
-bandPass
-  :: ( Monad m, VectorSpace v s
-     , Floating s
-     , s ~ Diff td)
-  => Diff td -- ^ The time constant @t@
-  -> BehaviourF m td v v
+bandPass ::
+  ( Monad m
+  , VectorSpace v s
+  , Floating s
+  , s ~ Diff td
+  ) =>
+  -- | The time constant @t@
+  Diff td ->
+  BehaviourF m td v v
 bandPass t = lowPass t >>> highPass t
 
 -- | Filters out the frequency @1 / (2 * pi * t)@.
-bandStop
-  :: ( Monad m, VectorSpace v s
-     , Floating s
-     , s ~ Diff td)
-  => Diff td -- ^ The time constant @t@
-  -> BehaviourF m td v v
+bandStop ::
+  ( Monad m
+  , VectorSpace v s
+  , Floating s
+  , s ~ Diff td
+  ) =>
+  -- | The time constant @t@
+  Diff td ->
+  BehaviourF m td v v
 bandStop t = clId ^-^ bandPass t
-
-
 
 -- * Delays
 
@@ -316,69 +362,74 @@ keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
 
--- | Remembers all input values that arrived within a given time window.
---   New values are appended left.
-historySince
-  :: (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl))
-  => Diff (Time cl) -- ^ The size of the time window
-  -> ClSF m cl a (Seq (TimeInfo cl, a))
+{- | Remembers all input values that arrived within a given time window.
+   New values are appended left.
+-}
+historySince ::
+  (Monad m, Ord (Diff (Time cl)), TimeDomain (Time cl)) =>
+  -- | The size of the time window
+  Diff (Time cl) ->
+  ClSF m cl a (Seq (TimeInfo cl, a))
 historySince dTime = readerS $ accumulateWith appendValue empty
   where
-    appendValue (ti, a) tias  = takeWhileL (recentlySince ti) $ (ti, a) <| tias
+    appendValue (ti, a) tias = takeWhileL (recentlySince ti) $ (ti, a) <| tias
     recentlySince ti (ti', _) = diffTime (absolute ti) (absolute ti') < dTime
 
--- | Delay a signal by certain time span,
---   initialising with the first input.
-delayBy
-  :: (Monad m, Ord (Diff td), TimeDomain td)
-  => Diff td            -- ^ The time span to delay the signal
-  -> BehaviorF m td a a
+{- | Delay a signal by certain time span,
+   initialising with the first input.
+-}
+delayBy ::
+  (Monad m, Ord (Diff td), TimeDomain td) =>
+  -- | The time span to delay the signal
+  Diff td ->
+  BehaviorF m td a a
 delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefined >>> arr snd
   where
-    safeHead EmptyR   = Nothing
+    safeHead EmptyR = Nothing
     safeHead (_ :> a) = Just a
 
 -- * Timers
 
--- | Throws an exception after the specified time difference,
---   outputting the time passed since the 'timer' was instantiated.
-timer
-  :: ( Monad m
-     , TimeDomain td
-     , Ord (Diff td)
-     )
-  => Diff td
-  -> BehaviorF (ExceptT () m) td a (Diff td)
+{- | Throws an exception after the specified time difference,
+   outputting the time passed since the 'timer' was instantiated.
+-}
+timer ::
+  ( Monad m
+  , TimeDomain td
+  , Ord (Diff td)
+  ) =>
+  Diff td ->
+  BehaviorF (ExceptT () m) td a (Diff td)
 timer diff = proc _ -> do
   time <- sinceStart -< ()
-  _    <- throwOn () -< time > diff
-  returnA            -< time
+  _ <- throwOn () -< time > diff
+  returnA -< time
 
 -- | Like 'timer_', but doesn't output the remaining time at all.
-timer_
-  :: ( Monad m
-     , TimeDomain td
-     , Ord (Diff td)
-     )
-  => Diff td
-  -> BehaviorF (ExceptT () m) td a ()
+timer_ ::
+  ( Monad m
+  , TimeDomain td
+  , Ord (Diff td)
+  ) =>
+  Diff td ->
+  BehaviorF (ExceptT () m) td a ()
 timer_ diff = timer diff >>> arr (const ())
 
 -- | Like 'timer', but divides the remaining time by the total time.
-scaledTimer
-  :: ( Monad m
-     , TimeDomain td
-     , Fractional (Diff td)
-     , Ord        (Diff td)
-     )
-  => Diff td
-  -> BehaviorF (ExceptT () m) td a (Diff td)
+scaledTimer ::
+  ( Monad m
+  , TimeDomain td
+  , Fractional (Diff td)
+  , Ord (Diff td)
+  ) =>
+  Diff td ->
+  BehaviorF (ExceptT () m) td a (Diff td)
 scaledTimer diff = timer diff >>> arr (/ diff)
-
 
 -- * To be ported to Dunai
 
--- | Remembers the last 'Just' value,
---   defaulting to the given initialisation value.
+{- | Remembers the last 'Just' value,
+   defaulting to the given initialisation value.
+-}
 lastS :: Monad m => a -> MSF m (Maybe a) a
 lastS a = arr Last >>> mappendFrom (Last (Just a)) >>> arr (getLast >>> fromJust)
