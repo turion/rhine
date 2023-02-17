@@ -52,8 +52,8 @@ which should be chosen much larger than the average time between @cl1@'s ticks.
 sinc
   :: ( Monad m, Clock m cl1, Clock m cl2
      , VectorSpace v s
-     , Ord (s)
-     , Floating (s)
+     , Ord s
+     , Floating s
      , s ~ Diff (Time cl1)
      , s ~ Diff (Time cl2)
      )

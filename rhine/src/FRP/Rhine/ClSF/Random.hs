@@ -35,7 +35,7 @@ runRandS
   => ClSF (RandT g m) cl a     b
   -> g -- ^ The initial random seed
   -> ClSF          m  cl a (g, b)
-runRandS clsf g = MSF.runRandS (morphS commuteReaderRand clsf) g
+runRandS clsf = MSF.runRandS (morphS commuteReaderRand clsf)
 
 -- | Updates the generator every step but discards the generator.
 evalRandS
@@ -59,9 +59,7 @@ evalRandIOS
   :: Monad m
   =>     ClSF (RandT StdGen m) cl a b
   -> IO (ClSF               m  cl a b)
-evalRandIOS clsf = do
-  g <- newStdGen
-  return $ evalRandS clsf g
+evalRandIOS clsf = evalRandS clsf <$> newStdGen
 
 -- | Evaluates the random computation by using the global random generator on the first tick.
 evalRandIOS'

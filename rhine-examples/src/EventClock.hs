@@ -76,7 +76,7 @@ responsive = timeInfo >>> proc TimeInfo {..} -> do
 randomsExample :: IO ()
 randomsExample = runEventChanT $ flow wholeSystem
   where
-    busy = (liftClock Busy :: HoistClock IO EventIO Busy) -- TODO Can't remove brackets. GHC parser bug?
+    busy = liftClock Busy :: HoistClock IO EventIO Busy
     emitEventSystem   = randomNumbers >-> emitS @@ busy
     handleEventSystem = handleEvents            @@ EventClock
     eventSystem = emitEventSystem ||@ concurrentlyWithEvents @|| handleEventSystem
@@ -93,8 +93,8 @@ threadsRandomsExample = do
   let
     eventClock = eventClockOn chan :: HoistClock EventIO IO (EventClock String)
     eventSystem = handleEvents @@ eventClock ||@ concurrently @|| responsive @@ waitClock
-    busy = (liftClock Busy :: HoistClock IO EventIO Busy) -- TODO Can't remove brackets. GHC parser bug?
-  void $ forkIO $ flow $ eventSystem
+    busy = liftClock Busy :: HoistClock IO EventIO Busy
+  void $ forkIO $ flow eventSystem
   withChan chan $ flow $ randomNumbers >-> emitS' @@ busy
 
 

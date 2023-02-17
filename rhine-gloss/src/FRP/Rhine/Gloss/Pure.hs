@@ -118,6 +118,6 @@ flowGlossWithWorldMSF GlossSettings { .. } clock msf
         (time, tag) <- fst $ fst $ runWriter $ flip runReaderT (0, Nothing) $ unGlossM $ initClock clock -< ()
         msf -< (time, tag)
       getPic (_, pic) = pic
-      stepWith (diff, maybeEvent) (msf, _) = snd *** id $ runWriter $ unMSF msf ((diff, maybeEvent), ())
+      stepWith (diff, maybeEvent) (msf, _) = first snd $ runWriter $ unMSF msf ((diff, maybeEvent), ())
       handleEvent event = stepWith (0, Just event)
       simStep diff = stepWith (diff, Nothing)

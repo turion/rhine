@@ -129,7 +129,7 @@ concurrentlyExcept = Schedule $ \cl1 cl2 -> do
           putMVar mvar $ Left e -- Either throw own exception or acknowledge the exception from the other clock
         Left e -> void $ putMVar iMVar $ Left e
     catchAndDrain mvar initScheduleAction = catchE initScheduleAction $ \e -> do
-      _ <- reactimate $ (constM $ ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
+      _ <- reactimate $ constM (ExceptT $ takeMVar mvar) >>> arr (const ()) -- Drain the mvar until the other clock acknowledges the exception
       throwE e
 
 -- | As 'concurrentlyExcept', with a single possible exception value.
