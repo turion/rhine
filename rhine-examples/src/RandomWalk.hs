@@ -1,3 +1,7 @@
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+
 {- | Simulation of a random walk.
 
 The internal state is a point in 2D space.
@@ -7,10 +11,7 @@ The current position and the distance to the origin is shown, as well as the pos
 
 This mainly exists to test the 'feedbackRhine' construct.
 -}
-
-{-# LANGUAGE Arrows #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeFamilies #-}
+module Main where
 
 -- random
 import System.Random
@@ -27,16 +28,18 @@ type SimulationClock = Millisecond 1
 type DisplayClock = Millisecond 1000
 type AppClock = SequentialClock IO StdinClock (SequentialClock IO SimulationClock DisplayClock)
 
--- | On every newline, show the current point and the local time.
---   Also, forward the current point so it can be saved.
+{- | On every newline, show the current point and the local time.
+   Also, forward the current point so it can be saved.
+-}
 keyboard :: ClSF IO StdinClock ((), Point) Point
 keyboard = proc ((), currentPoint) -> do
   arrMCl putStrLn -< "Saving: " ++ show currentPoint
   debugLocalTime -< ()
   returnA -< currentPoint
 
--- | Every millisecond, go one step up, down, right or left.
---   Also, forward the current point when it was marked by the last newline.
+{- | Every millisecond, go one step up, down, right or left.
+   Also, forward the current point when it was marked by the last newline.
+-}
 simulation :: ClSF IO SimulationClock Point (Point, Point)
 simulation = feedback zeroVector $ proc (savedPoint, lastPoint) -> do
   direction <- constMCl $ randomRIO (0, 3 :: Int) -< ()
@@ -50,18 +53,22 @@ simulation = feedback zeroVector $ proc (savedPoint, lastPoint) -> do
     nextPoint = lastPoint ^+^ shift
   returnA -< ((savedPoint, nextPoint), nextPoint)
 
--- | Every second, display the current simulated point and the point saved by the keyboard,
---   together with the distances from current point to origin and saved point, respectively.
+{- | Every second, display the current simulated point and the point saved by the keyboard,
+   together with the distances from current point to origin and saved point, respectively.
+-}
 display :: ClSF IO DisplayClock (Point, Point) ((), Point)
 display = proc (savedPoint, currentPoint) -> do
   let
     distanceOrigin = norm currentPoint
     distanceSaved = norm $ currentPoint ^-^ savedPoint
-  arrMCl putStrLn -<
-    "Saved: " ++ show savedPoint
-    ++ "\nCurrent: " ++ show currentPoint
-    ++ "\nDistance to origin: " ++ show distanceOrigin
-    ++ "\nDistance to saved: " ++ show distanceSaved
+  arrMCl putStrLn
+    -<
+      unlines
+        [ "Saved: " ++ show savedPoint
+        , "Current: " ++ show currentPoint
+        , "Distance to origin: " ++ show distanceOrigin
+        , "Distance to saved: " ++ show distanceSaved
+        ]
   returnA -< ((), currentPoint)
 
 -- | A helper to observe the difference between time since clock initialisation and local time
@@ -69,13 +76,14 @@ debugLocalTime :: BehaviourF IO UTCTime a a
 debugLocalTime = proc a -> do
   sinceInit_ <- sinceInitS -< ()
   sinceStart_ <- sinceStart -< ()
-  arrMCl putStrLn -<"since init: " ++ show sinceInit_ ++ "\nsince start: " ++ show sinceStart_
+  arrMCl putStrLn -< "since init: " ++ show sinceInit_ ++ "\nsince start: " ++ show sinceStart_
   returnA -< a
 
 -- | Wire together all components
 mainRhine :: Rhine IO AppClock () ()
-mainRhine = feedbackRhine (debugLocalTime ^->> keepLast zeroVector) $
-  keyboard @@ StdinClock >-- keepLast zeroVector -@- concurrently --> simulation @@ waitClock >-- keepLast (zeroVector, zeroVector) -@- scheduleMillisecond --> display @@ waitClock
+mainRhine =
+  feedbackRhine (debugLocalTime ^->> keepLast zeroVector) $
+    keyboard @@ StdinClock >-- keepLast zeroVector -@- concurrently --> simulation @@ waitClock >-- keepLast (zeroVector, zeroVector) -@- scheduleMillisecond --> display @@ waitClock
 
 -- | Execute the main Rhine
 main :: IO ()

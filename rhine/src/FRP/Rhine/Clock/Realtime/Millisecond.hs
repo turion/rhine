@@ -1,17 +1,16 @@
-{- |
-Provides a clock that ticks at every multiple of a fixed number of milliseconds.
--}
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- |
+Provides a clock that ticks at every multiple of a fixed number of milliseconds.
+-}
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
+import Control.Concurrent (threadDelay)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock
-import Control.Concurrent (threadDelay)
 import GHC.TypeLits
 
 -- vector-sized
@@ -19,12 +18,12 @@ import Data.Vector.Sized (Vector, fromList)
 
 -- rhine
 import FRP.Rhine.Clock
-import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.FixedStep
-import FRP.Rhine.Schedule
+import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
-import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.ResamplingBuffer.Collect
+import FRP.Rhine.ResamplingBuffer.Util
+import FRP.Rhine.Schedule
 
 {- |
 A clock ticking every 'n' milliseconds,
@@ -38,19 +37,21 @@ where 'True' represents successful realtime,
 and 'False' a lag.
 -}
 newtype Millisecond (n :: Nat) = Millisecond (RescaledClockS IO (FixedStep n) UTCTime Bool)
+
 -- TODO Consider changing the tag to Maybe Double
 
 instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
-  type Tag  (Millisecond n) = Bool
+  type Tag (Millisecond n) = Bool
   initClock (Millisecond cl) = initClock cl
 
 instance GetClockProxy (Millisecond n)
 
--- | This implementation measures the time after each tick,
---   and waits for the remaining time until the next tick.
---   If the next tick should already have occurred,
---   the tag is set to 'False', representing a failed real time attempt.
+{- | This implementation measures the time after each tick,
+   and waits for the remaining time until the next tick.
+   If the next tick should already have occurred,
+   the tag is set to 'False', representing a failed real time attempt.
+-}
 
 --   Note that this clock internally uses 'threadDelay' which can block
 --   for quite a lot longer than the requested time, which can cause
@@ -70,29 +71,31 @@ waitClock = Millisecond $ RescaledClockS FixedStep $ \_ -> do
       beforeSleep <- getCurrentTime
       let
         diff :: Double
-        diff      = realToFrac $ beforeSleep `diffUTCTime` initTime
+        diff = realToFrac $ beforeSleep `diffUTCTime` initTime
         remaining = fromInteger $ n * 1000 - round (diff * 1000000)
       threadDelay remaining
-      now         <- getCurrentTime -- TODO Test whether this is a performance penalty
+      now <- getCurrentTime -- TODO Test whether this is a performance penalty
       return (now, remaining > 0)
   return (runningClock, initTime)
 
-
 -- TODO It would be great if this could be directly implemented in terms of downsampleFixedStep
-downsampleMillisecond
-  :: (KnownNat n, Monad m)
-  => ResamplingBuffer m (Millisecond k) (Millisecond (n * k)) a (Vector n a)
+downsampleMillisecond ::
+  (KnownNat n, Monad m) =>
+  ResamplingBuffer m (Millisecond k) (Millisecond (n * k)) a (Vector n a)
 downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
   where
-    assumeSize = fromMaybe $ error $ unwords
-      [ "You are using an incorrectly implemented schedule"
-      , "for two Millisecond clocks."
-      , "Use a correct schedule like downsampleMillisecond."
-      ]
+    assumeSize =
+      fromMaybe $
+        error $
+          unwords
+            [ "You are using an incorrectly implemented schedule"
+            , "for two Millisecond clocks."
+            , "Use a correct schedule like downsampleMillisecond."
+            ]
 
 -- | Two 'Millisecond' clocks can always be scheduled deterministically.
 scheduleMillisecond :: Schedule IO (Millisecond n1) (Millisecond n2)
 scheduleMillisecond = Schedule initSchedule'
   where
-    initSchedule' (Millisecond cl1) (Millisecond cl2)
-      = initSchedule (rescaledScheduleS scheduleFixedStep) cl1 cl2
+    initSchedule' (Millisecond cl1) (Millisecond cl2) =
+      initSchedule (rescaledScheduleS scheduleFixedStep) cl1 cl2

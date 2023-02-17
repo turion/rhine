@@ -1,16 +1,18 @@
-{- | Example application for the @rhine-terminal@ library. -}
-
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- | Example application for the @rhine-terminal@ library.
+module Main where
+
 -- base
-import Prelude hiding (putChar)
+
 import System.Exit (exitSuccess)
 import System.IO hiding (putChar)
+import Prelude hiding (putChar)
 
 -- text
 import Data.Text (Text)
@@ -40,18 +42,19 @@ data Input
 type InputClock = SelectClock TerminalEventClock Input
 
 inputClock :: InputClock
-inputClock = SelectClock
-  { mainClock = TerminalEventClock
-  , select = \case
-      Right (KeyEvent (CharKey k) m)
-        -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
-        | k /= 'J' || m /= ctrlKey    -> Just (Char k m)
-      Right (KeyEvent SpaceKey _)     -> Just Space
-      Right (KeyEvent BackspaceKey _) -> Just Backspace
-      Right (KeyEvent EnterKey _)     -> Just Enter
-      Left _                          -> Just Exit
-      _                               -> Nothing
-  }
+inputClock =
+  SelectClock
+    { mainClock = TerminalEventClock
+    , select = \case
+        Right (KeyEvent (CharKey k) m)
+          -- Don't display Ctrl-J https://github.com/lpeterse/haskell-terminal/issues/17
+          | k /= 'J' || m /= ctrlKey -> Just (Char k m)
+        Right (KeyEvent SpaceKey _) -> Just Space
+        Right (KeyEvent BackspaceKey _) -> Just Backspace
+        Right (KeyEvent EnterKey _) -> Just Enter
+        Left _ -> Just Exit
+        _ -> Nothing
+    }
 
 type PromptClock = LiftClock IO (TerminalT LocalTerminal) (Millisecond 1000)
 
@@ -65,13 +68,13 @@ inputSource = tagS
 promptSource :: ClSF App PromptClock () Text
 promptSource = flip T.cons " > " . (cycle " ." !!) <$> count
 
-inputSink ::  ClSF App cl Input ()
+inputSink :: ClSF App cl Input ()
 inputSink = arrMCl $ \case
-  Char c _  -> putChar c >> flush
-  Space     -> putChar ' ' >> flush
+  Char c _ -> putChar c >> flush
+  Space -> putChar ' ' >> flush
   Backspace -> moveCursorBackward 1 >> deleteChars 1 >> flush
-  Enter     -> putLn >> changePrompt "  > " >> flush
-  Exit      -> do
+  Enter -> putLn >> changePrompt "  > " >> flush
+  Exit -> do
     putLn
     putStringLn "Exiting program."
     flush
@@ -80,11 +83,12 @@ inputSink = arrMCl $ \case
 changePrompt :: MonadScreen m => Text -> m ()
 changePrompt prmpt = do
   Position _ column <- getCursorPosition
-  if column /= 0 then do
-    moveCursorBackward column
-    putText prmpt
-    setCursorColumn column
-  else putText prmpt
+  if column /= 0
+    then do
+      moveCursorBackward column
+      putText prmpt
+      setCursorColumn column
+    else putText prmpt
   flush
 
 promptSink :: ClSF App cl Text ()

@@ -1,12 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 -- base
-import Prelude hiding (putChar)
-import GHC.Conc (retry, readTVarIO, atomically)
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Monad (void)
+import GHC.Conc (atomically, readTVarIO, retry)
+import Prelude hiding (putChar)
 
 -- rhine
 import FRP.Rhine
@@ -25,19 +26,20 @@ import Test.Hspec
 type KeyClock = SelectClock TerminalEventClock Char
 
 keyClock :: KeyClock
-keyClock = SelectClock { mainClock = TerminalEventClock , select }
+keyClock = SelectClock {mainClock = TerminalEventClock, select}
   where
     select :: Tag TerminalEventClock -> Maybe Char
     select (Right (KeyEvent (CharKey k) _)) = Just k
-    select _                                = Nothing
+    select _ = Nothing
 
 defaultSettings :: TQueue Event -> VirtualTerminalSettings
-defaultSettings eventQueue = VirtualTerminalSettings
-  { virtualType         = "xterm"
-  , virtualWindowSize   = pure (Size 3 10)
-  , virtualEvent        = readTQueue eventQueue
-  , virtualInterrupt    = retry
-  }
+defaultSettings eventQueue =
+  VirtualTerminalSettings
+    { virtualType = "xterm"
+    , virtualWindowSize = pure (Size 3 10)
+    , virtualEvent = readTQueue eventQueue
+    , virtualInterrupt = retry
+    }
 
 displayDot :: MonadScreen m => ClSF m KeyClock () ()
 displayDot = constMCl $ do
@@ -65,8 +67,9 @@ main = hspec $ do
         charEvent eventQueue t '3'
         threadDelay $ 200 * 1000
         readTVarIO (virtualWindow t) `shouldReturn` expWindow
-      where
-        expWindow =
-            [ "...       "
-            , "          "
-            , "          " ]
+  where
+    expWindow =
+      [ "...       "
+      , "          "
+      , "          "
+      ]

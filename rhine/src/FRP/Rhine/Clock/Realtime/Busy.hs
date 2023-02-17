@@ -1,7 +1,7 @@
-{- | A "'Busy'" clock that ticks without waiting. -}
-
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+
+-- | A "'Busy'" clock that ticks without waiting.
 module FRP.Rhine.Clock.Realtime.Busy where
 
 -- base
@@ -20,13 +20,13 @@ data Busy = Busy
 
 instance Clock IO Busy where
   type Time Busy = UTCTime
-  type Tag  Busy = ()
+  type Tag Busy = ()
 
   initClock _ = do
     initialTime <- getCurrentTime
     return
       ( constM getCurrentTime
-        &&& arr (const ())
+          &&& arr (const ())
       , initialTime
       )
 
