@@ -4,12 +4,11 @@ It does not export specific clocks, resampling buffers or schedules,
 so you will have to import those yourself, e.g. like this:
 
 @
-{-# LANGUAGE DataKinds #-}
 import FRP.Rhine
 import FRP.Rhine.Clock.Realtime.Millisecond
 
 main :: IO ()
-main = flow $ constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)
+main = flow \$ constMCl (putStrLn \"Hello World!\") \@\@ (waitClock :: Millisecond 100)
 @
 -}
 module FRP.Rhine (module X) where
