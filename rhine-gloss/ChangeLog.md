@@ -1,5 +1,10 @@
 # Revision history for rhine-gloss
 
+## 0.7.0
+
+* Reworked `gloss` backends.
+  There are now two pure backends and an `IO` backend.
+
 ## 0.4.0.0 -- 2017.12.04
 
 * Version bump
