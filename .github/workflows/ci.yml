@@ -23,7 +23,7 @@ jobs:
           wget https://github.com/Kleidukos/get-tested/releases/download/v0.1.3.0/get-tested-0.1.3.0-linux-amd64 -O get-tested
           chmod +x get-tested
           ./get-tested --ubuntu rhine/rhine.cabal >> $GITHUB_OUTPUT
-  build:
+  build-cabal:
     runs-on: ubuntu-latest
     needs: generateMatrix
     strategy:
@@ -59,6 +59,18 @@ jobs:
       - name: Cabal test
         run: |
           cabal test all --enable-tests --test-show-details=Always
+  build-stack:
+    runs-on: ubuntu-latest
+    needs: generateMatrix
+    strategy:
+      matrix: ${{ fromJSON(needs.generateMatrix.outputs.matrix) }}
+    name: Haskell GHC ${{ matrix.ghc }} stack
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
       - name: Cache stack build artifacts
         uses:  freckle/stack-cache-action@v1.0.1
         with:
@@ -75,7 +87,7 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v2
       - uses: cachix/install-nix-action@v15
       - name: Build default package (rhine)
         run: nix build
