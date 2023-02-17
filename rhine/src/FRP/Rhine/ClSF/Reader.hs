@@ -40,7 +40,7 @@ runReaderS
   :: Monad m
   => ClSF (ReaderT r m) cl a b -> ClSF m cl (a, r) b
 runReaderS behaviour
-  = arr swap >>> (MSF.runReaderS $ morphS commuteReaders behaviour)
+  = arr swap >>> MSF.runReaderS (morphS commuteReaders behaviour)
 
 -- | Remove a 'ReaderT' layer by passing the readonly environment explicitly.
 runReaderS_

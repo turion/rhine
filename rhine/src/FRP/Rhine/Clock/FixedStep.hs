@@ -10,7 +10,7 @@ and a deterministic schedule for such clocks.
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+
 module FRP.Rhine.Clock.FixedStep where
 
 

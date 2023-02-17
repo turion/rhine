@@ -142,6 +142,7 @@ decay
   -> Behaviour (ExceptT (Diff time) m) time amplitude
 decay d = linearly d 1
 
+{- HLINT ignore sustain "Eta reduce" -} -- Doesn't compile on GHC 9.0 otherwise
 -- | A period in which a given amplitude is sustained indefinitely.
 sustain :: Monad m => amplitude -> Behaviour m time amplitude
 sustain amplitude = arr_ amplitude

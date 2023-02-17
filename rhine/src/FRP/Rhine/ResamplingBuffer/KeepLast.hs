@@ -15,5 +15,5 @@ import FRP.Rhine.ResamplingBuffer.Timeless
 keepLast :: Monad m => a -> ResamplingBuffer m cl1 cl2 a a
 keepLast = timelessResamplingBuffer AsyncMealy {..}
   where
-    amPut _ a = return a
-    amGet   a = return (a, a)
+    amGet a = return (a, a)
+    amPut _ = return
