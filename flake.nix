@@ -31,7 +31,14 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
       "i686-linux"
     ];
 
+    hpPreOverrides = { pkgs, ... }: self: super:
+      with pkgs.haskell.lib;
+      with haskell-flake-utils.lib;
+      tunePackages pkgs super {
+        monad-bayes = [ (jailbreakUnbreak pkgs) dontCheck ];
+      };
+
     name = "rhine";
-    packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" ];
+    packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" "rhine-bayes" ];
   };
 }

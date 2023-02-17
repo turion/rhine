@@ -74,7 +74,8 @@ In a pull request, do the following:
 The repository is split into these packages:
 
 * `rhine`: The main library
-* `rhine-gloss` (and future packages `rhine-BACKEND`): Libraries connecting `rhine` to [`gloss`](http://hackage.haskell.org/package/gloss) (or some other backend)
+* `rhine-gloss`: A library connecting `rhine` to [`gloss`](http://hackage.haskell.org/package/gloss)
+* `rhine-bayes`: A library connecting `rhine` to [`monad-bayes`](https://hackage.haskell.org/package/monad-bayes)
 * `rhine-examples`: A zoo of examples using the library and different backends.
 
 If you have a contribution, and you are wondering where it should go, you can ask these questions to find the right place:
@@ -113,3 +114,4 @@ Thanks go to:
 * https://github.com/freckletonj
 * https://github.com/jmatsushita
 * https://github.com/miguel-negrao
+* https://github.com/reubenharry/
