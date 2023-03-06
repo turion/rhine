@@ -14,7 +14,7 @@ import Data.Time.Clock
 import Control.Concurrent (threadDelay)
 import GHC.TypeLits
 
--- fixed-vector
+-- vector-sized
 import Data.Vector.Sized (Vector, fromList)
 
 -- rhine
