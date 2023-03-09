@@ -234,6 +234,7 @@ mains :: [(String, IO ())]
 mains =
   [ ("single rate", mainSingleRate)
   , ("multi rate, temperature process", mainMultiRate)
+  , ("multi rate, temperature process, RMSMC", mainMultiRateRMSMC)
   ]
 
 main :: IO ()
@@ -321,6 +322,17 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
     particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
     returnA -< Result{temperature, measured, latent, particles}
 
+{- | This part performs the inference (and passes along temperature, sensor and position simulations).
+   It runs as fast as possible, so this will potentially drain the CPU.
+-}
+inferenceRMSMC :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
+inferenceRMSMC = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+ where
+  inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+  inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+    particles <- resampleMoveSequentialMonteCarloCl nParticles 10 resampleSystematic posteriorTemperatureProcess -< measured
+    returnA -< Result{temperature, measured, latent, particles}
+
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
@@ -336,11 +348,27 @@ mainRhineMultiRate =
             >-- keepLast Result{temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
               visualisationRhine
 
+mainRhineMultiRateRMSMC =
+  userTemperature
+    @@ glossClockUTC GlossEventClockIO
+      >-- keepLast initialTemperature -@- glossConcurrently -->
+        modelRhine
+        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
+          inferenceRMSMC
+            >-- keepLast Result{temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+              visualisationRhine
+
 mainMultiRate :: IO ()
 mainMultiRate =
   void $
     launchGlossThread glossSettings $
       flow mainRhineMultiRate
+
+mainMultiRateRMSMC :: IO ()
+mainMultiRateRMSMC =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineMultiRateRMSMC
 
 -- * Utilities
 

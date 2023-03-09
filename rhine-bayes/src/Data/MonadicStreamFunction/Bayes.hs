@@ -12,11 +12,15 @@ import Numeric.Log hiding (sum)
 
 -- monad-bayes
 import Control.Monad.Bayes.Population
+import Control.Monad.Bayes.Traced.Class
 
 -- dunai
 import Data.MonadicStreamFunction
 import Data.MonadicStreamFunction.InternalCore (MSF (..))
+import Control.Monad.Trans.Class
+import Control.Monad.Bayes.Class (MonadDistribution)
 
+-- FIXME rename to sequentialMonteCarlo or smc?
 -- | Run the Sequential Monte Carlo algorithm continuously on an 'MSF'
 runPopulationS ::
   forall m a b.
@@ -47,6 +51,36 @@ runPopulationsS resampler = go
       second (go . fromWeightedList . return) $
         unzip $
           (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
+
+resampleMoveSequentialMonteCarlo ::
+  forall t m a b.
+  (MonadDistribution m, HasTraced t, MonadTrans t) =>
+  -- | Number of particles
+  Int ->
+  -- | Number of MC steps
+  Int ->
+  -- | Resampler
+  (forall x. Population m x -> Population m x) ->
+  MSF (t (Population m)) a b ->
+  -- FIXME Why not MSF m a (Population b)
+  MSF m a [(b, Log Double)]
+resampleMoveSequentialMonteCarlo nParticles nMC resampler = go . (spawn nParticles $>)
+  where
+    go ::
+      Monad m =>
+      Population m (MSF (t (Population m)) a b) ->
+      MSF m a [(b, Log Double)]
+    go msfs = MSF $ \a -> do
+      -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
+      -- FIXME This normalizes, which introduces bias, whatever that means
+      bAndMSFs <- runPopulation $ normalize $ marginal $ freeze $ composeCopies nMC mhStep $ hoistTrace resampler $ flip unMSF a =<< lift msfs
+      return $
+        second (go . fromWeightedList . return) $
+          unzip $
+            (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
+
+
+-- resampleMoveSequentialMonteCarlo nParticles nMC resampler = morphS marginal $ runPopulationS nParticles $ freeze . composeCopies nMC mhStep . hoistTrace resampler
 
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: Monad m => Population m a -> Population m a

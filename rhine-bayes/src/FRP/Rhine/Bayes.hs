@@ -15,6 +15,8 @@ import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 
 -- rhine
 import FRP.Rhine
+import Control.Monad.Bayes.Traced.Class (HasTraced)
+import Control.Monad.Trans.Class (MonadTrans)
 
 -- * Inference methods
 
@@ -31,6 +33,22 @@ runPopulationCl :: forall m cl a b . Monad m =>
   -> ClSF (Population m) cl a b
   -> ClSF m cl a [(b, Log Double)]
 runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
+
+-- | Run the Resample Move Sequential Monte Carlo algorithm continuously on a 'ClSF'.
+resampleMoveSequentialMonteCarloCl :: forall t m cl a b . (MonadDistribution m, HasTraced t, MonadTrans t) =>
+  -- | Number of particles
+  Int ->
+  -- | Number of MC steps
+  Int ->
+  -- | Resampler (see 'Control.Monad.Bayes.Population' for some standard choices)
+  (forall x . Population m x -> Population m x)
+  -- | A signal function modelling the stochastic process on which to perform inference.
+  --   @a@ represents observations upon which the model should condition, using e.g. 'score'.
+  --   It can also additionally contain hyperparameters.
+  --   @b@ is the type of estimated current state.
+  -> ClSF (t (Population m)) cl a b
+  -> ClSF m cl a [(b, Log Double)]
+resampleMoveSequentialMonteCarloCl nParticles nMC resampler = DunaiReader.readerS . DunaiBayes.resampleMoveSequentialMonteCarlo nParticles nMC resampler . DunaiReader.runReaderS
 
 -- * Short standard library of stochastic processes
 
