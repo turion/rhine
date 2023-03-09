@@ -1,5 +1,8 @@
 module FRP.Rhine.Bayes where
 
+-- base
+import Data.Monoid (Sum(..))
+
 -- log-domain
 import Numeric.Log hiding (sum)
 
@@ -10,11 +13,11 @@ import Control.Monad.Bayes.Population
 -- dunai
 import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
 
--- dunai-bayes
-import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
-
 -- rhine
 import FRP.Rhine
+
+-- rhine-bayes
+import Data.MonadicStreamFunction.Bayes
 
 -- * Inference methods
 
@@ -30,7 +33,7 @@ runPopulationCl :: forall m cl a b . Monad m =>
   --   @b@ is the type of estimated current state.
   -> ClSF (Population m) cl a b
   -> ClSF m cl a [(b, Log Double)]
-runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
+runPopulationCl nParticles resampler = DunaiReader.readerS . runPopulationS nParticles resampler . DunaiReader.runReaderS
 
 -- FIXME We could simply not output the param here, then the user can decide to do that or not in b
 runPopulationParamSimple :: Monad m =>
@@ -42,7 +45,7 @@ runPopulationParamSimple :: Monad m =>
   ClSF (Population m) cl (param, a) b ->
   -- FIXME Why not ClSF m a (Population b)
   ClSF m cl a [((b, param), Log Double)]
-runPopulationParamSimple nParticles resampler param = DunaiReader.readerS . DunaiBayes.runPopulationParamSimpleS nParticles resampler param . (arr (\(param, (timeInfo, a)) -> (timeInfo, (param, a))) >>>) . DunaiReader.runReaderS
+runPopulationParamSimple nParticles resampler param = DunaiReader.readerS . runPopulationParamSimpleS nParticles resampler param . (arr (\(param, (timeInfo, a)) -> (timeInfo, (param, a))) >>>) . DunaiReader.runReaderS
 
 runPopulationParamDirichletConstant ::
   (Monad m, Real (Diff (Time cl)), Fractional (Diff (Time cl))) =>
@@ -61,7 +64,7 @@ runPopulationParamDirichletConstant ::
 runPopulationParamDirichletConstant nParticles t t0 resampler param clsf = proc a -> do
   tCurrent <- sinceInitS -< ()
   let pNew = realToFrac $ t / (tCurrent + t0)
-  DunaiReader.readerS $ (<<< arr assoc2) $ DunaiBayes.runPopulationParamDirichletConstant nParticles resampler param $ (<<< arr assoc) $ DunaiReader.runReaderS clsf -< (pNew, a)
+  DunaiReader.readerS $ (<<< arr assoc2) $ runPopulationParamDirichletConstantS nParticles resampler param $ (<<< arr assoc) $ DunaiReader.runReaderS clsf -< (pNew, a)
 
 -- FIXME I shouldn't need nParticles. When I sample from the prior predictive, I should be able to start with 0 basically and let t0 manage how many I sample on the first step
 runPopulationParamDirichletElastic ::
@@ -84,7 +87,7 @@ runPopulationParamDirichletElastic nParticles t t0 resampler param clsf = proc a
   pAccumulated <- arr getSum <<< mappendS -< Sum $ t / (tCurrent + t0)
   pLast <- iPre 0 -< pAccumulated
   let nNew = floor (fromIntegral nParticles * pAccumulated) - floor (fromIntegral nParticles * pLast)
-  DunaiReader.readerS $ (<<< arr assoc2) $ DunaiBayes.runPopulationParamDirichletElastic nParticles resampler param $ (<<< arr assoc) $ DunaiReader.runReaderS clsf -< (nNew, a)
+  DunaiReader.readerS $ (<<< arr assoc2) $ runPopulationParamDirichletElasticS nParticles resampler param $ (<<< arr assoc) $ DunaiReader.runReaderS clsf -< (nNew, a)
 
 assoc :: (param, (TimeInfo cl, a)) -> (TimeInfo cl, (param, a))
 assoc (param, (timeInfo, a)) = (timeInfo, (param, a))

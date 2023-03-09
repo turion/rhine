@@ -85,7 +85,9 @@ executable rhine-bayes-gloss
 
 executable rhine-bayes-gloss-lighthouse
   main-is:             Lighthouse.hs
-  hs-source-dirs:      app
+  other-modules:
+    Data.MonadicStreamFunction.Bayes
+  hs-source-dirs:      app src
   ghc-options:         -threaded
   -- monad-bayes is not yet released for GHC 9.4
   build-depends:       base         >= 4.11 && < 4.17

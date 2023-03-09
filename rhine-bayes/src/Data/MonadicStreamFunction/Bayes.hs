@@ -64,6 +64,7 @@ runPopulationsS resampler = go
 normalize :: Monad m => Population m a -> Population m a
 normalize = fromWeightedList . fmap (\particles -> second (/ (sum $ snd <$> particles)) <$> particles) . runPopulation
 
+-- FIXME this should reside, if at all, in a different module
 class SoftEq a where
   -- | `similarity a1 a2 == 1` if they are exactly equal, and 0 if they are completely different.
   similarity :: a -> a -> Log Double
@@ -105,37 +106,6 @@ instance (SoftEq a, SoftEq b) => SoftEq (a, b) where
 -- This should work for general control if the control space is not too high dimensional (bang bang to reduce to graph problem)
 
 -- * Is there a MCMC control algorithm?
-
--- | Run the Sequential Monte Carlo algorithm continuously on an 'MSF'
-runPopulationS ::
-  forall m a b.
-  Monad m =>
-  -- | Number of particles
-  Int ->
-  -- | Resampler
-  (forall x. Population m x -> Population m x) ->
-  MSF (Population m) a b ->
-  -- FIXME Why not MSF m a (Population b)
-  MSF m a [(b, Log Double)]
-runPopulationS nParticles resampler = runPopulationsS resampler . (spawn nParticles $>)
-
--- | Run the Sequential Monte Carlo algorithm continuously on a 'Population' of 'MSF's
-runPopulationsS ::
-  Monad m =>
-  -- | Resampler
-  (forall x. Population m x -> Population m x) ->
-  Population m (MSF (Population m) a b) ->
-  MSF m a [(b, Log Double)]
-runPopulationsS resampler = go
- where
-  go msfs = MSF $ \a -> do
-    -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
-    -- FIXME This normalizes, which introduces bias, whatever that means
-    bAndMSFs <- runPopulation $ normalize $ resampler $ flip unMSF a =<< msfs
-    return $
-      second (go . fromWeightedList . return) $
-        unzip $
-          (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
 
 runPopulationS' ::
   forall m a b.
@@ -197,7 +167,7 @@ runPopulationParamSimpleS ::
 runPopulationParamSimpleS nParticles resampler param = runPopulationsS resampler . ((spawn nParticles >> lift param) <&>) . runReaderS_ . readerS . (&&& arr fst)
 
 -- | Constant number of particles
-runPopulationParamDirichletConstant ::
+runPopulationParamDirichletConstantS ::
   forall m a b param.
   Monad m =>
   -- | Number of particles
@@ -208,7 +178,7 @@ runPopulationParamDirichletConstant ::
   MSF (Population m) (param, a) b ->
   -- FIXME Why not MSF m a (Population b)
   MSF m (Log Double, a) [((b, param), Log Double)]
-runPopulationParamDirichletConstant nParticles resampler param = runPopulationParamDirichletConstant' . mkInitialMSFs
+runPopulationParamDirichletConstantS nParticles resampler param = runPopulationParamDirichletConstantS' . mkInitialMSFs
  where
   mkInitialMSFs ::
     MSF (Population m) (param, a) b ->
@@ -218,11 +188,11 @@ runPopulationParamDirichletConstant nParticles resampler param = runPopulationPa
     initialParam <- lift param
     return (initialParam, msf)
 
-  runPopulationParamDirichletConstant' ::
+  runPopulationParamDirichletConstantS' ::
     Monad m =>
     Population m (param, MSF (Population m) (param, a) b) ->
     MSF m (Log Double, a) [((b, param), Log Double)]
-  runPopulationParamDirichletConstant' paramAndMSFs = MSF $ \(pNew, a) -> do
+  runPopulationParamDirichletConstantS' paramAndMSFs = MSF $ \(pNew, a) -> do
     -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
     -- FIXME This normalizes, which introduces bias, whatever that means
     bAndMSFs <- runPopulation $ do
@@ -239,7 +209,7 @@ runPopulationParamDirichletConstant nParticles resampler param = runPopulationPa
         bAndMSFsWithNew = ((newParam, bestBAndMSF), pNew) : bAndMSFsKept
     return $
       second
-        (runPopulationParamDirichletConstant' . normalize . resampler . fromWeightedList . return)
+        (runPopulationParamDirichletConstantS' . normalize . resampler . fromWeightedList . return)
         ( unzip $
             ( \((param, (b, msf)), p) ->
                 ( ((b, param), p)
@@ -250,7 +220,7 @@ runPopulationParamDirichletConstant nParticles resampler param = runPopulationPa
         )
 
 -- | Constant number of particles
-runPopulationParamDirichletElastic ::
+runPopulationParamDirichletElasticS ::
   forall m a b param.
   Monad m =>
   -- | Number of particles
@@ -260,7 +230,7 @@ runPopulationParamDirichletElastic ::
   m param ->
   MSF (Population m) (param, a) b ->
   MSF m (Int, a) [((b, param), Log Double)]
-runPopulationParamDirichletElastic nParticles resampler param = runPopulationParamDirichletElastic' . mkInitialMSFs
+runPopulationParamDirichletElasticS nParticles resampler param = runPopulationParamDirichletElasticS' . mkInitialMSFs
  where
   mkInitialMSFs ::
     MSF (Population m) (param, a) b ->
@@ -270,11 +240,11 @@ runPopulationParamDirichletElastic nParticles resampler param = runPopulationPar
     initialParam <- lift param
     return (initialParam, msf)
 
-  runPopulationParamDirichletElastic' ::
+  runPopulationParamDirichletElasticS' ::
     Monad m =>
     Population m (param, MSF (Population m) (param, a) b) ->
     MSF m (Int, a) [((b, param), Log Double)]
-  runPopulationParamDirichletElastic' paramAndMSFs = MSF $ \(n, a) -> do
+  runPopulationParamDirichletElasticS' paramAndMSFs = MSF $ \(n, a) -> do
     -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
     -- FIXME This normalizes, which introduces bias, whatever that means
     bAndMSFs <- runPopulation $ do
@@ -286,7 +256,7 @@ runPopulationParamDirichletElastic nParticles resampler param = runPopulationPar
         bAndMSFsWithNew = map (\newParam -> ((newParam, bestBAndMSF), 1)) newParams ++ bAndMSFs
     return $
       second
-        (runPopulationParamDirichletElastic' . normalize . resampler . fromWeightedList . return)
+        (runPopulationParamDirichletElasticS' . normalize . resampler . fromWeightedList . return)
         ( unzip $
             ( \((param, (b, msf)), p) ->
                 ( ((b, param), p)
@@ -302,10 +272,6 @@ hoistMSF morph msf = MSF $ \a -> morph $ fmap (hoistMSF morph) <$> unMSF msf a
 
 massagePopulation :: Functor m => Population m a -> Compose (ListT m) ((,) (Log Double)) a
 massagePopulation = Compose . ListT . fmap (map swap) . runPopulation
-
--- FIXME see PR re-adding this to monad-bayes
-normalize :: Monad m => Population m a -> Population m a
-normalize = fromWeightedList . fmap (\particles -> second (/ (sum $ snd <$> particles)) <$> particles) . runPopulation
 
 constantParameter ::
   Monad m =>

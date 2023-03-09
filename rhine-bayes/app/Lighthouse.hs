@@ -26,10 +26,8 @@ import FRP.Rhine
 -- rhine-gloss
 import FRP.Rhine.Gloss.IO
 
--- dunai-bayes
-import Data.MonadicStreamFunction.Bayes (DigitsPrecision (DigitsPrecision, getDigitsPrecision))
-
 -- rhine-bayes
+import Data.MonadicStreamFunction.Bayes (DigitsPrecision (DigitsPrecision, getDigitsPrecision))
 import FRP.Rhine.Bayes
 import FRP.Rhine.Gloss.Common
 
@@ -92,9 +90,6 @@ model = proc stdDev -> do
   latent <- prior -< stdDev
   sensor <- generativeModel -< latent
   returnA -< (sensor, latent)
-
-posterior :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td (StdDev, Sensor) Pos
-posterior = bayesFilter model
 
 -- FIXME Want ExceptT so we can exit with escape
 type MySmallMonad = GlossConcT SamplerIO
