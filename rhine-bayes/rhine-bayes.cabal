@@ -32,7 +32,7 @@ library
   exposed-modules: FRP.Rhine.Bayes
   other-modules: Data.MonadicStreamFunction.Bayes
   build-depends:
-    base >=4.11 && <4.18,
+    base >=4.11 && <4.19,
     dunai ^>=0.12.2,
     log-domain >=0.12,
     monad-bayes ^>=1.2,
@@ -64,7 +64,7 @@ executable rhine-bayes-gloss
   main-is: Main.hs
   hs-source-dirs: app
   build-depends:
-    base >=4.11 && <4.18,
+    base >=4.11 && <4.19,
     dunai,
     log-domain,
     mmorph,
