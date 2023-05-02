@@ -330,7 +330,7 @@ inferenceRMSMC = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
  where
   inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
   inferenceBehaviour = proc (temperature, (measured, latent)) -> do
-    particles <- resampleMoveSequentialMonteCarloCl nParticles 10 resampleSystematic posteriorTemperatureProcess -< measured
+    particles <- resampleMoveSequentialMonteCarloCl 2 1 resampleSystematic posteriorTemperatureProcess -< measured
     returnA -< Result{temperature, measured, latent, particles}
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
