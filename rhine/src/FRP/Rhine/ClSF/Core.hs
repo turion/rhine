@@ -26,7 +26,7 @@ import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
 
 -- rhine
-import FRP.Rhine.Clock as X
+import FRP.Rhine.Clock
 
 -- * Clocked signal functions and behaviours
 

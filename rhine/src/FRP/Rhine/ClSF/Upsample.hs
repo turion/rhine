@@ -10,6 +10,7 @@ module FRP.Rhine.ClSF.Upsample where
 import Control.Monad.Trans.MSF.Reader
 
 -- rhine
+import FRP.Rhine.Clock
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Schedule
 
