@@ -8,6 +8,7 @@ module FRP.Rhine.SN.Combinators where
 
 -- rhine
 import FRP.Rhine.ClSF.Core
+import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer.Util
 import FRP.Rhine.SN

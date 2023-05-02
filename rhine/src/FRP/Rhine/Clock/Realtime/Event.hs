@@ -44,6 +44,7 @@ import Control.Monad.Trans.Reader
 
 -- rhine
 import FRP.Rhine.ClSF
+import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Schedule
 import FRP.Rhine.Schedule.Concurrently
