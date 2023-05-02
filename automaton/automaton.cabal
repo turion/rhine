@@ -20,7 +20,7 @@ extra-doc-files:
 common opts
   build-depends:
     MonadRandom >=0.5,
-    base >=4.14 && <4.18,
+    base >=4.14 && <4.19,
     mmorph ^>=1.2,
     mtl >=2.2 && <2.4,
     profunctors ^>=5.6,

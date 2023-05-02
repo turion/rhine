@@ -6,12 +6,13 @@ module Automaton where
 -- base
 import Control.Applicative (Alternative (..))
 import Control.Arrow
+import Control.Monad (guard)
 import Data.Functor.Identity (runIdentity)
 import Data.List (uncons)
 import Data.Maybe (maybeToList)
 
 -- transformers
-import Control.Monad.State.Strict
+import Control.Monad.State.Strict (StateT (..))
 
 -- selective
 import Control.Selective ((<*?))
