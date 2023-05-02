@@ -4,6 +4,7 @@ module Data.MonadicStreamFunction.Bayes where
 import Control.Arrow
 import Data.Functor (($>))
 import Data.Tuple (swap)
+import Debug.Trace
 
 -- transformers
 
