@@ -87,6 +87,12 @@ wienerVaryingLogDomain ::
   BehaviourF m td (Diff td) (Log Double)
 wienerVaryingLogDomain = wienerVarying >>> arr Exp
 
+ornsteinUhlenbeck ::
+  Diff td ->
+  v ->
+  BehaviourF m td () v
+ornsteinUhlenbeck = _
+
 -- | Inhomogeneous Poisson point process, as described in:
 --   https://en.wikipedia.org/wiki/Poisson_point_process#Inhomogeneous_Poisson_point_process
 --
