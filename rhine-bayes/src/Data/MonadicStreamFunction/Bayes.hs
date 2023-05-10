@@ -81,10 +81,8 @@ resampleMoveSequentialMonteCarlo nParticles nMC resampler = go . Control.Monad.B
       -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
       -- FIXME This normalizes, which introduces bias, whatever that means
       let bAndMSFs = composeCopies nMC mhStep
-            -- $ Debug.Trace.trace "2"
-            $ Control.Monad.Bayes.Traced.hoist (tracePop "after resampler" . Debug.Trace.trace "resampler" resampler . tracePop "before resampler")
-            -- $ Debug.Trace.trace "1"
-            $ flip unMSF (Debug.Trace.trace "a" a) =<< Control.Monad.Bayes.Traced.hoist (tracePop "msfs") msfs
+            $ Control.Monad.Bayes.Traced.hoist resampler
+            $ flip unMSF a =<< msfs
       bs <- runPopulation $ marginal $ fst <$> bAndMSFs
       return (bs, go $ snd <$> bAndMSFs)
 
