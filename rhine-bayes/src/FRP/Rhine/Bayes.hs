@@ -1,5 +1,8 @@
 module FRP.Rhine.Bayes where
 
+-- transformers
+import Control.Monad.Trans.Reader (ReaderT (..))
+
 -- log-domain
 import Numeric.Log hiding (sum)
 
@@ -86,3 +89,44 @@ wienerVaryingLogDomain ::
   (MonadDistribution m, Diff td ~ Double) =>
   BehaviourF m td (Diff td) (Log Double)
 wienerVaryingLogDomain = wienerVarying >>> arr Exp
+
+{- | Inhomogeneous Poisson point process, as described in:
+  https://en.wikipedia.org/wiki/Poisson_point_process#Inhomogeneous_Poisson_point_process
+
+  * The input is the inverse of the current rate or intensity.
+    It corresponds to the average duration between two events.
+  * The output is the number of events since the last tick.
+-}
+poissonInhomogeneous ::
+  (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
+  BehaviourF m td (Diff td) Int
+poissonInhomogeneous = arrM $ \rate -> ReaderT $ \diffTime -> poisson $ realToFrac $ sinceLast diffTime / rate
+
+-- | Like 'poissonInhomogeneous', but the rate is constant.
+poissonHomogeneous ::
+  (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
+  -- | The (constant) rate of the process
+  Diff td ->
+  BehaviourF m td () Int
+poissonHomogeneous rate = arr (const rate) >>> poissonInhomogeneous
+
+{- | The Gamma process, https://en.wikipedia.org/wiki/Gamma_process.
+
+  The live input corresponds to inverse shape parameter, which is variance over mean.
+-}
+gammaInhomogeneous ::
+  (MonadDistribution m, Real (Diff td), Fractional (Diff td), Floating (Diff td)) =>
+  -- | The scale parameter
+  Diff td ->
+  BehaviourF m td (Diff td) Int
+gammaInhomogeneous gamma = proc rate -> do
+  t <- sinceInitS -< ()
+  accumulateWith (+) 0 <<< poissonInhomogeneous -< gamma / t * exp (-t / rate)
+
+{- | The inhomogeneous Bernoulli process, https://en.wikipedia.org/wiki/Bernoulli_process
+
+  Throws a coin to a given probability at each tick.
+  The live input is the probability.
+-}
+bernoulliInhomogeneous :: MonadDistribution m => BehaviourF m td Double Bool
+bernoulliInhomogeneous = arrMCl bernoulli
