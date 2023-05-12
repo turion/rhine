@@ -347,5 +347,10 @@ mainMultiRate =
 instance MonadDistribution m => MonadDistribution (GlossConcT m) where
   random = lift random
 
+instance MonadFactor m => MonadFactor (GlossConcT m) where
+  score = lift . score
+
+instance MonadMeasure m => MonadMeasure (GlossConcT m) where
+
 sampleIOGloss :: App a -> GlossConcT IO a
 sampleIOGloss = hoist sampleIO
