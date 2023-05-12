@@ -57,7 +57,11 @@ library
 
 executable rhine-bayes-gloss
   main-is:             Main.hs
-  hs-source-dirs:      app
+  hs-source-dirs:
+    app
+    models
+  other-modules:
+    Model.Oscillator
   build-depends:       base         >= 4.11 && < 4.18
                      , rhine
                      , rhine-bayes
@@ -81,6 +85,26 @@ executable rhine-bayes-gloss
   ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
   if flag(dev)
     ghc-options: -Werror
+
+test-suite test
+  main-is: Main.hs
+  type: exitcode-stdio-1.0
+  other-modules:
+    Oscillator
+  hs-source-dirs:
+    test
+    models
+  build-depends:
+      base         >= 4.11 && < 4.18
+    , rhine
+    , rhine-bayes
+    , monad-bayes
+  default-extensions:
+    Arrows
+    TypeFamilies
+  if flag(dev)
+    ghc-options: -Werror
+
 
 flag dev
   description: Enable warnings as errors. Active on ci.
