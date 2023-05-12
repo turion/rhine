@@ -14,7 +14,7 @@ category:            FRP
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 extra-doc-files:     README.md
-cabal-version:       1.18
+cabal-version:       2.0
 
 source-repository head
   type:     git
@@ -91,16 +91,22 @@ test-suite test
   type: exitcode-stdio-1.0
   other-modules:
     Oscillator
+    Model.Oscillator
   hs-source-dirs:
     test
     models
   build-depends:
       base         >= 4.11 && < 4.18
+    , transformers
     , rhine
     , rhine-bayes
     , monad-bayes
+    , hspec ^>= 2.11
   default-extensions:
     Arrows
+    FlexibleContexts
+    NamedFieldPuns
+    RankNTypes
     TypeFamilies
   if flag(dev)
     ghc-options: -Werror
