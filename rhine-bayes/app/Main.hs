@@ -390,6 +390,12 @@ mainMultiRateRMSMC =
     launchGlossThread glossSettings $
       flow mainRhineMultiRateRMSMC
 
+mainMultiRateRMSMCDyn :: IO ()
+mainMultiRateRMSMCDyn =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineMultiRateRMSMCDyn
+
 -- * Utilities
 
 instance MonadDistribution m => MonadDistribution (GlossConcT m) where
