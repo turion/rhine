@@ -113,9 +113,9 @@ initialTemperature :: Temperature
 initialTemperature = 7
 
 -- | We infer the temperature by randomly moving around with a Brownian motion (Wiener process).
-temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () Temperature
-temperatureProcess = proc () -> do
-  temperatureFactor <- wienerLogDomain 20 -< ()
+temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td (Diff td) Temperature
+temperatureProcess = proc dt -> do
+  temperatureFactor <- wienerVaryingLogDomain -< dt
   returnA -< runLogDomain temperatureFactor * initialTemperature
 
 -- | Auxiliary conversion function belonging to the log-domain library, see https://github.com/ekmett/log-domain/issues/38
@@ -133,15 +133,32 @@ genModelWithoutTemperature = proc temperature -> do
   sensor <- generativeModel -< latent
   returnA -< (sensor, latent)
 
+type ESS = Double
+
 {- | Given sensor data, sample a latent position and a temperature, and weight them according to the likelihood of the observed sensor position.
    Used to infer position and temperature.
 -}
-posteriorTemperatureProcess :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td Sensor (Temperature, Pos)
-posteriorTemperatureProcess = proc sensor -> do
-  temperature <- temperatureProcess -< ()
+posteriorTemperatureProcessAutoESS :: (MonadDistribution m, TimeDomain td, Diff td ~ Double) => BehaviourF (Population m) td Sensor (Temperature, Pos)
+posteriorTemperatureProcessAutoESS = withESS 20 posteriorTemperatureProcessLiveESS
+
+{- | Given sensor data, sample a latent position and a temperature, and weight them according to the likelihood of the observed sensor position.
+   Used to infer position and temperature.
+-}
+posteriorTemperatureProcessLiveESS :: (MonadMeasure m, TimeDomain td, Diff td ~ Double) => BehaviourF m td (Sensor, ESS) (Temperature, Pos)
+posteriorTemperatureProcessLiveESS = proc (sensor, ess) -> do
+  t <- sinceStart -< ()
+  temperature <- temperatureProcess -< ess / 2 + t / 20
   latent <- prior -< temperature
   arrM score -< sensorLikelihood latent sensor
   returnA -< (temperature, latent)
+
+{- | Given sensor data, sample a latent position and a temperature, and weight them according to the likelihood of the observed sensor position.
+   Used to infer position and temperature.
+-}
+posteriorTemperatureProcess :: (MonadMeasure m, TimeDomain td, Diff td ~ Double) => BehaviourF m td Sensor (Temperature, Pos)
+posteriorTemperatureProcess = proc sensor -> do
+  posteriorTemperatureProcessLiveESS -< (sensor, 20)
+
 
 -- | A collection of all displayable inference results
 data Result = Result
@@ -249,7 +266,7 @@ main = do
 {- | Given an actual temperature, simulate a latent position and measured sensor position,
    and based on the sensor data infer the latent position and the temperature.
 -}
-filtered :: Diff td ~ Double => BehaviourF App td Temperature Result
+filtered :: (TimeDomain td, Diff td ~ Double) => BehaviourF App td Temperature Result
 filtered = proc temperature -> do
   (measured, latent) <- genModelWithoutTemperature -< temperature
   particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
@@ -263,7 +280,7 @@ filtered = proc temperature -> do
         }
 
 -- | Run simulation, inference, and visualization synchronously
-mainClSF :: Diff td ~ Double => BehaviourF App td () ()
+mainClSF :: (TimeDomain td, Diff td ~ Double) => BehaviourF App td () ()
 mainClSF = proc () -> do
   output <- filtered -< initialTemperature
   visualisation -< output
@@ -318,9 +335,9 @@ userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr 
 inference :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
 inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
  where
-  inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+  inferenceBehaviour :: (MonadDistribution m, TimeDomain td, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
   inferenceBehaviour = proc (temperature, (measured, latent)) -> do
-    particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
+    particles <- runPopulationCl nParticles (onlyBelowEffectiveSampleSize 60 resampleSystematic) posteriorTemperatureProcessAutoESS -< measured
     returnA -< Result{temperature, measured, latent, particles}
 
 {- | This part performs the inference (and passes along temperature, sensor and position simulations).
@@ -329,7 +346,7 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
 inferenceRMSMC :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
 inferenceRMSMC = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
  where
-  inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+  inferenceBehaviour :: (MonadDistribution m, TimeDomain td, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
   inferenceBehaviour = proc (temperature, (measured, latent)) -> do
     particles <- resampleMoveSequentialMonteCarloCl 10 1 resampleSystematic posteriorTemperatureProcess -< measured
     returnA -< Result{temperature, measured, latent, particles}

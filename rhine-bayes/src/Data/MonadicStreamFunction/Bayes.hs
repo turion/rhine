@@ -131,3 +131,41 @@ tracePop _ = id
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: Monad m => Population m a -> Population m a
 normalize = fromWeightedList . fmap (\particles -> second (/ (sum $ snd <$> particles)) <$> particles) . runPopulation
+
+-- FIXME See PR to monad-bayes
+
+
+-- | Only use the given resampler when the effective sample size is below a certain threshold
+onlyBelowEffectiveSampleSize ::
+  MonadDistribution m =>
+  -- | The threshold under which the effective sample size must fall before the resampler is used.
+  --   For example, this may be half of the number of particles.
+  Double ->
+  -- | The resampler to user under the threshold
+  (forall n . MonadDistribution n => Population n a -> Population n a) ->
+  -- | The new resampler
+  (Population m a -> Population m a)
+onlyBelowEffectiveSampleSize threshold resampler pop = do
+  (particles, ess) <- lift $ runWithEffectiveSampleSize pop
+  let newPop = fromWeightedList $ pure particles
+  -- This assumes that the resampler does not mutate the m effects, as it should
+  if ess < threshold then resampler newPop else newPop
+
+-- | Compute the effective sample size of a population from the weights.
+--
+--   See https://en.wikipedia.org/wiki/Design_effect#Effective_sample_size
+runWithEffectiveSampleSize :: Functor m => Population m a -> m ([(a, Log Double)], Double)
+runWithEffectiveSampleSize = fmap (id &&& (effectiveSampleSizeKish . map (exp . ln . snd))) . runPopulation
+  where
+    effectiveSampleSizeKish :: [Double] -> Double
+    effectiveSampleSizeKish weights = square (sum weights) / sum (square <$> weights)
+    square :: Double -> Double
+    square x = x * x
+
+measureESS :: Monad m => MSF (Population m) a b -> MSF (Population m) a (b, Double)
+measureESS = morphGS $ fmap $ \pop -> fromWeightedList $ do
+  (particles, ess) <- runWithEffectiveSampleSize pop
+  pure $ map (first (first (, ess))) particles
+
+withESS :: Monad m => Double -> MSF (Population m) (a, Double) b -> MSF (Population m) a b
+withESS initESS = feedback initESS . measureESS

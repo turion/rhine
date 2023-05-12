@@ -1,4 +1,5 @@
-module FRP.Rhine.Bayes where
+module FRP.Rhine.Bayes
+  (module FRP.Rhine.Bayes, module X) where
 
 -- log-domain
 import Numeric.Log hiding (sum)
@@ -12,6 +13,8 @@ import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
 
 -- dunai-bayes
 import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
+
+import Data.MonadicStreamFunction.Bayes as X (onlyBelowEffectiveSampleSize)
 
 -- rhine
 import FRP.Rhine
@@ -118,3 +121,8 @@ wienerVaryingLogDomain ::
   (MonadDistribution m, Diff td ~ Double) =>
   BehaviourF m td (Diff td) (Log Double)
 wienerVaryingLogDomain = wienerVarying >>> arr Exp
+
+withESS :: Monad m => Double -> ClSF (Population m) cl (a, Double) b -> ClSF (Population m) cl a b
+withESS initESS = DunaiReader.readerS . DunaiBayes.withESS initESS . (arr assoc >>>) . DunaiReader.runReaderS
+  where
+    assoc ((ti, a), td) = (ti, (a, td))
