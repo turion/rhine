@@ -23,6 +23,7 @@ import Control.Monad.Bayes.Class (MonadDistribution)
 import qualified Control.Monad.Bayes.Traced.Static as Static
 import Control.Monad.Bayes.Sequential.Coroutine (hoistFirst)
 import Control.Monad.Trans.MSF (performOnFirstSample)
+import qualified Control.Monad.Bayes.Traced.Dynamic as Dynamic
 
 -- FIXME rename to sequentialMonteCarlo or smc?
 -- | Run the Sequential Monte Carlo algorithm continuously on an 'MSF'
@@ -80,10 +81,41 @@ resampleMoveSequentialMonteCarlo nParticles nMC resampler = go . Control.Monad.B
     go msfs = MSF $ \a -> do
       -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
       -- FIXME This normalizes, which introduces bias, whatever that means
-      let bAndMSFs = composeCopies nMC mhStep
+      let bAndMSFs =  composeCopies nMC mhStep
             $ Control.Monad.Bayes.Traced.hoist resampler
             $ flip unMSF a =<< msfs
       bs <- runPopulation $ marginal $ fst <$> bAndMSFs
+      return (bs, go $ snd <$> bAndMSFs)
+
+resampleMoveSequentialMonteCarloDynamic ::
+  forall m a b.
+  MonadDistribution m =>
+  -- (MonadDistribution m, HasTraced t, MonadTrans t) =>
+  -- | Number of particles
+  Int ->
+  -- | Number of MC steps
+  Int ->
+  -- | Resampler
+  (forall x. Population m x -> Population m x) ->
+  MSF (Dynamic.Traced (Population m)) a b ->
+  -- MSF (t (Population m)) a b ->
+  -- FIXME Why not MSF m a (Population b)
+  MSF m a [(b, Log Double)]
+resampleMoveSequentialMonteCarloDynamic nParticles nMC resampler = go . Dynamic.hoist (spawn nParticles >>) . pure
+  where
+    go ::
+      Monad m =>
+      Dynamic.Traced (Population m) (MSF (Dynamic.Traced (Population m)) a b) ->
+      -- Population m (MSF (t (Population m)) a b) ->
+      MSF m a [(b, Log Double)]
+    go msfs = MSF $ \a -> do
+      -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
+      -- FIXME This normalizes, which introduces bias, whatever that means
+      let bAndMSFs = Dynamic.freeze
+            $ composeCopies nMC Dynamic.mhStep
+            $ Dynamic.hoist resampler
+            $ flip unMSF a =<< msfs
+      bs <- runPopulation $ Dynamic.marginal $ fst <$> bAndMSFs
       return (bs, go $ snd <$> bAndMSFs)
 
 -- | Apply a function a given number of times.

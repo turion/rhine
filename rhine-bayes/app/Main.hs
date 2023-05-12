@@ -235,6 +235,7 @@ mains =
   [ ("single rate", mainSingleRate)
   , ("multi rate, temperature process", mainMultiRate)
   , ("multi rate, temperature process, RMSMC", mainMultiRateRMSMC)
+  , ("multi rate, temperature process, RMSMC dynamic", mainMultiRateRMSMCDyn)
   ]
 
 main :: IO ()
@@ -333,6 +334,14 @@ inferenceRMSMC = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
     particles <- resampleMoveSequentialMonteCarloCl 10 1 resampleSystematic posteriorTemperatureProcess -< measured
     returnA -< Result{temperature, measured, latent, particles}
 
+inferenceRMSMCDyn :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
+inferenceRMSMCDyn = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+ where
+  inferenceBehaviour :: (MonadDistribution m, TimeDomain td, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+  inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+    particles <- resampleMoveSequentialMonteCarloDynCl 10 1 (onlyBelowEffectiveSampleSize 5 resampleSystematic) posteriorTemperatureProcess -< measured
+    returnA -< Result{temperature, measured, latent, particles}
+
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
@@ -355,6 +364,17 @@ mainRhineMultiRateRMSMC =
         modelRhine
         >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
           inferenceRMSMC
+            >-- keepLast Result{temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+              visualisationRhine
+
+
+mainRhineMultiRateRMSMCDyn =
+  userTemperature
+    @@ glossClockUTC GlossEventClockIO
+      >-- keepLast initialTemperature -@- glossConcurrently -->
+        modelRhine
+        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
+          inferenceRMSMCDyn
             >-- keepLast Result{temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
               visualisationRhine
 
