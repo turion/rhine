@@ -82,6 +82,23 @@ executable rhine-bayes-gloss
   if flag(dev)
     ghc-options: -Werror
 
+test-suite test
+  main-is: Main.hs
+  type: exitcode-stdio-1.0
+  other-modules:
+    Oscillator
+  hs-source-dirs:
+    test
+    models
+  build-depends:
+      base         >= 4.11 && < 4.18
+    , rhine
+    , rhine-bayes
+    , monad-bayes
+  if flag(dev)
+    ghc-options: -Werror
+
+
 flag dev
   description: Enable warnings as errors. Active on ci.
   default: False
