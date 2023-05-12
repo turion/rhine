@@ -58,7 +58,6 @@ library
 executable rhine-bayes-gloss
   main-is:             Main.hs
   hs-source-dirs:      app
-  ghc-options:         -threaded
   build-depends:       base         >= 4.11 && < 4.18
                      , rhine
                      , rhine-bayes
