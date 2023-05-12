@@ -1,4 +1,5 @@
-module FRP.Rhine.Bayes where
+module FRP.Rhine.Bayes
+  (module FRP.Rhine.Bayes, module X) where
 
 -- log-domain
 import Numeric.Log hiding (sum)
@@ -13,8 +14,12 @@ import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
 -- dunai-bayes
 import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 
+import Data.MonadicStreamFunction.Bayes as X (onlyBelowEffectiveSampleSize)
+
 -- rhine
 import FRP.Rhine
+import qualified Control.Monad.Bayes.Traced.Static as Static
+import qualified Control.Monad.Bayes.Traced.Dynamic as Dynamic
 
 -- * Inference methods
 
@@ -31,6 +36,39 @@ runPopulationCl :: forall m cl a b . Monad m =>
   -> ClSF (Population m) cl a b
   -> ClSF m cl a [(b, Log Double)]
 runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
+
+-- | Run the Resample Move Sequential Monte Carlo algorithm continuously on a 'ClSF'.
+resampleMoveSequentialMonteCarloCl :: forall m cl a b . (MonadDistribution m) =>
+-- resampleMoveSequentialMonteCarloCl :: forall t m cl a b . (MonadDistribution m, HasTraced t, MonadTrans t) =>
+  -- | Number of particles
+  Int ->
+  -- | Number of MC steps
+  Int ->
+  -- | Resampler (see 'Control.Monad.Bayes.Population' for some standard choices)
+  (forall x . Population m x -> Population m x)
+  -- | A signal function modelling the stochastic process on which to perform inference.
+  --   @a@ represents observations upon which the model should condition, using e.g. 'score'.
+  --   It can also additionally contain hyperparameters.
+  --   @b@ is the type of estimated current state.
+  -> ClSF (Static.Traced (Population m)) cl a b
+  -> ClSF m cl a [(b, Log Double)]
+resampleMoveSequentialMonteCarloCl nParticles nMC resampler = DunaiReader.readerS . DunaiBayes.resampleMoveSequentialMonteCarlo nParticles nMC resampler . DunaiReader.runReaderS
+
+resampleMoveSequentialMonteCarloDynCl :: forall m cl a b . (MonadDistribution m) =>
+-- resampleMoveSequentialMonteCarloCl :: forall t m cl a b . (MonadDistribution m, HasTraced t, MonadTrans t) =>
+  -- | Number of particles
+  Int ->
+  -- | Number of MC steps
+  Int ->
+  -- | Resampler (see 'Control.Monad.Bayes.Population' for some standard choices)
+  (forall x . Population m x -> Population m x)
+  -- | A signal function modelling the stochastic process on which to perform inference.
+  --   @a@ represents observations upon which the model should condition, using e.g. 'score'.
+  --   It can also additionally contain hyperparameters.
+  --   @b@ is the type of estimated current state.
+  -> ClSF (Dynamic.Traced (Population m)) cl a b
+  -> ClSF m cl a [(b, Log Double)]
+resampleMoveSequentialMonteCarloDynCl nParticles nMC resampler = DunaiReader.readerS . DunaiBayes.resampleMoveSequentialMonteCarloDynamic nParticles nMC resampler . DunaiReader.runReaderS
 
 -- * Short standard library of stochastic processes
 
@@ -83,3 +121,8 @@ wienerVaryingLogDomain ::
   (MonadDistribution m, Diff td ~ Double) =>
   BehaviourF m td (Diff td) (Log Double)
 wienerVaryingLogDomain = wienerVarying >>> arr Exp
+
+withESS :: Monad m => Double -> ClSF (Population m) cl (a, Double) b -> ClSF (Population m) cl a b
+withESS initESS = DunaiReader.readerS . DunaiBayes.withESS initESS . (arr assoc >>>) . DunaiReader.runReaderS
+  where
+    assoc ((ti, a), td) = (ti, (a, td))
