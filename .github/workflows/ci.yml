@@ -7,8 +7,37 @@ on:
   schedule:
     - cron: '23 14 * * 2'
   release:
+
 name: build
+
 jobs:
+  lint:
+    name: "Run hlint and fourmolu"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up HLint
+      uses: haskell/actions/hlint-setup@v2
+
+    - name: Run HLint
+      uses: haskell/actions/hlint-run@v2
+      with:
+        fail-on: warning
+
+    - uses: haskell/actions/setup@v2
+      id: setup-haskell-build
+      with:
+        ghc-version: "9.2.5"
+
+    - name: Cabal update
+      run: cabal update
+
+    - name: Set up and run fourmolu
+      run: |
+        cabal install fourmolu
+        fourmolu --mode check .
+
   generateMatrix:
     name: "Generate matrix from cabal"
     runs-on: ubuntu-latest
@@ -88,12 +117,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
       - name: Cache stack build artifacts
-        uses:  freckle/stack-cache-action@v1.0.1
+        uses:  freckle/stack-cache-action@v2
         with:
           stack-yaml: stack.${{ matrix.ghc }}.yaml
       - name: Stack build and test
         run: |
           stack build --system-ghc --test --stack-yaml stack.${{ matrix.ghc }}.yaml
+
   build-flake:
     name: Nix Flake
     strategy:

@@ -1,20 +1,20 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+
 {- |
 Combinators for composing signal networks sequentially and parallely.
 -}
-
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
 module FRP.Rhine.SN.Combinators where
-
 
 -- rhine
 import FRP.Rhine.ClSF.Core
+import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer.Util
-import FRP.Rhine.Schedule
 import FRP.Rhine.SN
+import FRP.Rhine.Schedule
 
-
+{- FOURMOLU_DISABLE -}
 -- | Postcompose a signal network with a pure function.
 (>>>^)
   :: Monad m
@@ -75,21 +75,17 @@ Sequential sn11 rb1 sn12 **** Sequential sn21 rb2 sn22 = Sequential sn1 rb sn2
   where
     sn1 = sn11 **** sn21
     sn2 = sn12 **** sn22
-    rb  = rb1 *-* rb2
-Parallel sn11 sn12 **** Parallel sn21 sn22
-  = Parallel (sn11 **** sn21) (sn12 **** sn22)
-
+    rb = rb1 *-* rb2
+Parallel sn11 sn12 **** Parallel sn21 sn22 =
+  Parallel (sn11 **** sn21) (sn12 **** sn22)
 Precompose clsf sn1 **** sn2 = Precompose (first clsf) $ sn1 **** sn2
 sn1 **** Precompose clsf sn2 = Precompose (second clsf) $ sn1 **** sn2
 Postcompose sn1 clsf **** sn2 = Postcompose (sn1 **** sn2) (first clsf)
 sn1 **** Postcompose sn2 clsf = Postcompose (sn1 **** sn2) (second clsf)
-
 Feedback buf sn1 **** sn2 = Feedback buf $ (\((a, c), c1) -> ((a, c1), c)) ^>>> (sn1 **** sn2) >>>^ (\((b, d1), d) -> ((b, d), d1))
 sn1 **** Feedback buf sn2 = Feedback buf $ (\((a, c), c1) -> (a, (c, c1))) ^>>> (sn1 **** sn2) >>>^ (\(b, (d, d1)) -> ((b, d), d1))
-
 FirstResampling sn1 buf **** sn2 = (\((a1, c1), c) -> ((a1, c), c1)) ^>>> FirstResampling (sn1 **** sn2) buf >>>^ (\((b1, d), d1) -> ((b1, d1), d))
 sn1 **** FirstResampling sn2 buf = (\(a, (a1, c1)) -> ((a, a1), c1)) ^>>> FirstResampling (sn1 **** sn2) buf >>>^ (\((b, b1), d1) -> (b, (b1, d1)))
-
 -- Note that the patterns above are the only ones that can occur.
 -- This is ensured by the clock constraints in the SF constructors.
 Synchronous _ **** Parallel _ _ = error "Impossible pattern: Synchronous _ **** Parallel _ _"

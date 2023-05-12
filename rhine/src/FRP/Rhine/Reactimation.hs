@@ -1,18 +1,18 @@
+{-# LANGUAGE GADTs #-}
+
 {- |
 Run closed 'Rhine's (which are signal functions together with matching clocks)
 as main loops.
 -}
-
-{-# LANGUAGE GADTs #-}
 module FRP.Rhine.Reactimation where
 
 -- dunai
 import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Reactimation.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type
@@ -46,24 +46,32 @@ main :: MyMonad ()
 main = flow $ mainSF @@ clock
 @
 -}
+
 -- TODO Can we chuck the constraints into Clock m cl?
-flow
-  :: ( Monad m, Clock m cl
-     , GetClockProxy cl
-     , Time cl ~ Time (In  cl)
-     , Time cl ~ Time (Out cl)
-     )
-  => Rhine m cl () () -> m ()
+flow ::
+  ( Monad m
+  , Clock m cl
+  , GetClockProxy cl
+  , Time cl ~ Time (In cl)
+  , Time cl ~ Time (Out cl)
+  ) =>
+  Rhine m cl () () ->
+  m ()
 flow rhine = do
   msf <- eraseClock rhine
   reactimate $ msf >>> arr (const ())
 
--- | Run a synchronous 'ClSF' with its clock as a main loop,
---   similar to Yampa's, or Dunai's, 'reactimate'.
-reactimateCl
-  :: ( Monad m, Clock m cl
-     , GetClockProxy cl
-     , cl ~ In  cl, cl ~ Out cl
-     )
-  => cl -> ClSF m cl () () -> m ()
+{- | Run a synchronous 'ClSF' with its clock as a main loop,
+   similar to Yampa's, or Dunai's, 'reactimate'.
+-}
+reactimateCl ::
+  ( Monad m
+  , Clock m cl
+  , GetClockProxy cl
+  , cl ~ In cl
+  , cl ~ Out cl
+  ) =>
+  cl ->
+  ClSF m cl () () ->
+  m ()
 reactimateCl cl clsf = flow $ clsf @@ cl

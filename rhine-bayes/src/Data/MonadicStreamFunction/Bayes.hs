@@ -38,15 +38,15 @@ runPopulationsS ::
   Population m (MSF (Population m) a b) ->
   MSF m a [(b, Log Double)]
 runPopulationsS resampler = go
- where
-  go msfs = MSF $ \a -> do
-    -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
-    -- FIXME This normalizes, which introduces bias, whatever that means
-    bAndMSFs <- runPopulation $ normalize $ resampler $ flip unMSF a =<< msfs
-    return $
-      second (go . fromWeightedList . return) $
-        unzip $
-          (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
+  where
+    go msfs = MSF $ \a -> do
+      -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
+      -- FIXME This normalizes, which introduces bias, whatever that means
+      bAndMSFs <- runPopulation $ normalize $ resampler $ flip unMSF a =<< msfs
+      return $
+        second (go . fromWeightedList . return) $
+          unzip $
+            (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
 
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: Monad m => Population m a -> Population m a

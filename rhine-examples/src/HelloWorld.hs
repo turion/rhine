@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+
 import FRP.Rhine
 
 main :: IO ()
