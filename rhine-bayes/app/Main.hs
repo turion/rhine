@@ -78,10 +78,6 @@ prior = prior1d 10 0 &&& prior1d 0 10
 
 -- ** Observation
 
--- | Internal utility because `gloss` operates on floats
-double2FloatTuple :: (Double, Double) -> (Float, Float)
-double2FloatTuple = double2Float *** double2Float
-
 -- | An integral where the integrated value dies of exponentially
 decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td)) => Diff td -> BehaviourF m td v v
 decayIntegral timeConstant = (timeConstant *^) <$> average timeConstant
@@ -157,6 +153,10 @@ nParticles :: Int
 nParticles = 100
 
 -- * Visualization
+
+-- | Internal utility because `gloss` operates on floats
+double2FloatTuple :: (Double, Double) -> (Float, Float)
+double2FloatTuple = double2Float *** double2Float
 
 {- | The monad in which our program will run.
    'SamplerIO' is for the probabilistic effects from @monad-bayes@,
@@ -346,6 +346,11 @@ mainMultiRate =
 
 instance MonadDistribution m => MonadDistribution (GlossConcT m) where
   random = lift random
+
+instance MonadFactor m => MonadFactor (GlossConcT m) where
+  score = lift . score
+
+instance MonadMeasure m => MonadMeasure (GlossConcT m) where
 
 sampleIOGloss :: App a -> GlossConcT IO a
 sampleIOGloss = hoist sampleIO
