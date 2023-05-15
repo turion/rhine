@@ -18,6 +18,9 @@ import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 
 -- rhine
 import FRP.Rhine
+import Control.Monad.Trans.MSF (MSFExcept)
+import Control.Monad.Trans.Class (MonadTrans (lift))
+import qualified Control.Monad.Trans.MSF.Except as Dunai
 
 -- * Inference methods
 
@@ -124,3 +127,6 @@ gammaInhomogeneous gamma = proc rate -> do
 --   The live input is the probability.
 bernoulliInhomogeneous :: MonadDistribution m => BehaviourF m td Double Bool
 bernoulliInhomogeneous = arrMCl bernoulli
+
+instance (MonadDistribution m) => MonadDistribution (MSFExcept m a b) where
+  random = Dunai.once_ random
