@@ -36,6 +36,7 @@ library
                      , dunai        >= 0.8
                      , log-domain   >= 0.12
                      , monad-bayes  >= 1.1.0
+                     , parallel     >= 3.2.2.0
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:
@@ -78,7 +79,7 @@ executable rhine-bayes-gloss
     TypeApplications
     TypeFamilies
 
-  ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:        -W -threaded -rtsopts -with-rtsopts=-N -fprof-auto -with-rtsopts=-p
   if flag(dev)
     ghc-options: -Werror
 

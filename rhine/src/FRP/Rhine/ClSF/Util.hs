@@ -238,7 +238,7 @@ weightedAverageFrom ::
 weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
   let
     vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
-  returnA -< (vAvg', vAvg')
+  returnA -< vAvg' `seq` (vAvg', vAvg')
 
 {- | An exponential moving average, or low pass.
    It will average out, or filter,
@@ -260,7 +260,7 @@ averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
     weight = exp $ -(sinceLast / t)
-  weightedAverageFrom v0 -< (v, weight)
+  weightedAverageFrom v0 -< v `seq` weight `seq` (v, weight)
 
 -- | An average, or low pass, initialised to zero.
 average ::

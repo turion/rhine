@@ -71,7 +71,7 @@ prior1d initialPosition initialVelocity = feedback 0 $ proc (temperature, positi
   -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
   velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
   position <- integralFrom initialPosition -< velocity
-  returnA -< (position, position)
+  returnA -< position `seq` (position, position)
 
 -- | 2D harmonic oscillator with noise
 prior :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td Temperature Pos
@@ -146,12 +146,13 @@ data Result = Result
   , measured :: Sensor
   , latent :: Pos
   , particles :: [((Temperature, Pos), Log Double)]
+  , fps :: Double
   }
   deriving (Show)
 
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
-nParticles = 100
+nParticles = 10000
 
 -- * Visualization
 
@@ -167,7 +168,7 @@ type App = GlossConcT SamplerIO
 
 -- | Draw the results of the simulation and inference
 visualisation :: Diff td ~ Double => BehaviourF App td Result ()
-visualisation = proc Result {temperature, measured, latent, particles} -> do
+visualisation = proc Result {temperature, measured, latent, particles, fps} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
   arrMCl paintIO
@@ -181,13 +182,14 @@ visualisation = proc Result {temperature, measured, latent, particles} -> do
                   [ printf "Temperature: %.2f" temperature
                   , printf "Particles: %i" $ length particles
                   , printf "Time: %.1f" time
+                  , printf "FPS: %.1f" fps
                   ]
               return $ translate 0 ((-150) * n) $ text message
           , color red $ rectangleUpperSolid thermometerWidth $ double2Float temperature * thermometerScale
           ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
-  drawParticles -< particles
+  drawParticles -< take 50 particles
 
 -- ** Parameters for the temperature display
 
@@ -252,6 +254,7 @@ filtered :: Diff td ~ Double => BehaviourF App td Temperature Result
 filtered = proc temperature -> do
   (measured, latent) <- genModelWithoutTemperature -< temperature
   particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
+  dt <- sinceLastS -< ()
   returnA
     -<
       Result
@@ -259,6 +262,7 @@ filtered = proc temperature -> do
         , measured
         , latent
         , particles
+        , fps = 1 / dt
         }
 
 -- | Run simulation, inference, and visualization synchronously
@@ -320,7 +324,8 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
     inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
     inferenceBehaviour = proc (temperature, (measured, latent)) -> do
       particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
-      returnA -< Result {temperature, measured, latent, particles}
+      dt <- sinceLastS -< ()
+      returnA -< Result {temperature, measured, latent, particles, fps = 1 / dt}
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
@@ -335,7 +340,7 @@ mainRhineMultiRate =
         modelRhine
         >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
           inference
-            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = [], fps = 0} -@- glossConcurrently -->
               visualisationRhine
 {- FOURMOLU_ENABLE -}
 
