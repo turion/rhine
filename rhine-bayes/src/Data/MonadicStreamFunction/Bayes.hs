@@ -37,6 +37,7 @@ runPopulationS ::
   -- FIXME Why not MSF m a (Population b)
   MSF m a [(b, Log Double)]
 runPopulationS nParticles resampler = runPopulationsS resampler . (spawn nParticles $>)
+{-# INLINE runPopulationS #-}
 
 -- | Run the Sequential Monte Carlo algorithm continuously on a 'Population' of 'MSF's
 runPopulationsS ::
@@ -101,6 +102,7 @@ toPopulation = fromWeightedList . return . unWeightedList
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: Monad m => Population m a -> Population m a
 normalize = fromWeightedList . fmap (\particles -> let totalWeight = (sum $ snd <$> particles) in second (/ totalWeight) <$> particles) . runPopulation
+{-# INLINE normalize #-}
 
 forceParticles :: [(b, Log Double)] -> [(b, Log Double)]
 forceParticles [] = []

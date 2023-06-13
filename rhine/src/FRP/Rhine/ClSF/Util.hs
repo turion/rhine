@@ -52,10 +52,12 @@ printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
 -}
 timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = constM $ asks f
+{-# INLINE timeInfoOf #-}
 
 -- | Continuously return the time difference since the last tick.
 sinceLastS :: Monad m => ClSF m cl a (Diff (Time cl))
 sinceLastS = timeInfoOf sinceLast
+{-# INLINE sinceLastS #-}
 
 -- | Continuously return the time difference since clock initialisation.
 sinceInitS :: Monad m => ClSF m cl a (Diff (Time cl))

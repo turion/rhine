@@ -39,6 +39,7 @@ eraseClockClSF ::
 eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
   timeInfo <- genTimeInfo proxy initialTime -< (time, tag)
   runReaderS clsf -< (timeInfo, a)
+{-# INLINE eraseClockClSF #-}
 
 {- | Run a signal network as a monadic stream function.
 
@@ -133,6 +134,7 @@ eraseClockSN initialTime (FirstResampling sn buf) =
           _ -> Nothing
       dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) initialTime buf -< resBufInput
       returnA -< (,) <$> bMaybe <*> join dMaybe
+{-# INLINE eraseClockSN #-}
 
 {- | Translate a resampling buffer into a monadic stream function.
 

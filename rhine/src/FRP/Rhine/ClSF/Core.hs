@@ -68,6 +68,7 @@ hoistClSF ::
   ClSF m1 cl a b ->
   ClSF m2 cl a b
 hoistClSF hoist = morphS $ mapReaderT hoist
+{-# INLINE hoistClSF #-}
 
 -- | Hoist a 'ClSF' and its clock along a monad morphism.
 hoistClSFAndClock ::

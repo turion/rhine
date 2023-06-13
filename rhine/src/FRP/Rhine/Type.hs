@@ -58,6 +58,7 @@ eraseClock Rhine {..} = do
   return $ proc a -> do
     (time, tag) <- runningClock -< ()
     eraseClockSN initTime sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
+{-# INLINE eraseClock #-}
 
 {- |
 Loop back data from the output to the input.

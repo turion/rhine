@@ -36,6 +36,7 @@ runPopulationCl ::
   ClSF (Population m) cl a b ->
   ClSF m cl a [(b, Log Double)]
 runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS' nParticles resampler . DunaiReader.runReaderS
+{-# INLINE runPopulationCl #-}
 
 -- * Short standard library of stochastic processes
 

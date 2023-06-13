@@ -60,6 +60,7 @@ flow ::
 flow rhine = do
   msf <- eraseClock rhine
   reactimate $ msf >>> arr (const ())
+{-# INLINE flow #-}
 
 {- | Run a synchronous 'ClSF' with its clock as a main loop,
    similar to Yampa's, or Dunai's, 'reactimate'.
@@ -75,3 +76,4 @@ reactimateCl ::
   ClSF m cl () () ->
   m ()
 reactimateCl cl clsf = flow $ clsf @@ cl
+{-# INLINE reactimateCl #-}

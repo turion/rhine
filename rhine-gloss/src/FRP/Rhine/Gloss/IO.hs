@@ -162,6 +162,8 @@ launchInGlossThread ::
 launchInGlossThread settings glossLoop = do
   vars <- launchGlossThread settings
   runReaderT (unGlossConcT glossLoop) vars
+{-# INLINE launchGlossThread #-}
+
 
 {- | Run a 'Rhine' in the 'GlossConcT' monad by launching a separate thread for the @gloss@ backend,
    and reactimate in the foreground.
