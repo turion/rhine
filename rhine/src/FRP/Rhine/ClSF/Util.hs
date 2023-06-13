@@ -157,6 +157,7 @@ integralFrom ::
 integralFrom v0 = proc v -> do
   _sinceLast <- timeInfoOf sinceLast -< ()
   sumFrom v0 -< _sinceLast *^ v
+{-# INLINE integralFrom #-}
 
 -- | Euler integration, with zero initial offset.
 integral ::
@@ -241,6 +242,7 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
   let
     vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
   returnA -< (vAvg', vAvg')
+{-# INLINE weightedAverageFrom #-}
 
 {- | An exponential moving average, or low pass.
    It will average out, or filter,
@@ -263,6 +265,7 @@ averageFrom v0 t = proc v -> do
   let
     weight = exp $ -(sinceLast / t)
   weightedAverageFrom v0 -< (v, weight)
+{-# INLINE averageFrom #-}
 
 -- | An average, or low pass, initialised to zero.
 average ::
@@ -275,6 +278,7 @@ average ::
   Diff td ->
   BehaviourF m td v v
 average = averageFrom zeroVector
+{-# INLINE average #-}
 
 {- | A linearised version of 'averageFrom'.
    It is more efficient, but only accurate
@@ -296,6 +300,7 @@ averageLinFrom v0 t = proc v -> do
   let
     weight = t / (sinceLast + t)
   weightedAverageFrom v0 -< (v, weight)
+{-# INLINE averageLinFrom #-}
 
 -- | Linearised version of 'average'.
 averageLin ::
@@ -307,6 +312,7 @@ averageLin ::
   Diff td ->
   BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
+{-# INLINE averageLin #-}
 
 -- *** First-order filters
 
