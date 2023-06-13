@@ -264,7 +264,7 @@ averageFrom v0 t = proc v -> do
   sinceLast <- sinceLastS -< ()
   let
     weight = exp $ -(sinceLast / t)
-  weightedAverageFrom v0 -< (v, weight)
+  weightedAverageFrom v0 -< weight `seq` (v, weight)
 {-# INLINE averageFrom #-}
 
 -- | An average, or low pass, initialised to zero.
