@@ -44,6 +44,7 @@ runPopulationsS resampler = go
       -- FIXME This normalizes, which introduces bias, whatever that means
       bAndMSFs <- runPopulation $ normalize $ resampler $ flip unMSF a =<< msfs
       return $
+        first forceParticles $
         second (go . fromWeightedList . return) $
           unzip $
             (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
@@ -51,3 +52,7 @@ runPopulationsS resampler = go
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: Monad m => Population m a -> Population m a
 normalize = fromWeightedList . fmap (\particles -> let totalWeight = (sum $ snd <$> particles) in second (/ totalWeight) <$> particles) . runPopulation
+
+forceParticles :: [(b, Log Double)] -> [(b, Log Double)]
+forceParticles [] = []
+forceParticles ((b, p) : particles) = p `seq` b `seq` (b, p) : forceParticles particles
