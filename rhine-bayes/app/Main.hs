@@ -72,16 +72,19 @@ prior1d initialPosition initialVelocity = feedback 0 $ proc (temperature, positi
   velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
   position <- integralFrom initialPosition -< velocity
   returnA -< (position, position)
+{-# INLINE prior1d #-}
 
 -- | 2D harmonic oscillator with noise
 prior :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td Temperature Pos
 prior = prior1d 10 0 &&& prior1d 0 10
+{-# INLINE prior #-}
 
 -- ** Observation
 
 -- | An integral where the integrated value dies of exponentially
 decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td)) => Diff td -> BehaviourF m td v v
 decayIntegral timeConstant = (timeConstant *^) <$> average timeConstant
+{-# INLINE decayIntegral #-}
 
 -- | The assumed standard deviation of the sensor noise
 sensorNoiseTemperature :: Double
@@ -145,6 +148,7 @@ posteriorTemperatureProcess = proc sensor -> do
   latent <- prior -< temperature
   arrM score -< sensorLikelihood latent sensor
   returnA -< (temperature, latent)
+{-# INLINE posteriorTemperatureProcess #-}
 
 -- | A collection of all displayable inference results
 data Result = Result
