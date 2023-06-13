@@ -57,6 +57,8 @@ runPopulationsS resampler = go
         second (go . fromWeightedList . return . forceParticles) $
           unzip $
             (swap . fmap fst &&& swap . fmap snd) . swap <$> forceParticles bAndMSFs
+    {-# INLINE go #-}
+{-# INLINE runPopulationsS #-}
 
 -- runPopulationS' ::
 --   Monad m =>
