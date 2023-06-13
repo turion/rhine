@@ -157,7 +157,7 @@ data Result = Result
 
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
-nParticles = 100
+nParticles = 800
 
 -- * Visualization
 
