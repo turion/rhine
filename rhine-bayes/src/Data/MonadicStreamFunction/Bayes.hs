@@ -50,4 +50,4 @@ runPopulationsS resampler = go
 
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: Monad m => Population m a -> Population m a
-normalize = fromWeightedList . fmap (\particles -> second (/ (sum $ snd <$> particles)) <$> particles) . runPopulation
+normalize = fromWeightedList . fmap (\particles -> let totalWeight = (sum $ snd <$> particles) in second (/ totalWeight) <$> particles) . runPopulation
