@@ -28,6 +28,7 @@ import Control.Monad.Trans.Reader (ask, asks)
 -- dunai
 import Control.Monad.Trans.MSF.Reader (readerS)
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
+import Data.MonadicStreamFunction.InternalCore (MSF(..))
 
 -- simple-affine-space
 import Data.VectorSpace
@@ -238,10 +239,9 @@ weightedAverageFrom ::
   -- | The initial position
   v ->
   BehaviorF m td (v, s) v
-weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
-  let
-    vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
-  returnA -< (vAvg', vAvg')
+weightedAverageFrom v0 = feedback v0 $ arr $ \((v, weight), vAvg) ->
+  let vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
+  in vAvg' `seq` (vAvg', vAvg')
 {-# INLINE weightedAverageFrom #-}
 
 {- | An exponential moving average, or low pass.
