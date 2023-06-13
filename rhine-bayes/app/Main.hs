@@ -193,7 +193,7 @@ visualisation = proc Result {temperature, measured, latent, particles} -> do
           ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
-  drawParticles -< particles
+  drawParticles -< take 50 particles
 
 -- ** Parameters for the temperature display
 
