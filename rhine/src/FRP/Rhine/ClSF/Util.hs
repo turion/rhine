@@ -196,7 +196,7 @@ derivative = derivativeFrom zeroVector
 threePointDerivativeFrom ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , s ~ Diff td, Num s
   ) =>
   -- | The initial position
   v ->
@@ -212,7 +212,7 @@ threePointDerivativeFrom v0 = proc v -> do
 threePointDerivative ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , s ~ Diff td, Num s
   ) =>
   BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
@@ -230,7 +230,7 @@ threePointDerivative = threePointDerivativeFrom zeroVector
 weightedAverageFrom ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , s ~ Diff td, Num s
   ) =>
   -- | The initial position
   v ->
@@ -282,7 +282,7 @@ average = averageFrom zeroVector
 averageLinFrom ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , s ~ Diff td, Fractional s
   ) =>
   -- | The initial position
   v ->
@@ -299,7 +299,7 @@ averageLinFrom v0 t = proc v -> do
 averageLin ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , s ~ Diff td, Fractional s
   ) =>
   -- | The time scale on which the signal is averaged
   Diff td ->
@@ -319,41 +319,49 @@ lowPass ::
   BehaviourF m td v v
 lowPass = average
 
+{-
 -- | Filters out frequencies below @1 / (2 * pi * t)@.
 highPass ::
   ( Monad m
   , VectorSpace v s
   , Floating s
+  , Eq s
   , s ~ Diff td
   ) =>
   -- | The time constant @t@
   Diff td ->
   BehaviourF m td v v
 highPass t = clId ^-^ lowPass t
+-}
 
+{-
 -- | Filters out frequencies other than @1 / (2 * pi * t)@.
 bandPass ::
   ( Monad m
   , VectorSpace v s
   , Floating s
-  , s ~ Diff td
+  , s ~ Diff td, Eq s
   ) =>
   -- | The time constant @t@
   Diff td ->
   BehaviourF m td v v
 bandPass t = lowPass t >>> highPass t
+-}
 
+{-
 -- | Filters out the frequency @1 / (2 * pi * t)@.
 bandStop ::
   ( Monad m
   , VectorSpace v s
   , Floating s
+  , Eq s
   , s ~ Diff td
   ) =>
   -- | The time constant @t@
   Diff td ->
   BehaviourF m td v v
 bandStop t = clId ^-^ bandPass t
+-}
 
 -- * Delays
 

@@ -115,7 +115,7 @@ library
                      , random       >= 1.1
                      , MonadRandom  >= 0.5
                      -- Remove version pin when https://github.com/ivanperez-keera/dunai/issues/298 is resolved:
-                     , simple-affine-space == 0.1.1
+                     , simple-affine-space
                      , time-domain
 
   -- Directories containing source files.
