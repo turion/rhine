@@ -261,7 +261,7 @@ averageFrom ::
   Diff td ->
   BehaviorF m td v v
 averageFrom v0 t = proc v -> do
-  TimeInfo {..} <- timeInfo -< ()
+  sinceLast <- sinceLastS -< ()
   let
     weight = exp $ -(sinceLast / t)
   weightedAverageFrom v0 -< (v, weight)
