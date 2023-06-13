@@ -156,6 +156,7 @@ data Result = Result
   , measured :: Sensor
   , latent :: Pos
   , particles :: [((Temperature, Pos), Log Double)]
+  , avg :: Pos
   }
   deriving (Show)
 
@@ -177,7 +178,7 @@ type App = GlossConcT SamplerIO
 
 -- | Draw the results of the simulation and inference
 visualisation :: Diff td ~ Double => BehaviourF App td Result ()
-visualisation = proc Result {temperature, measured, latent, particles} -> do
+visualisation = proc Result {temperature, measured, latent, particles, avg} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
   arrMCl paintIO
@@ -197,6 +198,7 @@ visualisation = proc Result {temperature, measured, latent, particles} -> do
           ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
+  drawBall -< (avg, 1, withAlpha 0.1 yellow)
   drawParticles -< take 50 particles
 
 -- ** Parameters for the temperature display
@@ -269,6 +271,7 @@ filtered = proc temperature -> do
         , measured
         , latent
         , particles
+        , avg = foldr (\((_temp, pos), p) acc -> acc ^+^ exp (ln p) *^ pos) zeroVector particles
         }
 {-# INLINE filtered #-}
 
@@ -331,7 +334,8 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
     inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
     inferenceBehaviour = proc (temperature, (measured, latent)) -> do
       particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
-      returnA -< Result {temperature, measured, latent, particles}
+      let avg = foldr (\((_temp, pos), p) acc -> acc ^+^ exp (ln p) *^ pos) zeroVector particles
+      returnA -< Result {temperature, measured, latent, particles, avg}
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
@@ -346,7 +350,7 @@ mainRhineMultiRate =
         modelRhine
         >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
           inference
-            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -->
+            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = [], avg = zeroVector} -->
               visualisationRhine
 {- FOURMOLU_ENABLE -}
 
