@@ -83,7 +83,7 @@ prior = prior1d 10 0 &&& prior1d 0 10
 
 -- | An integral where the integrated value dies of exponentially
 decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td)) => Diff td -> BehaviourF m td v v
-decayIntegral timeConstant = (timeConstant *^) <$> average timeConstant
+decayIntegral timeConstant = (timeConstant *^) <$> averageLin timeConstant
 {-# INLINE decayIntegral #-}
 
 -- | The assumed standard deviation of the sensor noise
