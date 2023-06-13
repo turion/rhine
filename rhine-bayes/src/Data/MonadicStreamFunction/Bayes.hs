@@ -52,11 +52,11 @@ runPopulationsS resampler = go
       -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
       -- FIXME This normalizes, which introduces bias, whatever that means
       bAndMSFs <- runPopulation $ normalize $ resampler $ flip unMSF a =<< msfs
-      return $
-        first forceParticles $
-        second (go . fromWeightedList . return . forceParticles) $
-          unzip $
-            (swap . fmap fst &&& swap . fmap snd) . swap <$> forceParticles bAndMSFs
+      let (particles, continuations) = unzip $ (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
+          forcedParticles = forceParticles particles
+          continuations' = go . fromWeightedList . return $ continuations
+      return $ forcedParticles `seq` continuations' `seq` (forcedParticles, continuations')
+
     {-# INLINE go #-}
 {-# INLINE runPopulationsS #-}
 
