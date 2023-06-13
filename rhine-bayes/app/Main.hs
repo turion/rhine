@@ -266,6 +266,7 @@ filtered = proc temperature -> do
         , latent
         , particles
         }
+{-# INLINE filtered #-}
 
 -- | Run simulation, inference, and visualization synchronously
 mainClSF :: Diff td ~ Double => BehaviourF App td () ()
