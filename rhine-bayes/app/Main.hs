@@ -85,6 +85,7 @@ prior = prior1d 10 0 &&& prior1d 0 10
 decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td)) => Diff td -> BehaviourF m td v v
 decayIntegral timeConstant = (timeConstant *^) <$> averageLin timeConstant
 {-# INLINE decayIntegral #-}
+-- {-# SPECIALISE decayIntegral :: (VectorSpace v Double, Monad m) => Double -> BehaviourF m Double v v #-}
 
 -- | The assumed standard deviation of the sensor noise
 sensorNoiseTemperature :: Double
@@ -248,12 +249,14 @@ mains =
   [ ("single rate", mainSingleRate)
   , ("multi rate, temperature process", mainMultiRate)
   ]
+{-# INLINE mains #-}
 
 main :: IO ()
 main = do
   putStrLn $ ("Choose between: " ++) $ unwords $ zipWith (\n (title, _program) -> "\n" ++ show n ++ ": " ++ title) [1 ..] mains
   choice <- read <$> getLine
   map snd mains !! (choice - 1)
+{-# INLINE main #-}
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
@@ -280,6 +283,7 @@ mainClSF :: Diff td ~ Double => BehaviourF App td () ()
 mainClSF = proc () -> do
   output <- filtered -< initialTemperature
   visualisation -< output
+{-# INLINE mainClSF #-}
 
 -- | Rescale to the 'Double' time domain
 type GlossClock = RescaledClock GlossSimClockIO Double
@@ -296,6 +300,7 @@ mainSingleRate =
     sampleIO $
       launchInGlossThread glossSettings $
         reactimateCl glossClock mainClSF
+{-# INLINE mainSingleRate #-}
 
 -- ** Multi-rate: Simulation, inference, display at different rates
 
@@ -336,6 +341,7 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
       particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
       let avg = foldr (\((_temp, pos), p) acc -> acc ^+^ exp (ln p) *^ pos) zeroVector particles
       returnA -< Result {temperature, measured, latent, particles, avg}
+{-# INLINE inference #-}
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
@@ -352,6 +358,7 @@ mainRhineMultiRate =
           inference
             >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = [], avg = zeroVector} -->
               visualisationRhine
+{-# INLINE mainRhineMultiRate #-}
 {- FOURMOLU_ENABLE -}
 
 mainMultiRate :: IO ()
@@ -359,6 +366,7 @@ mainMultiRate =
   void $
     launchInGlossThread glossSettings $
       flow mainRhineMultiRate
+{-# INLINE mainMultiRate #-}
 
 -- * Utilities
 
@@ -372,3 +380,4 @@ instance MonadMeasure m => MonadMeasure (GlossConcT m)
 
 sampleIOGloss :: App a -> GlossConcT IO a
 sampleIOGloss = hoist sampleIO
+{-# INLINE sampleIOGloss #-}
