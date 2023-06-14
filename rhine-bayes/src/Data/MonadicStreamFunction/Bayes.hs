@@ -103,8 +103,16 @@ toPopulation = fromWeightedList . return . unWeightedList
 
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: Monad m => Population m a -> Population m a
-normalize = fromWeightedList . fmap (\particles -> let totalWeight = (sum $ snd <$> particles) in second (/ totalWeight) <$> particles) . runPopulation
+normalize = fromWeightedList . fmap normalizeParticles . runPopulation
 {-# INLINE normalize #-}
+
+normalizeParticles :: [(b, Log Double)] -> [(b, Log Double)]
+normalizeParticles particles = second (/ totalWeight particles) <$> particles
+{-# NOINLINE normalizeParticles #-}
+
+totalWeight :: [(b, Log Double)] -> Log Double
+totalWeight particles = sum $ snd <$> particles
+{-# NOINLINE totalWeight #-}
 
 forceParticles :: [(b, Log Double)] -> [(b, Log Double)]
 forceParticles [] = []
