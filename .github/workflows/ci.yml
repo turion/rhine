@@ -133,7 +133,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - uses: cachix/install-nix-action@v15
+      - uses: cachix/install-nix-action@v22
       - name: Build default package (rhine)
         run: nix build
       - name: Build default package (rhine-examples)
