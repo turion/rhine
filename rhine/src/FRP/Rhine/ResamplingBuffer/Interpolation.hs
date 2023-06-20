@@ -28,6 +28,7 @@ linear ::
   , VectorSpace v s
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
+  , Num s
   ) =>
   -- | The initial velocity (derivative of the signal)
   v ->
@@ -95,6 +96,8 @@ cubic ::
   , Eq v
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
+  , Num s
+  , Fractional s
   ) =>
   ResamplingBuffer m cl1 cl2 v v
 {- FOURMOLU_DISABLE -}

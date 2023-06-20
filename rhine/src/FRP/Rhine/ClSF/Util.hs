@@ -27,6 +27,7 @@ import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
 import Control.Monad.Trans.MSF.Reader (readerS)
+import Data.MonadicStreamFunction.Instances.Num ()
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
 
 -- simple-affine-space
@@ -197,6 +198,7 @@ threePointDerivativeFrom ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Num s
   ) =>
   -- | The initial position
   v ->
@@ -213,6 +215,7 @@ threePointDerivative ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Num s
   ) =>
   BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
@@ -231,6 +234,7 @@ weightedAverageFrom ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Num s
   ) =>
   -- | The initial position
   v ->
@@ -283,6 +287,7 @@ averageLinFrom ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Fractional s
   ) =>
   -- | The initial position
   v ->
@@ -300,6 +305,7 @@ averageLin ::
   ( Monad m
   , VectorSpace v s
   , s ~ Diff td
+  , Fractional s
   ) =>
   -- | The time scale on which the signal is averaged
   Diff td ->
@@ -325,6 +331,7 @@ highPass ::
   , VectorSpace v s
   , Floating s
   , s ~ Diff td
+  , Eq s
   ) =>
   -- | The time constant @t@
   Diff td ->
@@ -337,6 +344,7 @@ bandPass ::
   , VectorSpace v s
   , Floating s
   , s ~ Diff td
+  , Eq s
   ) =>
   -- | The time constant @t@
   Diff td ->
@@ -347,6 +355,7 @@ bandPass t = lowPass t >>> highPass t
 bandStop ::
   ( Monad m
   , VectorSpace v s
+  , Eq s
   , Floating s
   , s ~ Diff td
   ) =>
