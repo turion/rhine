@@ -35,7 +35,7 @@ runPopulationCl ::
   --   @b@ is the type of estimated current state.
   ClSF (Population m) cl a b ->
   ClSF m cl a [(b, Log Double)]
-runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
+runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS' nParticles resampler . DunaiReader.runReaderS
 
 -- * Short standard library of stochastic processes
 
