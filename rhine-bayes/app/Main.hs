@@ -353,7 +353,7 @@ instance MonadDistribution m => MonadDistribution (GlossConcT m) where
 instance MonadFactor m => MonadFactor (GlossConcT m) where
   score = lift . score
 
-instance MonadMeasure m => MonadMeasure (GlossConcT m) where
+instance MonadMeasure m => MonadMeasure (GlossConcT m)
 
 sampleIOGloss :: App a -> GlossConcT IO a
 sampleIOGloss = hoist sampleIO
