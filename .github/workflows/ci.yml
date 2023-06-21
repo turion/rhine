@@ -12,7 +12,7 @@ name: build
 
 jobs:
   lint:
-    name: "Run hlint and fourmolu"
+    name: "Run hlint"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -25,18 +25,17 @@ jobs:
       with:
         fail-on: warning
 
-    - uses: haskell/actions/setup@v2
-      id: setup-haskell-build
+  fourmolu:
+    name: "Run fourmolu"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v22
       with:
-        ghc-version: "9.2.5"
-
-    - name: Cabal update
-      run: cabal update
-
+        nix_path: nixpkgs=channel:nixos-unstable
     - name: Set up and run fourmolu
       run: |
-        cabal install fourmolu
-        fourmolu --mode check .
+        nix shell nixpkgs#haskellPackages.fourmolu --command fourmolu --mode check .
 
   generateMatrix:
     name: "Generate matrix from cabal"
@@ -134,7 +133,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - uses: cachix/install-nix-action@v15
+      - uses: cachix/install-nix-action@v22
       - name: Build default package (rhine)
         run: nix build
       - name: Build default package (rhine-examples)

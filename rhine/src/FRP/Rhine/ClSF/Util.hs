@@ -33,9 +33,9 @@ import Data.MonadicStreamFunction.Instances.VectorSpace ()
 import Data.VectorSpace
 
 -- rhine
-import FRP.Rhine.Clock
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except
+import FRP.Rhine.Clock
 
 -- * Read time information
 
