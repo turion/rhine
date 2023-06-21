@@ -36,6 +36,8 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
       with haskell-flake-utils.lib;
       tunePackages pkgs super {
         monad-bayes = [ (jailbreakUnbreak pkgs) dontCheck ];
+      } // {
+        dunai = super.dunai_0_11_0;
       };
 
     name = "rhine";
