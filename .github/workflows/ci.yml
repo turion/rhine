@@ -68,7 +68,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
       - name: Cache Cabal build artifacts
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ${{ steps.setup-haskell-build.outputs.cabal-store }}
