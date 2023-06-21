@@ -10,8 +10,8 @@ module FRP.Rhine.ClSF.Upsample where
 import Control.Monad.Trans.MSF.Reader
 
 -- rhine
-import FRP.Rhine.Clock
 import FRP.Rhine.ClSF.Core
+import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 
 {- | An 'MSF' can be given arbitrary other arguments

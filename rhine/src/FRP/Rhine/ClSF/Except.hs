@@ -35,9 +35,9 @@ import Data.MonadicStreamFunction
 import qualified Control.Monad.Trans.MSF.Except as MSFE
 
 -- rhine
-import FRP.Rhine.Clock
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except.Util
+import FRP.Rhine.Clock
 
 -- * Throwing exceptions
 
