@@ -44,7 +44,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout base repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Extract the tested GHC versions
         id: set-matrix
         run: |
@@ -58,7 +58,7 @@ jobs:
       matrix: ${{ fromJSON(needs.generateMatrix.outputs.matrix) }}
     name: Haskell GHC ${{ matrix.ghc }} cabal
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: haskell/actions/setup@v2
         id: setup-haskell-build
         with:
@@ -110,7 +110,7 @@ jobs:
       matrix: ${{ fromJSON(needs.generateMatrix.outputs.matrix) }}
     name: Haskell GHC ${{ matrix.ghc }} stack
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -132,7 +132,7 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: cachix/install-nix-action@v22
       - name: Build default package (rhine)
         run: nix build
