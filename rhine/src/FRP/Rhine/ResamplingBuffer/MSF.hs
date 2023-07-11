@@ -31,7 +31,6 @@ msfBuffer ::
   MSF m (TimeInfo cl2, [(TimeInfo cl1, a)]) b ->
   ResamplingBuffer m cl1 cl2 a b
 msfBuffer = msfBuffer' []
-  -> ResamplingBuffer m cl1 cl2 a b
 msfBuffer Cell { .. } = ResamplingBuffer { resamplingState = ([], cellState), .. }
   where
     put (as, s) ti1 a = return ((ti1, a) : as, s)
