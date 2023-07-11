@@ -14,7 +14,7 @@ category:            FRP
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 extra-doc-files:     README.md
-cabal-version:       1.18
+cabal-version:       2.0
 
 source-repository head
   type:     git
@@ -33,7 +33,7 @@ library
   build-depends:       base         >= 4.11 && < 4.18
                      , transformers >= 0.5
                      , rhine        == 0.8.1.1
-                     , dunai        >= 0.8
+                     , dunai        ^>= 0.9
                      , log-domain   >= 0.12
                      , monad-bayes  >= 1.1.0
   hs-source-dirs:      src
