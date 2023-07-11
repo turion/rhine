@@ -66,12 +66,14 @@ evalRandIOS ::
   IO (ClSF m cl a b)
 evalRandIOS clsf = evalRandS clsf <$> newStdGen
 
+{-
 -- | Evaluates the random computation by using the global random generator on the first tick.
 evalRandIOS' ::
   MonadIO m =>
   ClSF (RandT StdGen m) cl a b ->
   ClSF m cl a b
 evalRandIOS' = performOnFirstSample . liftIO . evalRandIOS
+-}
 
 -- deriving instance Data StdGen
 instance Data StdGen
