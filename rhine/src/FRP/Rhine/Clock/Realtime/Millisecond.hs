@@ -51,17 +51,17 @@ instance GetClockProxy (Millisecond n)
    and waits for the remaining time until the next tick.
    If the next tick should already have occurred,
    the tag is set to 'False', representing a failed real time attempt.
--}
 
---   Note that this clock internally uses 'threadDelay' which can block
---   for quite a lot longer than the requested time, which can cause
---   the clock to miss one or more ticks when using low values of 'n'.
---   When using 'threadDelay', the difference between the real wait time
---   and the requested wait time will be larger when using
---   the '-threaded' ghc option (around 800 microseconds) than when not using
---   this option (around 100 microseconds). For low values of @n@ it is recommended
---   that '-threaded' not be used in order to miss less ticks. The clock will adjust
---   the wait time, up to no wait time at all, to catch up when a tick is missed.
+   Note that this clock internally uses 'threadDelay' which can block
+   for quite a lot longer than the requested time, which can cause
+   the clock to miss one or more ticks when using low values of 'n'.
+   When using 'threadDelay', the difference between the real wait time
+   and the requested wait time will be larger when using
+   the '-threaded' ghc option (around 800 microseconds) than when not using
+   this option (around 100 microseconds). For low values of @n@ it is recommended
+   that '-threaded' not be used in order to miss less ticks. The clock will adjust
+   the wait time, up to no wait time at all, to catch up when a tick is missed.
+-}
 
 waitClock :: KnownNat n => Millisecond n
 waitClock = Millisecond $ RescaledClockS FixedStep $ \_ -> do
