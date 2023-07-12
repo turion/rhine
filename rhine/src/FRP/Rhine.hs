@@ -41,6 +41,7 @@ import FRP.Rhine.Clock.Realtime.Event as X
 import FRP.Rhine.Clock.Realtime.Millisecond as X
 import FRP.Rhine.Clock.Realtime.Stdin as X
 import FRP.Rhine.Clock.Select as X
+import FRP.Rhine.Clock.Unyield as X
 
 import FRP.Rhine.ResamplingBuffer.Collect as X
 import FRP.Rhine.ResamplingBuffer.FIFO as X
