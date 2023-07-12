@@ -50,6 +50,7 @@ library
     ScopedTypeVariables
     TupleSections
     TypeFamilies
+    TypeOperators
 
   ghc-options:         -W
   if flag(dev)
@@ -77,6 +78,7 @@ executable rhine-bayes-gloss
     TupleSections
     TypeApplications
     TypeFamilies
+    TypeOperators
 
   ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
   if flag(dev)
