@@ -62,7 +62,6 @@ instance GetClockProxy (Millisecond n)
    that '-threaded' not be used in order to miss less ticks. The clock will adjust
    the wait time, up to no wait time at all, to catch up when a tick is missed.
 -}
-
 waitClock :: KnownNat n => Millisecond n
 waitClock = Millisecond $ RescaledClockS FixedStep $ \_ -> do
   initTime <- getCurrentTime
