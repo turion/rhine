@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -8,6 +9,8 @@
 module FRP.Rhine.Terminal (
   TerminalEventClock (..),
   flowTerminal,
+  RunTerminalClock,
+  runTerminalClock,
 ) where
 
 -- base
@@ -82,6 +85,25 @@ flowTerminal ::
   Rhine (TerminalT t m) cl () () ->
   m ()
 flowTerminal term clsf = flip runTerminalT term $ flow clsf
+
+{- | To escape the 'TerminalT' transformer,
+  you can apply this operator to your clock type,
+  where @cl@ is a clock in 'TerminalT'.
+  The resulting clock is then in @m@.
+-}
+type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
+
+-- | See 'RunTerminalClock'. Apply this to your clock value to remove a 'TerminalT' layer.
+runTerminalClock ::
+  Terminal t =>
+  t ->
+  cl ->
+  RunTerminalClock IO t cl
+runTerminalClock term unhoistedClock =
+  HoistClock
+    { monadMorphism = flip runTerminalT term
+    , ..
+    }
 
 -- Workaround TerminalT constructor not being exported. Should be safe in practice.
 -- See PR upstream https://github.com/lpeterse/haskell-terminal/pull/18
