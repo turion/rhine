@@ -286,7 +286,7 @@ glossClock =
 mainSingleRate =
   void $
     sampleIO $
-      launchGlossThread glossSettings $
+      launchInGlossThread glossSettings $
         reactimateCl glossClock mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
@@ -348,7 +348,7 @@ mainRhineMultiRate =
 mainMultiRate :: IO ()
 mainMultiRate =
   void $
-    launchGlossThread glossSettings $
+    launchInGlossThread glossSettings $
       flow mainRhineMultiRate
 
 -- * Utilities
