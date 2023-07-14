@@ -10,17 +10,17 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import FRP.Rhine
 import Util (runRhine)
 
-msSinceInit :: Monad m => ClSF m (Millisecond n) a Int
-msSinceInit = sinceInitS >>> arr (\seconds -> round $ seconds * 1000)
+secondsSinceInit :: Monad m => ClSF m (Millisecond n) a Int
+secondsSinceInit = sinceInitS >>> arr round
 
 tests =
   testGroup
     "Millisecond"
-    [ testCase "Runs to millisecond precision" $ do
-        output <- runRhine (msSinceInit @@ (waitClock @1)) $ replicate 5 ()
+    [ testCase "Runs to second precision" $ do
+        output <- runRhine (secondsSinceInit @@ (waitClock @1000)) $ replicate 5 ()
         output @?= Just <$> [1, 2, 3, 4, 5]
     , testCase "Schedules chronologically" $ do
-        output <- runRhine (msSinceInit @@ (waitClock @3) >-- collect --> (clId &&& msSinceInit) @@ (waitClock @5)) $ replicate 5 ()
+        output <- runRhine (secondsSinceInit @@ (waitClock @3000) >-- collect --> (clId &&& secondsSinceInit) @@ (waitClock @5000)) $ replicate 5 ()
         output
           @?= [ Nothing
               , Just ([3], 5)
