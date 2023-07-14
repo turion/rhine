@@ -14,8 +14,11 @@ module FRP.Rhine.Gloss.IO (
   paintAllIO,
   GlossEventClockIO (..),
   GlossSimClockIO (..),
+  launchInGlossThread,
   launchGlossThread,
   flowGlossIO,
+  runGlossEnvClock,
+  RunGlossEnvClock,
 )
 where
 
@@ -126,9 +129,8 @@ instance GetClockProxy GlossSimClockIO
 launchGlossThread ::
   MonadIO m =>
   GlossSettings ->
-  GlossConcT m a ->
-  m a
-launchGlossThread GlossSettings {..} glossLoop = do
+  m GlossEnv
+launchGlossThread GlossSettings {..} = do
   vars <- liftIO $ GlossEnv <$> newEmptyMVar <*> newEmptyMVar <*> newIORef Blank <*> pure 0
   let
     getPic GlossEnv {picRef} = readIORef picRef
@@ -141,6 +143,24 @@ launchGlossThread GlossSettings {..} glossLoop = do
       void $ tryPutMVar timeVar time'
       return vars {time = time'}
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
+  return vars
+
+{- | Apply this to supply the 'GlossConcT' effect.
+   Creates a new thread in which @gloss@ is run,
+   and feeds the clocks 'GlossEventClockIO' and 'GlossSimClockIO'.
+
+   Usually, this function is applied to the result of 'flow',
+   so you can handle all occurring effects as needed.
+   If you only use @gloss@ in your whole signal network,
+   you can use 'flowGlossIO' instead.
+-}
+launchInGlossThread ::
+  MonadIO m =>
+  GlossSettings ->
+  GlossConcT m a ->
+  m a
+launchInGlossThread settings glossLoop = do
+  vars <- launchGlossThread settings
   runReaderT (unGlossConcT glossLoop) vars
 
 {- | Run a 'Rhine' in the 'GlossConcT' monad by launching a separate thread for the @gloss@ backend,
@@ -156,14 +176,21 @@ flowGlossIO ::
   GlossSettings ->
   Rhine (GlossConcT m) cl () () ->
   m ()
-flowGlossIO settings = launchGlossThread settings . flow
+flowGlossIO settings = launchInGlossThread settings . flow
 
-type RunGlossEnvClock cl = HoistClock (GlossConcT IO) IO cl
+{- | Apply this wrapper to your clock type @cl@ in order to escape the 'GlossConcT' transformer.
+  The resulting clock will be in @m@, not 'GlossConcT m' anymore.
+  Typically, @m@ will have the 'MonadIO' constraint.
+-}
+type RunGlossEnvClock m cl = HoistClock (GlossConcT m) m cl
 
+{- | Apply to a gloss clock to remove a 'GlossConcT' layer.
+  You will have to have initialized a 'GlossEnv', for example by calling 'launchGlossThread'.
+-}
 runGlossEnvClock ::
   GlossEnv ->
   cl ->
-  RunGlossEnvClock cl
+  RunGlossEnvClock m cl
 runGlossEnvClock env unhoistedClock =
   HoistClock
     { monadMorphism = flip runReaderT env . unGlossConcT
