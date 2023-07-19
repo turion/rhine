@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 
 {- |
 The 'MonadSchedule' class from the @monad-schedule@ package is the compatibility mechanism between two different clocks.
@@ -175,3 +176,11 @@ parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left tag
 parClockTagInclusion (ParClockInR parClockInR) tag = parClockTagInclusion parClockInR $ Right tag
 parClockTagInclusion ParClockRefl tag = tag
+
+type family HoistedClock m1 m2 cl where
+  HoistedClock m1 m2 (SequentialClock cl1 cl2) = SequentialClock (HoistedClock m1 m2 cl1) (HoistedClock m1 m2 cl2)
+  HoistedClock m1 m2 (ParallelClock cl1 cl2) = ParallelClock (HoistedClock m1 m2 cl1) (HoistedClock m1 m2 cl2)
+  HoistedClock m1 m2 cl = HoistClock m1 m2 cl
+
+
+type LiftedClock  m t cl = HoistedClock m (t m) cl

@@ -20,6 +20,7 @@ import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer)
 import FRP.Rhine.SN
 import FRP.Rhine.Schedule (In, Out)
+import Control.Monad.Trans.Class (MonadTrans)
 
 {- |
 A 'Rhine' consists of a 'SN' together with a clock of matching type 'cl'.
@@ -79,3 +80,14 @@ feedbackRhine buf Rhine {..} =
     { sn = Feedback buf sn
     , clock
     }
+
+{-
+liftRhine ::
+  (MonadTrans t, Monad m) =>
+  Rhine m cl a b ->
+  Rhine (t m) (LiftClock m t cl) a b
+liftRhine Rhine {..} = Rhine
+  { sn = _
+  , clock = liftClock clock
+  }
+-}

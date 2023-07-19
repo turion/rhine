@@ -19,6 +19,7 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.Schedule
+import Control.Monad.Trans.Class (MonadTrans)
 
 {- FOURMOLU_DISABLE -}
 
@@ -113,3 +114,13 @@ data SN m cl a b where
 
 instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
   type Cl (SN m cl a b) = cl
+
+{-
+-- FIXME module structure: should this be here or elsewhere
+liftSN ::
+  (MonadTrans t, Monad m, Monad (t m)) =>
+  SN m cl a b ->
+  SN (t m) (LiftedClock m t cl) a b
+liftSN (Synchronous clsf) = Synchronous $ liftClSFAndClock clsf
+liftSN (Sequential sn1 buf sn2) = Sequential (liftSN sn1) (hoistResamplingBufferAndClocks lift buf) (liftSN sn2)
+-}
