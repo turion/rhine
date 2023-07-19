@@ -49,6 +49,10 @@ type StochasticProcessF time a b = forall m. MonadDistribution m => BehaviourF m
 whiteNoise :: Double -> StochasticProcess td Double
 whiteNoise sigma = constMCl $ normal 0 sigma
 
+-- | Like 'whiteNoise', that is, an independent normal distribution at every time step.
+whiteNoiseVarying :: StochasticProcessF td Double Double
+whiteNoiseVarying = arrMCl $ normal 0
+
 -- | Construct a Lévy process from the increment between time steps.
 levy ::
   (MonadDistribution m, VectorSpace v (Diff td)) =>
