@@ -1,11 +1,10 @@
 {- |
 This module reexports most common names and combinators you will need to work with Rhine.
-It does not export specific clocks, resampling buffers or schedules,
-so you will have to import those yourself, e.g. like this:
+It also exports most specific clocks and resampling buffers,
+so you can import everything in one line:
 
 @
 import FRP.Rhine
-import FRP.Rhine.Clock.Realtime.Millisecond
 
 main :: IO ()
 main = flow \$ constMCl (putStrLn \"Hello World!\") \@\@ (waitClock :: Millisecond 100)
