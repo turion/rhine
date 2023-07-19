@@ -70,6 +70,8 @@ If you miss something, feel free to open an issue or pull request.
 | `\|@\|`    | `Rhine m (ParallelClock clL clR) a b`            |
 | `+@+`      | `Rhine m (ParallelClock clL clR) a (Either b c)` |
 
+For more information, see [docs/operators.md](docs/operators.md).
+
 #### Common combinators in action
 
 ##### Sequential signal composition
