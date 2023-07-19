@@ -66,7 +66,7 @@ prior1d ::
   Double ->
   StochasticProcessF td Temperature Double
 prior1d initialPosition initialVelocity = feedback 0 $ proc (temperature, position') -> do
-  impulse <- arrM (normal 0) -< temperature
+  impulse <- whiteNoiseVarying -< temperature
   let acceleration = (-3) * position' + impulse
   -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
   velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
