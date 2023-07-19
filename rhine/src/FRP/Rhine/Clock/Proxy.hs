@@ -90,3 +90,54 @@ class ToClockProxy a where
     a ->
     ClockProxy (Cl a)
   toClockProxy _ = getClockProxy
+
+data MyDict cl1 cl2 where
+  MyDict :: MyDict cl cl
+
+
+data S a b = S a b
+
+type family MaybeTree a where
+  MaybeTree (S a b) = S (MaybeTree a) (MaybeTree b)
+  MaybeTree a = Maybe a
+
+type family Composite a where
+  Composite (S a b) = 'True
+  Composite a = 'False
+
+class HasMaybeTree a where
+  type MaybeTree' a :: Type
+  hasJust :: a -> MaybeTree' a
+
+{-
+instance (HasMaybeTree a, HasMaybeTree b) => HasMaybeTree (S a b) where
+  type MaybeTree' (S a b) = S (MaybeTree' a) (MaybeTree' b)
+  hasJust (S a b) = S (hasJust a) (hasJust b)
+
+instance HasMaybeTree a where
+  type MaybeTree' a = a
+  hasJust = Just
+-}
+
+-- myJust :: (Composite a ~ 'False) => a -> MaybeTree a
+-- myJust = Just
+
+-- generalJust :: a -> MaybeTree a
+-- generalJust = _
+
+-- class GJust a where
+--   gJust :: a -> MaybeTree a
+
+-- instance (GJust a, GJust b) => GJust (S a b) where
+--   gJust (S a b) = S (gJust a) (gJust b)
+
+-- instance (Composite a ~ 'False) => GJust a where
+--   gJust = Just
+
+-- data Sing a where
+--   SingS :: Sing a -> Sing b -> Sing (S a b)
+--   SingA :: Sing a
+
+-- singJust :: Sing a -> a -> MaybeTree a
+-- singJust (SingS sa sb) (S a b) = S (singJust sa a) (singJust sb b)
+-- singJust SingA a = Just a
