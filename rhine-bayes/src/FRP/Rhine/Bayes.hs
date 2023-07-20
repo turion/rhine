@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module FRP.Rhine.Bayes where
 
 -- transformers
@@ -130,3 +131,39 @@ gammaInhomogeneous gamma = proc rate -> do
 -}
 bernoulliInhomogeneous :: MonadDistribution m => BehaviourF m td Double Bool
 bernoulliInhomogeneous = arrMCl bernoulli
+
+-- FIXME finish
+-- caution this has confusing time info
+-- consider changing into input (a -> m b) or MSF m a b
+-- but that would be ugly
+-- whenPoisson :: Diff (Time cl) -> ClSF m cl a b -> ClSF m cl a [b]
+-- whenPoisson = _
+
+-- TODO inhomogeneous
+
+-- * Poisson clock
+
+-- ticks on every poisson event
+-- Nearly pure, but has effects in MonadDistribution
+-- Can rescale the same way as millisecond
+-- In fact any pure clock can be rescaled that way, abstract this as a separate thingy
+-- also its time domain should be (UTCTime, logical time), so one sees when it ticked and when it should have ticked
+-- or maybe rather logical time in the tag
+-- Figure out why clock can't be newtype derived or solve it
+newtype PoissonClock = PoissonClock { rate :: Log Double }
+
+-- FIXME add 2 proptests:
+-- * It's correct for Integer
+-- * Its differences are good precision even for large numbers
+--   * Need QuickCheck coverage to make sure this is tested
+kahanSum :: (Num a, Monad m) => MSF m a a
+kahanSum = feedback (0, 0) $ arr $ \(a, (accumulator, offset)) ->
+  let a' = a - offset
+      accumulator' = accumulator + a'
+  in (accumulator', (accumulator', (accumulator' - accumulator) - a'))
+
+instance MonadDistribution m => Clock m PoissonClock where
+  type Time PoissonClock = Double
+  type Tag PoissonClock = ()
+  -- Increments between Poisson events are memoryless, they follow an exponential distribution, which is a special case of Gamma for k = 1
+  initClock PoissonClock { rate } = return (constM (gamma 1 (exp $ ln rate)) >>> kahanSum >>> arr (, ()), 0)
