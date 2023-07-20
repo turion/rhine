@@ -16,7 +16,7 @@ In this example, you will find the following:
 module Main where
 
 -- base
-import Control.Monad (void)
+import Control.Monad (replicateM, void)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Product (Product, getProduct))
 import GHC.Float (double2Float, float2Double)
@@ -109,11 +109,17 @@ sensorLikelihood (posX, posY) (sensorX, sensorY) = normalPdf posX sensorNoiseTem
 initialTemperature :: Temperature
 initialTemperature = 7
 
--- | We infer the temperature by randomly moving around with a Brownian motion (Wiener process).
+-- | We assume the user changes the temperature randomly every 3 seconds.
 temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () Temperature
-temperatureProcess = proc () -> do
-  temperatureFactor <- wienerLogDomain 20 -< ()
-  returnA -< runLogDomain temperatureFactor * initialTemperature
+temperatureProcess =
+  -- Draw events from a Poisson process with a rate of one event per 3 seconds
+  poissonHomogeneous 3
+    -- For every event, draw a number from a normal distribution
+    >>> arrMCl (flip replicateM $ normal 0 0.2)
+    -- Sum the numbers and log-transform then into the positive reals
+    >>> arr (exp . sum)
+    -- Multiply original temperature with the random temperature changes
+    >>> accumulateWith (*) initialTemperature
 
 -- | Auxiliary conversion function belonging to the log-domain library, see https://github.com/ekmett/log-domain/issues/38
 runLogDomain :: Log Double -> Double
