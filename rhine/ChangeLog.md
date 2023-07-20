@@ -1,5 +1,9 @@
 # Revision history for rhine
 
+## 0.9
+
+* dunai-0.9 compatibility
+
 ## 0.8.1.1
 
 * Support for GHC 9.4.4
