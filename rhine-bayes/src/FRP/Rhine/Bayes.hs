@@ -39,9 +39,19 @@ runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopul
 
 -- * Short standard library of stochastic processes
 
+-- | A stochastic process is a behaviour that uses, as only effect, random sampling.
+type StochasticProcess time a = forall m. MonadDistribution m => Behaviour m time a
+
+-- | Like 'StochasticProcess', but with a live input.
+type StochasticProcessF time a b = forall m. MonadDistribution m => BehaviourF m time a b
+
 -- | White noise, that is, an independent normal distribution at every time step.
-whiteNoise :: MonadDistribution m => Double -> Behaviour m td Double
+whiteNoise :: Double -> StochasticProcess td Double
 whiteNoise sigma = constMCl $ normal 0 sigma
+
+-- | Like 'whiteNoise', that is, an independent normal distribution at every time step.
+whiteNoiseVarying :: StochasticProcessF td Double Double
+whiteNoiseVarying = arrMCl $ normal 0
 
 -- | Construct a Lévy process from the increment between time steps.
 levy ::
@@ -64,8 +74,8 @@ brownianMotion = wiener
 -- | The Wiener process, also known as Brownian motion, with varying variance parameter.
 wienerVarying
   , brownianMotionVarying ::
-    (MonadDistribution m, Diff td ~ Double) =>
-    BehaviourF m td (Diff td) Double
+    (Diff td ~ Double) =>
+    StochasticProcessF td (Diff td) Double
 wienerVarying = proc timeScale -> do
   diffTime <- sinceLastS -< ()
   let stdDev = sqrt $ diffTime / timeScale
@@ -78,16 +88,16 @@ brownianMotionVarying = wienerVarying
 
 -- | The 'wiener' process transformed to the Log domain, also called the geometric Wiener process.
 wienerLogDomain ::
-  (MonadDistribution m, Diff td ~ Double) =>
+  (Diff td ~ Double) =>
   -- | Time scale of variance
   Diff td ->
-  Behaviour m td (Log Double)
+  StochasticProcess td (Log Double)
 wienerLogDomain timescale = wiener timescale >>> arr Exp
 
 -- | See 'wienerLogDomain' and 'wienerVarying'.
 wienerVaryingLogDomain ::
-  (MonadDistribution m, Diff td ~ Double) =>
-  BehaviourF m td (Diff td) (Log Double)
+  (Diff td ~ Double) =>
+  StochasticProcessF td (Diff td) (Log Double)
 wienerVaryingLogDomain = wienerVarying >>> arr Exp
 
 {- | Inhomogeneous Poisson point process, as described in:

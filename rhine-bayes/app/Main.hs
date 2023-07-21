@@ -59,14 +59,14 @@ type Sensor = Pos
 
 -- | Harmonic oscillator with white noise
 prior1d ::
-  (MonadDistribution m, Diff td ~ Double) =>
+  (Diff td ~ Double) =>
   -- | Starting position
   Double ->
   -- | Starting velocity
   Double ->
-  BehaviourF m td Temperature Double
+  StochasticProcessF td Temperature Double
 prior1d initialPosition initialVelocity = feedback 0 $ proc (temperature, position') -> do
-  impulse <- arrM (normal 0) -< temperature
+  impulse <- whiteNoiseVarying -< temperature
   let acceleration = (-3) * position' + impulse
   -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
   velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
@@ -88,11 +88,11 @@ sensorNoiseTemperature :: Double
 sensorNoiseTemperature = 1
 
 -- | A generative model of the sensor noise
-noise :: MonadDistribution m => Behaviour m td Pos
+noise :: StochasticProcess td Pos
 noise = whiteNoise sensorNoiseTemperature &&& whiteNoise sensorNoiseTemperature
 
 -- | A generative model of the sensor position, given the noise
-generativeModel :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td Pos Sensor
+generativeModel :: (Diff td ~ Double) => StochasticProcessF td Pos Sensor
 generativeModel = proc latent -> do
   noiseNow <- noise -< ()
   returnA -< latent ^+^ noiseNow
