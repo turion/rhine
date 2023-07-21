@@ -1,5 +1,10 @@
 # Revision history for rhine-gloss
 
+## 1.0
+
+* Removed schedules. See the [page about changes in version 1](/version1.md).
+* Simplified `gloss` backends. Renamed `launchGlossThread` to `launchInGlossThread`.
+
 ## 0.7.0
 
 * Reworked `gloss` backends.
