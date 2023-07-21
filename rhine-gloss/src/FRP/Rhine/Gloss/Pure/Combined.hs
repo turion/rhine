@@ -1,4 +1,3 @@
-{-# LANGUAGE Arrows #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {- | A pure @gloss@ backend for Rhine,
@@ -12,7 +11,6 @@ module FRP.Rhine.Gloss.Pure.Combined where
 
 -- rhine
 import FRP.Rhine
-import FRP.Rhine.Reactimation.ClockErasure
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -24,13 +22,8 @@ import FRP.Rhine.Gloss.Pure
 -}
 type GlossCombinedClock a =
   SequentialClock
-    GlossM
     (GlossEventClock a)
     GlossSimulationClock
-
--- | Schedule the subclocks of the 'GlossCombinedClock'.
-glossSchedule :: Schedule GlossM (GlossEventClock a) GlossSimulationClock
-glossSchedule = schedSelectClocks
 
 -- ** Events
 
@@ -92,7 +85,7 @@ mySim = ...
 
 myGlossRhine :: GlossRhine a
 myGlossRhine
-  = myEventSubsystem @@ myEventClock >-- collect -@- glossSchedule --> mySim @@ glossSimulationClock
+  = myEventSubsystem @@ myEventClock >-- collect --> mySim @@ glossSimulationClock
 @
 -}
 type GlossRhine a = Rhine GlossM (GlossCombinedClock a) () ()
@@ -110,19 +103,5 @@ buildGlossRhine ::
   GlossRhine a
 buildGlossRhine selector clsfSim =
   timeInfoOf tag @@ glossEventSelectClock selector
-    >-- collect -@- glossSchedule
+    >-- collect
     --> clsfSim @@ glossSimulationClock
-
--- * Reactimation
-
--- | The main function that will start the @gloss@ backend and run the 'SN'.
-flowGlossCombined ::
-  GlossSettings ->
-  -- | The @gloss@-compatible 'Rhine'.
-  GlossRhine a ->
-  IO ()
-flowGlossCombined settings Rhine {..} = flowGlossWithWorldMSF settings clock $ proc tick -> do
-  eraseClockSN 0 sn
-    -< case tick of
-      (_, Left event) -> (0, Left event, Just ())
-      (diffTime, Right ()) -> (diffTime, Right (), Nothing)

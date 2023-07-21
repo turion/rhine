@@ -9,7 +9,8 @@
 module FRP.Rhine.Terminal (
   TerminalEventClock (..),
   flowTerminal,
-  terminalConcurrently,
+  RunTerminalClock,
+  runTerminalClock,
 ) where
 
 -- base
@@ -28,9 +29,10 @@ import System.Terminal (Event, Interrupt, MonadInput, TerminalT, awaitEvent, run
 import System.Terminal.Internal (Terminal)
 
 -- transformers
-
-import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader
+
+-- monad-schedule
+import Control.Monad.Schedule.Class
 
 -- rhine
 import FRP.Rhine
@@ -84,31 +86,14 @@ flowTerminal ::
   m ()
 flowTerminal term clsf = flip runTerminalT term $ flow clsf
 
-{- | A schedule in the 'TerminalT LocalTerminal' transformer,
-   supplying the same backend connection to its scheduled clocks.
+{- | To escape the 'TerminalT' transformer,
+  you can apply this operator to your clock type,
+  where @cl@ is a clock in 'TerminalT'.
+  The resulting clock is then in @m@.
 -}
-terminalConcurrently ::
-  forall t cl1 cl2.
-  ( Terminal t
-  , Clock (TerminalT t IO) cl1
-  , Clock (TerminalT t IO) cl2
-  , Time cl1 ~ Time cl2
-  ) =>
-  Schedule (TerminalT t IO) cl1 cl2
-terminalConcurrently =
-  Schedule $ \cl1 cl2 -> do
-    term <- terminalT ask
-    lift $
-      first liftTransS
-        <$> initSchedule concurrently (runTerminalClock term cl1) (runTerminalClock term cl2)
-
--- Workaround TerminalT constructor not being exported. Should be safe in practice.
--- See PR upstream https://github.com/lpeterse/haskell-terminal/pull/18
-terminalT :: ReaderT t m a -> TerminalT t m a
-terminalT = unsafeCoerce
-
 type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
 
+-- | See 'RunTerminalClock'. Apply this to your clock value to remove a 'TerminalT' layer.
 runTerminalClock ::
   Terminal t =>
   t ->
@@ -119,3 +104,14 @@ runTerminalClock term unhoistedClock =
     { monadMorphism = flip runTerminalT term
     , ..
     }
+
+-- Workaround TerminalT constructor not being exported. Should be safe in practice.
+-- See PR upstream https://github.com/lpeterse/haskell-terminal/pull/18
+terminalT :: ReaderT t m a -> TerminalT t m a
+terminalT = unsafeCoerce
+
+unTerminalT :: TerminalT t m a -> ReaderT t m a
+unTerminalT = unsafeCoerce
+
+instance (Monad m, MonadSchedule m) => MonadSchedule (TerminalT t m) where
+  schedule = terminalT . fmap (fmap (fmap terminalT)) . schedule . fmap unTerminalT

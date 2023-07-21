@@ -36,7 +36,7 @@ upsampleR ::
   (Monad m, Time clL ~ Time clR) =>
   b ->
   ClSF m clR a b ->
-  ClSF m (ParallelClock m clL clR) a b
+  ClSF m (ParallelClock clL clR) a b
 upsampleR b clsf = readerS $ arr remap >>> upsampleMSF b (runReaderS clsf)
   where
     remap (TimeInfo {tag = Left tag}, _) = Left tag
@@ -51,7 +51,7 @@ upsampleL ::
   (Monad m, Time clL ~ Time clR) =>
   b ->
   ClSF m clL a b ->
-  ClSF m (ParallelClock m clL clR) a b
+  ClSF m (ParallelClock clL clR) a b
 upsampleL b clsf = readerS $ arr remap >>> upsampleMSF b (runReaderS clsf)
   where
     remap (TimeInfo {tag = Right tag}, _) = Left tag

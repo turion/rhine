@@ -4,8 +4,10 @@
 -- transformers
 import Control.Monad.IO.Class
 
+-- monad-schedule
+import Control.Monad.Schedule.Trans
+
 -- rhine
-import Control.Monad.Schedule
 import FRP.Rhine
 
 type MyClock = Periodic '[500, 1000]

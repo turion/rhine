@@ -8,6 +8,15 @@ Rhine is a library for synchronous and asynchronous Functional Reactive Programm
 It separates the aspects of clocking, scheduling and resampling
 from each other, and ensures clock-safety on the type level.
 
+## Versions 1.* vs. 0.*
+
+Confused because some examples from the article don't work anymore?
+As a big simplification and breaking change,
+explicit schedules were removed in version 1.0.
+For an overview of the required changes, see [this page](/version1.md).
+
+## Concept
+
 Complex reactive programs often process data at different rates.
 For example, games, GUIs and media applications
 may output audio and video signals, or receive
@@ -78,11 +87,9 @@ would be:
   main :: IO ()
   main = flow $
     ms500 @@ waitClock            --  a Rhine = a ClSF in the context of a Clock
-    ||@ scheduleMillisecond @||   --  compose 2 Rhines in parallel
-    ms1200 @@ waitClock           --  a Rhine
-    >-- collect                   --  buffer results from both Rhines into a list
-        -@- concurrently          --  the next Rhine executes in its own thread
-    -->
+    |@|                           --  compose 2 Rhines in parallel
+    ms1200 @@ waitClock           --  a Rhine at a different clock
+    >-- collect -->               --  buffer results from both Rhines into a list
     printEverySecond @@ waitClock --  the final Rhine
 
   -- | Uncomment the following for a type error (the clocks don't match):

@@ -22,6 +22,7 @@ extra-deps:
 - vty-5.38@sha256:c3b46c8072f92b61dad09dac45ede37f1a093836e14ac84ece6515a4d3222864,5628
 - random-1.2.1
 - linear-1.22
+- monad-schedule-0.1.2.1@sha256:95d6b9c6fd36f585e4a52938ebd1762c2e2caa8bb3c11ce86985dd11a2caae1a,1776
 
 nix:
   packages:

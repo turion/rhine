@@ -286,7 +286,7 @@ glossClock =
 mainSingleRate =
   void $
     sampleIO $
-      launchGlossThread glossSettings $
+      launchInGlossThread glossSettings $
         reactimateCl glossClock mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
@@ -337,18 +337,18 @@ visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC Glos
 mainRhineMultiRate =
   userTemperature
     @@ glossClockUTC GlossEventClockIO
-      >-- keepLast initialTemperature -@- glossConcurrently -->
+      >-- keepLast initialTemperature -->
         modelRhine
-        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
+        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
           inference
-            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -->
               visualisationRhine
 {- FOURMOLU_ENABLE -}
 
 mainMultiRate :: IO ()
 mainMultiRate =
   void $
-    launchGlossThread glossSettings $
+    launchInGlossThread glossSettings $
       flow mainRhineMultiRate
 
 -- * Utilities

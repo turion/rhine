@@ -55,7 +55,7 @@ data SN m cl a b where
     SN               m      clab            a b     ->
     ResamplingBuffer m (Out clab) (In clcd)   b c   ->
     SN               m                clcd      c d ->
-    SN m (SequentialClock m clab      clcd) a     d
+    SN m (SequentialClock   clab      clcd) a     d
 
   -- | Two 'SN's with the same input and output data may be parallely composed.
   Parallel ::
@@ -70,7 +70,7 @@ data SN m cl a b where
     ) =>
     SN m                  cl1      a b ->
     SN m                      cl2  a b ->
-    SN m (ParallelClock m cl1 cl2) a b
+    SN m (ParallelClock   cl1 cl2) a b
 
   -- | Bypass the signal network by forwarding data in parallel through a 'ResamplingBuffer'.
   FirstResampling ::
