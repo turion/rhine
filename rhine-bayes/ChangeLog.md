@@ -1,5 +1,9 @@
 # Revision history for rhine-gloss
 
+## 0.9
+
+* Add simple Poisson, Gamma and Bernoulli processes
+
 ## 0.8.1.1
 
 * First version. Version numbers follow rhine.
