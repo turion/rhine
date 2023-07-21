@@ -2,7 +2,7 @@ cabal-version:       2.2
 
 name:                rhine
 
-version:             0.9
+version:             1.0
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -52,7 +52,7 @@ source-repository head
 source-repository this
   type:     git
   location: https://github.com/turion/rhine.git
-  tag:      v0.9
+  tag:      v1.0
 
 common opts
   build-depends:
