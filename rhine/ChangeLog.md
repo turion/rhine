@@ -1,5 +1,9 @@
 # Revision history for rhine
 
+## 1.0
+
+* Removed schedules. See the [page about changes in version 1](/version1.md).
+
 ## 0.9
 
 * dunai-0.9 compatibility
