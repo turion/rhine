@@ -89,11 +89,11 @@ ppmmhS resPar resState = go
       MSF m a ([b], [p])
     go parMSFs stateMSFs = MSF $ \a -> do
       pars <- forM parMSFs $ flip unMSF a
-      bAndStateMSFs <- forM pars $ \(p, _) -> runPopulation $ normalize $ resState $ flip unMSF (a, p) =<< fromWeightedList (pure $ (, 1) <$> stateMSFs)
+      bAndStateMSFs <- forM pars $ \(p, _) -> runPopulation $ flip unMSF (a, p) =<< fromWeightedList (pure $ (, 1) <$> stateMSFs)
       let parWeights = sum . fmap snd <$> bAndStateMSFs
       -- FIXME it's not so nice that the next step is in m, but the side effects should all be pure
       parMSFs' <- runPopulation $ resPar $ fromWeightedList $ pure $ zip (snd <$> pars) parWeights
-      let bAndStateMSFsT = transpose bAndStateMSFs
+      bAndStateMSFsT <- transpose <$> mapM (runPopulation . normalize . resState . fromWeightedList . pure) bAndStateMSFs
       bAndStateMSFs <- forM bAndStateMSFsT $ \forallParameters -> do
         choice <- logCategorical $ fromList $ snd <$> forallParameters
         pure $ fst $ forallParameters !! choice
