@@ -149,6 +149,15 @@ posteriorTemperatureProcess = proc sensor -> do
   arrM score -< sensorLikelihood latent sensor
   returnA -< (temperature, latent)
 
+{- | Given sensor data and temperature, sample a latent position, and weight them according to the likelihood of the observed sensor position.
+   Used to infer position when temperature is given.
+-}
+posterior :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td (Sensor, Temperature) Pos
+posterior = proc (sensor, temperature) -> do
+  latent <- prior -< temperature
+  arrM score -< sensorLikelihood latent sensor
+  returnA -< latent
+
 -- | A collection of all displayable inference results
 data Result = Result
   { temperature :: Temperature
@@ -269,6 +278,7 @@ mains =
   [ ("single rate", mainSingleRate)
   , ("single rate, parameter collapse", mainSingleRateCollapse)
   , ("multi rate, temperature process", mainMultiRate)
+  , ("multi rate, PPMMH", mainMultiRatePPMMH)
   ]
 
 main :: IO ()
@@ -393,6 +403,12 @@ userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr 
     selector (EventKey (SpecialKey KeyDown) Down _ _) = Just (1 / 1.2)
     selector _ = Nothing
 
+-- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
+visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
+visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
+
+-- *** Joint inference on state and parameter
+
 {- | This part performs the inference (and passes along temperature, sensor and position simulations).
    It runs as fast as possible, so this will potentially drain the CPU.
 -}
@@ -434,6 +450,39 @@ mainMultiRate =
   void $
     launchInGlossThread glossSettings $
       flow mainRhineMultiRate
+
+-- *** Separate inference on state and parameter (PPMMH)
+
+{- | This part performs the inference (and passes along temperature, sensor and position simulations).
+   It runs as fast as possible, so this will potentially drain the CPU.
+-}
+inferencePPMMH :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
+inferencePPMMH = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+  where
+    inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+    inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+      (particles, temperatures) <- ppmmh 20 20 resampleSystematic resampleSystematic (temperatureProcess <<< arr (const ())) posterior -< measured
+      -- particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
+      returnA -< Result {temperature, measured, latent, particles = (, 1/20) <$> particles, particlesTemperature = (, 1/20) <$> temperatures}
+
+{- FOURMOLU_DISABLE -}
+-- | Compose all four asynchronous components to a single 'Rhine'.
+mainRhineMultiRatePPMMH =
+  userTemperature
+    @@ glossClockUTC GlossEventClockIO
+      >-- keepLast initialTemperature -->
+        modelRhine
+        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
+          inferencePPMMH
+            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = [], particlesTemperature = []} -->
+              visualisationRhine
+{- FOURMOLU_ENABLE -}
+
+mainMultiRatePPMMH :: IO ()
+mainMultiRatePPMMH =
+  void $
+    launchInGlossThread glossSettings $
+      flow mainRhineMultiRatePPMMH
 
 -- * Utilities
 
