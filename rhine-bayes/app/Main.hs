@@ -68,7 +68,7 @@ prior1d ::
 prior1d initialPosition initialVelocity = feedback 0 $ proc (temperature, position') -> do
   impulse <- whiteNoiseVarying -< temperature
   let acceleration = (-3) * position' + impulse
-  -- Integral over roughly the last 100 seconds, dying off exponentially, as to model a small friction term
+  -- Integral over roughly the last 10 seconds, dying off exponentially, as to model a small friction term
   velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
   position <- integralFrom initialPosition -< velocity
   returnA -< (position, position)
