@@ -205,7 +205,7 @@ visualisation = proc Result {temperature, measured, latent, particlesPosition, p
                   [0 ..]
                   [ printf "Temperature: %.2f" temperature
                   , printf "Particles: %i" $ length particlesPosition
-                  , printf "Time: %.1f" time
+                  -- , printf "Time: %.1f" time
                   ]
               return $ translate 0 ((-150) * n) $ text message
           , color red $ rectangleUpperSolid thermometerWidth $ double2Float temperature * thermometerScale
@@ -263,7 +263,7 @@ drawParticlesTemperature = proc particlesPosition -> do
 glossSettings :: GlossSettings
 glossSettings =
   defaultSettings
-    { display = InWindow "rhine-bayes" (1024, 960) (10, 10)
+    { display = InWindow "rhine-bayes" (650, 780) (10, 10)
     }
 
 -- * Integration
