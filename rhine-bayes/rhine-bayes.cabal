@@ -63,6 +63,7 @@ executable rhine-bayes-gloss
                      , rhine
                      , rhine-bayes
                      , rhine-gloss
+                     , dunai
                      , monad-bayes
                      , transformers
                      , log-domain

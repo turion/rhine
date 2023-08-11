@@ -39,6 +39,9 @@ import Control.Monad.Bayes.Class hiding (posterior, prior)
 import Control.Monad.Bayes.Population hiding (hoist)
 import Control.Monad.Bayes.Sampler.Strict
 
+-- dunai
+import Control.Monad.Trans.MSF.Except
+
 -- rhine
 import FRP.Rhine
 
@@ -264,6 +267,7 @@ glossSettings =
 mains :: [(String, IO ())]
 mains =
   [ ("single rate", mainSingleRate)
+  , ("single rate, parameter collapse", mainSingleRateCollapse)
   , ("multi rate, temperature process", mainMultiRate)
   ]
 
@@ -274,6 +278,63 @@ main = do
   map snd mains !! (choice - 1)
 
 -- ** Single-rate : One simulation step = one inference step = one display step
+
+-- | Rescale to the 'Double' time domain
+type GlossClock = RescaledClock GlossSimClockIO Double
+
+glossClock :: GlossClock
+glossClock =
+  RescaledClock
+    { unscaledClock = GlossSimClockIO
+    , rescale = float2Double
+    }
+
+-- *** Poor attempt at temperature inference: Particle collapse
+
+-- | Choose an exponential distribution as prior for the temperature
+temperaturePrior :: (MonadDistribution m) => m Temperature
+temperaturePrior = gamma 1 7
+
+{- | On startup, sample values from the temperature prior.
+  Then keep sampling from the position prior and condition by the likelihood of the measured sensor position.
+-}
+posteriorTemperatureCollapse :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td Sensor (Temperature, Pos)
+posteriorTemperatureCollapse = proc sensor -> do
+  temperature <- performOnFirstSample (arr_ <$> temperaturePrior) -< ()
+  latent <- prior -< temperature
+  arrM score -< sensorLikelihood latent sensor
+  returnA -< (temperature, latent)
+
+{- | Given an actual temperature, simulate a latent position and measured sensor position,
+   and based on the sensor data infer the latent position and the temperature.
+-}
+filteredCollapse :: (Diff td ~ Double) => BehaviourF App td Temperature Result
+filteredCollapse = proc temperature -> do
+  (measured, latent) <- genModelWithoutTemperature -< temperature
+  particlesAndTemperature <- runPopulationCl nParticles resampleSystematic posteriorTemperatureCollapse -< measured
+  returnA
+    -<
+      Result
+        { temperature
+        , measured
+        , latent
+        , particlesPosition = first snd <$> particlesAndTemperature
+        , particlesTemperature = first fst <$> particlesAndTemperature
+        }
+
+-- | Run simulation, inference, and visualization synchronously
+mainClSFCollapse :: (Diff td ~ Double) => BehaviourF App td () ()
+mainClSFCollapse = proc () -> do
+  output <- filteredCollapse -< initialTemperature
+  visualisation -< output
+
+mainSingleRateCollapse =
+  void $
+    sampleIO $
+      launchInGlossThread glossSettings $
+        reactimateCl glossClock mainClSFCollapse
+
+-- *** Infer temperature with a stochastic process
 
 {- | Given an actual temperature, simulate a latent position and measured sensor position,
    and based on the sensor data infer the latent position and the temperature.
@@ -297,16 +358,6 @@ mainClSF :: (Diff td ~ Double) => BehaviourF App td () ()
 mainClSF = proc () -> do
   output <- filtered -< initialTemperature
   visualisation -< output
-
--- | Rescale to the 'Double' time domain
-type GlossClock = RescaledClock GlossSimClockIO Double
-
-glossClock :: GlossClock
-glossClock =
-  RescaledClock
-    { unscaledClock = GlossSimClockIO
-    , rescale = float2Double
-    }
 
 mainSingleRate =
   void $
