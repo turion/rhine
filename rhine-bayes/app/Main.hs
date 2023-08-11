@@ -163,7 +163,7 @@ data Result = Result
 
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
-nParticles = 800
+nParticles = 100
 
 -- * Visualization
 
@@ -199,8 +199,7 @@ visualisation = proc Result {temperature, measured, latent, particles, avg} -> d
           ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
-  drawBall -< (avg, 1, withAlpha 0.1 yellow)
-  drawParticles -< take 50 particles
+  drawParticles -< particles
 
 -- ** Parameters for the temperature display
 
