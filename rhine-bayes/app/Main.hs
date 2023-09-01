@@ -75,7 +75,8 @@ prior1d ::
   StochasticProcessF td Temperature Double
 prior1d initialPosition initialVelocity = feedback 0 $ proc (temperature, position') -> do
   impulse <- whiteNoiseVarying -< temperature
-  let acceleration = (-3) * position' + impulse
+  let springConstant = 3
+      acceleration = (- springConstant) * position' + impulse
   -- Integral over roughly the last 10 seconds, dying off exponentially, as to model a small friction term
   velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
   position <- integralFrom initialPosition -< velocity
