@@ -89,7 +89,7 @@ initSchedule cl1 cl2 = do
 {- | Two clocks can be combined with a schedule as a clock
    for an asynchronous sequential composition of signal networks.
 -}
-data SequentialClock cl1 cl2 = Time cl1 ~ Time cl2 =>
+data SequentialClock cl1 cl2 = (Time cl1 ~ Time cl2) =>
   SequentialClock
   { sequentialCl1 :: cl1
   , sequentialCl2 :: cl2
@@ -112,7 +112,7 @@ instance
 {- | Two clocks can be combined with a schedule as a clock
    for an asynchronous parallel composition of signal networks.
 -}
-data ParallelClock cl1 cl2 = Time cl1 ~ Time cl2 =>
+data ParallelClock cl1 cl2 = (Time cl1 ~ Time cl2) =>
   ParallelClock
   { parallelCl1 :: cl1
   , parallelCl2 :: cl2

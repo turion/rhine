@@ -20,7 +20,7 @@ gears angle =
 {- | Rotate the gear with a constant angular velocity.
    Disregards all events.
 -}
-sim :: Monad m => BehaviourF m Float [Event] Picture
+sim :: (Monad m) => BehaviourF m Float [Event] Picture
 sim = timeInfoOf sinceInit >>> arr (* 50) >>> arr gears
 
 main :: IO ()

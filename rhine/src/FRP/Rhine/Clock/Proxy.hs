@@ -75,10 +75,10 @@ instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (SequentialCloc
 instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (ParallelClock cl1 cl2) where
   getClockProxy = ParallelProxy getClockProxy getClockProxy
 
-instance GetClockProxy cl => GetClockProxy (HoistClock m1 m2 cl)
-instance GetClockProxy cl => GetClockProxy (RescaledClock cl time)
-instance GetClockProxy cl => GetClockProxy (RescaledClockM m cl time)
-instance GetClockProxy cl => GetClockProxy (RescaledClockS m cl time tag)
+instance (GetClockProxy cl) => GetClockProxy (HoistClock m1 m2 cl)
+instance (GetClockProxy cl) => GetClockProxy (RescaledClock cl time)
+instance (GetClockProxy cl) => GetClockProxy (RescaledClockM m cl time)
+instance (GetClockProxy cl) => GetClockProxy (RescaledClockS m cl time tag)
 
 -- | Extract a clock proxy from a type.
 class ToClockProxy a where
@@ -86,7 +86,7 @@ class ToClockProxy a where
 
   toClockProxy :: a -> ClockProxy (Cl a)
   default toClockProxy ::
-    GetClockProxy (Cl a) =>
+    (GetClockProxy (Cl a)) =>
     a ->
     ClockProxy (Cl a)
   toClockProxy _ = getClockProxy

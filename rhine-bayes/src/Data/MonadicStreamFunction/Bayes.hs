@@ -20,7 +20,7 @@ import Data.MonadicStreamFunction.InternalCore (MSF (..))
 -- | Run the Sequential Monte Carlo algorithm continuously on an 'MSF'
 runPopulationS ::
   forall m a b.
-  Monad m =>
+  (Monad m) =>
   -- | Number of particles
   Int ->
   -- | Resampler
@@ -32,7 +32,7 @@ runPopulationS nParticles resampler = runPopulationsS resampler . (spawn nPartic
 
 -- | Run the Sequential Monte Carlo algorithm continuously on a 'Population' of 'MSF's
 runPopulationsS ::
-  Monad m =>
+  (Monad m) =>
   -- | Resampler
   (forall x. Population m x -> Population m x) ->
   Population m (MSF (Population m) a b) ->
@@ -49,5 +49,5 @@ runPopulationsS resampler = go
             (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
 
 -- FIXME see PR re-adding this to monad-bayes
-normalize :: Monad m => Population m a -> Population m a
+normalize :: (Monad m) => Population m a -> Population m a
 normalize = fromWeightedList . fmap (\particles -> second (/ (sum $ snd <$> particles)) <$> particles) . runPopulation

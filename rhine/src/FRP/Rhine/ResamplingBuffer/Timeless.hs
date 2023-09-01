@@ -29,7 +29,7 @@ data AsyncMealy m s a b = AsyncMealy
    discarding the time stamp. Analogously for 'put'.
 -}
 timelessResamplingBuffer ::
-  Monad m =>
+  (Monad m) =>
   AsyncMealy m s a b -> -- The asynchronous Mealy machine from which the buffer is built
 
   -- | The initial state
@@ -47,7 +47,7 @@ timelessResamplingBuffer AsyncMealy {..} = go
         ResamplingBuffer {..}
 
 -- | A resampling buffer that only accepts and emits units.
-trivialResamplingBuffer :: Monad m => ResamplingBuffer m cl1 cl2 () ()
+trivialResamplingBuffer :: (Monad m) => ResamplingBuffer m cl1 cl2 () ()
 trivialResamplingBuffer =
   timelessResamplingBuffer
     AsyncMealy

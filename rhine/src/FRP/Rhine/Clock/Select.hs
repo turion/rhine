@@ -69,5 +69,5 @@ instance GetClockProxy (SelectClock cl a)
 {- | Helper function that runs an 'MSF' with 'Maybe' output
    until it returns a value.
 -}
-filterS :: Monad m => MSF m () (Maybe b) -> MSF m () b
+filterS :: (Monad m) => MSF m () (Maybe b) -> MSF m () b
 filterS = concatS . (>>> arr maybeToList)

@@ -36,7 +36,7 @@ import FRP.Rhine.ResamplingBuffer.Util
    which prevents composition of signals at different rates.
 -}
 data FixedStep (n :: Nat) where
-  FixedStep :: KnownNat n => FixedStep n -- TODO Does the constraint bring any benefit?
+  FixedStep :: (KnownNat n) => FixedStep n -- TODO Does the constraint bring any benefit?
 
 -- | Extract the type-level natural number as an integer.
 stepsize :: FixedStep n -> Integer

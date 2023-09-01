@@ -10,7 +10,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import FRP.Rhine
 import Util (runRhine)
 
-secondsSinceInit :: Monad m => ClSF m (Millisecond n) a Int
+secondsSinceInit :: (Monad m) => ClSF m (Millisecond n) a Int
 secondsSinceInit = sinceInitS >>> arr round
 
 tests =

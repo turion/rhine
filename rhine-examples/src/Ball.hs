@@ -18,7 +18,7 @@ type SimClock = Millisecond 10
 type StatusClock = Millisecond 500
 
 freeFall ::
-  Monad m =>
+  (Monad m) =>
   BallVel ->
   BehaviourF m UTCTime () Ball
 freeFall v0 =
@@ -34,7 +34,7 @@ startVel = arrMCl $ const $ do
   return (velX, velY, velZ)
 
 waiting ::
-  MonadIO m =>
+  (MonadIO m) =>
   ClSF
     (ExceptT BallVel m)
     SimClock
@@ -43,7 +43,7 @@ waiting ::
 waiting = throwMaybe >>> arr (const zeroVector)
 
 falling ::
-  Monad m =>
+  (Monad m) =>
   BallVel ->
   ClSF
     (ExceptT () m)

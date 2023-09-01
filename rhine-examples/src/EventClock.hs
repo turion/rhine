@@ -31,11 +31,11 @@ type EventIO = EventChanT String IO
 -- ** Sample data
 
 -- | Output "Hello World!" every second.
-message :: Monad m => ClSF m (HoistClock IO EventIO (Millisecond 1000)) () String
+message :: (Monad m) => ClSF m (HoistClock IO EventIO (Millisecond 1000)) () String
 message = arr $ const "Hello World!"
 
 -- | Perform a random computation, using a lot of CPU time.
-randomNumbers :: MonadIO m => Behaviour m time String
+randomNumbers :: (MonadIO m) => Behaviour m time String
 randomNumbers = constMCl $ liftIO $ do
   m <- randomRIO (4, 6 :: Integer)
   x <- randomRIO (-3, 3 :: Double)

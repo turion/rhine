@@ -41,12 +41,12 @@ defaultSettings eventQueue =
     , virtualInterrupt = retry
     }
 
-displayDot :: MonadScreen m => ClSF m KeyClock () ()
+displayDot :: (MonadScreen m) => ClSF m KeyClock () ()
 displayDot = constMCl $ do
   putChar '.'
   flush
 
-testRhine :: Terminal t => Rhine (TerminalT t IO) KeyClock () ()
+testRhine :: (Terminal t) => Rhine (TerminalT t IO) KeyClock () ()
 testRhine = displayDot @@ keyClock
 
 charEvent :: TQueue Event -> t -> Char -> IO ()

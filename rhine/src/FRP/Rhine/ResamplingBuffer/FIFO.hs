@@ -20,7 +20,7 @@ import FRP.Rhine.ResamplingBuffer.Timeless
 {- | An unbounded FIFO buffer.
    If the buffer is empty, it will return 'Nothing'.
 -}
-fifoUnbounded :: Monad m => ResamplingBuffer m cl1 cl2 a (Maybe a)
+fifoUnbounded :: (Monad m) => ResamplingBuffer m cl1 cl2 a (Maybe a)
 fifoUnbounded = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as
@@ -31,7 +31,7 @@ fifoUnbounded = timelessResamplingBuffer AsyncMealy {..} empty
 {- |  A bounded FIFO buffer that forgets the oldest values when the size is above a given threshold.
     If the buffer is empty, it will return 'Nothing'.
 -}
-fifoBounded :: Monad m => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
+fifoBounded :: (Monad m) => Int -> ResamplingBuffer m cl1 cl2 a (Maybe a)
 fifoBounded threshold = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ take threshold $ a <| as
@@ -40,7 +40,7 @@ fifoBounded threshold = timelessResamplingBuffer AsyncMealy {..} empty
       as' :> a -> return (Just a, as')
 
 -- | An unbounded FIFO buffer that also returns its current size.
-fifoWatch :: Monad m => ResamplingBuffer m cl1 cl2 a (Maybe a, Int)
+fifoWatch :: (Monad m) => ResamplingBuffer m cl1 cl2 a (Maybe a, Int)
 fifoWatch = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as

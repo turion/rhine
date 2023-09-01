@@ -24,7 +24,7 @@ import FRP.Rhine
 -- | Run the Sequential Monte Carlo algorithm continuously on a 'ClSF'.
 runPopulationCl ::
   forall m cl a b.
-  Monad m =>
+  (Monad m) =>
   -- | Number of particles
   Int ->
   -- | Resampler (see 'Control.Monad.Bayes.Population' for some standard choices)
@@ -40,10 +40,10 @@ runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopul
 -- * Short standard library of stochastic processes
 
 -- | A stochastic process is a behaviour that uses, as only effect, random sampling.
-type StochasticProcess time a = forall m. MonadDistribution m => Behaviour m time a
+type StochasticProcess time a = forall m. (MonadDistribution m) => Behaviour m time a
 
 -- | Like 'StochasticProcess', but with a live input.
-type StochasticProcessF time a b = forall m. MonadDistribution m => BehaviourF m time a b
+type StochasticProcessF time a b = forall m. (MonadDistribution m) => BehaviourF m time a b
 
 -- | White noise, that is, an independent normal distribution at every time step.
 whiteNoise :: Double -> StochasticProcess td Double
@@ -138,5 +138,5 @@ gammaInhomogeneous gamma = proc rate -> do
   Throws a coin to a given probability at each tick.
   The live input is the probability.
 -}
-bernoulliInhomogeneous :: MonadDistribution m => BehaviourF m td Double Bool
+bernoulliInhomogeneous :: (MonadDistribution m) => BehaviourF m td Double Bool
 bernoulliInhomogeneous = arrMCl bernoulli
