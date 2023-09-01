@@ -29,7 +29,7 @@ commuteReaders a =
    by passing the original behaviour the extra @r@ input.
 -}
 readerS ::
-  Monad m =>
+  (Monad m) =>
   ClSF m cl (a, r) b ->
   ClSF (ReaderT r m) cl a b
 readerS behaviour =
@@ -39,7 +39,7 @@ readerS behaviour =
    by making it an explicit input to the behaviour.
 -}
 runReaderS ::
-  Monad m =>
+  (Monad m) =>
   ClSF (ReaderT r m) cl a b ->
   ClSF m cl (a, r) b
 runReaderS behaviour =
@@ -47,7 +47,7 @@ runReaderS behaviour =
 
 -- | Remove a 'ReaderT' layer by passing the readonly environment explicitly.
 runReaderS_ ::
-  Monad m =>
+  (Monad m) =>
   ClSF (ReaderT r m) cl a b ->
   r ->
   ClSF m cl a b

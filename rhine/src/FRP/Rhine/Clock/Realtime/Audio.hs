@@ -42,7 +42,7 @@ data AudioRate
   | Hz96000
 
 -- | Converts an 'AudioRate' to its corresponding rate as an 'Integral'.
-rateToIntegral :: Integral a => AudioRate -> a
+rateToIntegral :: (Integral a) => AudioRate -> a
 rateToIntegral Hz44100 = 44100
 rateToIntegral Hz48000 = 48000
 rateToIntegral Hz96000 = 96000
@@ -70,9 +70,9 @@ data AudioClock (rate :: AudioRate) (bufferSize :: Nat) = AudioClock
 
 class AudioClockRate (rate :: AudioRate) where
   theRate :: AudioClock rate bufferSize -> AudioRate
-  theRateIntegral :: Integral a => AudioClock rate bufferSize -> a
+  theRateIntegral :: (Integral a) => AudioClock rate bufferSize -> a
   theRateIntegral = rateToIntegral . theRate
-  theRateNum :: Num a => AudioClock rate bufferSize -> a
+  theRateNum :: (Num a) => AudioClock rate bufferSize -> a
   theRateNum = fromInteger . theRateIntegral
 
 instance AudioClockRate Hz44100 where
@@ -104,7 +104,7 @@ instance
           round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
       bufferSize = theBufferSize audioClock
 
-      runningClock :: MonadIO m => UTCTime -> Maybe Double -> MSF m () (UTCTime, Maybe Double)
+      runningClock :: (MonadIO m) => UTCTime -> Maybe Double -> MSF m () (UTCTime, Maybe Double)
       runningClock initialTime maybeWasLate = safely $ do
         bufferFullTime <- try $ proc () -> do
           n <- count -< ()
@@ -136,9 +136,9 @@ data PureAudioClock (rate :: AudioRate) = PureAudioClock
 
 class PureAudioClockRate (rate :: AudioRate) where
   thePureRate :: PureAudioClock rate -> AudioRate
-  thePureRateIntegral :: Integral a => PureAudioClock rate -> a
+  thePureRateIntegral :: (Integral a) => PureAudioClock rate -> a
   thePureRateIntegral = rateToIntegral . thePureRate
-  thePureRateNum :: Num a => PureAudioClock rate -> a
+  thePureRateNum :: (Num a) => PureAudioClock rate -> a
   thePureRateNum = fromInteger . thePureRateIntegral
 
 instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) where

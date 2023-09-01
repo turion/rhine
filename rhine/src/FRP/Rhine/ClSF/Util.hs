@@ -40,7 +40,7 @@ import FRP.Rhine.Clock
 -- * Read time information
 
 -- | Read the environment variable, i.e. the 'TimeInfo'.
-timeInfo :: Monad m => ClSF m cl a (TimeInfo cl)
+timeInfo :: (Monad m) => ClSF m cl a (TimeInfo cl)
 timeInfo = constM ask
 
 {- | Utility to apply functions to the current 'TimeInfo',
@@ -50,23 +50,23 @@ printAbsoluteTime :: ClSF IO cl () ()
 printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
 @
 -}
-timeInfoOf :: Monad m => (TimeInfo cl -> b) -> ClSF m cl a b
+timeInfoOf :: (Monad m) => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = constM $ asks f
 
 -- | Continuously return the time difference since the last tick.
-sinceLastS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceLastS :: (Monad m) => ClSF m cl a (Diff (Time cl))
 sinceLastS = timeInfoOf sinceLast
 
 -- | Continuously return the time difference since clock initialisation.
-sinceInitS :: Monad m => ClSF m cl a (Diff (Time cl))
+sinceInitS :: (Monad m) => ClSF m cl a (Diff (Time cl))
 sinceInitS = timeInfoOf sinceInit
 
 -- | Continuously return the absolute time.
-absoluteS :: Monad m => ClSF m cl a (Time cl)
+absoluteS :: (Monad m) => ClSF m cl a (Time cl)
 absoluteS = timeInfoOf absolute
 
 -- | Continuously return the tag of the current tick.
-tagS :: Monad m => ClSF m cl a (Tag cl)
+tagS :: (Monad m) => ClSF m cl a (Tag cl)
 tagS = timeInfoOf tag
 
 {- |
@@ -110,7 +110,7 @@ The type signature specialises e.g. to
 infixr 6 >->
 
 (>->) ::
-  Category cat =>
+  (Category cat) =>
   cat a b ->
   cat b c ->
   cat a c
@@ -120,7 +120,7 @@ infixr 6 >->
 infixl 6 <-<
 
 (<-<) ::
-  Category cat =>
+  (Category cat) =>
   cat b c ->
   cat a b ->
   cat a c
@@ -131,11 +131,11 @@ Specialises e.g. to this type signature:
 
 > arr_ :: Monad m => b -> ClSF m cl a b
 -}
-arr_ :: Arrow a => b -> a c b
+arr_ :: (Arrow a) => b -> a c b
 arr_ = arr . const
 
 -- | The identity synchronous stream function.
-clId :: Monad m => ClSF m cl a a
+clId :: (Monad m) => ClSF m cl a a
 clId = Control.Category.id
 
 -- * Basic signal processing components
@@ -358,7 +358,7 @@ bandStop t = clId ^-^ bandPass t
 -- * Delays
 
 -- | Remembers and indefinitely outputs ("holds") the first input value.
-keepFirst :: Monad m => ClSF m cl a a
+keepFirst :: (Monad m) => ClSF m cl a a
 keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
@@ -432,5 +432,5 @@ scaledTimer diff = timer diff >>> arr (/ diff)
 {- | Remembers the last 'Just' value,
    defaulting to the given initialisation value.
 -}
-lastS :: Monad m => a -> MSF m (Maybe a) a
+lastS :: (Monad m) => a -> MSF m (Maybe a) a
 lastS a = arr Last >>> mappendFrom (Last (Just a)) >>> arr (getLast >>> fromJust)

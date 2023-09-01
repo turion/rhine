@@ -95,7 +95,7 @@ type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
 
 -- | See 'RunTerminalClock'. Apply this to your clock value to remove a 'TerminalT' layer.
 runTerminalClock ::
-  Terminal t =>
+  (Terminal t) =>
   t ->
   cl ->
   RunTerminalClock IO t cl

@@ -80,7 +80,7 @@ inputSink = arrMCl $ \case
     flush
     liftIO exitSuccess
 
-changePrompt :: MonadScreen m => Text -> m ()
+changePrompt :: (MonadScreen m) => Text -> m ()
 changePrompt prmpt = do
   Position _ column <- getCursorPosition
   if column /= 0
