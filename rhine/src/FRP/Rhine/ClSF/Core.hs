@@ -45,7 +45,7 @@ type ClSignal m cl a = forall arbitrary. ClSF m cl arbitrary a
    that doesn't depend on a particular clock.
    @time@ denotes the 'TimeDomain'.
 -}
-type Behaviour m time a = forall cl. time ~ Time cl => ClSignal m cl a
+type Behaviour m time a = forall cl. (time ~ Time cl) => ClSignal m cl a
 
 -- | Compatibility to U.S. american spelling.
 type Behavior m time a = Behaviour m time a
@@ -54,7 +54,7 @@ type Behavior m time a = Behaviour m time a
    function that doesn't depend on a particular clock.
    @time@ denotes the 'TimeDomain'.
 -}
-type BehaviourF m time a b = forall cl. time ~ Time cl => ClSF m cl a b
+type BehaviourF m time a b = forall cl. (time ~ Time cl) => ClSF m cl a b
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorF m time a b = BehaviourF m time a b
@@ -95,15 +95,15 @@ liftClSFAndClock = hoistClSFAndClock lift
 {- | A monadic stream function without dependency on time
    is a 'ClSF' for any clock.
 -}
-timeless :: Monad m => MSF m a b -> ClSF m cl a b
+timeless :: (Monad m) => MSF m a b -> ClSF m cl a b
 timeless = liftTransS
 
 -- | Utility to lift Kleisli arrows directly to 'ClSF's.
-arrMCl :: Monad m => (a -> m b) -> ClSF m cl a b
+arrMCl :: (Monad m) => (a -> m b) -> ClSF m cl a b
 arrMCl = timeless . arrM
 
 -- | Version without input.
-constMCl :: Monad m => m b -> ClSF m cl a b
+constMCl :: (Monad m) => m b -> ClSF m cl a b
 constMCl = timeless . constM
 
 {- | Call a 'ClSF' every time the input is 'Just a'.
@@ -117,7 +117,7 @@ The former only integrates when the input is @Just 1@,
 whereas the latter always returns the correct time since initialisation.
 -}
 mapMaybe ::
-  Monad m =>
+  (Monad m) =>
   ClSF m cl a b ->
   ClSF m cl (Maybe a) (Maybe b)
 mapMaybe behaviour = proc ma -> case ma of

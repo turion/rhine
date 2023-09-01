@@ -42,30 +42,30 @@ import FRP.Rhine.Clock
 -- * Throwing exceptions
 
 -- | Immediately throw the incoming exception.
-throwS :: Monad m => ClSF (ExceptT e m) cl e a
+throwS :: (Monad m) => ClSF (ExceptT e m) cl e a
 throwS = arrMCl throwE
 
 -- | Immediately throw the given exception.
-throw :: Monad m => e -> MSF (ExceptT e m) a b
+throw :: (Monad m) => e -> MSF (ExceptT e m) a b
 throw = constM . throwE
 
 -- | Do not throw an exception.
-pass :: Monad m => MSF (ExceptT e m) a a
+pass :: (Monad m) => MSF (ExceptT e m) a a
 pass = Category.id
 
 -- | Throw the given exception when the 'Bool' turns true.
-throwOn :: Monad m => e -> ClSF (ExceptT e m) cl Bool ()
+throwOn :: (Monad m) => e -> ClSF (ExceptT e m) cl Bool ()
 throwOn e = proc b -> throwOn' -< (b, e)
 
 -- | Variant of 'throwOn', where the exception can vary every tick.
-throwOn' :: Monad m => ClSF (ExceptT e m) cl (Bool, e) ()
+throwOn' :: (Monad m) => ClSF (ExceptT e m) cl (Bool, e) ()
 throwOn' = proc (b, e) ->
   if b
     then throwS -< e
     else returnA -< ()
 
 -- | Throw the exception 'e' whenever the function evaluates to 'True'.
-throwOnCond :: Monad m => (a -> Bool) -> e -> ClSF (ExceptT e m) cl a a
+throwOnCond :: (Monad m) => (a -> Bool) -> e -> ClSF (ExceptT e m) cl a a
 throwOnCond cond e = proc a ->
   if cond a
     then throwS -< e
@@ -74,7 +74,7 @@ throwOnCond cond e = proc a ->
 {- | Variant of 'throwOnCond' for Kleisli arrows.
    Throws the exception when the input is 'True'.
 -}
-throwOnCondM :: Monad m => (a -> m Bool) -> e -> ClSF (ExceptT e m) cl a a
+throwOnCondM :: (Monad m) => (a -> m Bool) -> e -> ClSF (ExceptT e m) cl a a
 throwOnCondM cond e = proc a -> do
   b <- arrMCl (lift . cond) -< a
   if b
@@ -82,7 +82,7 @@ throwOnCondM cond e = proc a -> do
     else returnA -< a
 
 -- | When the input is @Just e@, throw the exception @e@.
-throwMaybe :: Monad m => ClSF (ExceptT e m) cl (Maybe e) (Maybe a)
+throwMaybe :: (Monad m) => ClSF (ExceptT e m) cl (Maybe e) (Maybe a)
 throwMaybe = proc me -> case me of
   Nothing -> returnA -< Nothing
   Just e -> throwS -< e
@@ -109,34 +109,34 @@ or equivalently an exception-throwing behaviour.
 Any clock with time domain @time@ may occur.
 -}
 type BehaviourFExcept m time a b e =
-  forall cl. time ~ Time cl => ClSFExcept m cl a b e
+  forall cl. (time ~ Time cl) => ClSFExcept m cl a b e
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
 
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
-runClSFExcept :: Monad m => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
+runClSFExcept :: (Monad m) => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
 runClSFExcept = morphS commuteExceptReader . runMSFExcept
 
 {- | Enter the monad context in the exception
    for 'ClSF's in the 'ExceptT' monad.
    The 'ClSF' will be run until it encounters an exception.
 -}
-try :: Monad m => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
+try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
 try = MSFE.try . morphS commuteReaderExcept
 
 {- | Within the same tick, perform a monadic action,
    and immediately throw the value as an exception.
 -}
-once :: Monad m => (a -> m e) -> ClSFExcept m cl a b e
+once :: (Monad m) => (a -> m e) -> ClSFExcept m cl a b e
 once f = MSFE.once $ lift . f
 
 -- | A variant of 'once' without input.
-once_ :: Monad m => m e -> ClSFExcept m cl a b e
+once_ :: (Monad m) => m e -> ClSFExcept m cl a b e
 once_ = once . const
 
 {- | Advances a single tick with the given Kleisli arrow,
    and then throws an exception.
 -}
-step :: Monad m => (a -> m (b, e)) -> ClSFExcept m cl a b e
+step :: (Monad m) => (a -> m (b, e)) -> ClSFExcept m cl a b e
 step f = MSFE.step $ lift . f

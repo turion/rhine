@@ -58,14 +58,14 @@ execRandS clsf g = runRandS clsf g >>> arr fst
 
 -- | Evaluates the random computation by using the global random generator.
 evalRandIOS ::
-  Monad m =>
+  (Monad m) =>
   ClSF (RandT StdGen m) cl a b ->
   IO (ClSF m cl a b)
 evalRandIOS clsf = evalRandS clsf <$> newStdGen
 
 -- | Evaluates the random computation by using the global random generator on the first tick.
 evalRandIOS' ::
-  MonadIO m =>
+  (MonadIO m) =>
   ClSF (RandT StdGen m) cl a b ->
   ClSF m cl a b
 evalRandIOS' = performOnFirstSample . liftIO . evalRandIOS

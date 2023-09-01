@@ -17,7 +17,7 @@ import FRP.Rhine.ResamplingBuffer
    that collects all input in a timestamped list.
 -}
 msfBuffer ::
-  Monad m =>
+  (Monad m) =>
   -- | The monadic stream function that consumes
   --   a single time stamp for the moment when an output value is required,
   --   and a list of timestamped inputs,
@@ -28,7 +28,7 @@ msfBuffer ::
 msfBuffer = msfBuffer' []
   where
     msfBuffer' ::
-      Monad m =>
+      (Monad m) =>
       [(TimeInfo cl1, a)] ->
       MSF m (TimeInfo cl2, [(TimeInfo cl1, a)]) b ->
       ResamplingBuffer m cl1 cl2 a b

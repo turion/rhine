@@ -9,7 +9,7 @@ module Main where
 
 import FRP.Rhine
 
-sawtooth :: Monad m => Behaviour m UTCTime Double
+sawtooth :: (Monad m) => Behaviour m UTCTime Double
 sawtooth = safely $ do
   try $
     sinceStart >>> proc time -> do

@@ -172,7 +172,7 @@ double2FloatTuple = double2Float *** double2Float
 type App = GlossConcT SamplerIO
 
 -- | Draw the results of the simulation and inference
-visualisation :: Diff td ~ Double => BehaviourF App td Result ()
+visualisation :: (Diff td ~ Double) => BehaviourF App td Result ()
 visualisation = proc Result {temperature, measured, latent, particles} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
@@ -254,7 +254,7 @@ main = do
 {- | Given an actual temperature, simulate a latent position and measured sensor position,
    and based on the sensor data infer the latent position and the temperature.
 -}
-filtered :: Diff td ~ Double => BehaviourF App td Temperature Result
+filtered :: (Diff td ~ Double) => BehaviourF App td Temperature Result
 filtered = proc temperature -> do
   (measured, latent) <- genModelWithoutTemperature -< temperature
   particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
@@ -268,7 +268,7 @@ filtered = proc temperature -> do
         }
 
 -- | Run simulation, inference, and visualization synchronously
-mainClSF :: Diff td ~ Double => BehaviourF App td () ()
+mainClSF :: (Diff td ~ Double) => BehaviourF App td () ()
 mainClSF = proc () -> do
   output <- filtered -< initialTemperature
   visualisation -< output
@@ -294,7 +294,7 @@ mainSingleRate =
 -- | Rescale the gloss clocks so they will be compatible with real 'UTCTime' (needed for compatibility with 'Millisecond')
 type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
 
-glossClockUTC :: Real (Time cl) => cl -> GlossClockUTC cl
+glossClockUTC :: (Real (Time cl)) => cl -> GlossClockUTC cl
 glossClockUTC cl =
   RescaledClockS
     { unscaledClockS = cl
@@ -353,13 +353,13 @@ mainMultiRate =
 
 -- * Utilities
 
-instance MonadDistribution m => MonadDistribution (GlossConcT m) where
+instance (MonadDistribution m) => MonadDistribution (GlossConcT m) where
   random = lift random
 
-instance MonadFactor m => MonadFactor (GlossConcT m) where
+instance (MonadFactor m) => MonadFactor (GlossConcT m) where
   score = lift . score
 
-instance MonadMeasure m => MonadMeasure (GlossConcT m)
+instance (MonadMeasure m) => MonadMeasure (GlossConcT m)
 
 sampleIOGloss :: App a -> GlossConcT IO a
 sampleIOGloss = hoist sampleIO

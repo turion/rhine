@@ -57,7 +57,7 @@ Different values of the same clock type should tick at the same speed,
 and only differ in implementation details.
 Often, clocks are singletons.
 -}
-class TimeDomain (Time cl) => Clock m cl where
+class (TimeDomain (Time cl)) => Clock m cl where
   -- | The time domain, i.e. type of the time stamps the clock creates.
   type Time cl
 
@@ -125,7 +125,7 @@ type RescalingSInit m cl time tag = Time cl -> m (RescalingS m cl time tag, time
    although this type is ambiguous.
 -}
 rescaleMToSInit ::
-  Monad m =>
+  (Monad m) =>
   (time1 -> m time2) ->
   time1 ->
   m (MSF m (time1, tag) (time2, tag), time2)
@@ -177,7 +177,7 @@ instance
       )
 
 -- | A 'RescaledClock' is trivially a 'RescaledClockM'.
-rescaledClockToM :: Monad m => RescaledClock cl time -> RescaledClockM m cl time
+rescaledClockToM :: (Monad m) => RescaledClock cl time -> RescaledClockM m cl time
 rescaledClockToM RescaledClock {..} =
   RescaledClockM
     { unscaledClockM = unscaledClock
@@ -211,7 +211,7 @@ instance
 
 -- | A 'RescaledClockM' is trivially a 'RescaledClockS'.
 rescaledClockMToS ::
-  Monad m =>
+  (Monad m) =>
   RescaledClockM m cl time ->
   RescaledClockS m cl time (Tag cl)
 rescaledClockMToS RescaledClockM {..} =
@@ -222,7 +222,7 @@ rescaledClockMToS RescaledClockM {..} =
 
 -- | A 'RescaledClock' is trivially a 'RescaledClockS'.
 rescaledClockToS ::
-  Monad m =>
+  (Monad m) =>
   RescaledClock cl time ->
   RescaledClockS m cl time (Tag cl)
 rescaledClockToS = rescaledClockMToS . rescaledClockToM
@@ -263,7 +263,7 @@ liftClock unhoistedClock =
 type IOClock m cl = HoistClock IO m cl
 
 -- | Lift a clock value into 'MonadIO'.
-ioClock :: MonadIO m => cl -> IOClock m cl
+ioClock :: (MonadIO m) => cl -> IOClock m cl
 ioClock unhoistedClock =
   HoistClock
     { monadMorphism = liftIO

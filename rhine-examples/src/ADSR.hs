@@ -180,7 +180,7 @@ decay d = linearly d 1
 -- Doesn't compile on GHC 9.0 otherwise
 
 -- | A period in which a given amplitude is sustained indefinitely.
-sustain :: Monad m => amplitude -> Behaviour m time amplitude
+sustain :: (Monad m) => amplitude -> Behaviour m time amplitude
 sustain amplitude = arr_ amplitude
 
 {- | The period in which the level falls from the sustain level to 0.
@@ -223,13 +223,13 @@ main = flow $ key >-- keepLast False --> consoleADSR
 {- | Raises an exception when the input becomes 'True',
    i.e. the key is pressed.
 -}
-keyPressed :: Monad m => BehaviourF (ExceptT () m) time Bool ()
+keyPressed :: (Monad m) => BehaviourF (ExceptT () m) time Bool ()
 keyPressed = throwOn ()
 
 {- | Raises an exception when the input becomes 'False',
    i.e. the key isn't pressed anymore.
 -}
-keyReleased :: Monad m => BehaviourF (ExceptT () m) time Bool ()
+keyReleased :: (Monad m) => BehaviourF (ExceptT () m) time Bool ()
 keyReleased = arr not >>> keyPressed
 
 {- | Executes the first 'ClSF' in parallel with a second 'ClSF',
@@ -239,7 +239,7 @@ keyReleased = arr not >>> keyPressed
    together with the current output of the first 'ClSF'.
 -}
 till ::
-  Monad m =>
+  (Monad m) =>
   ClSF m cl a b ->
   ClSF (ExceptT e m) cl a c ->
   ClSF (ExceptT (e, b) m) cl a b

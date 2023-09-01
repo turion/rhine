@@ -38,7 +38,7 @@ data Rhine m cl a b = Rhine
   , clock :: cl
   }
 
-instance GetClockProxy cl => ToClockProxy (Rhine m cl a b) where
+instance (GetClockProxy cl) => ToClockProxy (Rhine m cl a b) where
   type Cl (Rhine m cl a b) = cl
 
 {- |

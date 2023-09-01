@@ -18,7 +18,7 @@ import FRP.Rhine.Schedule
    that cause it to tick without doing anything
    and replicating the last output.
 -}
-upsampleMSF :: Monad m => b -> MSF m a b -> MSF m (Either arbitrary a) b
+upsampleMSF :: (Monad m) => b -> MSF m a b -> MSF m (Either arbitrary a) b
 upsampleMSF b msf = right msf >>> accumulateWith (<>) (Right b) >>> arr fromRight
   where
     fromRight (Right b') = b'

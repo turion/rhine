@@ -60,7 +60,7 @@ instance GetClockProxy (Periodic v)
 data HeadClProxy (n :: Nat) where
   HeadClProxy :: Periodic (n : ns) -> HeadClProxy n
 
-headCl :: KnownNat n => Periodic (n : ns) -> Integer
+headCl :: (KnownNat n) => Periodic (n : ns) -> Integer
 headCl cl = natVal $ HeadClProxy cl
 
 tailCl :: Periodic (n1 : n2 : ns) -> Periodic (n2 : ns)
@@ -69,7 +69,7 @@ tailCl Periodic = Periodic
 class NonemptyNatList (v :: [Nat]) where
   theList :: Periodic v -> NonEmpty Integer
 
-instance KnownNat n => NonemptyNatList '[n] where
+instance (KnownNat n) => NonemptyNatList '[n] where
   theList cl = headCl cl :| []
 
 instance
@@ -83,7 +83,7 @@ instance
 -- TODO Port back to dunai when naming issues are resolved
 
 -- | Repeatedly outputs the values of a given list, in order.
-cycleS :: Monad m => NonEmpty a -> MSF m () a
+cycleS :: (Monad m) => NonEmpty a -> MSF m () a
 cycleS as = unfold (second (fromMaybe as) . uncons) as
 
 {-

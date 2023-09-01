@@ -71,7 +71,7 @@ since it would create a new channel every tick.
 Instead, create one @chan :: Chan c@, e.g. with 'newChan',
 and then use 'withChanS'.
 -}
-runEventChanT :: MonadIO m => EventChanT event m a -> m a
+runEventChanT :: (MonadIO m) => EventChanT event m a -> m a
 runEventChanT a = do
   chan <- liftIO newChan
   runReaderT a chan
@@ -88,7 +88,7 @@ pass the channel to every behaviour or 'ClSF' that wants to emit events,
 and, by using 'eventClockOn', to every clock that should tick on the event.
 -}
 withChanS ::
-  Monad m =>
+  (Monad m) =>
   Chan event ->
   ClSF (EventChanT event m) cl a b ->
   ClSF m cl a b
@@ -103,17 +103,17 @@ Be cautious when emitting events from a signal clocked by an 'EventClock'.
 Nothing prevents you from emitting more events than are handled,
 causing the event buffer to grow indefinitely.
 -}
-emit :: MonadIO m => event -> EventChanT event m ()
+emit :: (MonadIO m) => event -> EventChanT event m ()
 emit event = do
   chan <- ask
   liftIO $ writeChan chan event
 
 -- | Emit an event on every tick.
-emitS :: MonadIO m => ClSF (EventChanT event m) cl event ()
+emitS :: (MonadIO m) => ClSF (EventChanT event m) cl event ()
 emitS = arrMCl emit
 
 -- | Emit an event whenever the input value is @Just event@.
-emitSMaybe :: MonadIO m => ClSF (EventChanT event m) cl (Maybe event) ()
+emitSMaybe :: (MonadIO m) => ClSF (EventChanT event m) cl (Maybe event) ()
 emitSMaybe = mapMaybe emitS >>> arr (const ())
 
 -- | Like 'emit', but completely evaluates the event before emitting it.
@@ -147,7 +147,7 @@ data EventClock event = EventClock
 instance Semigroup (EventClock event) where
   (<>) _ _ = EventClock
 
-instance MonadIO m => Clock (EventChanT event m) (EventClock event) where
+instance (MonadIO m) => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime
   type Tag (EventClock event) = event
   initClock _ = do
@@ -168,7 +168,7 @@ instance GetClockProxy (EventClock event)
    to the main loop (see 'withChanS').
 -}
 eventClockOn ::
-  MonadIO m =>
+  (MonadIO m) =>
   Chan event ->
   HoistClock (EventChanT event m) m (EventClock event)
 eventClockOn chan =

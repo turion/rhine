@@ -64,7 +64,7 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (GlossConcT m) where
   schedule actions = GlossConcT $ fmap (second $ map GlossConcT) $ schedule $ unGlossConcT <$> actions
 
 withPicRef ::
-  MonadIO m =>
+  (MonadIO m) =>
   (IORef Picture -> IO a) ->
   GlossConcT m a
 withPicRef action = GlossConcT $ do
@@ -72,15 +72,15 @@ withPicRef action = GlossConcT $ do
   liftIO $ action picRef
 
 -- | Add a picture to the canvas.
-paintIO :: MonadIO m => Picture -> GlossConcT m ()
+paintIO :: (MonadIO m) => Picture -> GlossConcT m ()
 paintIO pic = withPicRef $ \ref -> modifyIORef' ref (<> pic)
 
 -- | Clear the canvas.
-clearIO :: MonadIO m => GlossConcT m ()
+clearIO :: (MonadIO m) => GlossConcT m ()
 clearIO = withPicRef $ \ref -> writeIORef ref Blank
 
 -- | Clear the canvas and then paint.
-paintAllIO :: MonadIO m => Picture -> GlossConcT m ()
+paintAllIO :: (MonadIO m) => Picture -> GlossConcT m ()
 paintAllIO pic = clearIO >> paintIO pic
 
 -- * Gloss clocks in 'IO'
@@ -88,7 +88,7 @@ paintAllIO pic = clearIO >> paintIO pic
 -- | Concurrently block on @gloss@ events.
 data GlossEventClockIO = GlossEventClockIO
 
-instance MonadIO m => Clock (GlossConcT m) GlossEventClockIO where
+instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
   type Time GlossEventClockIO = Float
   type Tag GlossEventClockIO = Event
   initClock _ = return (constM getEvent, 0)
@@ -104,7 +104,7 @@ instance GetClockProxy GlossEventClockIO
 -- | Concurrently block on @gloss@ simulation ticks.
 data GlossSimClockIO = GlossSimClockIO
 
-instance MonadIO m => Clock (GlossConcT m) GlossSimClockIO where
+instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
   type Time GlossSimClockIO = Float
   type Tag GlossSimClockIO = ()
   initClock _ = return (constM getTime &&& arr (const ()), 0)
@@ -127,7 +127,7 @@ instance GetClockProxy GlossSimClockIO
    you can use 'flowGlossIO' instead.
 -}
 launchGlossThread ::
-  MonadIO m =>
+  (MonadIO m) =>
   GlossSettings ->
   m GlossEnv
 launchGlossThread GlossSettings {..} = do
@@ -155,7 +155,7 @@ launchGlossThread GlossSettings {..} = do
    you can use 'flowGlossIO' instead.
 -}
 launchInGlossThread ::
-  MonadIO m =>
+  (MonadIO m) =>
   GlossSettings ->
   GlossConcT m a ->
   m a
