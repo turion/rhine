@@ -9,6 +9,8 @@ packages:
 extra-deps:
 - terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
 - monad-schedule-0.1.2.1@sha256:95d6b9c6fd36f585e4a52938ebd1762c2e2caa8bb3c11ce86985dd11a2caae1a,1776
+- dunai-0.11.0@sha256:fc82a2ac6e2f7efcc2cd7f01412544ebe10d25143febdb0c3ebfb090220f4660,6372
+- simple-affine-space-0.2.1@sha256:bc9b1f5ae236b2898cd6f20da2d4589fd662fac2e2057f29b01330f65c030434,2046
 
 nix:
   packages:

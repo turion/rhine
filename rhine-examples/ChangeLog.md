@@ -1,5 +1,9 @@
 # Revision history for rhine-examples
 
+## 1.1
+
+* dunai-0.11 compatibility
+
 ## 0.9
 
 * Added Ball example

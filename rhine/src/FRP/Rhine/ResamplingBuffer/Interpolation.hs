@@ -26,6 +26,7 @@ linear ::
   , Clock m cl1
   , Clock m cl2
   , VectorSpace v s
+  , Num s
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
   ) =>
@@ -93,6 +94,7 @@ cubic ::
   , VectorSpace v s
   , Floating v
   , Eq v
+  , Fractional s
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
   ) =>
