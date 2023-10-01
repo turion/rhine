@@ -39,7 +39,7 @@ library
   build-depends:       base         >= 4.14 && < 4.18
                      , transformers >= 0.5
                      , rhine        == 1.0
-                     , dunai        ^>= 0.9
+                     , dunai        >= 0.9 && < 0.12
                      , gloss        >= 1.12
                      , mmorph       >= 1.1
                      , monad-schedule >= 0.1

@@ -23,6 +23,7 @@ import FRP.Rhine.ResamplingBuffer.Util
 -- | A simple linear interpolation based on the last calculated position and velocity.
 linear ::
   ( Monad m
+  , Num s
   , Clock m cl1
   , Clock m cl2
   , VectorSpace v s
@@ -90,6 +91,7 @@ sinc windowSize =
 -}
 cubic ::
   ( Monad m
+  , Fractional s
   , VectorSpace v s
   , Floating v
   , Eq v

@@ -27,6 +27,7 @@ import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
 import Control.Monad.Trans.MSF.Reader (readerS)
+import Data.MonadicStreamFunction.Instances.Num ()
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
 
 -- simple-affine-space
@@ -195,6 +196,7 @@ derivative = derivativeFrom zeroVector
 -}
 threePointDerivativeFrom ::
   ( Monad m
+  , Num s
   , VectorSpace v s
   , s ~ Diff td
   ) =>
@@ -211,6 +213,7 @@ threePointDerivativeFrom v0 = proc v -> do
 -}
 threePointDerivative ::
   ( Monad m
+  , Num s
   , VectorSpace v s
   , s ~ Diff td
   ) =>
@@ -229,6 +232,7 @@ threePointDerivative = threePointDerivativeFrom zeroVector
 -}
 weightedAverageFrom ::
   ( Monad m
+  , Fractional s
   , VectorSpace v s
   , s ~ Diff td
   ) =>
@@ -281,6 +285,7 @@ average = averageFrom zeroVector
 -}
 averageLinFrom ::
   ( Monad m
+  , Fractional s
   , VectorSpace v s
   , s ~ Diff td
   ) =>
@@ -298,6 +303,7 @@ averageLinFrom v0 t = proc v -> do
 -- | Linearised version of 'average'.
 averageLin ::
   ( Monad m
+  , Fractional s
   , VectorSpace v s
   , s ~ Diff td
   ) =>
@@ -322,8 +328,9 @@ lowPass = average
 -- | Filters out frequencies below @1 / (2 * pi * t)@.
 highPass ::
   ( Monad m
-  , VectorSpace v s
+  , Eq s
   , Floating s
+  , VectorSpace v s
   , s ~ Diff td
   ) =>
   -- | The time constant @t@
@@ -334,6 +341,7 @@ highPass t = clId ^-^ lowPass t
 -- | Filters out frequencies other than @1 / (2 * pi * t)@.
 bandPass ::
   ( Monad m
+  , Eq s
   , VectorSpace v s
   , Floating s
   , s ~ Diff td
@@ -346,6 +354,7 @@ bandPass t = lowPass t >>> highPass t
 -- | Filters out the frequency @1 / (2 * pi * t)@.
 bandStop ::
   ( Monad m
+  , Eq s
   , VectorSpace v s
   , Floating s
   , s ~ Diff td

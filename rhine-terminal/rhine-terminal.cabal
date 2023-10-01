@@ -33,7 +33,7 @@ library
                      , exceptions   >= 0.10.4
                      , transformers >= 0.5
                      , rhine        == 1.0
-                     , dunai        ^>= 0.9
+                     , dunai        >= 0.9 && < 0.12
                      , terminal     >= 0.2.0.0
                      , time         >= 1.9.3
                      , monad-schedule >= 0.1.2
