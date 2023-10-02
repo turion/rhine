@@ -175,3 +175,19 @@ parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left tag
 parClockTagInclusion (ParClockInR parClockInR) tag = parClockTagInclusion parClockInR $ Right tag
 parClockTagInclusion ParClockRefl tag = tag
+
+data SubclockProxy cl where
+  SameClock :: SubclockProxy cl
+  LeftParClock :: SubclockProxy cl1 -> SubclockProxy (ParallelClock cl1 cl2)
+  RightParClock :: SubclockProxy cl2 -> SubclockProxy (ParallelClock cl1 cl2)
+  LeftSeqClock :: SubclockProxy cl1 -> SubclockProxy (SequentialClock cl1 cl2)
+  RightSeqClock :: SubclockProxy cl2 -> SubclockProxy (SequentialClock cl1 cl2)
+
+data Subclock cl = Subclock
+  { wholeClock :: cl
+  , subclockProxy :: SubclockProxy cl
+  }
+
+instance Clock m cl => Clock m (Subclock cl) where
+  type Time (Subclock cl) = Time cl
+  type Tag (Subclock cl) = Tag cl -- FIXME Hack, I should restrict the type, but the Subclock is not on the type level

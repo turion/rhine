@@ -113,3 +113,7 @@ data SN m cl a b where
 
 instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
   type Cl (SN m cl a b) = cl
+
+
+projectSubclock :: Subclock cl -> SN m cl a b -> SN m (Subclock cl) a (Maybe b)
+projectSubclock SameClock (Synchronous clsf) = Synchronous $ clsf >>> arr Just
