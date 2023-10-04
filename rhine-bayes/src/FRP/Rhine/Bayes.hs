@@ -37,6 +37,22 @@ runPopulationCl ::
   ClSF m cl a [(b, Log Double)]
 runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
 
+-- | "Particle parameter marginalized Metropolis-Hastings" - adaptation of PMMH
+ppmmh ::
+  MonadDistribution m =>
+  -- | Number of particles parameter
+  Int ->
+  -- | Number of particles state
+  Int ->
+  -- | Resampler for parameter
+  (forall x . Population m x -> Population m x) ->
+  -- | Resampler for state
+  (forall x . Population m x -> Population m x) ->
+  ClSF m cl a p ->
+  ClSF (Population m) cl (a, p) b ->
+  ClSF m cl a ([b], [p])
+ppmmh nPar nState resPar resState par state = DunaiReader.readerS $ DunaiBayes.ppmmh nPar nState resPar resState (DunaiReader.runReaderS par) (DunaiReader.runReaderS state <<< arr (\((ti, a), p) -> (ti, (a, p))))
+
 -- * Short standard library of stochastic processes
 
 -- | A stochastic process is a behaviour that uses, as only effect, random sampling.
