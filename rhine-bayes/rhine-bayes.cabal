@@ -69,6 +69,7 @@ executable rhine-bayes-gloss
                      , log-domain
                      , mmorph
                      , time
+                     , monad-schedule
   default-language:    Haskell2010
   default-extensions:
     Arrows

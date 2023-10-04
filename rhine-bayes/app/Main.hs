@@ -13,10 +13,11 @@ In this example, you will find the following:
   * A more scalable, modular, interactive architecture, where all these three systems run on separate clocks,
     and the user can interactively change the temperature of the heat bath
 -}
+{-# LANGUAGE LambdaCase #-}
 module Main where
 
 -- base
-import Control.Monad (replicateM, void)
+import Control.Monad (replicateM, void, guard)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Product (Product, getProduct))
 import GHC.Float (double2Float, float2Double)
@@ -51,6 +52,10 @@ import FRP.Rhine.Gloss.IO
 -- rhine-bayes
 import FRP.Rhine.Bayes
 import FRP.Rhine.Gloss.Common
+import FRP.Rhine.Gloss (GlossEventClock)
+import Control.Monad.Schedule.Class (MonadSchedule (..))
+import Unsafe.Coerce (unsafeCoerce)
+import Control.Monad.Trans.Reader (ReaderT(ReaderT))
 
 type Temperature = Double
 type Pos = (Double, Double)
@@ -267,7 +272,7 @@ glossSettings =
 mains :: [(String, IO ())]
 mains =
   [ ("single rate", mainSingleRate)
-  , ("single rate, parameter collapse", mainSingleRateCollapse)
+  , ("multi rate, parameter collapse", mainMultiRateCollapse)
   , ("multi rate, temperature process", mainMultiRate)
   ]
 
@@ -288,51 +293,6 @@ glossClock =
     { unscaledClock = GlossSimClockIO
     , rescale = float2Double
     }
-
--- *** Poor attempt at temperature inference: Particle collapse
-
--- | Choose an exponential distribution as prior for the temperature
-temperaturePrior :: (MonadDistribution m) => m Temperature
-temperaturePrior = gamma 1 7
-
-{- | On startup, sample values from the temperature prior.
-  Then keep sampling from the position prior and condition by the likelihood of the measured sensor position.
--}
-posteriorTemperatureCollapse :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td Sensor (Temperature, Pos)
-posteriorTemperatureCollapse = proc sensor -> do
-  temperature <- performOnFirstSample (arr_ <$> temperaturePrior) -< ()
-  latent <- prior -< temperature
-  arrM score -< sensorLikelihood latent sensor
-  returnA -< (temperature, latent)
-
-{- | Given an actual temperature, simulate a latent position and measured sensor position,
-   and based on the sensor data infer the latent position and the temperature.
--}
-filteredCollapse :: (Diff td ~ Double) => BehaviourF App td Temperature Result
-filteredCollapse = proc temperature -> do
-  (measured, latent) <- genModelWithoutTemperature -< temperature
-  particlesAndTemperature <- runPopulationCl nParticles resampleSystematic posteriorTemperatureCollapse -< measured
-  returnA
-    -<
-      Result
-        { temperature
-        , measured
-        , latent
-        , particlesPosition = first snd <$> particlesAndTemperature
-        , particlesTemperature = first fst <$> particlesAndTemperature
-        }
-
--- | Run simulation, inference, and visualization synchronously
-mainClSFCollapse :: (Diff td ~ Double) => BehaviourF App td () ()
-mainClSFCollapse = proc () -> do
-  output <- filteredCollapse -< initialTemperature
-  visualisation -< output
-
-mainSingleRateCollapse =
-  void $
-    sampleIO $
-      launchInGlossThread glossSettings $
-        reactimateCl glossClock mainClSFCollapse
 
 -- *** Infer temperature with a stochastic process
 
@@ -379,19 +339,108 @@ glossClockUTC cl =
         return (arr $ \(timePassed, event) -> (addUTCTime (realToFrac timePassed) now, event), now)
     }
 
+type ModelClock = LiftClock IO GlossConcT (Millisecond 100)
+
+-- | The model is sampled at 100 FPS.
+modelClock :: ModelClock
+modelClock = liftClock waitClock
+
 {- | The part of the program which simulates latent position and sensor,
    running 100 times a second.
 -}
-modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) Temperature (Temperature, (Sensor, Pos))
-modelRhine = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature) @@ liftClock waitClock
+model :: ClSF (GlossConcT IO) ModelClock Temperature (Temperature, (Sensor, Pos))
+model = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature)
 
--- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC GlossEventClockIO) () Temperature
-userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
+-- | The user can change the temperature by pressing the up and down arrow keys,
+--   or press the "r" key.
+data UserInput
+  = TemperatureFactor (Product Double)
+  | ResetKey
+  deriving Eq
+
+type UserClock = SelectClock (GlossClockUTC GlossEventClockIO) UserInput
+
+userClock :: UserClock
+userClock = SelectClock
+  { mainClock = glossClockUTC GlossEventClockIO
+  ,  select = \case
+      EventKey (SpecialKey KeyUp) Down _ _ -> Just $ TemperatureFactor $ Product 1.2
+      EventKey (SpecialKey KeyDown) Down _ _ -> Just $ TemperatureFactor $ Product $ 1 / 1.2
+      EventKey (Char 'r') Down _ _ -> Just ResetKey
+      _ -> Nothing
+  }
+
+userTemperature :: ClSF (GlossConcT IO) UserClock () Temperature
+userTemperature = tagS >>> arr selector >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
-    selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
-    selector (EventKey (SpecialKey KeyDown) Down _ _) = Just (1 / 1.2)
+    selector (TemperatureFactor factor) = Just factor
     selector _ = Nothing
+
+-- *** Poor attempt at temperature inference: Particle collapse
+
+-- | Choose an exponential distribution as prior for the temperature
+temperaturePrior :: (MonadDistribution m) => m Temperature
+temperaturePrior = gamma 1 7
+
+
+{- | On startup, sample values from the temperature prior.
+  Then keep sampling from the position prior and condition by the likelihood of the measured sensor position.
+-}
+posteriorTemperatureCollapse :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td (Bool, Sensor) (Temperature, Pos)
+posteriorTemperatureCollapse = proc (resetTemperature, sensor) -> do
+  temperature <- cache temperaturePrior -< resetTemperature
+  latent <- prior -< temperature
+  arrM score -< sensorLikelihood latent sensor
+  returnA -< (temperature, latent)
+  where
+    cache :: Monad m => m b -> BehaviourF m td Bool b
+    cache action = feedback Nothing $ proc (invalidateCache, bLast) -> do
+      let bCached = guard (not invalidateCache) >> bLast
+      bNew <- case bCached of
+        Nothing -> do
+          constMCl action -< ()
+        Just b -> do
+          returnA -< b
+      returnA -< (bNew, Just bNew)
+
+{- | Given an actual temperature, simulate a latent position and measured sensor position,
+   and based on the sensor data infer the latent position and the temperature.
+-}
+inferenceCollapse :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Bool, (Temperature, (Sensor, Pos))) Result
+inferenceCollapse = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+  where
+    inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Bool, (Temperature, (Sensor, Pos))) Result
+    inferenceBehaviour = proc (reset, (temperature, (measured, latent))) -> do
+      positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureCollapse -< (reset, measured)
+      returnA
+        -<
+          Result
+            { temperature
+            , measured
+            , latent
+            , particlesPosition = first snd <$> positionsAndTemperatures
+            , particlesTemperature = first fst <$> positionsAndTemperatures
+            }
+
+mainRhineMultiRateCollapse =
+  (tagS &&& userTemperature)
+    @@ userClock
+      >-- collect *-* keepLast initialTemperature -->
+        (clId *** model) @@ modelClock
+        >-- reset *-* keepLast (initialTemperature, (zeroVector, zeroVector)) -->
+          inferenceCollapse
+            >-- keepLast emptyResult -->
+              visualisationRhine
+  where
+    -- | Whether the user pressed the reset key
+    reset :: Monad m => ResamplingBuffer m cl1 cl2 [UserInput] Bool
+    reset = collect >>-^ arr (concat >>> filter (== ResetKey) >>> not . null)
+
+mainMultiRateCollapse = void $
+  launchInGlossThread glossSettings $
+    flow mainRhineMultiRateCollapse
+
+-- *** Multi rate with stochastic process
 
 {- | This part performs the inference (and passes along temperature, sensor and position simulations).
    It runs as fast as possible, so this will potentially drain the CPU.
@@ -420,9 +469,9 @@ visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC Glos
 -- | Compose all four asynchronous components to a single 'Rhine'.
 mainRhineMultiRate =
   userTemperature
-    @@ glossClockUTC GlossEventClockIO
+    @@ userClock
       >-- keepLast initialTemperature -->
-        modelRhine
+        model @@ modelClock
         >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
           inference
             >-- keepLast emptyResult -->
@@ -447,3 +496,12 @@ instance (MonadMeasure m) => MonadMeasure (GlossConcT m)
 
 sampleIOGloss :: App a -> GlossConcT IO a
 sampleIOGloss = hoist sampleIO
+
+unsafeMkSampler :: ReaderT g m a -> Sampler g m a
+unsafeMkSampler = unsafeCoerce
+
+runSampler :: Sampler g m a -> ReaderT g m a
+runSampler = ReaderT . sampleWith
+
+instance (Monad m, MonadSchedule m) => MonadSchedule (Sampler g m) where
+  schedule = unsafeMkSampler . fmap (second (map unsafeMkSampler)) . schedule . fmap runSampler
