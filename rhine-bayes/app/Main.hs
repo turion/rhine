@@ -156,6 +156,16 @@ data Result = Result
   }
   deriving (Show)
 
+-- | A 'Result' where nothing has been inferred yet
+emptyResult =
+  Result
+    { temperature = initialTemperature
+    , measured = zeroVector
+    , latent = zeroVector
+    , particlesPosition = []
+    , particlesTemperature = []
+    }
+
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
 nParticles = 100
@@ -364,7 +374,7 @@ mainRhineMultiRate =
         modelRhine
         >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
           inference
-            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particlesPosition = [], particlesTemperature = []} -->
+            >-- keepLast emptyResult -->
               visualisationRhine
 {- FOURMOLU_ENABLE -}
 
