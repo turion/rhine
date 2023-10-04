@@ -52,7 +52,7 @@ data GlossEnv = GlossEnv
   { timeVar :: MVar Float
   , eventVar :: MVar Event
   , picRef :: IORef Picture
-  , time :: Float
+  , timeRef :: IORef Float
   }
 
 -- | Wraps the concurrent variables needed for communication with the @gloss@ backend.
@@ -94,9 +94,10 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
   initClock _ = return (constM getEvent, 0)
     where
       getEvent = do
-        GlossEnv {eventVar, time} <- GlossConcT ask
+        GlossEnv {eventVar, timeRef} <- GlossConcT ask
         liftIO $ do
           event <- takeMVar eventVar
+          time <- readIORef timeRef
           return (time, event)
 
 instance GetClockProxy GlossEventClockIO
@@ -131,17 +132,20 @@ launchGlossThread ::
   GlossSettings ->
   m GlossEnv
 launchGlossThread GlossSettings {..} = do
-  vars <- liftIO $ GlossEnv <$> newEmptyMVar <*> newEmptyMVar <*> newIORef Blank <*> pure 0
+  vars <- liftIO $ GlossEnv <$> newEmptyMVar <*> newEmptyMVar <*> newIORef Blank <*> newIORef 0
   let
     getPic GlossEnv {picRef} = readIORef picRef
     -- Only try to put so this doesn't hang in case noone is listening for events or ticks
     handleEvent event vars@GlossEnv {eventVar} = do
       void $ tryPutMVar eventVar event
       return vars
-    simStep diffTime vars@GlossEnv {timeVar, time} = do
+    simStep diffTime vars@GlossEnv {timeVar, timeRef} = do
+      time <- readIORef timeRef
       let !time' = time + diffTime
+      liftIO $ print time'
       void $ tryPutMVar timeVar time'
-      return vars {time = time'}
+      writeIORef timeRef time'
+      return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
   return vars
 
