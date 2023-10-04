@@ -39,6 +39,9 @@ import Control.Monad.Bayes.Class hiding (posterior, prior)
 import Control.Monad.Bayes.Population hiding (hoist)
 import Control.Monad.Bayes.Sampler.Strict
 
+-- dunai
+import Control.Monad.Trans.MSF.Except
+
 -- rhine
 import FRP.Rhine
 
@@ -151,9 +154,20 @@ data Result = Result
   { temperature :: Temperature
   , measured :: Sensor
   , latent :: Pos
-  , particles :: [((Temperature, Pos), Log Double)]
+  , particlesPosition :: [(Pos, Log Double)]
+  , particlesTemperature :: [(Temperature, Log Double)]
   }
   deriving (Show)
+
+-- | A 'Result' where nothing has been inferred yet
+emptyResult =
+  Result
+    { temperature = initialTemperature
+    , measured = zeroVector
+    , latent = zeroVector
+    , particlesPosition = []
+    , particlesTemperature = []
+    }
 
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
@@ -173,7 +187,7 @@ type App = GlossConcT SamplerIO
 
 -- | Draw the results of the simulation and inference
 visualisation :: (Diff td ~ Double) => BehaviourF App td Result ()
-visualisation = proc Result {temperature, measured, latent, particles} -> do
+visualisation = proc Result {temperature, measured, latent, particlesPosition, particlesTemperature} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
   arrMCl paintIO
@@ -185,7 +199,7 @@ visualisation = proc Result {temperature, measured, latent, particles} -> do
                 zip
                   [0 ..]
                   [ printf "Temperature: %.2f" temperature
-                  , printf "Particles: %i" $ length particles
+                  , printf "Particles: %i" $ length particlesPosition
                   , printf "Time: %.1f" time
                   ]
               return $ translate 0 ((-150) * n) $ text message
@@ -193,7 +207,8 @@ visualisation = proc Result {temperature, measured, latent, particles} -> do
           ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
-  drawParticles -< particles
+  drawParticles -< particlesPosition
+  drawParticlesTemperature -< particlesTemperature
 
 -- ** Parameters for the temperature display
 
@@ -215,18 +230,30 @@ drawBall :: BehaviourF App td (Pos, Double, Color) ()
 drawBall = proc (position, width, theColor) -> do
   arrMCl paintIO -< scale 20 20 $ uncurry translate (double2FloatTuple position) $ color theColor $ circleSolid $ double2Float width
 
-drawParticle :: BehaviourF App td ((Temperature, Pos), Log Double) ()
-drawParticle = proc ((temperature, position), probability) -> do
+drawParticle :: BehaviourF App td (Pos, Log Double) ()
+drawParticle = proc (position, probability) -> do
   drawBall -< (position, 0.1, withAlpha (double2Float $ exp $ 0.2 * ln probability) white)
+
+drawParticleTemperature :: BehaviourF App td (Temperature, Log Double) ()
+drawParticleTemperature = proc (temperature, probability) -> do
   arrMCl paintIO -< toThermometer $ translate 0 (double2Float temperature * thermometerScale) $ color (withAlpha (double2Float $ exp $ 0.2 * ln probability) white) $ rectangleSolid thermometerWidth 2
 
-drawParticles :: BehaviourF App td [((Temperature, Pos), Log Double)] ()
-drawParticles = proc particles -> do
-  case particles of
+drawParticles :: BehaviourF App td [(Pos, Log Double)] ()
+drawParticles = proc particlesPosition -> do
+  case particlesPosition of
     [] -> returnA -< ()
     p : ps -> do
       drawParticle -< p
       drawParticles -< ps
+
+-- FIXME abstract using a library
+drawParticlesTemperature :: BehaviourF App td [(Temperature, Log Double)] ()
+drawParticlesTemperature = proc particlesPosition -> do
+  case particlesPosition of
+    [] -> returnA -< ()
+    p : ps -> do
+      drawParticleTemperature -< p
+      drawParticlesTemperature -< ps
 
 glossSettings :: GlossSettings
 glossSettings =
@@ -240,6 +267,7 @@ glossSettings =
 mains :: [(String, IO ())]
 mains =
   [ ("single rate", mainSingleRate)
+  , ("single rate, parameter collapse", mainSingleRateCollapse)
   , ("multi rate, temperature process", mainMultiRate)
   ]
 
@@ -251,28 +279,6 @@ main = do
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
-{- | Given an actual temperature, simulate a latent position and measured sensor position,
-   and based on the sensor data infer the latent position and the temperature.
--}
-filtered :: (Diff td ~ Double) => BehaviourF App td Temperature Result
-filtered = proc temperature -> do
-  (measured, latent) <- genModelWithoutTemperature -< temperature
-  particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
-  returnA
-    -<
-      Result
-        { temperature
-        , measured
-        , latent
-        , particles
-        }
-
--- | Run simulation, inference, and visualization synchronously
-mainClSF :: (Diff td ~ Double) => BehaviourF App td () ()
-mainClSF = proc () -> do
-  output <- filtered -< initialTemperature
-  visualisation -< output
-
 -- | Rescale to the 'Double' time domain
 type GlossClock = RescaledClock GlossSimClockIO Double
 
@@ -282,6 +288,76 @@ glossClock =
     { unscaledClock = GlossSimClockIO
     , rescale = float2Double
     }
+
+-- *** Poor attempt at temperature inference: Particle collapse
+
+-- | Choose an exponential distribution as prior for the temperature
+temperaturePrior :: (MonadDistribution m) => m Temperature
+temperaturePrior = gamma 1 7
+
+{- | On startup, sample values from the temperature prior.
+  Then keep sampling from the position prior and condition by the likelihood of the measured sensor position.
+-}
+posteriorTemperatureCollapse :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td Sensor (Temperature, Pos)
+posteriorTemperatureCollapse = proc sensor -> do
+  temperature <- performOnFirstSample (arr_ <$> temperaturePrior) -< ()
+  latent <- prior -< temperature
+  arrM score -< sensorLikelihood latent sensor
+  returnA -< (temperature, latent)
+
+{- | Given an actual temperature, simulate a latent position and measured sensor position,
+   and based on the sensor data infer the latent position and the temperature.
+-}
+filteredCollapse :: (Diff td ~ Double) => BehaviourF App td Temperature Result
+filteredCollapse = proc temperature -> do
+  (measured, latent) <- genModelWithoutTemperature -< temperature
+  particlesAndTemperature <- runPopulationCl nParticles resampleSystematic posteriorTemperatureCollapse -< measured
+  returnA
+    -<
+      Result
+        { temperature
+        , measured
+        , latent
+        , particlesPosition = first snd <$> particlesAndTemperature
+        , particlesTemperature = first fst <$> particlesAndTemperature
+        }
+
+-- | Run simulation, inference, and visualization synchronously
+mainClSFCollapse :: (Diff td ~ Double) => BehaviourF App td () ()
+mainClSFCollapse = proc () -> do
+  output <- filteredCollapse -< initialTemperature
+  visualisation -< output
+
+mainSingleRateCollapse =
+  void $
+    sampleIO $
+      launchInGlossThread glossSettings $
+        reactimateCl glossClock mainClSFCollapse
+
+-- *** Infer temperature with a stochastic process
+
+{- | Given an actual temperature, simulate a latent position and measured sensor position,
+   and based on the sensor data infer the latent position and the temperature.
+-}
+filtered :: (Diff td ~ Double) => BehaviourF App td Temperature Result
+filtered = proc temperature -> do
+  (measured, latent) <- genModelWithoutTemperature -< temperature
+  positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
+  returnA
+    -<
+      Result
+        { temperature
+        , measured
+        , latent
+        , particlesPosition = first snd <$> positionsAndTemperatures
+        , particlesTemperature = first fst <$> positionsAndTemperatures
+        }
+
+-- | Run simulation, inference, and visualization synchronously
+mainClSF :: (Diff td ~ Double) => BehaviourF App td () ()
+mainClSF = proc () -> do
+  output <- filtered -< initialTemperature
+  visualisation -< output
 
 mainSingleRate =
   void $
@@ -325,8 +401,16 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
   where
     inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
     inferenceBehaviour = proc (temperature, (measured, latent)) -> do
-      particles <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
-      returnA -< Result {temperature, measured, latent, particles}
+      positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
+      returnA
+        -<
+          Result
+            { temperature
+            , measured
+            , latent
+            , particlesPosition = first snd <$> positionsAndTemperatures
+            , particlesTemperature = first fst <$> positionsAndTemperatures
+            }
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
@@ -341,7 +425,7 @@ mainRhineMultiRate =
         modelRhine
         >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
           inference
-            >-- keepLast Result {temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -->
+            >-- keepLast emptyResult -->
               visualisationRhine
 {- FOURMOLU_ENABLE -}
 
