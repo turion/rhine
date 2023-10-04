@@ -24,6 +24,7 @@ where
 
 -- base
 import Control.Concurrent
+import Control.Monad (when)
 import Data.Functor (void)
 import Data.IORef
 
@@ -142,9 +143,8 @@ launchGlossThread GlossSettings {..} = do
     simStep diffTime vars@GlossEnv {timeVar, timeRef} = do
       time <- readIORef timeRef
       let !time' = time + diffTime
-      liftIO $ print time'
-      void $ tryPutMVar timeVar time'
-      writeIORef timeRef time'
+      timeUpdate <- tryPutMVar timeVar time'
+      when timeUpdate $ writeIORef timeRef time'
       return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
   return vars
