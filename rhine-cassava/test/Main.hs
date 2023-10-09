@@ -54,3 +54,27 @@ main = hspec $ do
     removeFile filepath
     e `shouldBe` Right EndOfFile
     contents `shouldBe` ([["hi", "this"], ["is", "dog"]] :: Vector Record)
+
+  it "Throws EndOfFile when given incorrect separator" $ do
+    let bytestring = "oh,that\ncat,is,rude\n" :: ByteString
+        filepath = "testfile.csv"
+    ByteString.writeFile filepath bytestring
+    Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ csvClock filepath
+    removeFile filepath
+    e `shouldBe` Left "hi"
+
+  it "Throws EndOfFile when given incorrect separator" $ do
+    let bytestring = "oh,that\ncat\n" :: ByteString
+        filepath = "testfile.csv"
+    ByteString.writeFile filepath bytestring
+    Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ csvClock filepath
+    removeFile filepath
+    e `shouldBe` Left "hi"
+
+  it "Throws EndOfFile when given incorrect separator" $ do
+    let bytestring = "oh,that\ncat" :: ByteString
+        filepath = "testfile.csv"
+    ByteString.writeFile filepath bytestring
+    Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ csvClock filepath
+    removeFile filepath
+    e `shouldBe` Left "hi"
