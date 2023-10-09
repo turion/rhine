@@ -39,6 +39,6 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
       };
 
     name = "rhine";
-    packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" "rhine-bayes" ];
+    packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" "rhine-bayes" "rhine-cassava" ];
   };
 }
