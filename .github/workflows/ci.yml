@@ -87,15 +87,8 @@ jobs:
           key: ${{ env.key }}-plan-${{ hashFiles('**/plan.json') }}
           restore-keys: ${{ env.key }}
 
-      - name: Cabal build dependencies except rhine-bayes
-        # Temporarily disable building rhine-bayes on GHC 9.4.4
-        if: ${{ matrix.ghc == '9.4.4' }}
-        run: |
-          cabal build all --project-file cabal.9.4.4.project --enable-tests --only-dependencies
       - name: Cabal build dependencies
-        if: ${{ matrix.ghc != '9.4.4' }} # Because dependency monad-bayes doesn't support it yet, see https://github.com/tweag/monad-bayes/issues/259
-        run: |
-          cabal build all --enable-tests --only-dependencies
+        run: cabal build all --enable-tests --only-dependencies
 
       - name: Save Cabal dependency cache
         uses: actions/cache/save@v3
@@ -104,22 +97,10 @@ jobs:
           path: ${{ steps.setup.outputs.cabal-store }}
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
-      - name: Cabal build packages except rhine-bayes
-        if: ${{ matrix.ghc == '9.4.4' }}
-        run: |
-          cabal build all --project-file cabal.9.4.4.project --enable-tests -fdev
       - name: Cabal build packages
-        if: ${{ matrix.ghc != '9.4.4' }} # Because dependency monad-bayes doesn't support it yet, see https://github.com/tweag/monad-bayes/issues/259
-        run: |
-          cabal build all --enable-tests -fdev
-      - name: Cabal test all except rhine-bayes
-        if: ${{ matrix.ghc == '9.4.4' }}
-        run: |
-          cabal test all --project-file cabal.9.4.4.project --enable-tests --test-show-details=Always
+        run: cabal build all --enable-tests -fdev
       - name: Cabal test
-        if: ${{ matrix.ghc != '9.4.4' }} # Because dependency monad-bayes doesn't support it yet, see https://github.com/tweag/monad-bayes/issues/259
-        run: |
-          cabal test all --enable-tests --test-show-details=Always
+        run: cabal test all --enable-tests --test-show-details=Always
 
   build-stack:
     runs-on: ubuntu-latest
@@ -159,13 +140,8 @@ jobs:
       - name: Build default package (rhine-gloss)
         run: nix build .#rhine-gloss
       - name: Build default package (rhine-bayes)
-        if: ${{ matrix.ghc != '9.4.4' }} # Because dependency monad-bayes doesn't support it yet, see https://github.com/tweag/monad-bayes/issues/259
         run: nix build .#rhine-bayes
-      - name: Run tests except rhine-bayes
-        if: ${{ matrix.ghc == '9.4.4' }}
-        run: nix develop -c cabal test all --project-file cabal.9.4.4.project
       - name: Run tests
-        if: ${{ matrix.ghc != '9.4.4' }} # Because dependency monad-bayes doesn't support it yet, see https://github.com/tweag/monad-bayes/issues/259
         run: nix develop -c cabal test all
       # nix flake check breaks on IFD in multi-platform flake https://github.com/NixOS/nix/issues/4265
       # - run: nix flake check
