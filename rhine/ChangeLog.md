@@ -1,5 +1,9 @@
 # Revision history for rhine
 
+## 1.0.1
+
+* Added `File` clock
+
 ## 1.0
 
 * Removed schedules. See the [page about changes in version 1](/version1.md).

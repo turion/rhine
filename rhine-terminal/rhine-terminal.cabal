@@ -32,7 +32,7 @@ library
   build-depends:       base         >= 4.11 && < 4.18
                      , exceptions   >= 0.10.4
                      , transformers >= 0.5
-                     , rhine        == 1.0
+                     , rhine        ^>= 1.0
                      , dunai        ^>= 0.9
                      , terminal     >= 0.2.0.0
                      , time         >= 1.9.3
@@ -49,7 +49,7 @@ executable rhine-terminal-simple
   main-is:             TerminalSimple.hs
   ghc-options:         -threaded
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.0
+                     , rhine        ^>= 1.0
                      , rhine-terminal
                      , terminal     >= 0.2.0.0
                      , text         >= 1.2.5.0
@@ -67,7 +67,7 @@ test-suite rhine-terminal-tests
   main-is:             tests/Main.hs
   ghc-options:         -threaded
   build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.0
+                     , rhine        ^>= 1.0
                      , rhine-terminal
                      , exceptions   >= 0.10.4
                      , transformers >= 0.5
