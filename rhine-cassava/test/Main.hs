@@ -30,12 +30,12 @@ import FRP.Rhine.Clock.Csv
 main :: IO ()
 main = hspec $ do
   it "Can read a file" $ do
-    let bytestring = "hi,this\nis,dog\n" :: ByteString
+    let bytestring = "hi,this\nis,dog\n\n" :: ByteString
         filepath = "testfile.csv"
     ByteString.writeFile filepath bytestring
-    Right result <- runExceptT @(Either String FileException) $ (flip embed [(), ()] =<<) $ eraseClock $ tagS @@ csvClock filepath
+    result <- runExceptT @(Either String FileException) $ (flip embed [(), ()] =<<) $ eraseClock $ tagS @@ csvClock filepath
     removeFile filepath
-    result `shouldBe` ([Just [["hi", "this"]], Just [["is", "dog"]]] :: [Maybe (Vector Record)])
+    result `shouldBe` Right ([Just ["hi", "this"], Just ["is", "dog"]] :: [Maybe Record])
 
   it "Throws EndOfFile when run for more ticks than the file is long" $ do
     let bytestring = "hi,this\nis,dog\n" :: ByteString
@@ -48,12 +48,12 @@ main = hspec $ do
   it "Parses the CSV before throwing EndOfFile when run for more ticks than the file is long" $ do
     let bytestring = "hi,this\nis,dog\n" :: ByteString
         filepath = "testfile.csv"
-        writerClock = HoistClock (csvClock filepath) (mapExceptT lift) :: HoistClock (ExceptT (Either String FileException) IO) (ExceptT (Either String FileException) (WriterT (Vector Record) IO)) CsvClock
+        writerClock = HoistClock (csvClock filepath) (mapExceptT lift) :: HoistClock (ExceptT (Either String FileException) IO) (ExceptT (Either String FileException) (WriterT [Record] IO)) CsvClock
     ByteString.writeFile filepath bytestring
-    (Left e, contents) <- runWriterT $ runExceptT @(Either String FileException) $ flow $ tagS >-> arrMCl (lift . tell) @@ writerClock
+    (Left e, contents) <- runWriterT $ runExceptT @(Either String FileException) $ flow $ tagS >-> arrMCl (lift . tell . pure) @@ writerClock
     removeFile filepath
     e `shouldBe` Right EndOfFile
-    contents `shouldBe` ([["hi", "this"], ["is", "dog"]] :: Vector Record)
+    contents `shouldBe` ([["hi", "this"], ["is", "dog"]] :: [Record])
 
   it "Throws EndOfFile when given incorrect separator" $ do
     let bytestring = "oh,that\ncat,is,rude\n" :: ByteString

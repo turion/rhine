@@ -51,10 +51,16 @@ extra-doc-files:    CHANGELOG.md
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 -- extra-source-files:
 
-common warnings
+common opts
     ghc-options: -Wall
     if flag(dev)
         ghc-options: -Werror
+
+    default-language: GHC2021
+
+    default-extensions:
+        Arrows
+        TypeFamilies
 
 flag dev
   description: Enable warnings as errors. Active on ci.
@@ -62,8 +68,8 @@ flag dev
   manual: True
 
 library
-    -- Import common warning flags.
-    import:           warnings
+    -- Import common warning flags and other shared default settings.
+    import:           opts
 
     -- Modules exported by the library.
     exposed-modules:  FRP.Rhine.Clock.Csv
@@ -81,25 +87,19 @@ library
                     , cassava ^>= 0.5.3
                     , bytestring ^>= 0.11
                     , vector ^>= 0.12
+                    , dunai ^>= 0.9
 
     -- Directories containing source files.
     hs-source-dirs:   src
 
-    -- Base language which the package is written in.
-    default-language: Haskell2010
-
     default-extensions:
-        FlexibleInstances
-        MultiParamTypeClasses
-        NamedFieldPuns
-        TypeFamilies
+        OverloadedStrings
 
 test-suite rhine-cassava-test
-    -- Import common warning flags.
-    import:           warnings
+    import:           opts
 
     -- Base language which the package is written in.
-    default-language: Haskell2010
+    default-language: GHC2021
 
     -- Modules included in this executable, other than Main.
     -- other-modules:
@@ -129,8 +129,5 @@ test-suite rhine-cassava-test
       , rhine-cassava
 
     default-extensions:
-        Arrows
-        ImportQualifiedPost
         OverloadedLists
         OverloadedStrings
-        TypeApplications
