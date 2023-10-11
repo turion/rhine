@@ -61,12 +61,12 @@ and then add the result to another signal network.
 data FileException = EndOfFile
   deriving (Show, Eq)
 
-instance Clock (ExceptT (Either e FileException) IO) (File e a) where
+instance MonadIO m => Clock (ExceptT (Either e FileException) m) (File e a) where
   type Time (File e a) = Integer
   type Tag (File e a) = a
   initClock File {filename, action} = lift $ do
     handle <- liftIO $ openFile filename ReadMode
-    let getLineHandle = arrM $ const $ ExceptT $ do
+    let getLineHandle = arrM $ const $ ExceptT $ liftIO $ do
           catchIOError (Data.Bifunctor.first Left <$> action handle) $ \e -> do
             hClose handle
             if isEOFError e
