@@ -2,7 +2,7 @@ name:                rhine-bayes
 version:             1.0
 synopsis:            monad-bayes backend for Rhine
 description:
-  This package provides a backend to the `monad-bayes` library,
+  This package provides a backend to the @monad-bayes@ library,
   enabling you to write stochastic processes as signal functions,
   and performing online machine learning on them.
 license:             BSD3
