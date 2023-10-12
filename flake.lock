@@ -51,6 +51,22 @@
         "type": "github"
       }
     },
+    "nix-mkPandoc": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1636045594,
+        "narHash": "sha256-sdJaDmdMyRhkJheIrVx60dYyB3pVdNEQ7409v8BCyOI=",
+        "owner": "chisui",
+        "repo": "nix-mkPandoc",
+        "rev": "9f462382efdca2eeb28735176311dbf84a6ffa34",
+        "type": "github"
+      },
+      "original": {
+        "owner": "chisui",
+        "repo": "nix-mkPandoc",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1676534113,
@@ -72,6 +88,7 @@
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
         "haskell-flake-utils": "haskell-flake-utils",
+        "nix-mkPandoc": "nix-mkPandoc",
         "nixpkgs": "nixpkgs"
       }
     }

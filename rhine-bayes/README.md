@@ -1,6 +1,6 @@
 # README
 
-This package connects `rhine` to the [`monad-bayes`](hackage.haskell.org/package/monad-bayes) library for probabilistic programming and inference.
+This package connects [`rhine`](https://hackage.haskell.org/package/rhine) to the [`monad-bayes`](hackage.haskell.org/package/monad-bayes) library for probabilistic programming and inference.
 It provides:
 
 * Some standard stochastic processes such as Brownian Motion and Levý processes

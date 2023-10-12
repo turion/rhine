@@ -15,9 +15,14 @@
       url = "github:ivanovs-4/haskell-flake-utils";
       inputs.flake-utils.follows = "flake-utils";
     };
+
+    nix-mkPandoc = {
+      url = "github:chisui/nix-mkPandoc";
+      flake = false;
+    };
   };
 
-outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }:
+outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, nix-mkPandoc, ... }:
   haskell-flake-utils.lib.simpleCabalProject2flake {
     inherit self nixpkgs;
 
@@ -40,5 +45,13 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
 
     name = "rhine";
     packageNames = [ "rhine-gloss" "rhine-terminal" "rhine-examples" "rhine-bayes" ];
+  } // {
+    packages.x86_64-linux = let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        rhine-bayes-presentation = import ./rhine-bayes/presentation { inherit pkgs nix-mkPandoc; };
+      };
   };
 }
