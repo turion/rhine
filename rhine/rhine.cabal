@@ -2,7 +2,7 @@ cabal-version:       2.2
 
 name:                rhine
 
-version:             1.0
+version:             1.0.1
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -85,6 +85,7 @@ library
   exposed-modules:
     FRP.Rhine
     FRP.Rhine.Clock
+    FRP.Rhine.Clock.File
     FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
     FRP.Rhine.Clock.Proxy
