@@ -1,5 +1,9 @@
 # Revision history for rhine-gloss
 
+## 1.1
+
+* dunai-0.11 compatibility
+
 ## 1.0
 
 * Removed schedules. See the [page about changes in version 1](/version1.md).
