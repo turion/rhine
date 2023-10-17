@@ -2,7 +2,7 @@ cabal-version:       2.2
 
 name:                rhine
 
-version:             1.0
+version:             1.1
 
 synopsis: Functional Reactive Programming with type-level clocks
 
@@ -129,7 +129,7 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:
-                     , dunai        ^>= 0.9
+                     , dunai        ^>= 0.11
                      , transformers >= 0.5
                      , time         >= 1.8
                      , free         >= 5.1
@@ -137,8 +137,7 @@ library
                      , deepseq      >= 1.4
                      , random       >= 1.1
                      , MonadRandom  >= 0.5
-                     -- Remove version pin when https://github.com/ivanperez-keera/dunai/issues/298 is resolved:
-                     , simple-affine-space == 0.1.1
+                     , simple-affine-space ^>= 0.2
                      , time-domain
                      , monad-schedule >= 0.1.2
 
