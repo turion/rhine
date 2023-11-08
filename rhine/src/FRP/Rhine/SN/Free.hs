@@ -276,6 +276,10 @@ newtype Clocks m td cls = Clocks {getClocks :: NP (ClassyClock m td) cls}
 
 type Position cl cls = NS ((:~:) cl) cls
 
+newtype TheTag cl = TheTag {getTheTag :: Tag cl}
+
+newtype Tags cls = Tags {getTags :: HSum TheTag cls}
+
 data OrderedPositions cl1 cl2 cls where
   OPHere :: Position cl2 cls -> OrderedPositions cl1 cl2 (cl1 ': cls)
   OPThere :: OrderedPositions cl1 cl2 cls -> OrderedPositions cl1 cl2 (cl ': cls)
