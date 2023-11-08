@@ -133,6 +133,7 @@ library
     FRP.Rhine.ResamplingBuffer.Util
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
+    FRP.Rhine.SN.Free
     FRP.Rhine.SN.Type
     FRP.Rhine.Schedule
     FRP.Rhine.Type
@@ -160,6 +161,7 @@ library
     time >=1.8,
     time-domain ^>=0.1.0.2,
     transformers >=0.5,
+    free-category ^>= 0.0.4.5,
 
   -- Directories containing source files.
   hs-source-dirs: src
