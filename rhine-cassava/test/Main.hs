@@ -26,6 +26,7 @@ import FRP.Rhine.Clock.File (FileException (..))
 
 -- rhine-cassava
 import FRP.Rhine.Clock.Csv
+import FRP.Rhine.Clock.CsvLazy
 
 main :: IO ()
 main = hspec $ do
@@ -61,7 +62,7 @@ main = hspec $ do
     ByteString.writeFile filepath bytestring
     Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ csvClock filepath
     removeFile filepath
-    e `shouldBe` Left "hi"
+    e `shouldBe` Left "EOF"
 
   it "Throws EndOfFile when given incorrect separator" $ do
     let bytestring = "oh,that\ncat\n" :: ByteString
@@ -69,7 +70,7 @@ main = hspec $ do
     ByteString.writeFile filepath bytestring
     Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ csvClock filepath
     removeFile filepath
-    e `shouldBe` Left "hi"
+    e `shouldBe` Left "EOF"
 
   it "Throws EndOfFile when given incorrect separator" $ do
     let bytestring = "oh,that\ncat" :: ByteString
@@ -77,4 +78,55 @@ main = hspec $ do
     ByteString.writeFile filepath bytestring
     Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ csvClock filepath
     removeFile filepath
-    e `shouldBe` Left "hi"
+    e `shouldBe` Left "EOF"
+
+  describe "Lazy" $ do
+    it "Can read a file" $ do
+      let bytestring = "hi,this\nis,dog\n\n" :: ByteString
+          filepath = "testfile.csv"
+      ByteString.writeFile filepath bytestring
+      result <- runExceptT @(Either String FileException) $ (flip embed [(), ()] =<<) $ eraseClock $ tagS @@ CsvClockLazy filepath
+      removeFile filepath
+      result `shouldBe` Right ([Just ["hi", "this"], Just ["is", "dog"]] :: [Maybe Record])
+
+    it "Throws EndOfFile when run for more ticks than the file is long" $ do
+      let bytestring = "hi,this\nis,dog\n" :: ByteString
+          filepath = "testfile.csv"
+      ByteString.writeFile filepath bytestring
+      Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ CsvClockLazy filepath
+      removeFile filepath
+      e `shouldBe` Right EndOfFile
+
+    it "Parses the CSV before throwing EndOfFile when run for more ticks than the file is long" $ do
+      let bytestring = "hi,this\nis,dog\n" :: ByteString
+          filepath = "testfile.csv"
+          writerClock = HoistClock (CsvClockLazy filepath) (mapExceptT lift) :: HoistClock (ExceptT (Either String FileException) IO) (ExceptT (Either String FileException) (WriterT [Record] IO)) CsvClockLazy
+      ByteString.writeFile filepath bytestring
+      (Left e, contents) <- runWriterT $ runExceptT @(Either String FileException) $ flow $ tagS >-> arrMCl (lift . tell . pure) @@ writerClock
+      removeFile filepath
+      e `shouldBe` Right EndOfFile
+      contents `shouldBe` ([["hi", "this"], ["is", "dog"]] :: [Record])
+
+    it "Throws EndOfFile when given incorrect separator" $ do
+      let bytestring = "oh,that\ncat,is,rude\n" :: ByteString
+          filepath = "testfile.csv"
+      ByteString.writeFile filepath bytestring
+      Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ CsvClockLazy filepath
+      removeFile filepath
+      e `shouldBe` Left "hi"
+
+    it "Throws EndOfFile when given incorrect separator" $ do
+      let bytestring = "oh,that\ncat\n" :: ByteString
+          filepath = "testfile.csv"
+      ByteString.writeFile filepath bytestring
+      Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ CsvClockLazy filepath
+      removeFile filepath
+      e `shouldBe` Left "hi"
+
+    it "Throws EndOfFile when given incorrect separator" $ do
+      let bytestring = "oh,that\ncat" :: ByteString
+          filepath = "testfile.csv"
+      ByteString.writeFile filepath bytestring
+      Left e <- runExceptT @(Either String FileException) $ flow $ clId @@ CsvClockLazy filepath
+      removeFile filepath
+      e `shouldBe` Left "hi"

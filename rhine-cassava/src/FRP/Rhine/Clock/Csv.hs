@@ -36,7 +36,7 @@ and returns a parsed record.
 
 Additionally to an end-of-file error, it can also return a parse error as a 'String'.
 -}
-newtype CsvClock = CsvClock (File String ByteString) -- FIXME should be Void
+newtype CsvClock = CsvClock (File String Data.ByteString.ByteString) -- FIXME should be Void
 
 -- FIXME Csv should rather be an adapter to an existing clock, e.g. Stdin, or something from the internet
 

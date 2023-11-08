@@ -73,6 +73,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  FRP.Rhine.Clock.Csv
+                      FRP.Rhine.Clock.CsvLazy
 
     -- Modules included in this library but not exported.
     -- other-modules:
