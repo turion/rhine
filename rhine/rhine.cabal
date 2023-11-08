@@ -117,6 +117,7 @@ library
     FRP.Rhine.Schedule
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
+    FRP.Rhine.SN.Free
     FRP.Rhine.Type
 
   other-modules:
@@ -140,6 +141,7 @@ library
                      , simple-affine-space ^>= 0.2
                      , time-domain ^>= 0.1.0.2
                      , monad-schedule ^>= 0.1.2
+                     , free-category ^>= 0.0.4.5
 
   -- Directories containing source files.
   hs-source-dirs:      src
