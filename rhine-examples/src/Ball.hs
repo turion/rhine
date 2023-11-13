@@ -10,6 +10,7 @@ import Data.Vector.Sized as VS
 
 -- rhine
 import FRP.Rhine
+import qualified FRP.Rhine.SN.Free as Free
 
 type Ball = (Double, Double, Double)
 type BallVel = (Double, Double, Double)
@@ -88,9 +89,24 @@ statusRh = statusMsg @@ waitClock
 ballStatusRh :: Rhine IO (SeqClock SimClock StatusClock) (Maybe BallVel) ()
 ballStatusRh = ballRh >-- downsampleSimToStatus --> statusRh
 
-main :: IO ()
-main =
+mainOld :: IO ()
+mainOld =
   flow $
     startVelRh
       >-- fifoUnbounded
       --> ballStatusRh
+
+mainNew :: IO ()
+mainNew = Free.flow $ Free.Rhine
+  { Free.clocks = Free.ConsClocks StdinClock $ Free.ConsClocks (waitClock :: SimClock) $ Free.UnitClock (waitClock :: StatusClock)
+  , Free.freeSN =
+      arr Free.Present
+      >>> Free.synchronous startVel
+      >>> Free.resampling fifoUnbounded
+      >>> Free.synchronous ball
+      >>> Free.resampling downsampleSimToStatus
+      >>> Free.synchronous statusMsg
+      >>> arr (const ())
+  }
+
+main = mainNew
