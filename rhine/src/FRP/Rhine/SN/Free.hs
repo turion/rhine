@@ -256,6 +256,24 @@ eraseClockFreeSN FreeSN {getFreeSN} = runA getFreeSN eraseClockSNComponent
 -- FIXME interesting idea: Erase only some clocks, e.g. the first one of the stack.
 -- Then I need a concept between FreeSN and MSF.
 -- The advantage would be higher flexibility, and I could maye also use MonadSchedule to make the data parts concurrent
+-- FIXME I should use a TL snoc list for the reader ticks to avoid confusion?
+eraseOneClock :: FreeSN (ReaderT (Tick (cl ': cls')) m) (cl ': cls) a b -> FreeSN (ReaderT (Tick (cl ': cls')) m) cls a b
+eraseOneClock = _
+-- FIXME who knows whether cls' will have the same order as cls? I should maybe write a TL prefix thingy
+eraseOneClockComponent :: (HasClock cl cls', Monad m) => SNComponent (ReaderT (Tick cls') m) (cl ': cls) a b -> SNComponent (ReaderT (Tick cls') m) cls a b
+eraseOneClockComponent component@(Synchronous clsf) = case positionClSF clsf component of
+  PHere -> Always $ readerS $ proc (tick, a) -> do
+    case (project (proxyFromClSF clsf) tick, a) of
+      (Nothing, _) -> returnA -< Absent
+      (Just ti, Present a) -> do
+        b <- runReaderS $ runReaderS clsf -< (tick, (ti, a))
+        returnA -< Present b
+      _ -> error "eraseClockSNComponent: Internal error (Synchronous)" -< ()
+  PThere _ -> Synchronous clsf -- FIXME I should probably put the position in the SN component and only require the type class when calling synchronous
+ where
+  positionClSF :: HasClock cl cls => ClSF m cl a b -> SNComponent m cls c d -> Position cl cls
+  positionClSF _ _ = position
+
 
 infixr 9 .:.
 
