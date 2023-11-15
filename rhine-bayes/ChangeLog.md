@@ -3,6 +3,7 @@
 ## 1.1
 
 * dunai-0.11 compatibility
+* Extended example application by particle collapse
 
 ## 1.0
 
