@@ -3,6 +3,7 @@
 ## 1.1
 
 * dunai-0.11 compatibility
+* Fixed bug in IO backend
 
 ## 1.0
 
