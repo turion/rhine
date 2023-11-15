@@ -231,11 +231,13 @@ data HTuple cls where
 data ClassyClock m td cl where
   ClassyClock :: (Clock m cl, Time cl ~ td) => cl -> ClassyClock m td cl
 
+infixr :.
+
 -- FIXME I could also have a Nil constructor, an SN with no clocks is simply an MSF
 -- FIXME maybe put Clock constraints and time domain here?
 data Clocks m td cls where
-  UnitClock :: (GetClockProxy cl, Clock m cl, Time cl ~ td) => cl -> Clocks m td '[cl]
-  ConsClocks :: (GetClockProxy cl, Clock m cl, Time cl ~ td) => cl -> Clocks m td cls -> Clocks m td (cl ': cls)
+  CNil :: Clocks m td '[]
+  (:.) :: (GetClockProxy cl, Clock m cl, Time cl ~ td) => cl -> Clocks m td cls -> Clocks m td (cl ': cls)
 
 -- FIXME This is
 -- newtype Clocks m td cls = Clocks {getClocks :: HTuple (Map (ClassyClock m td) cls)}
@@ -250,13 +252,13 @@ data Tick cls where
 
 data Rhine m td cls a b = Rhine
   { clocks :: Clocks m td cls
-  , freeSN :: FreeSN m cls a b
+  , sn :: FreeSN m cls a b
   }
 
 eraseClockRhine :: (Monad m, MonadSchedule m) => Rhine m td cls a b -> MSF m a b
-eraseClockRhine Rhine {clocks, freeSN} = proc a -> do
+eraseClockRhine Rhine {clocks, sn} = proc a -> do
   ti <- runClocks clocks -< ()
-  runReaderS (eraseClockFreeSN freeSN) -< (ti, a)
+  runReaderS (eraseClockFreeSN sn) -< (ti, a)
 
 flow :: (Monad m, MonadSchedule m) => Rhine m td cls () () -> m ()
 flow = reactimate . eraseClockRhine
@@ -265,8 +267,8 @@ runClocks :: (Monad m, MonadSchedule m) => Clocks m td cls -> MSF m () (Tick cls
 runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks cls
  where
   getRunningClocks :: Monad m => Clocks m td cls -> m [MSF m () (Tick cls)]
-  getRunningClocks (UnitClock cl) = pure <$> startAndInjectClock cl
-  getRunningClocks (ConsClocks cl cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr There) <$> getRunningClocks cls)
+  getRunningClocks CNil = pure []
+  getRunningClocks (cl :. cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr There) <$> getRunningClocks cls)
 
   startAndInjectClock :: (Monad m, GetClockProxy cl, HasClock cl cls) => Clock m cl => cl -> m (MSF m () (Tick cls))
   startAndInjectClock cl = do
