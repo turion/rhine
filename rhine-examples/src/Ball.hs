@@ -9,8 +9,8 @@ import System.Random
 import Data.Vector.Sized as VS
 
 -- rhine
-import FRP.Rhine
-import qualified FRP.Rhine.SN.Free as Free
+import FRP.Rhine hiding (sn, flow, Rhine)
+import FRP.Rhine.SN.Free as Free
 
 type Ball = (Double, Double, Double)
 type BallVel = (Double, Double, Double)
@@ -77,36 +77,15 @@ statusMsg :: ClSF IO StatusClock Ball ()
 statusMsg = arrMCl $ \(x, y, z) ->
   printf "%.2f %.2f %.2f\n" x y z
 
-startVelRh :: Rhine IO StdinClock () BallVel
-startVelRh = startVel @@ StdinClock
-
-ballRh :: Rhine IO SimClock (Maybe BallVel) Ball
-ballRh = ball @@ waitClock
-
-statusRh :: Rhine IO StatusClock Ball ()
-statusRh = statusMsg @@ waitClock
-
-ballStatusRh :: Rhine IO (SeqClock SimClock StatusClock) (Maybe BallVel) ()
-ballStatusRh = ballRh >-- downsampleSimToStatus --> statusRh
-
-mainOld :: IO ()
-mainOld =
-  flow $
-    startVelRh
-      >-- fifoUnbounded
-      --> ballStatusRh
-
-mainNew :: IO ()
-mainNew = Free.flow $ Free.Rhine
-  { Free.clocks = Free.ConsClocks StdinClock $ Free.ConsClocks (waitClock :: SimClock) $ Free.UnitClock (waitClock :: StatusClock)
-  , Free.freeSN =
-      arr Free.Present
-      >>> Free.synchronous startVel
-      >>> Free.resampling fifoUnbounded
-      >>> Free.synchronous ball
-      >>> Free.resampling downsampleSimToStatus
-      >>> Free.synchronous statusMsg
+main :: IO ()
+main = flow $ Rhine
+  { clocks = StdinClock :. (waitClock :: SimClock) :. (waitClock :: StatusClock) :. CNil
+  , sn =
+      arr Present
+      >>> synchronous startVel
+      >>> resampling fifoUnbounded
+      >>> synchronous ball
+      >>> resampling downsampleSimToStatus
+      >>> synchronous statusMsg
       >>> arr (const ())
   }
-
-main = mainNew
