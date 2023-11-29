@@ -381,7 +381,7 @@ visualisationMultiRate = hoistClSF sampleIOGloss visualisation
 
 -- | Compose all four asynchronous components to a single 'Rhine'.
 mainRhineMultiRate = Rhine
-  { clocks = glossClockUTC GlossEventClockIO :. (liftClock waitClock :: ModelClock) :. (liftClock Busy :: InferenceClock) :. (glossClockUTC GlossSimClockIO) :. CNil
+  { clocks = glossClockUTC GlossEventClockIO .:. (liftClock waitClock :: ModelClock) .:. (liftClock Busy :: InferenceClock) .:. (glossClockUTC GlossSimClockIO) .:. cnil
   , sn = proc _ -> do
       temperature <- synchronous userTemperature -< Present ()
       measuredAndLatent <- synchronous model <<< resampling (keepLast initialTemperature) -< temperature
