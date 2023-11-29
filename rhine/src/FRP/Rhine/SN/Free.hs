@@ -231,6 +231,7 @@ data HTuple cls where
 data ClassyClock m td cl where
   ClassyClock :: (Clock m cl, Time cl ~ td) => cl -> ClassyClock m td cl
 
+-- FIXME I could also have a Nil constructor, an SN with no clocks is simply an MSF
 -- FIXME maybe put Clock constraints and time domain here?
 data Clocks m td cls where
   UnitClock :: (GetClockProxy cl, Clock m cl, Time cl ~ td) => cl -> Clocks m td '[cl]
