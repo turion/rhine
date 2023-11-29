@@ -76,7 +76,7 @@ statusMsg = arrMCl $ \(x, y, z) ->
 
 main :: IO ()
 main = flow $ Rhine
-  { clocks = StdinClock :. (waitClock :: SimClock) :. (waitClock :: StatusClock) :. CNil
+  { clocks = StdinClock .:. (waitClock :: SimClock) .:. (waitClock :: StatusClock) .:. cnil
   , sn =
       arr Present
       >>> synchronous startVel

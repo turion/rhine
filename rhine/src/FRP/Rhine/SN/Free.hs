@@ -21,7 +21,11 @@ module FRP.Rhine.SN.Free (
   Rhine(..),
   eraseClockRhine,
   flow,
-  Clocks(..)
+  Clocks(..),
+  HTuple(..),
+  HSum(..),
+  (.:.),
+  cnil
 )
 where
 
@@ -221,22 +225,22 @@ eraseClockFreeSN FreeSN {getFreeSN} = runA getFreeSN eraseClockSNComponent
 -- The advantage would be higher flexibility, and I could maye also use MonadSchedule to make the data parts concurrent
 
 data HTuple (f :: Type -> Type) (cls :: [Type]) where
-  Nil :: HTuple f '[]
-  Cons :: f cl -> HTuple f cls -> HTuple f (cl ': cls)
+  HNil :: HTuple f '[]
+  HCons :: f cl -> HTuple f cls -> HTuple f (cl ': cls)
+
+infixr .:.
+
+(.:.) :: (GetClockProxy cl, Clock m cl) => cl -> Clocks m (Time cl) cls -> Clocks m (Time cl) (cl ': cls)
+getClassyClock .:. Clocks {getClocks} = Clocks $ HCons ClassyClock {getClassyClock} getClocks
+
+cnil :: Clocks m td '[]
+cnil = Clocks HNil
 
 data ClassyClock m td cl where
-  ClassyClock :: (Clock m cl, Time cl ~ td) => cl -> ClassyClock m td cl
-
-infixr :.
-
--- FIXME I could also have a Nil constructor, an SN with no clocks is simply an MSF
--- FIXME maybe put Clock constraints and time domain here?
-data Clocks m td cls where
-  CNil :: Clocks m td '[]
-  (:.) :: (GetClockProxy cl, Clock m cl, Time cl ~ td) => cl -> Clocks m td cls -> Clocks m td (cl ': cls)
+  ClassyClock :: (Clock m cl, GetClockProxy cl, Time cl ~ td) => {getClassyClock :: cl} -> ClassyClock m td cl
 
 -- FIXME This is
-newtype Clocks' m td cls = Clocks {getClocks :: HTuple (ClassyClock m td) cls}
+newtype Clocks m td cls = Clocks {getClocks :: HTuple (ClassyClock m td) cls}
 
 type Position cl cls = HSum ((:~:) cl) cls
 
@@ -260,14 +264,14 @@ flow :: (Monad m, MonadSchedule m) => Rhine m td cls () () -> m ()
 flow = reactimate . eraseClockRhine
 
 runClocks :: (Monad m, MonadSchedule m) => Clocks m td cls -> MSF m () (Tick cls)
-runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks cls
+runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks (getClocks cls)
  where
-  getRunningClocks :: Monad m => Clocks m td cls -> m [MSF m () (Tick cls)]
-  getRunningClocks CNil = pure []
-  getRunningClocks (cl :. cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . There . getTick)) <$> getRunningClocks cls)
+  getRunningClocks :: Monad m => HTuple (ClassyClock m td) cls -> m [MSF m () (Tick cls)]
+  getRunningClocks HNil = pure []
+  getRunningClocks (HCons cl cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . There . getTick)) <$> getRunningClocks cls)
 
-  startAndInjectClock :: (Monad m, GetClockProxy cl, HasClock cl cls) => Clock m cl => cl -> m (MSF m () (Tick cls))
-  startAndInjectClock cl = do
+  startAndInjectClock :: (Monad m, HasClock cl cls) => ClassyClock m td cl -> m (MSF m () (Tick cls))
+  startAndInjectClock (ClassyClock cl) = do
     (runningClock, initTime) <- initClock cl
     return $ runningClock >>> genTimeInfo getClockProxy initTime >>> arr (inject (clockProxy cl))
 
