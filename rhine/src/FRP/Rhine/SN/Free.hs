@@ -84,18 +84,18 @@ instance {-# OVERLAPPABLE #-} (HasClock cl cls) => HasClock cl (cl' ': cls) wher
   position = PThere position
 
 inject :: forall cl cls . HasClock cl cls => Proxy cl -> TimeInfo cl -> Tick cls
-inject _ = injectPosition (position @cl @cls)
+inject _ = Tick . injectPosition (position @cl @cls)
 
-injectPosition :: Position cl cls -> TimeInfo cl -> Tick cls
-injectPosition PHere ti = Here ti
-injectPosition (PThere pointer) ti = There $ injectPosition pointer ti
+injectPosition :: Position cl cls -> f cl -> HSum f cls
+injectPosition PHere ti = HHere ti
+injectPosition (PThere pointer) ti = HThere $ injectPosition pointer ti
 
 project :: forall cl cls . HasClock cl cls => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
-project _ = projectPosition $ position @cl @cls
+project _ = projectPosition (position @cl @cls) . getTick
 
-projectPosition :: Position cl cls -> Tick cls -> Maybe (TimeInfo cl)
-projectPosition PHere (Here ti) = Just ti
-projectPosition (PThere position) (There tick) = projectPosition position tick
+projectPosition :: Position cl cls -> HSum f cls -> Maybe (f cl)
+projectPosition PHere (HHere ti) = Just ti
+projectPosition (PThere position) (HThere tick) = projectPosition position tick
 projectPosition _ _ = Nothing
 
 
@@ -220,13 +220,9 @@ eraseClockFreeSN FreeSN {getFreeSN} = runA getFreeSN eraseClockSNComponent
 -- Then I need a concept between FreeSN and MSF.
 -- The advantage would be higher flexibility, and I could maye also use MonadSchedule to make the data parts concurrent
 
-type family Map (f :: Type -> Type) (ts :: [Type]) :: [Type] where
-  Map f '[] = '[]
-  Map f (t ': ts) = f t ': Map f ts
-
-data HTuple cls where
-  Unit :: cl -> HTuple '[cl]
-  Cons :: cl -> HTuple cls -> HTuple (cl ': cls)
+data HTuple (f :: Type -> Type) (cls :: [Type]) where
+  Nil :: HTuple f '[]
+  Cons :: f cl -> HTuple f cls -> HTuple f (cl ': cls)
 
 data ClassyClock m td cl where
   ClassyClock :: (Clock m cl, Time cl ~ td) => cl -> ClassyClock m td cl
@@ -240,15 +236,17 @@ data Clocks m td cls where
   (:.) :: (GetClockProxy cl, Clock m cl, Time cl ~ td) => cl -> Clocks m td cls -> Clocks m td (cl ': cls)
 
 -- FIXME This is
--- newtype Clocks m td cls = Clocks {getClocks :: HTuple (Map (ClassyClock m td) cls)}
+newtype Clocks' m td cls = Clocks {getClocks :: HTuple (ClassyClock m td) cls}
 
 data Position cl cls where
   PHere :: Position cl (cl ': cls)
   PThere :: Position cl cls -> Position cl (cl' ': cls)
 
-data Tick cls where
-  Here :: TimeInfo cl -> Tick (cl ': cls)
-  There :: Tick cls -> Tick (cl ': cls)
+data HSum (f :: Type -> Type) (cls :: [Type]) where
+  HHere :: f cl -> HSum f (cl ': cls)
+  HThere :: HSum f cls -> HSum f (cl ': cls)
+
+newtype Tick cls = Tick {getTick :: HSum TimeInfo cls}
 
 data Rhine m td cls a b = Rhine
   { clocks :: Clocks m td cls
@@ -268,7 +266,7 @@ runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks cls
  where
   getRunningClocks :: Monad m => Clocks m td cls -> m [MSF m () (Tick cls)]
   getRunningClocks CNil = pure []
-  getRunningClocks (cl :. cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr There) <$> getRunningClocks cls)
+  getRunningClocks (cl :. cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . HThere . getTick)) <$> getRunningClocks cls)
 
   startAndInjectClock :: (Monad m, GetClockProxy cl, HasClock cl cls) => Clock m cl => cl -> m (MSF m () (Tick cls))
   startAndInjectClock cl = do
