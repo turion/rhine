@@ -22,8 +22,8 @@ module FRP.Rhine.SN.Free (
   eraseClockRhine,
   flow,
   Clocks(..),
-  HTuple(..),
-  HSum(..),
+  NP(..),
+  NS(..),
   (.:.),
   cnil
 )
@@ -47,6 +47,7 @@ import Control.Monad.Trans.MSF (performOnFirstSample)
 import Control.Category (Category)
 import Data.Type.Equality ((:~:) (Refl))
 import Data.Typeable (cast, Typeable)
+import Generics.SOP (NS (..), NP (..))
 
 -- Don't export Absent
 data At cl a = Present !a | Absent
@@ -82,24 +83,24 @@ class HasClock cl cls where
   position :: Position cl cls
 
 instance HasClock cl (cl ': cls) where
-  position = Here Refl
+  position = Z Refl
 
 instance {-# OVERLAPPABLE #-} (HasClock cl cls) => HasClock cl (cl' ': cls) where
-  position = There position
+  position = S position
 
 inject :: forall cl cls . HasClock cl cls => Proxy cl -> TimeInfo cl -> Tick cls
 inject _ = Tick . injectPosition (position @cl @cls)
 
-injectPosition :: Position cl cls -> f cl -> HSum f cls
-injectPosition (Here Refl) ti = Here ti
-injectPosition (There pointer) ti = There $ injectPosition pointer ti
+injectPosition :: Position cl cls -> f cl -> NS f cls
+injectPosition (Z Refl) ti = Z ti
+injectPosition (S pointer) ti = S $ injectPosition pointer ti
 
 project :: forall cl cls . HasClock cl cls => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
 project _ = projectPosition (position @cl @cls) . getTick
 
-projectPosition :: Position cl cls -> HSum f cls -> Maybe (f cl)
-projectPosition (Here Refl) (Here ti) = Just ti
-projectPosition (There position) (There tick) = projectPosition position tick
+projectPosition :: Position cl cls -> NS f cls -> Maybe (f cl)
+projectPosition (Z Refl) (Z ti) = Just ti
+projectPosition (S position) (S tick) = projectPosition position tick
 projectPosition _ _ = Nothing
 
 
@@ -224,31 +225,23 @@ eraseClockFreeSN FreeSN {getFreeSN} = runA getFreeSN eraseClockSNComponent
 -- Then I need a concept between FreeSN and MSF.
 -- The advantage would be higher flexibility, and I could maye also use MonadSchedule to make the data parts concurrent
 
-data HTuple (f :: Type -> Type) (cls :: [Type]) where
-  HNil :: HTuple f '[]
-  HCons :: f cl -> HTuple f cls -> HTuple f (cl ': cls)
-
 infixr .:.
 
 (.:.) :: (GetClockProxy cl, Clock m cl) => cl -> Clocks m (Time cl) cls -> Clocks m (Time cl) (cl ': cls)
-getClassyClock .:. Clocks {getClocks} = Clocks $ HCons ClassyClock {getClassyClock} getClocks
+getClassyClock .:. Clocks {getClocks} = Clocks $ ClassyClock {getClassyClock} :* getClocks
 
 cnil :: Clocks m td '[]
-cnil = Clocks HNil
+cnil = Clocks Nil
 
 data ClassyClock m td cl where
   ClassyClock :: (Clock m cl, GetClockProxy cl, Time cl ~ td) => {getClassyClock :: cl} -> ClassyClock m td cl
 
 -- FIXME This is
-newtype Clocks m td cls = Clocks {getClocks :: HTuple (ClassyClock m td) cls}
+newtype Clocks m td cls = Clocks {getClocks :: NP (ClassyClock m td) cls}
 
-type Position cl cls = HSum ((:~:) cl) cls
+type Position cl cls = NS ((:~:) cl) cls
 
-data HSum (f :: Type -> Type) (cls :: [Type]) where
-  Here :: f cl -> HSum f (cl ': cls)
-  There :: HSum f cls -> HSum f (cl ': cls)
-
-newtype Tick cls = Tick {getTick :: HSum TimeInfo cls}
+newtype Tick cls = Tick {getTick :: NS TimeInfo cls}
 
 data Rhine m td cls a b = Rhine
   { clocks :: Clocks m td cls
@@ -266,9 +259,9 @@ flow = reactimate . eraseClockRhine
 runClocks :: (Monad m, MonadSchedule m) => Clocks m td cls -> MSF m () (Tick cls)
 runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks (getClocks cls)
  where
-  getRunningClocks :: Monad m => HTuple (ClassyClock m td) cls -> m [MSF m () (Tick cls)]
-  getRunningClocks HNil = pure []
-  getRunningClocks (HCons cl cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . There . getTick)) <$> getRunningClocks cls)
+  getRunningClocks :: Monad m => NP (ClassyClock m td) cls -> m [MSF m () (Tick cls)]
+  getRunningClocks Nil = pure []
+  getRunningClocks (cl :* cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . S . getTick)) <$> getRunningClocks cls)
 
   startAndInjectClock :: (Monad m, HasClock cl cls) => ClassyClock m td cl -> m (MSF m () (Tick cls))
   startAndInjectClock (ClassyClock cl) = do
