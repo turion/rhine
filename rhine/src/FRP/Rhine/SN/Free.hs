@@ -175,7 +175,7 @@ eraseClockSNComponent (Feedback sn resbuf0) =
         (Nothing, _) -> returnA -< resbuf'
         (Just ti, Present a) -> do
           arrM $ uncurry $ uncurry put -< ((resbuf', ti), a)
-        _ -> error "eraseClockSNComponent: internal error (Resampling)" -< ()
+        _ -> error "eraseClockSNComponent: internal error (Feedback)" -< ()
       returnA -< (b, resbuf'')
 eraseClockSNComponent (Always msf) = liftTransS msf
 
