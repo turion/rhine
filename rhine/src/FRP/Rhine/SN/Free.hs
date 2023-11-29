@@ -5,6 +5,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards #-} -- FIXME consider using lenses instead
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -293,6 +294,22 @@ data ClassyClock m td cl where
 newtype Clocks m td cls = Clocks {getClocks :: NP (ClassyClock m td) cls}
 
 type Position cl cls = NS ((:~:) cl) cls
+
+instance (TimeDomain td) => Clock m (Clocks m td cls) where
+  type Time (Clocks m td cls) = td
+  type Tag (Clocks m td cls) = Tags cls
+
+clocksTimeInfoToTick :: TimeInfo (Clocks m td cls) -> Tick cls
+clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = Here TheTag {getTheTag}}, ..} = Tick $ Here TimeInfo {tag = getTheTag, ..}
+clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = There tag}, ..} = Tick $ There $ getTick $ clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = tag}, ..}
+
+instance (TimeDomain td) => Clock m (Clocks m td cls) where
+  type Time (Clocks m td cls) = td
+  type Tag (Clocks m td cls) = Tags cls
+
+clocksTimeInfoToTick :: TimeInfo (Clocks m td cls) -> Tick cls
+clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = Here TheTag {getTheTag}}, ..} = Tick $ Here TimeInfo {tag = getTheTag, ..}
+clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = There tag}, ..} = Tick $ There $ getTick $ clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = tag}, ..}
 
 newtype TheTag cl = TheTag {getTheTag :: Tag cl}
 
