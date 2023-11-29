@@ -78,24 +78,24 @@ class HasClock cl cls where
   position :: Position cl cls
 
 instance HasClock cl (cl ': cls) where
-  position = PHere
+  position = HHere Refl
 
 instance {-# OVERLAPPABLE #-} (HasClock cl cls) => HasClock cl (cl' ': cls) where
-  position = PThere position
+  position = HThere position
 
 inject :: forall cl cls . HasClock cl cls => Proxy cl -> TimeInfo cl -> Tick cls
 inject _ = Tick . injectPosition (position @cl @cls)
 
 injectPosition :: Position cl cls -> f cl -> HSum f cls
-injectPosition PHere ti = HHere ti
-injectPosition (PThere pointer) ti = HThere $ injectPosition pointer ti
+injectPosition (HHere Refl) ti = HHere ti
+injectPosition (HThere pointer) ti = HThere $ injectPosition pointer ti
 
 project :: forall cl cls . HasClock cl cls => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
 project _ = projectPosition (position @cl @cls) . getTick
 
 projectPosition :: Position cl cls -> HSum f cls -> Maybe (f cl)
-projectPosition PHere (HHere ti) = Just ti
-projectPosition (PThere position) (HThere tick) = projectPosition position tick
+projectPosition (HHere Refl) (HHere ti) = Just ti
+projectPosition (HThere position) (HThere tick) = projectPosition position tick
 projectPosition _ _ = Nothing
 
 
@@ -238,9 +238,7 @@ data Clocks m td cls where
 -- FIXME This is
 newtype Clocks' m td cls = Clocks {getClocks :: HTuple (ClassyClock m td) cls}
 
-data Position cl cls where
-  PHere :: Position cl (cl ': cls)
-  PThere :: Position cl cls -> Position cl (cl' ': cls)
+type Position cl cls = HSum ((:~:) cl) cls
 
 data HSum (f :: Type -> Type) (cls :: [Type]) where
   HHere :: f cl -> HSum f (cl ': cls)
