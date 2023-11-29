@@ -15,9 +15,24 @@ import FRP.Rhine.SN.Free
 
 data Rhine m td cls a b = Rhine
   { clocks :: Clocks m td cls
-  , sn :: FreeSN m cls a b
+  , erasedSN :: MSF (ReaderT (Tick cls) m) a b
   }
 
+rhine :: Monad m => Clocks m td cls -> FreeSN m cls a b -> Rhine m td cls a b
+rhine clocks sn = Rhine
+  { clocks
+  , erasedSN = eraseClockFreeSN sn
+  }
+
+eraseClockRhine :: (Monad m, MonadSchedule m) => Rhine m td cls a b -> MSF m a b
+eraseClockRhine Rhine {clocks, erasedSN} = proc a -> do
+  ti <- runClocks clocks -< ()
+  runReaderS erasedSN -< (ti, a)
+
+flow :: (Monad m, MonadSchedule m) => Rhine m td cls () () -> m ()
+flow = reactimate . eraseClockRhine
+
+-- FIXME the following haven't been adapted to the new change yet
 instance Profunctor (Rhine m td cls) where
   dimap f g Rhine {clocks, sn} =
     Rhine
