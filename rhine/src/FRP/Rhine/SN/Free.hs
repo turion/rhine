@@ -78,24 +78,24 @@ class HasClock cl cls where
   position :: Position cl cls
 
 instance HasClock cl (cl ': cls) where
-  position = HHere Refl
+  position = Here Refl
 
 instance {-# OVERLAPPABLE #-} (HasClock cl cls) => HasClock cl (cl' ': cls) where
-  position = HThere position
+  position = There position
 
 inject :: forall cl cls . HasClock cl cls => Proxy cl -> TimeInfo cl -> Tick cls
 inject _ = Tick . injectPosition (position @cl @cls)
 
 injectPosition :: Position cl cls -> f cl -> HSum f cls
-injectPosition (HHere Refl) ti = HHere ti
-injectPosition (HThere pointer) ti = HThere $ injectPosition pointer ti
+injectPosition (Here Refl) ti = Here ti
+injectPosition (There pointer) ti = There $ injectPosition pointer ti
 
 project :: forall cl cls . HasClock cl cls => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
 project _ = projectPosition (position @cl @cls) . getTick
 
 projectPosition :: Position cl cls -> HSum f cls -> Maybe (f cl)
-projectPosition (HHere Refl) (HHere ti) = Just ti
-projectPosition (HThere position) (HThere tick) = projectPosition position tick
+projectPosition (Here Refl) (Here ti) = Just ti
+projectPosition (There position) (There tick) = projectPosition position tick
 projectPosition _ _ = Nothing
 
 
@@ -241,8 +241,8 @@ newtype Clocks' m td cls = Clocks {getClocks :: HTuple (ClassyClock m td) cls}
 type Position cl cls = HSum ((:~:) cl) cls
 
 data HSum (f :: Type -> Type) (cls :: [Type]) where
-  HHere :: f cl -> HSum f (cl ': cls)
-  HThere :: HSum f cls -> HSum f (cl ': cls)
+  Here :: f cl -> HSum f (cl ': cls)
+  There :: HSum f cls -> HSum f (cl ': cls)
 
 newtype Tick cls = Tick {getTick :: HSum TimeInfo cls}
 
@@ -264,7 +264,7 @@ runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks cls
  where
   getRunningClocks :: Monad m => Clocks m td cls -> m [MSF m () (Tick cls)]
   getRunningClocks CNil = pure []
-  getRunningClocks (cl :. cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . HThere . getTick)) <$> getRunningClocks cls)
+  getRunningClocks (cl :. cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . There . getTick)) <$> getRunningClocks cls)
 
   startAndInjectClock :: (Monad m, GetClockProxy cl, HasClock cl cls) => Clock m cl => cl -> m (MSF m () (Tick cls))
   startAndInjectClock cl = do
