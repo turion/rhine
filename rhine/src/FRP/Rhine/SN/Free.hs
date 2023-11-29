@@ -120,7 +120,7 @@ data SNComponent m cls a b where
     FreeSN m cls (At clB b, c) (At clA a, d) ->
     ResamplingBuffer m clA clB a b ->
     SNComponent m cls c d
-  Always :: -- FIXME Do I need this really? It's like a general buffer. So maybe I can get rid of MSF buffer? No, that is still helpful because it has clock constraints
+  Always ::
     MSF m a b -> SNComponent m cls a b
 
 newtype FreeSN m cls a b = FreeSN {getFreeSN :: A (SNComponent m cls) a b}
