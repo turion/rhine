@@ -142,6 +142,7 @@ library
                      , time-domain ^>= 0.1.0.2
                      , monad-schedule ^>= 0.1.2
                      , free-category ^>= 0.0.4.5
+                     , generics-sop ^>= 0.5.1.3
 
   -- Directories containing source files.
   hs-source-dirs:      src
