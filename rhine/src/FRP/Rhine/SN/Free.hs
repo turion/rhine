@@ -41,6 +41,8 @@ import Control.Monad.Schedule.Class (MonadSchedule)
 import Data.MonadicStreamFunction.Async (concatS)
 import Control.Monad.Trans.MSF (performOnFirstSample)
 import Control.Category (Category)
+import Data.Type.Equality ((:~:) (Refl))
+import Data.Typeable (cast, Typeable)
 
 -- Don't export Absent
 data At cl a = Present !a | Absent
@@ -73,18 +75,29 @@ instance Monad (At cl) where
 
 -- FIXME rewrite with prisms?
 class HasClock cl cls where
-  inject :: Proxy cl -> TimeInfo cl -> Tick cls
-  project :: Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
+  position :: Position cl cls
 
 instance HasClock cl (cl ': cls) where
-  inject _ = Here
-  project _ (Here ti) = Just ti
-  project _ _ = Nothing
+  position = PHere
 
 instance {-# OVERLAPPABLE #-} (HasClock cl cls) => HasClock cl (cl' ': cls) where
-  inject proxy ti = There $ inject proxy ti
-  project _ (Here _) = Nothing
-  project proxy (There tick) = project proxy tick
+  position = PThere position
+
+inject :: forall cl cls . HasClock cl cls => Proxy cl -> TimeInfo cl -> Tick cls
+inject _ = injectPosition (position @cl @cls)
+
+injectPosition :: Position cl cls -> TimeInfo cl -> Tick cls
+injectPosition PHere ti = Here ti
+injectPosition (PThere pointer) ti = There $ injectPosition pointer ti
+
+project :: forall cl cls . HasClock cl cls => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
+project _ = projectPosition $ position @cl @cls
+
+projectPosition :: Position cl cls -> Tick cls -> Maybe (TimeInfo cl)
+projectPosition PHere (Here ti) = Just ti
+projectPosition (PThere position) (There tick) = projectPosition position tick
+projectPosition _ _ = Nothing
+
 
 type family HasClocksOrdered clA clB (cls :: [Type]) :: Constraint where
   HasClocksOrdered clA clB (clA ': cls) = HasClock clB cls
@@ -225,6 +238,10 @@ data Clocks m td cls where
 
 -- FIXME This is
 -- newtype Clocks m td cls = Clocks {getClocks :: HTuple (Map (ClassyClock m td) cls)}
+
+data Position cl cls where
+  PHere :: Position cl (cl ': cls)
+  PThere :: Position cl cls -> Position cl (cl' ': cls)
 
 data Tick cls where
   Here :: TimeInfo cl -> Tick (cl ': cls)
