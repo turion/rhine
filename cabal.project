@@ -1,4 +1,1 @@
 packages: */*.cabal
-
-program-options
-    ghc-options: -freverse-errors -fmax-errors=1

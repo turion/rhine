@@ -1,7 +1,12 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module FRP.Rhine.SN.Free (
   At (
@@ -12,53 +17,70 @@ module FRP.Rhine.SN.Free (
     -- The constructor Present is harmless though, since an unneeded value is simply discarded.
     Present
   ),
+  SNComponent (..),
+  FreeSN (..),
   eraseClockFreeSN,
   synchronous,
   resampling,
   feedbackSN,
   always,
   currently,
-  Rhine(..),
-  eraseClockRhine,
-  flow,
-  Clocks(..),
-  NP(..),
-  NS(..),
+  Clocks (..),
+  NP (..),
+  NS (..),
   (.:.),
-  cnil
+  cnil,
+  (^>>>),
+  (>>>^),
+  Append,
+  Position, -- FIXME this should be internal
+  HasClock (..),
+  runClocks,
+  -- FIXME the followong are probably internal
+  appendClocks,
+  appendClocksSN,
+  prependClocksSN,
+  ClassyClock (..),
+  orderedPositionsInAppend,
 )
 where
 
-import Control.Arrow.Free
-import Control.Monad.Trans.MSF.Reader (readerS, runReaderS)
-import Control.Monad.Trans.Reader (ReaderT, withReaderT)
-import Data.Kind (Constraint, Type)
-import Data.Proxy (Proxy (..))
-import FRP.Rhine.ClSF.Core
-import FRP.Rhine.Clock (Clock (..), TimeDomain, TimeInfo (..), tag)
-import FRP.Rhine.ResamplingBuffer (ResamplingBuffer (..))
-import FRP.Rhine.Clock.Util (genTimeInfo)
-import FRP.Rhine.Clock.Proxy (GetClockProxy(getClockProxy), toClockProxy, ToClockProxy)
-import FRP.Rhine.Schedule (scheduleList)
-import Data.List.NonEmpty (fromList, toList)
-import Control.Monad.Schedule.Class (MonadSchedule)
-import Data.MonadicStreamFunction.Async (concatS)
-import Control.Monad.Trans.MSF (performOnFirstSample)
-import Control.Category (Category)
-import Data.Type.Equality ((:~:) (Refl))
-import Data.Typeable (cast, Typeable)
-import Generics.SOP (NS (..), NP (..))
+-- FIXME sort imports and exports
 
--- Don't export Absent
+import Control.Arrow.Free
+import Control.Category (Category)
+import Control.Monad.Schedule.Class (MonadSchedule)
+import Control.Monad.Trans.MSF (performOnFirstSample)
+import Control.Monad.Trans.MSF.Reader (readerS, runReaderS)
+import Control.Monad.Trans.Reader (ReaderT)
+import Data.Kind (Type)
+import Data.List.NonEmpty (fromList, toList)
+import Data.MonadicStreamFunction.Async (concatS)
+import Data.Proxy (Proxy (..))
+import Data.SOP (NP (..), NS (..))
+import Data.Type.Equality ((:~:) (Refl))
+
+import Data.Profunctor (Profunctor (..), WrappedArrow (..))
+
+import FRP.Rhine.ClSF.Core
+import FRP.Rhine.Clock (Clock (..), TimeInfo (..), tag)
+import FRP.Rhine.Clock.Proxy (GetClockProxy (getClockProxy))
+import FRP.Rhine.Clock.Util (genTimeInfo)
+import FRP.Rhine.ResamplingBuffer (ResamplingBuffer (..))
+import FRP.Rhine.Schedule (scheduleList)
+
+-- FIXME Don't export Absent, maybe by having an internal module?
 data At cl a = Present !a | Absent
+  deriving (Show, Eq, Functor, Foldable, Traversable)
 
 currently :: At cl a -> Maybe a
 currently (Present a) = Just a
 currently Absent = Nothing
 
-instance Functor (At cl) where
-  fmap f (Present a) = Present $ f a
-  fmap _ Absent = Absent
+-- Internal use in this module only
+unsafeAssumePresent :: String -> At cl a -> a
+unsafeAssumePresent _ (Present a) = a
+unsafeAssumePresent msg Absent = error msg
 
 instance Applicative (At cl) where
   pure = Present
@@ -78,6 +100,7 @@ instance Monad (At cl) where
 --   HasClock cl (cl ': cls) = ()
 --   HasClock cl1 (cl2 ': cls) = HasClock cl1 cls
 
+-- FIXME rewrite with sop-core?
 -- FIXME rewrite with prisms?
 class HasClock cl cls where
   position :: Position cl cls
@@ -88,14 +111,14 @@ instance HasClock cl (cl ': cls) where
 instance {-# OVERLAPPABLE #-} (HasClock cl cls) => HasClock cl (cl' ': cls) where
   position = S position
 
-inject :: forall cl cls . HasClock cl cls => Proxy cl -> TimeInfo cl -> Tick cls
+inject :: forall cl cls. (HasClock cl cls) => Proxy cl -> TimeInfo cl -> Tick cls
 inject _ = Tick . injectPosition (position @cl @cls)
 
 injectPosition :: Position cl cls -> f cl -> NS f cls
 injectPosition (Z Refl) ti = Z ti
 injectPosition (S pointer) ti = S $ injectPosition pointer ti
 
-project :: forall cl cls . HasClock cl cls => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
+project :: forall cl cls. (HasClock cl cls) => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
 project _ = projectPosition (position @cl @cls) . getTick
 
 projectPosition :: Position cl cls -> NS f cls -> Maybe (f cl)
@@ -103,27 +126,42 @@ projectPosition (Z Refl) (Z ti) = Just ti
 projectPosition (S position) (S tick) = projectPosition position tick
 projectPosition _ _ = Nothing
 
+-- type family HasClocksOrdered clA clB (cls :: [Type]) :: Constraint where
+--   HasClocksOrdered clA clB (clA ': cls) = HasClock clB cls
+--   HasClocksOrdered clA clB (cl ': cls) = HasClocksOrdered clA clB cls
 
-type family HasClocksOrdered clA clB (cls :: [Type]) :: Constraint where
-  HasClocksOrdered clA clB (clA ': cls) = HasClock clB cls
-  HasClocksOrdered clA clB (cl ': cls) = HasClocksOrdered clA clB cls
+class HasClocksOrdered clA clB cls where
+  orderedPositions :: OrderedPositions clA clB cls
+
+instance (HasClock clB cls) => HasClocksOrdered clA clB (clA ': cls) where
+  orderedPositions = OPHere position
+
+instance {-# OVERLAPPABLE #-} (HasClocksOrdered clA clB cls) => HasClocksOrdered clA clB (cl ': cls) where
+  orderedPositions = OPThere orderedPositions
+
+firstPosition :: OrderedPositions clA clB cls -> Position clA cls
+firstPosition (OPHere _) = Z Refl
+firstPosition (OPThere positions) = S $ firstPosition positions
+
+secondPosition :: OrderedPositions clA clB cls -> Position clB cls
+secondPosition (OPHere pos) = S pos
+secondPosition (OPThere positions) = S $ secondPosition positions
 
 data SNComponent m cls a b where
   Synchronous ::
-    (HasClock cl cls, Clock m cl) =>
+    (Clock m cl) =>
+    Position cl cls ->
     ClSF m cl a b ->
     SNComponent m cls (At cl a) (At cl b)
   Resampling ::
-    ( HasClocksOrdered clA clB cls
-    , HasClock clA cls
-    , HasClock clB cls -- FIXME The first constraint implies the second and third
-    ) =>
+    OrderedPositions clA clB cls ->
     ResamplingBuffer m clA clB a b ->
     SNComponent m cls (At clA a) (At clB b)
   Feedback :: -- FIXME Do I need a particular order for these clocks? Think about some examples
-    (HasClock clA cls, HasClock clB cls) =>
-    FreeSN m cls (At clB b, c) (At clA a, d) ->
+    Position clA cls ->
+    Position clB cls ->
     ResamplingBuffer m clA clB a b ->
+    FreeSN m cls (At clB b, c) (At clA a, d) ->
     SNComponent m cls c d
   Always ::
     MSF m a b -> SNComponent m cls a b
@@ -131,8 +169,10 @@ data SNComponent m cls a b where
 newtype FreeSN m cls a b = FreeSN {getFreeSN :: A (SNComponent m cls) a b}
   deriving (Category, Arrow)
 
+deriving via (WrappedArrow (FreeSN m cls)) instance Profunctor (FreeSN m cls)
+
 synchronous :: (HasClock cl cls, Clock m cl) => ClSF m cl a b -> FreeSN m cls (At cl a) (At cl b)
-synchronous = FreeSN . liftFree2 . Synchronous
+synchronous = FreeSN . liftFree2 . Synchronous position
 
 resampling ::
   ( HasClock clA cls
@@ -142,41 +182,39 @@ resampling ::
   ) =>
   ResamplingBuffer m clA clB a b ->
   FreeSN m cls (At clA a) (At clB b)
-resampling = FreeSN . liftFree2 . Resampling
+resampling = FreeSN . liftFree2 . Resampling orderedPositions
 
 feedbackSN ::
   (HasClock clA cls, HasClock clB cls) =>
-  FreeSN m cls (At clB b, c) (At clA a, d) ->
   ResamplingBuffer m clA clB a b ->
+  FreeSN m cls (At clB b, c) (At clA a, d) ->
   FreeSN m cls c d
-feedbackSN sn = FreeSN . liftFree2 . Feedback sn
+feedbackSN sn = FreeSN . liftFree2 . Feedback position position sn
 
 always :: MSF m a b -> FreeSN m cls a b
 always = FreeSN . liftFree2 . Always
 
 eraseClockSNComponent :: forall m cls a b. (Monad m) => SNComponent m cls a b -> MSF (ReaderT (Tick cls) m) a b
-eraseClockSNComponent (Synchronous clsf) = readerS $ proc (tick, a) -> do
-  case (project (proxyFromClSF clsf) tick, a) of
+eraseClockSNComponent (Synchronous position clsf) = readerS $ proc (tick, a) -> do
+  case (projectPosition position (getTick tick), a) of
     (Nothing, _) -> returnA -< Absent
     (Just ti, Present a) -> do
       b <- runReaderS clsf -< (ti, a)
       returnA -< Present b
     _ -> error "eraseClockSNComponent: Internal error (Synchronous)" -< ()
-eraseClockSNComponent (Resampling resbuf0) = readerS $ eraseClockResBuf (Proxy @cls) resbuf0
-eraseClockSNComponent (Feedback sn resbuf0) =
+eraseClockSNComponent (Resampling positions resbuf0) = readerS $ eraseClockResBuf (Proxy @cls) positions resbuf0
+eraseClockSNComponent (Feedback posA posB resbuf0 sn) =
   let
-    proxyIn = proxyInFromResBuf resbuf0
-    proxyOut = proxyOutFromResBuf resbuf0
     snErased = runReaderS $ eraseClockFreeSN sn
    in
     readerS $ feedback resbuf0 $ proc ((tick, a), resbuf) -> do
-      (bAt, resbuf') <- case project proxyOut tick of
+      (bAt, resbuf') <- case projectPosition posB $ getTick tick of
         Nothing -> returnA -< (Absent, resbuf)
         Just ti -> do
           (b, resbuf') <- arrM $ uncurry get -< (resbuf, ti)
           returnA -< (Present b, resbuf')
       (aAt, b) <- snErased -< (tick, (bAt, a))
-      resbuf'' <- case (project proxyIn tick, aAt) of
+      resbuf'' <- case (projectPosition posA $ getTick tick, aAt) of
         (Nothing, _) -> returnA -< resbuf'
         (Just ti, Present a) -> do
           arrM $ uncurry $ uncurry put -< ((resbuf', ti), a)
@@ -185,22 +223,23 @@ eraseClockSNComponent (Feedback sn resbuf0) =
 eraseClockSNComponent (Always msf) = liftTransS msf
 
 eraseClockResBuf ::
-  (Monad m, HasClock cla cls, HasClock clb cls) =>
+  (Monad m) =>
   Proxy cls ->
-  ResamplingBuffer m cla clb a1 a2 ->
-  MSF m (Tick cls, At cl1 a1) (At cl2 a2)
-eraseClockResBuf _ resbuf0 =
+  OrderedPositions clA clB cls ->
+  ResamplingBuffer m clA clB a1 a2 ->
+  MSF m (Tick cls, At clA a1) (At clB a2)
+eraseClockResBuf _ orderedPositions resbuf0 =
   let
-    proxyIn = proxyInFromResBuf resbuf0
-    proxyOut = proxyOutFromResBuf resbuf0
+    posIn = firstPosition orderedPositions
+    posOut = secondPosition orderedPositions
    in
     feedback resbuf0 $ proc ((tick, a), resbuf) -> do
-      resbuf' <- case (project proxyIn tick, a) of
+      resbuf' <- case (projectPosition posIn $ getTick tick, a) of
         (Nothing, _) -> returnA -< resbuf
         (Just ti, Present a) -> do
           arrM $ uncurry $ uncurry put -< ((resbuf, ti), a)
         _ -> error "eraseClockSNComponent: internal error (Resampling)" -< ()
-      case project proxyOut tick of
+      case projectPosition posOut $ getTick tick of
         Nothing -> returnA -< (Absent, resbuf')
         Just ti -> do
           (b, resbuf'') <- arrM $ uncurry get -< (resbuf', ti)
@@ -225,7 +264,7 @@ eraseClockFreeSN FreeSN {getFreeSN} = runA getFreeSN eraseClockSNComponent
 -- Then I need a concept between FreeSN and MSF.
 -- The advantage would be higher flexibility, and I could maye also use MonadSchedule to make the data parts concurrent
 
-infixr .:.
+infixr 9 .:.
 
 (.:.) :: (GetClockProxy cl, Clock m cl) => cl -> Clocks m (Time cl) cls -> Clocks m (Time cl) (cl ': cls)
 getClassyClock .:. Clocks {getClocks} = Clocks $ ClassyClock {getClassyClock} :* getClocks
@@ -241,35 +280,99 @@ newtype Clocks m td cls = Clocks {getClocks :: NP (ClassyClock m td) cls}
 
 type Position cl cls = NS ((:~:) cl) cls
 
+data OrderedPositions cl1 cl2 cls where
+  OPHere :: Position cl2 cls -> OrderedPositions cl1 cl2 (cl1 ': cls)
+  OPThere :: OrderedPositions cl1 cl2 cls -> OrderedPositions cl1 cl2 (cl ': cls)
+
 newtype Tick cls = Tick {getTick :: NS TimeInfo cls}
 
-data Rhine m td cls a b = Rhine
-  { clocks :: Clocks m td cls
-  , sn :: FreeSN m cls a b
-  }
+type family Append (cls1 :: [Type]) (cls2 :: [Type]) :: [Type] where
+  Append '[] cls = cls
+  Append (cl ': cls1) cls2 = cl ': Append cls1 cls2
 
-eraseClockRhine :: (Monad m, MonadSchedule m) => Rhine m td cls a b -> MSF m a b
-eraseClockRhine Rhine {clocks, sn} = proc a -> do
-  ti <- runClocks clocks -< ()
-  runReaderS (eraseClockFreeSN sn) -< (ti, a)
+appendPosition :: Clocks m td cls2 -> Position cl cls1 -> Position cl (Append cls1 cls2)
+appendPosition _ (Z Refl) = Z Refl
+appendPosition clocks (S pos) = S $ appendPosition clocks pos
 
-flow :: (Monad m, MonadSchedule m) => Rhine m td cls () () -> m ()
-flow = reactimate . eraseClockRhine
+prependPosition :: Clocks m td cls1 -> Position cl cls2 -> Position cl (Append cls1 cls2)
+prependPosition Clocks {getClocks = Nil} pos = pos
+prependPosition Clocks {getClocks = _ :* getClocks} pos = S $ prependPosition Clocks {getClocks} pos
+
+appendPositions :: Clocks m td cls2 -> OrderedPositions clA clB cls1 -> OrderedPositions clA clB (Append cls1 cls2)
+appendPositions clocks (OPHere pos) = OPHere $ appendPosition clocks pos
+appendPositions clocks (OPThere positions) = OPThere $ appendPositions clocks positions
+
+appendClocks :: Clocks m td cls1 -> Clocks m td cls2 -> Clocks m td (Append cls1 cls2)
+appendClocks Clocks {getClocks = Nil} clocks = clocks
+appendClocks Clocks {getClocks = cl :* cls} clocks =
+  let Clocks {getClocks} = appendClocks Clocks {getClocks = cls} clocks
+   in Clocks {getClocks = cl :* getClocks}
+
+addClockSNComponent :: SNComponent m cls a b -> SNComponent m (cl ': cls) a b
+addClockSNComponent (Synchronous position clsf) = Synchronous (S position) clsf
+addClockSNComponent (Resampling positions clsf) = Resampling (OPThere positions) clsf
+addClockSNComponent (Feedback posA posB resbuf sn) = Feedback (S posA) (S posB) resbuf (addClockSN sn)
+addClockSNComponent (Always msf) = Always msf
+
+appendClockSNComponent :: Clocks m td cls2 -> SNComponent m cls1 a b -> SNComponent m (Append cls1 cls2) a b
+appendClockSNComponent clocks (Synchronous position clsf) = Synchronous (appendPosition clocks position) clsf
+appendClockSNComponent clocks (Resampling positions resbuf) = Resampling (appendPositions clocks positions) resbuf
+appendClockSNComponent clocks (Feedback posA posB resbuf sn) =
+  Feedback
+    (appendPosition clocks posA)
+    (appendPosition clocks posB)
+    resbuf
+    (appendClocksSN clocks sn)
+appendClockSNComponent _ (Always msf) = Always msf
+
+addClockSN :: FreeSN m cls a b -> FreeSN m (cl ': cls) a b
+addClockSN = FreeSN . foldNatFree2 (liftFree2 . addClockSNComponent) . getFreeSN
+
+prependClocksSN :: Clocks m td cls1 -> FreeSN m cls2 a b -> FreeSN m (Append cls1 cls2) a b
+prependClocksSN Clocks {getClocks = Nil} = id
+prependClocksSN Clocks {getClocks = _ :* getClocks} = addClockSN . prependClocksSN Clocks {getClocks}
+
+appendClocksSN :: Clocks m td cls2 -> FreeSN m cls1 a b -> FreeSN m (Append cls1 cls2) a b
+appendClocksSN clocks = FreeSN . foldNatFree2 (liftFree2 . appendClockSNComponent clocks) . getFreeSN
+
+orderedPositionsInAppend ::
+  Clocks m td cls1 ->
+  Clocks m td cls2 ->
+  Position cl1 cls1 ->
+  Position cl2 cls2 ->
+  OrderedPositions cl1 cl2 (Append cls1 cls2)
+orderedPositionsInAppend Clocks {getClocks = _ :* getClocks} _ (Z Refl) pos2 = OPHere $ prependPosition Clocks {getClocks} pos2
+orderedPositionsInAppend Clocks {getClocks = _ :* getClocks} cls2 (S pos1) pos2 = OPThere $ orderedPositionsInAppend Clocks {getClocks} cls2 pos1 pos2
+-- I think that there are no other valid patterns. GHC 9.4 is unsure about that because of https://gitlab.haskell.org/ghc/ghc/-/issues/22684.
+-- Revisit with GHC 9.6.
+orderedPositionsInAppend Clocks {getClocks = Nil} _ _ _ = error "orderedPositionsInAppend: Internal error. Please report as a rhine bug."
 
 runClocks :: (Monad m, MonadSchedule m) => Clocks m td cls -> MSF m () (Tick cls)
 runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks (getClocks cls)
- where
-  getRunningClocks :: Monad m => NP (ClassyClock m td) cls -> m [MSF m () (Tick cls)]
-  getRunningClocks Nil = pure []
-  getRunningClocks (cl :* cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . S . getTick)) <$> getRunningClocks cls)
+  where
+    getRunningClocks :: (Monad m) => NP (ClassyClock m td) cls -> m [MSF m () (Tick cls)]
+    getRunningClocks Nil = pure []
+    getRunningClocks (cl :* cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . S . getTick)) <$> getRunningClocks cls)
 
-  startAndInjectClock :: (Monad m, HasClock cl cls) => ClassyClock m td cl -> m (MSF m () (Tick cls))
-  startAndInjectClock (ClassyClock cl) = do
-    (runningClock, initTime) <- initClock cl
-    return $ runningClock >>> genTimeInfo getClockProxy initTime >>> arr (inject (clockProxy cl))
+    startAndInjectClock :: (Monad m, HasClock cl cls) => ClassyClock m td cl -> m (MSF m () (Tick cls))
+    startAndInjectClock (ClassyClock cl) = do
+      (runningClock, initTime) <- initClock cl
+      return $ runningClock >>> genTimeInfo getClockProxy initTime >>> arr (inject (clockProxy cl))
 
-  clockProxy :: cl -> Proxy cl
-  clockProxy _ = Proxy
+    clockProxy :: cl -> Proxy cl
+    clockProxy _ = Proxy
 
-  scheduleMSFs :: (Monad m, MonadSchedule m) => [MSF m () a] -> MSF m () a
-  scheduleMSFs msfs = concatS $ scheduleList (fromList msfs) >>> arr toList
+    scheduleMSFs :: (Monad m, MonadSchedule m) => [MSF m () a] -> MSF m () a
+    scheduleMSFs msfs = concatS $ scheduleList (fromList msfs) >>> arr toList
+
+infix 4 >>>^
+
+-- | Operator alias for 'rmap', useful to postcompose a 'Rhine' or 'SN' with a function
+(>>>^) :: (Profunctor p) => p a b -> (b -> c) -> p a c
+(>>>^) = flip rmap
+
+infix 3 ^>>>
+
+-- | Operator alias for 'lmap', useful to precompose a 'Rhine' or 'SN' with a function
+(^>>>) :: (Profunctor p) => (a -> b) -> p b c -> p a c
+(^>>>) = lmap
