@@ -38,6 +38,7 @@ import Data.Automaton.Trans.Except
 
 -- rhine
 import FRP.Rhine hiding (Rhine, flow, sn, Result)
+import FRP.Rhine.Rhine.Free
 import FRP.Rhine.SN.Free
 
 -- rhine-gloss
