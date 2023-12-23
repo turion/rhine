@@ -35,6 +35,7 @@ module FRP.Rhine.SN.Free (
   Append,
   Position, -- FIXME this should be internal
   HasClock (..),
+  HasClocksOrdered (..),
   runClocks,
   -- FIXME the followong are probably internal
   appendClocks,
@@ -175,10 +176,7 @@ synchronous :: (HasClock cl cls, Clock m cl) => ClSF m cl a b -> FreeSN m cls (A
 synchronous = FreeSN . liftFree2 . Synchronous position
 
 resampling ::
-  ( HasClock clA cls
-  , Clock m clA
-  , HasClocksOrdered clA clB cls
-  , HasClock clB cls
+  ( HasClocksOrdered clA clB cls
   ) =>
   ResamplingBuffer m clA clB a b ->
   FreeSN m cls (At clA a) (At clB b)
@@ -268,6 +266,9 @@ infixr 9 .:.
 
 (.:.) :: (GetClockProxy cl, Clock m cl) => cl -> Clocks m (Time cl) cls -> Clocks m (Time cl) (cl ': cls)
 getClassyClock .:. Clocks {getClocks} = Clocks $ ClassyClock {getClassyClock} :* getClocks
+
+clocks :: (GetClockProxy cl, Clock m cl) => cl -> Clocks m (Time cl) '[cl]
+clocks cl = cl .:. cnil
 
 cnil :: Clocks m td '[]
 cnil = Clocks Nil
