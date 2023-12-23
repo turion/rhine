@@ -18,15 +18,15 @@ import System.Random
 import Data.Vector2
 
 -- rhine
-import FRP.Rhine hiding (flow, sn, Rhine)
-import FRP.Rhine.SN.Free
+import FRP.Rhine hiding (Rhine, flow, sn)
 import FRP.Rhine.Rhine.Free
+import FRP.Rhine.SN.Free
 
 type Point = Vector2 Float
 
 type SimulationClock = Millisecond 1
 type DisplayClock = Millisecond 1000
-type AppClock = '[StdinClock, SimulationClock, DisplayClock]
+type AppClock = '[SimulationClock, StdinClock, DisplayClock]
 
 {- | On every newline, show the current point and the local time.
    Also, forward the current point so it can be saved.
@@ -37,8 +37,7 @@ keyboard = proc currentPoint -> do
   debugLocalTime -< ()
   returnA -< currentPoint
 
-{- | Every millisecond, go one step up, down, right or left.
--}
+-- | Every millisecond, go one step up, down, right or left.
 simulation :: ClSF IO SimulationClock () Point
 simulation = feedback zeroVector $ proc ((), lastPoint) -> do
   direction <- constMCl $ randomRIO (0, 3 :: Int) -< ()
@@ -77,18 +76,28 @@ debugLocalTime = proc a -> do
   arrMCl putStrLn -< "since init: " ++ show sinceInit_ ++ "\nsince first local tick: " ++ show sinceStart_
   returnA -< a
 
+-- | In this example, we will always zero-order resample, that is, by keeping the last value
+resample ::
+  ( HasClocksOrdered clA clB cls
+  , Monad m
+  ) =>
+  FreeSN m cls (At clA Point) (At clB Point)
+resample = resampling $ keepLast zeroVector
+
 -- | Wire together all components
 mainRhine :: Rhine IO UTCTime AppClock () ()
-mainRhine = Rhine
-  { clocks = StdinClock .:. waitClock .:. waitClock .:. cnil
-  , sn = feedbackSN (debugLocalTime ^->> keepLast zeroVector) $ proc (lastPoint, ()) -> do
-      savedPoint <- resampling (keepLast zeroVector) <<< synchronous keyboard -< lastPoint
-      currentPoint <- resampling (keepLast zeroVector) <<< synchronous simulation -< pure ()
-      synchronous display -< (,) <$> savedPoint <*> currentPoint
-      returnA -< (currentPoint, ())
-  }
-  -- feedbackRhine (debugLocalTime ^->> keepLast zeroVector) $
-  --   keyboard @@ StdinClock >-- keepLast zeroVector --> simulation @@ waitClock >-- keepLast (zeroVector, zeroVector) --> display @@ waitClock
+mainRhine =
+  Rhine
+    -- The order of the clocks matters!
+    -- Since we are using the `simulation` first, we need to list its clock first.
+    { clocks = waitClock .:. StdinClock .:. waitClock .:. cnil
+    , sn = proc () -> do
+        currentPoint <- synchronous simulation -< pure ()
+        savedPoint <- resample <<< synchronous keyboard <<< resample -< currentPoint
+        currentPointDisplay <- resample -< currentPoint
+        synchronous display -< (,) <$> savedPoint <*> currentPointDisplay
+        returnA -< ()
+    }
 
 -- | Execute the main Rhine
 main :: IO ()
