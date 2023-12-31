@@ -25,7 +25,7 @@ executable HelloWorld
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     rhine ==1.2
 
   default-language: Haskell2010
@@ -44,7 +44,7 @@ executable Demonstration
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     rhine ==1.2
 
   default-language: Haskell2010
@@ -63,7 +63,7 @@ executable ADSR
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     rhine ==1.2
 
   default-language: Haskell2010
@@ -82,7 +82,7 @@ executable Ball
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     random >=1.1,
     rhine ==1.2,
     vector-sized >=1.4
@@ -108,7 +108,7 @@ executable Periodic
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     monad-schedule >=0.1,
     rhine ==1.2,
     transformers >=0.5
@@ -129,7 +129,7 @@ executable EventClock
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     random >=1.1,
     rhine ==1.2
 
@@ -149,7 +149,7 @@ executable Sawtooth
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     rhine ==1.2
 
   default-language: Haskell2010
@@ -168,13 +168,14 @@ executable RandomWalk
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     random >=1.1,
     rhine ==1.2,
     simple-affine-space
 
   default-language: Haskell2010
-  default-extensions: TypeOperators
+  default-extensions:
+    TypeOperators
 
   if flag(dev)
     ghc-options: -Werror
