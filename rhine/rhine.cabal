@@ -134,6 +134,7 @@ library
                      , time         >= 1.8
                      , free         >= 5.1
                      , containers   >= 0.5
+                     , text        ^>= 2.0
                      , deepseq      >= 1.4
                      , random       >= 1.1
                      , MonadRandom  >= 0.5
