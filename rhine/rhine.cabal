@@ -140,7 +140,7 @@ library
                      , random       >= 1.1
                      , MonadRandom  >= 0.5
                      , simple-affine-space ^>= 0.2
-                     , time-domain ^>= 0.1.0.2
+                     , time-domain ^>= 0.1.0.3
                      , monad-schedule ^>= 0.1.2
 
   -- Directories containing source files.
