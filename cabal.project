@@ -1,1 +1,6 @@
 packages: */*.cabal
+
+source-repository-package
+    type: git
+    location: https://github.com/turion/monad-bayes/
+    tag: 31e93540c6386ab4c2edebc5a147130de79724ed
