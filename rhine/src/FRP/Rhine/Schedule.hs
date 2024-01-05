@@ -17,35 +17,68 @@ and utilities to work with them.
 module FRP.Rhine.Schedule where
 
 -- base
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.List.NonEmpty qualified as N
+import Control.Arrow
+import Data.List.NonEmpty as N
 
--- dunai
-import Data.MonadicStreamFunction
-import Data.MonadicStreamFunction.Async (concatS)
-import Data.MonadicStreamFunction.InternalCore
+-- transformers
+import Control.Monad.Trans.Reader
 
 -- monad-schedule
 import Control.Monad.Schedule.Class
+
+-- automaton
+import Data.Automaton
+import Data.Automaton.Final (getFinal, toFinal)
+import Data.Stream
+import Data.Stream.Final qualified as StreamFinal
+import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
+import Data.Stream.Result
 
 -- rhine
 import FRP.Rhine.Clock
 
 -- * Scheduling
 
-scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (MSF m a b) -> MSF m a (NonEmpty b)
-scheduleList msfs = scheduleList' msfs []
-  where
-    scheduleList' msfs running = MSF $ \a -> do
-      let bsAndConts = flip unMSF a <$> msfs
-      (done, running) <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
-      let (bs, dones) = N.unzip done
-      return (bs, scheduleList' dones running)
+{- | Run several automata concurrently.
 
-{- | Two clocks in the 'ScheduleT' monad transformer
-  can always be canonically scheduled.
-  Indeed, this is the purpose for which 'ScheduleT' was defined.
+Whenever one automaton outputs a value,
+it is returned together with all other values that happen to be output at the same time.
 -}
+scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (Automaton m a b) -> Automaton m a (NonEmpty b)
+scheduleList automatons0 =
+  Automaton $
+    Stateful $
+      StreamT
+        { state = (getFinal . toFinal <$> automatons0, [])
+        , step = \(automatons, running) -> ReaderT $ \a -> do
+            let bsAndConts = flip (runReaderT . StreamFinal.getFinal) a <$> automatons
+            (done, running') <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
+            return $ Result (resultState <$> done, running') $ output <$> done
+        }
+
+{- | Run two automata concurrently.
+
+Whenever one automaton returns a value, it is returned.
+
+This is similar to 'scheduleList', but more efficient.
+-}
+schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
+schedulePair (Automaton automatonL) (Automaton automatonR) = Automaton $! Stateful $! scheduleStreams (toStreamT automatonL) (toStreamT automatonR)
+  where
+    scheduleStreams :: (Monad m, MonadSchedule m) => StreamT m b -> StreamT m b -> StreamT m b
+    scheduleStreams (StreamT stateL0 stepL) (StreamT stateR0 stepR) =
+      StreamT
+        { state = (stepL stateL0, stepR stateR0)
+        , step
+        }
+      where
+        step (runningL, runningR) = do
+          result <- race runningL runningR
+          case result of
+            Left (Result stateL' b, runningR') -> return $ Result (stepL stateL', runningR') b
+            Right (runningL', Result stateR' b) -> return $ Result (runningL', stepR stateR') b
+
+-- | Run two running clocks concurrently.
 runningSchedule ::
   ( Monad m
   , MonadSchedule m
@@ -58,7 +91,7 @@ runningSchedule ::
   RunningClock m (Time cl1) (Tag cl1) ->
   RunningClock m (Time cl2) (Tag cl2) ->
   RunningClock m (Time cl1) (Either (Tag cl1) (Tag cl2))
-runningSchedule _ _ rc1 rc2 = concatS $ scheduleList [rc1 >>> arr (second Left), rc2 >>> arr (second Right)] >>> arr N.toList
+runningSchedule _ _ rc1 rc2 = schedulePair (rc1 >>> arr (second Left)) (rc2 >>> arr (second Right))
 
 {- | A schedule implements a combination of two clocks.
    It outputs a time stamp and an 'Either' value,

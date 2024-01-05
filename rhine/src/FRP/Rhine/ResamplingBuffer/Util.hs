@@ -8,8 +8,8 @@ module FRP.Rhine.ResamplingBuffer.Util where
 -- transformers
 import Control.Monad.Trans.Reader (runReaderT)
 
--- dunai
-import Data.MonadicStreamFunction.InternalCore
+-- automaton
+import Data.Stream.Result (Result (..))
 
 -- rhine
 import FRP.Rhine.ClSF
@@ -33,7 +33,7 @@ resBuf >>-^ clsf = ResamplingBuffer put_ get_
     put_ theTimeInfo a = (>>-^ clsf) <$> put resBuf theTimeInfo a
     get_ theTimeInfo = do
       (b, resBuf') <- get resBuf theTimeInfo
-      (c, clsf') <- unMSF clsf b `runReaderT` theTimeInfo
+      Result clsf' c <- stepAutomaton clsf b `runReaderT` theTimeInfo
       return (c, resBuf' >>-^ clsf')
 
 infix 1 ^->>
@@ -47,7 +47,7 @@ infix 1 ^->>
 clsf ^->> resBuf = ResamplingBuffer put_ get_
   where
     put_ theTimeInfo a = do
-      (b, clsf') <- unMSF clsf a `runReaderT` theTimeInfo
+      Result clsf' b <- stepAutomaton clsf a `runReaderT` theTimeInfo
       resBuf' <- put resBuf theTimeInfo b
       return $ clsf' ^->> resBuf'
     get_ theTimeInfo = second (clsf ^->>) <$> get resBuf theTimeInfo

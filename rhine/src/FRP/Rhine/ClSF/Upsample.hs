@@ -7,22 +7,22 @@
 module FRP.Rhine.ClSF.Upsample where
 
 -- dunai
-import Control.Monad.Trans.MSF.Reader
+import Data.Automaton.Trans.Reader
 
 -- rhine
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
 
-{- | An 'MSF' can be given arbitrary other arguments
+{- | An 'Automaton' can be given arbitrary other arguments
    that cause it to tick without doing anything
    and replicating the last output.
 -}
-upsampleMSF :: (Monad m) => b -> MSF m a b -> MSF m (Either arbitrary a) b
-upsampleMSF b msf = right msf >>> accumulateWith (<>) (Right b) >>> arr fromRight
+upsampleAutomaton :: (Monad m) => b -> Automaton m a b -> Automaton m (Either arbitrary a) b
+upsampleAutomaton b automaton = right automaton >>> accumulateWith (<>) (Right b) >>> arr fromRight
   where
     fromRight (Right b') = b'
-    fromRight (Left _) = error "fromRight: This case never occurs in upsampleMSF."
+    fromRight (Left _) = error "fromRight: This case never occurs in upsampleAutomaton."
 
 -- Note that the Semigroup instance of Either a arbitrary
 -- updates when the first argument is Right.
@@ -37,7 +37,7 @@ upsampleR ::
   b ->
   ClSF m clR a b ->
   ClSF m (ParallelClock clL clR) a b
-upsampleR b clsf = readerS $ arr remap >>> upsampleMSF b (runReaderS clsf)
+upsampleR b clsf = readerS $ arr remap >>> upsampleAutomaton b (runReaderS clsf)
   where
     remap (TimeInfo {tag = Left tag}, _) = Left tag
     remap (TimeInfo {tag = Right tag, ..}, a) = Right (TimeInfo {..}, a)
@@ -52,7 +52,7 @@ upsampleL ::
   b ->
   ClSF m clL a b ->
   ClSF m (ParallelClock clL clR) a b
-upsampleL b clsf = readerS $ arr remap >>> upsampleMSF b (runReaderS clsf)
+upsampleL b clsf = readerS $ arr remap >>> upsampleAutomaton b (runReaderS clsf)
   where
     remap (TimeInfo {tag = Right tag}, _) = Left tag
     remap (TimeInfo {tag = Left tag, ..}, a) = Right (TimeInfo {..}, a)

@@ -1,6 +1,7 @@
 resolver: lts-20.26
 
 packages:
+- automaton
 - rhine
 - rhine-examples
 - rhine-gloss
@@ -22,6 +23,7 @@ extra-deps:
 - criterion-1.6.3.0@sha256:cf27e6c83f91674fb67ef253cae644ad0ce079b7e2cfa6402e13e930f78499ec,5373
 - criterion-measurement-0.2.1.0@sha256:646d5b5c55499580747746396b731ef9d6e2cd59fa7b488354788e68eae8e9bc,2098
 - optparse-applicative-0.18.1.0@sha256:b4cf8d9018e5e67cb1f14edb5130b6d05ad8bc1b5f6bd4efaa6ec0b7f28f559d,5132
+- selective-0.7.0.1@sha256:542ab572491898552b42d62d43a7e8c70fb93d714c06c06a4de6f331fee87df2,3509
 
 nix:
   packages:

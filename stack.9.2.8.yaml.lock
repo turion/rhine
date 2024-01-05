@@ -102,6 +102,13 @@ packages:
       size: 3124
   original:
     hackage: optparse-applicative-0.18.1.0@sha256:b4cf8d9018e5e67cb1f14edb5130b6d05ad8bc1b5f6bd4efaa6ec0b7f28f559d,5132
+- completed:
+    hackage: selective-0.7.0.1@sha256:542ab572491898552b42d62d43a7e8c70fb93d714c06c06a4de6f331fee87df2,3509
+    pantry-tree:
+      sha256: 0c83390d679a54549b03180465335118331f120511a11e82a1c8e2d9cbd5ed55
+      size: 1292
+  original:
+    hackage: selective-0.7.0.1@sha256:542ab572491898552b42d62d43a7e8c70fb93d714c06c06a4de6f331fee87df2,3509
 snapshots:
 - completed:
     sha256: 5a59b2a405b3aba3c00188453be172b85893cab8ebc352b1ef58b0eae5d248a2

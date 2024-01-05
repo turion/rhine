@@ -109,8 +109,8 @@ rhL    -- A rhine that inputs some data `a` and outputs some data `b`, on some c
 
 ### Clocked signal functions (`ClSF`s)
 
-Stream functions in [`dunai`](http://hackage.haskell.org/package/dunai) are usually valid clocked signal functions.
-Here are some that are not in `dunai`.
+Automata in [`automaton`](http://hackage.haskell.org/package/automaton) are usually valid clocked signal functions.
+Here are some of the most used:
 
 | Name         | Type (abbreviated)                                   | Meaning                                           |
 |--------------|------------------------------------------------------|---------------------------------------------------|

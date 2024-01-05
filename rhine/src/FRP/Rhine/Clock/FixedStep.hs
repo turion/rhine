@@ -12,6 +12,7 @@ and a deterministic schedule for such clocks.
 module FRP.Rhine.Clock.FixedStep where
 
 -- base
+import Control.Arrow
 import Data.Functor (($>))
 import Data.Maybe (fromMaybe)
 import GHC.TypeLits
@@ -22,6 +23,9 @@ import Data.Vector.Sized (Vector, fromList)
 -- monad-schedule
 import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Trans (ScheduleT, wait)
+
+-- automaton
+import Data.Automaton (accumulateWith, arrM)
 
 -- rhine
 import FRP.Rhine.Clock
