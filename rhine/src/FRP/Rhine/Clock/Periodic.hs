@@ -6,6 +6,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
 
 {- |
 Periodic clocks are defined by a stream of ticks with periodic time differences.
@@ -15,19 +16,20 @@ The time differences are supplied at the type level.
 module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
+import Control.Arrow
 import Data.List.NonEmpty hiding (unfold)
-import Data.Maybe (fromMaybe)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 
--- dunai
-import Data.MonadicStreamFunction
 
 -- monad-schedule
 import Control.Monad.Schedule.Trans
 
 -- rhine
+import Data.Automaton
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import Data.Automaton.MSF (MSF (..), accumulateWith)
+import Data.Automaton.MSF (withSideEffect)
 
 -- * The 'Periodic' clock
 
@@ -80,15 +82,13 @@ instance
 
 -- * Utilities
 
--- TODO Port back to dunai when naming issues are resolved
-
 -- | Repeatedly outputs the values of a given list, in order.
 cycleS :: (Monad m) => NonEmpty a -> MSF m () a
-cycleS as = unfold (second (fromMaybe as) . uncons) as
+cycleS as = MSF AutomatonT
+  {state = (as, [])
+  , step
+  }
+  where
+    step (as, []) = step (as, toList as)
+    step (as, a : as') = return $! Result (as, as') a
 
-{-
--- TODO Port back to dunai when naming issues are resolved
-delayList :: [a] -> MSF a a
-delayList [] = id
-delayList (a : as) = delayList as >>> delay a
--}

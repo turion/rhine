@@ -40,7 +40,7 @@ import Control.Monad.Bayes.Population hiding (hoist)
 import Control.Monad.Bayes.Sampler.Strict
 
 -- dunai
-import Control.Monad.Trans.MSF.Except
+import Data.Automaton.MSF.Trans.Except
 
 -- rhine
 import FRP.Rhine

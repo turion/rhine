@@ -14,12 +14,8 @@ module FRP.Rhine.Reactimation.ClockErasure where
 -- base
 import Control.Monad (join)
 
--- dunai
-import Control.Monad.Trans.MSF.Reader
-import Data.MonadicStreamFunction
-
 -- rhine
-
+import Data.Automaton.MSF.Trans.Reader
 import FRP.Rhine.ClSF hiding (runReaderS)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy

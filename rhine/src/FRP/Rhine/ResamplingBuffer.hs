@@ -15,6 +15,9 @@ module FRP.Rhine.ResamplingBuffer (
 )
 where
 
+-- base
+import Control.Arrow
+
 -- rhine
 import FRP.Rhine.Clock
 

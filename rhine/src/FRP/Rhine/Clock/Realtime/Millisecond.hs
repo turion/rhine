@@ -26,6 +26,8 @@ import FRP.Rhine.Clock.Unschedule
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
+import Data.Automaton.MSF (arrM)
+import Control.Arrow
 
 {- |
 A clock ticking every 'n' milliseconds,

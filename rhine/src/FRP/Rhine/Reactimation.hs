@@ -6,9 +6,6 @@ as main loops.
 -}
 module FRP.Rhine.Reactimation where
 
--- dunai
-import Data.MonadicStreamFunction.InternalCore
-
 -- rhine
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock

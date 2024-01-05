@@ -36,6 +36,7 @@ benchmarks =
     "WordCount"
     [ bench "rhine" $ nfIO rhineWordCount
     , bench "dunai" $ nfIO dunaiWordCount
+    , bench "automaton" $ nfIO automatonWordCount
     , bgroup
         "Text"
         [ bench "IORef" $ nfIO textWordCount
@@ -84,6 +85,21 @@ dunaiWordCount = do
       line <- Dunai.constM getLine -< ()
       words <- Dunai.mappendS -< Sum $ length $ words line
       Dunai.arrM $ writeIORef wcOut -< getSum words
+      returnA -< ()
+
+automatonWordCount :: FilePath -> IO Int
+automatonWordCount inputFileName = do
+  wcOut <- newIORef (0 :: Int)
+  catch (withInput inputFileName $ reactimate (wc wcOut) >> readIORef wcOut) $ \(e :: IOError) ->
+    if isEOFError e
+      then readIORef wcOut
+      else throwIO e
+  readIORef wcOut
+  where
+    wc wcOut = proc () -> do
+      line <- constM getLine -< ()
+      words <- mappendS -< Sum $ length $ words line
+      arrM $ writeIORef wcOut -< getSum words
       returnA -< ()
 
 {- | This is what 'rhineWordCount' should reduce to roughly (except the way the IORef is handled).

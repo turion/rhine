@@ -13,11 +13,10 @@ import Data.Tuple (swap)
 -- transformers
 import Control.Monad.Trans.Reader
 
--- dunai
-import Control.Monad.Trans.MSF.Reader qualified as MSF
-
 -- rhine
+import Data.Automaton.MSF.Trans.Reader qualified as MSF
 import FRP.Rhine.ClSF.Core
+import qualified Data.Automaton.MSF.Trans.Reader as MSF
 
 -- | Commute two 'ReaderT' transformer layers past each other
 commuteReaders :: ReaderT r1 (ReaderT r2 m) a -> ReaderT r2 (ReaderT r1 m) a
@@ -33,7 +32,7 @@ readerS ::
   ClSF m cl (a, r) b ->
   ClSF (ReaderT r m) cl a b
 readerS behaviour =
-  morphS commuteReaders $ MSF.readerS $ arr swap >>> behaviour
+  hoistS commuteReaders $ MSF.readerS $ arr swap >>> behaviour
 
 {- | Remove ("run") a 'ReaderT' layer from the monad stack
    by making it an explicit input to the behaviour.
@@ -43,7 +42,7 @@ runReaderS ::
   ClSF (ReaderT r m) cl a b ->
   ClSF m cl (a, r) b
 runReaderS behaviour =
-  arr swap >>> MSF.runReaderS (morphS commuteReaders behaviour)
+  arr swap >>> MSF.runReaderS (hoistS commuteReaders behaviour)
 
 -- | Remove a 'ReaderT' layer by passing the readonly environment explicitly.
 runReaderS_ ::

@@ -5,6 +5,7 @@
 module FRP.Rhine.Clock.Realtime.Busy where
 
 -- base
+import Control.Arrow
 import Control.Monad.IO.Class
 
 -- time
@@ -13,6 +14,7 @@ import Data.Time.Clock
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import Data.Automaton.MSF (constM)
 
 {- |
 A clock that ticks without waiting.

@@ -6,7 +6,7 @@ Collect and process all incoming values statefully and with time stamps.
 module FRP.Rhine.ResamplingBuffer.MSF where
 
 -- dunai
-import Data.MonadicStreamFunction.InternalCore
+import Data.Automaton.MSF
 
 -- rhine
 import FRP.Rhine.ResamplingBuffer
@@ -36,5 +36,5 @@ msfBuffer = msfBuffer' []
       where
         put ti1 a = return $ msfBuffer' ((ti1, a) : as) msf
         get ti2 = do
-          (b, msf') <- unMSF msf (ti2, as)
+          StrictTuple b msf' <- stepMSF msf (ti2, as)
           return (b, msfBuffer msf')

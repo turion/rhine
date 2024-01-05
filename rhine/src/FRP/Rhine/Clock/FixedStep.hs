@@ -29,6 +29,8 @@ import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
+import Control.Arrow
+import Data.Automaton.MSF (accumulateWith, arrM)
 
 {- | A pure (side effect free) clock with fixed step size,
    i.e. ticking at multiples of 'n'.

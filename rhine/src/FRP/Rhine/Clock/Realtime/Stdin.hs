@@ -22,6 +22,7 @@ import Data.Text.IO qualified as Text
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import Data.Automaton.MSF (constM)
 
 {- |
 A clock that ticks for every line entered on the console,

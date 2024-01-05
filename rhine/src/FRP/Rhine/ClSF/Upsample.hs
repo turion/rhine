@@ -7,7 +7,7 @@
 module FRP.Rhine.ClSF.Upsample where
 
 -- dunai
-import Control.Monad.Trans.MSF.Reader
+import Data.Automaton.MSF.Trans.Reader
 
 -- rhine
 import FRP.Rhine.ClSF.Core

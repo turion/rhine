@@ -1,11 +1,13 @@
+-- FIXME or should I indeed define everything for automata first and add MSFs separately?
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Data.MonadicStreamFunction.Bayes where
 
 -- base
 import Control.Arrow
-import Data.Functor (($>))
-import Data.Tuple (swap)
 
 -- transformers
+import Control.Monad.Trans.Reader (ReaderT (..))
 
 -- log-domain
 import Numeric.Log hiding (sum)
@@ -13,9 +15,9 @@ import Numeric.Log hiding (sum)
 -- monad-bayes
 import Control.Monad.Bayes.Population
 
--- dunai
-import Data.MonadicStreamFunction
-import Data.MonadicStreamFunction.InternalCore (MSF (..))
+-- rhine
+import Data.Automaton (AutomatonT (..), Result (..))
+import Data.Automaton.MSF (MSF (..))
 
 -- | Run the Sequential Monte Carlo algorithm continuously on an 'MSF'
 runPopulationS ::
@@ -28,25 +30,19 @@ runPopulationS ::
   MSF (PopulationT m) a b ->
   -- FIXME Why not MSF m a (PopulationT b)
   MSF m a [(b, Log Double)]
-runPopulationS nParticles resampler = runPopulationsS resampler . (spawn nParticles $>)
-
--- | Run the Sequential Monte Carlo algorithm continuously on a 'PopulationT' of 'MSF's
-runPopulationsS ::
-  (Monad m) =>
-  -- | Resampler
-  (forall x. PopulationT m x -> PopulationT m x) ->
-  PopulationT m (MSF (PopulationT m) a b) ->
-  MSF m a [(b, Log Double)]
-runPopulationsS resampler = go
-  where
-    go msfs = MSF $ \a -> do
-      -- TODO This is quite different than the dunai version now. Maybe it's right nevertheless.
-      -- FIXME This normalizes, which introduces bias, whatever that means
-      bAndMSFs <- runPopulationT $ normalize $ resampler $ flip unMSF a =<< msfs
-      return $
-        second (go . fromWeightedList . return) $
-          unzip $
-            (swap . fmap fst &&& swap . fmap snd) . swap <$> bAndMSFs
+runPopulationS nParticles resampler (MSF AutomatonT {state, step}) =
+  MSF
+    AutomatonT
+      { -- FIXME it's weird that the particles don't have a weight?
+        state = replicate nParticles (state, 1 / fromIntegral nParticles)
+      , step = \states -> ReaderT $ \a -> do
+          -- FIXME This normalizes, which introduces bias, whatever that means
+          x <- runPopulationT $ normalize $ resampler $ do
+            -- Would it make more sense to put the resampler here?
+            state <- fromWeightedList $ pure states
+            runReaderT (step state) a
+          return $! Result (first resultState <$> x) (first output <$> x)
+      }
 
 -- FIXME see PR re-adding this to monad-bayes
 normalize :: (Monad m) => PopulationT m a -> PopulationT m a

@@ -9,6 +9,8 @@ import Data.TimeDomain
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import Data.Automaton.MSF (MSF, delay)
+import Control.Arrow
 
 -- * Auxiliary definitions and utilities
 
@@ -21,7 +23,7 @@ genTimeInfo ::
   Time cl ->
   MSF m (Time cl, Tag cl) (TimeInfo cl)
 genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- iPre initialTime -< absolute
+  lastTime <- delay initialTime -< absolute
   returnA
     -<
       TimeInfo

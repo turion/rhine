@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE LambdaCase #-}
 
 {- |
 The 'MonadSchedule' class from the @monad-schedule@ package is the compatibility mechanism between two different clocks.
@@ -17,30 +18,52 @@ and utilities to work with them.
 module FRP.Rhine.Schedule where
 
 -- base
+import Control.Arrow
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.List.NonEmpty qualified as N
 
--- dunai
-import Data.MonadicStreamFunction
-import Data.MonadicStreamFunction.Async (concatS)
-import Data.MonadicStreamFunction.InternalCore
+-- transformers
+import Control.Monad.Trans.Reader (ReaderT (..))
 
 -- monad-schedule
 import Control.Monad.Schedule.Class
 
 -- rhine
+import Data.Automaton
+import Data.Automaton.MSF
 import FRP.Rhine.Clock
 
 -- * Scheduling
 
 scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (MSF m a b) -> MSF m a (NonEmpty b)
-scheduleList msfs = scheduleList' msfs []
-  where
-    scheduleList' msfs running = MSF $ \a -> do
-      let bsAndConts = flip unMSF a <$> msfs
+scheduleList msfs = MSF AutomatonT {
+  state = (toFinal <$> msfs, [])
+  , step = \(msfs, running) -> ReaderT $ \a -> do
+      let bsAndConts = flip getFinal a <$> msfs
       (done, running) <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
-      let (bs, dones) = N.unzip done
-      return (bs, scheduleList' dones running)
+      return $! Result (resultState <$> done, running) $! output <$> done
+  }
+
+-- FIXME it's hard to write it down with explicit states, but it ought to be possible.
+{-
+scheduleList (MSF {getMSF = AutomatonT {state, step}} :| msfs) = scheduleList' msfs $ StatesAndSteps $ ExplicitStateAutomaton state step :* Nil
+ where
+  scheduleList' :: [MSF m a b] -> StatesAndSteps m a b -> MSF m a (NonEmpty b)
+  scheduleList' (MSF {getMSF = AutomatonT {state, step}} : msfs) (StatesAndSteps automata) = scheduleList' msfs $ StatesAndSteps $ ExplicitStateAutomaton state step :* automata
+  scheduleList' [] (StatesAndSteps automata) = scheduleList'' automata
+
+  scheduleList'' :: NP (ExplicitStateAutomaton m a b) (state ': states) -> MSF m a (NonEmpty b)
+  scheduleList'' automata = MSF AutomatonT
+    {state = liftA_NP (I . explicitState) automata
+    , step = _
+    }
+
+data ExplicitStateAutomaton m a b s = ExplicitStateAutomaton
+  { explicitState :: s
+  , explicitStep :: s -> ReaderT a m (Result s b)}
+
+data StatesAndSteps m a b = forall state states . StatesAndSteps {getStatesAndSteps :: NP (ExplicitStateAutomaton m a b) (state ': states)}
+-}
 
 {- | Two clocks in the 'ScheduleT' monad transformer
   can always be canonically scheduled.

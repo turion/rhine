@@ -11,7 +11,7 @@ import Control.Monad.Bayes.Class
 import Control.Monad.Bayes.Population
 
 -- dunai
-import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
+import qualified Data.Automaton.MSF.Trans.Reader as DunaiReader
 
 -- dunai-bayes
 import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes

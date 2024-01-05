@@ -10,10 +10,8 @@ A signal network together with a matching clock value.
 -}
 module FRP.Rhine.Type where
 
--- dunai
-import Data.MonadicStreamFunction
-
 -- rhine
+import Data.Automaton.MSF
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Reactimation.ClockErasure
