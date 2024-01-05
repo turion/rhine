@@ -66,33 +66,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
 
-      - name: Configure & plan
-        run: |
-          cabal configure --enable-tests --enable-benchmarks --disable-documentation
-          cabal build all --dry-run
-        # The last step generates dist-newstyle/cache/plan.json for the cache key.
-
-      - name: Restore Cabal cache
-        uses: actions/cache/restore@v3
-        id: cache
-        env:
-          key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ steps.setup.outputs.cabal-version }}
+      - name: Cache Cabal build artifacts
+        uses: actions/cache@v3
         with:
           path: |
-            ${{ steps.setup.outputs.cabal-store }}
+            ${{ steps.setup-haskell-build.outputs.cabal-store }}
             dist-newstyle
-          key: ${{ env.key }}-plan-${{ hashFiles('**/plan.json') }}
-          restore-keys: ${{ env.key }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}
 
       - name: Cabal build dependencies
         run: cabal build all --enable-tests --only-dependencies
-
-      - name: Save Cabal dependency cache
-        uses: actions/cache/save@v3
-        if: ${{ steps.cache.outputs.cache-primary-key != steps.cache.outputs.cache-matched-key }}
-        with:
-          path: ${{ steps.setup.outputs.cabal-store }}
-          key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: Cabal build packages
         run: cabal build all --enable-tests -fdev
