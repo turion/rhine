@@ -115,16 +115,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v24
-      - name: Build default package (rhine)
+      - name: Build all packages
         run: nix build
-      - name: Build rhine-examples
-        run: nix build .#rhine-examples
-      - name: Build rhine-gloss
-        run: nix build .#rhine-gloss
-      - name: Build rhine-bayes
-        run: nix build .#rhine-bayes
-      - name: Build rhine-terminal
-        run: nix build .#rhine-terminal
       - name: Run tests
         run: nix develop -c cabal test all
       # nix flake check breaks on IFD in multi-platform flake https://github.com/NixOS/nix/issues/4265
