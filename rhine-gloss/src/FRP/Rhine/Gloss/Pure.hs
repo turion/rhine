@@ -30,17 +30,14 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 
--- dunai
-import Control.Monad.Trans.MSF (performOnFirstSample)
-import qualified Control.Monad.Trans.MSF.Reader as MSFReader
-import qualified Control.Monad.Trans.MSF.Writer as MSFWriter
-import Data.MonadicStreamFunction.InternalCore
-
 -- monad-schedule
 import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Yield
 
 -- rhine
+import Data.Automaton.MSF.Trans.Except (performOnFirstSample)
+import qualified Data.Automaton.MSF.Trans.Reader as MSFReader
+import qualified Data.Automaton.MSF.Trans.Writer as MSFWriter
 import FRP.Rhine
 
 -- rhine-gloss
@@ -126,9 +123,9 @@ flowGloss GlossSettings {..} rhine =
   play display backgroundColor stepsPerSecond (worldMSF, Blank) getPic handleEvent simStep
   where
     worldMSF :: WorldMSF
-    worldMSF = MSFWriter.runWriterS $ MSFReader.runReaderS $ morphS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
+    worldMSF = MSFWriter.runWriterS $ MSFReader.runReaderS $ hoistS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
     stepWith :: (Float, Maybe Event) -> (WorldMSF, Picture) -> (WorldMSF, Picture)
-    stepWith (diff, eventMaybe) (msf, _) = let ((picture, _), msf') = runIdentity $ unMSF msf ((diff, eventMaybe), ()) in (msf', picture)
+    stepWith (diff, eventMaybe) (msf, _) = let StrictTuple (picture, _) msf' = runIdentity $ stepMSF msf ((diff, eventMaybe), ()) in (msf', picture)
     getPic (_, pic) = pic
     handleEvent event = stepWith (0, Just event)
     simStep diff = stepWith (diff, Nothing)

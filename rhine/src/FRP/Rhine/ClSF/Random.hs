@@ -4,7 +4,7 @@
 {- | Create 'ClSF's with randomness without 'IO'.
    Uses the @MonadRandom@ package.
    This module copies the API from @dunai@'s
-   'Control.Monad.Trans.MSF.Random'.
+   'Data.Automaton.MSF.Trans.Random'.
 -}
 module FRP.Rhine.ClSF.Random (
   module FRP.Rhine.ClSF.Random,
@@ -18,12 +18,10 @@ import Control.Monad.IO.Class
 -- MonadRandom
 import Control.Monad.Random
 
--- dunai
-import Control.Monad.Trans.MSF.Except (performOnFirstSample)
-import Control.Monad.Trans.MSF.Random as X hiding (evalRandS, getRandomRS, getRandomRS_, getRandomS, runRandS)
-import Control.Monad.Trans.MSF.Random qualified as MSF
-
 -- rhine
+import Data.Automaton.MSF.Trans.Except (performOnFirstSample)
+import Data.Automaton.MSF.Trans.Random as X hiding (evalRandS, getRandomRS, getRandomRS_, getRandomS, runRandS)
+import Data.Automaton.MSF.Trans.Random qualified as MSF
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Random.Util
 
@@ -36,7 +34,7 @@ runRandS ::
   -- | The initial random seed
   g ->
   ClSF m cl a (g, b)
-runRandS clsf = MSF.runRandS (morphS commuteReaderRand clsf)
+runRandS clsf = MSF.runRandS (hoistS commuteReaderRand clsf)
 
 -- | Updates the generator every step but discards the generator.
 evalRandS ::

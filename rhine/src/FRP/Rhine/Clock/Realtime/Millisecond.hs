@@ -19,6 +19,9 @@ import GHC.TypeLits
 import Data.Vector.Sized (Vector, fromList)
 
 -- rhine
+
+import Control.Arrow
+import Data.Automaton.MSF (arrM)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.Clock.Proxy

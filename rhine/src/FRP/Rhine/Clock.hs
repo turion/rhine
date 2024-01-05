@@ -22,14 +22,15 @@ module FRP.Rhine.Clock (
 where
 
 -- base
+import Control.Arrow
 import Control.Category qualified as Category
 
 -- transformers
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
--- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+-- rhine
+import Data.Automaton.MSF (MSF, arrM, hoistS)
 
 -- time-domain
 import Data.TimeDomain as X
@@ -241,10 +242,8 @@ instance
   type Tag (HoistClock m1 m2 cl) = Tag cl
   initClock HoistClock {..} = do
     (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
-    let hoistMSF = morphS
-    -- TODO Look out for API changes in dunai here
     return
-      ( hoistMSF monadMorphism runningClock
+      ( hoistS monadMorphism runningClock
       , initialTime
       )
 

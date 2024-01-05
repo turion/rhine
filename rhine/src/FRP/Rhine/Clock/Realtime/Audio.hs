@@ -21,6 +21,7 @@ module FRP.Rhine.Clock.Realtime.Audio (
 where
 
 -- base
+import Control.Arrow
 import Data.Time.Clock
 import GHC.Float (double2Float)
 import GHC.TypeLits (KnownNat, Nat, natVal)
@@ -28,10 +29,9 @@ import GHC.TypeLits (KnownNat, Nat, natVal)
 -- transformers
 import Control.Monad.IO.Class
 
--- dunai
-import Control.Monad.Trans.MSF.Except hiding (step)
-
 -- rhine
+import Data.Automaton.MSF
+import Data.Automaton.MSF.Trans.Except hiding (step)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 
@@ -100,8 +100,8 @@ instance
   initClock audioClock = do
     let
       step =
-        picosecondsToDiffTime $ -- The only sufficiently precise conversion function
-          round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double)
+        picosecondsToDiffTime $
+          round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double) -- The only sufficiently precise conversion function
       bufferSize = theBufferSize audioClock
 
       runningClock :: (MonadIO m) => UTCTime -> Maybe Double -> MSF m () (UTCTime, Maybe Double)

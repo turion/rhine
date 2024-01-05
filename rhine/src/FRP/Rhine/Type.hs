@@ -10,10 +10,8 @@ A signal network together with a matching clock value.
 -}
 module FRP.Rhine.Type where
 
--- dunai
-import Data.MonadicStreamFunction
-
 -- rhine
+import Data.Automaton.MSF
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Reactimation.ClockErasure
@@ -58,6 +56,7 @@ eraseClock Rhine {..} = do
   return $ proc a -> do
     (time, tag) <- runningClock -< ()
     eraseClockSN initTime sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
+{-# INLINE eraseClock #-}
 
 {- |
 Loop back data from the output to the input.
@@ -79,3 +78,4 @@ feedbackRhine buf Rhine {..} =
     { sn = Feedback buf sn
     , clock
     }
+{-# INLINE feedbackRhine #-}

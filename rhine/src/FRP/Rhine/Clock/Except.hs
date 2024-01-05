@@ -8,22 +8,18 @@ import Control.Monad ((<=<))
 import Data.Functor ((<&>))
 import Data.Void
 
--- transformers
-import Control.Monad.Trans.MSF.Except
-
 -- time
 import Data.Time (UTCTime, getCurrentTime)
 
 -- mtl
 import Control.Monad.Error.Class
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Trans.MSF qualified as MSFExcept
-
--- dunai
-import Control.Monad.Trans.MSF.Reader (readerS, runReaderS)
-import Data.MonadicStreamFunction (morphS)
 
 -- rhine
+import Data.Automaton.MSF (hoistS)
+import Data.Automaton.MSF.Trans.Except
+import Data.Automaton.MSF.Trans.Except qualified as MSFExcept
+import Data.Automaton.MSF.Trans.Reader (readerS, runReaderS)
 import FRP.Rhine.ClSF.Core (ClSF)
 import FRP.Rhine.Clock (
   Clock (..),
@@ -54,7 +50,7 @@ instance (Exception e, Clock IO cl, MonadIO eio, MonadError e eio) => Clock eio 
     ioerror $
       Exception.try $
         initClock getExceptClock
-          <&> first (morphS (ioerror . Exception.try))
+          <&> first (hoistS (ioerror . Exception.try))
     where
       ioerror :: (MonadError e eio, MonadIO eio) => IO (Either e a) -> eio a
       ioerror = liftEither <=< liftIO
@@ -136,7 +132,7 @@ instance (TimeDomain time, MonadError e m) => Clock m (Single m time tag e) wher
   type Tag (Single m time tag e) = tag
   initClock Single {singleTag, getTime, exception} = do
     initTime <- getTime
-    let runningClock = morphS (errorT . runExceptT) $ runMSFExcept $ do
+    let runningClock = hoistS (errorT . runExceptT) $ runMSFExcept $ do
           step_ (initTime, singleTag)
           return exception
         errorT :: (MonadError e m) => m (Either e a) -> m a

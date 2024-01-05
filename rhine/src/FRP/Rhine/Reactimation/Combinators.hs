@@ -44,6 +44,7 @@ infix 5 @@
           cl     ->
   Rhine m cl a b
 (@@) = Rhine . Synchronous
+{-# INLINE (@@) #-}
 
 {- | A purely syntactical convenience construction
    enabling quadruple syntax for sequential composition, as described below.

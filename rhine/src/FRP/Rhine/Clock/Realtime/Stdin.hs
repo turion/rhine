@@ -20,6 +20,8 @@ import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 
 -- rhine
+
+import Data.Automaton.MSF (constM)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 

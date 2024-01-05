@@ -5,7 +5,7 @@
 {- | This module provides exception handling, and thus control flow,
 to synchronous signal functions.
 
-The API presented here closely follows dunai's 'Control.Monad.Trans.MSF.Except',
+The API presented here closely follows dunai's 'Data.Automaton.MSF.Trans.Except',
 and reexports everything needed from there.
 -}
 module FRP.Rhine.ClSF.Except (
@@ -27,14 +27,11 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except as X
 import Control.Monad.Trans.Reader
 
--- dunai
-import Control.Monad.Trans.MSF.Except hiding (once, once_, throwOn, throwOn', throwS, try)
-import Data.MonadicStreamFunction
+-- rhine
+import Data.Automaton.MSF.Trans.Except hiding (once, once_, throwOn, throwOn', throwS, try)
 
 -- TODO Find out whether there is a cleverer way to handle exports
-import Control.Monad.Trans.MSF.Except qualified as MSFE
-
--- rhine
+import Data.Automaton.MSF.Trans.Except qualified as MSFE
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except.Util
 import FRP.Rhine.Clock
@@ -116,14 +113,14 @@ type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
 
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
 runClSFExcept :: (Monad m) => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
-runClSFExcept = morphS commuteExceptReader . runMSFExcept
+runClSFExcept = hoistS commuteExceptReader . runMSFExcept
 
 {- | Enter the monad context in the exception
    for 'ClSF's in the 'ExceptT' monad.
    The 'ClSF' will be run until it encounters an exception.
 -}
 try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
-try = MSFE.try . morphS commuteReaderExcept
+try = MSFE.try . hoistS commuteReaderExcept
 
 {- | Within the same tick, perform a monadic action,
    and immediately throw the value as an exception.

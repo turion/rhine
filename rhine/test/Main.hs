@@ -4,6 +4,7 @@ module Main where
 import Test.Tasty
 
 -- rhine
+import Automaton.MSF
 import Clock
 import Except
 import Schedule
@@ -15,4 +16,5 @@ main =
       [ Clock.tests
       , Except.tests
       , Schedule.tests
+      , Automaton.MSF.tests
       ]

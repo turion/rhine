@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
@@ -17,30 +18,73 @@ and utilities to work with them.
 module FRP.Rhine.Schedule where
 
 -- base
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.List.NonEmpty qualified as N
+import Control.Arrow
+import Data.List.NonEmpty as N
 
--- dunai
-import Data.MonadicStreamFunction
-import Data.MonadicStreamFunction.Async (concatS)
-import Data.MonadicStreamFunction.InternalCore
+-- transformers
+import Control.Monad.Trans.Reader
 
 -- monad-schedule
 import Control.Monad.Schedule.Class
 
 -- rhine
+import Data.Automaton
+import Data.Automaton.Final qualified as AutomatonFinal
+import Data.Automaton.MSF
+import Data.Automaton.Optimized (OptimizedAutomatonT (..), toAutomatonT)
+import Data.Automaton.Result
 import FRP.Rhine.Clock
 
 -- * Scheduling
 
 scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (MSF m a b) -> MSF m a (NonEmpty b)
-scheduleList msfs = scheduleList' msfs []
+scheduleList msfs0 =
+  MSF $
+    Stateful $
+      AutomatonT
+        { state = (getFinal . toFinal <$> msfs0, [])
+        , step = \(msfs, running) -> ReaderT $ \a -> do
+            let bsAndConts = flip (runReaderT . AutomatonFinal.getFinal) a <$> msfs
+            (done, running') <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
+            return $ Result (resultState <$> done, running') $ output <$> done
+        }
+
+schedulePair :: (Monad m, MonadSchedule m) => MSF m a b -> MSF m a b -> MSF m a b
+schedulePair (MSF automatonL) (MSF automatonR) = MSF $! Stateful $! scheduleAutomata (toAutomatonT automatonL) (toAutomatonT automatonR)
   where
-    scheduleList' msfs running = MSF $ \a -> do
-      let bsAndConts = flip unMSF a <$> msfs
-      (done, running) <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
-      let (bs, dones) = N.unzip done
-      return (bs, scheduleList' dones running)
+    scheduleAutomata :: (Monad m, MonadSchedule m) => AutomatonT m b -> AutomatonT m b -> AutomatonT m b
+    scheduleAutomata (AutomatonT stateL0 stepL) (AutomatonT stateR0 stepR) =
+      AutomatonT
+        { state = (stepL stateL0, stepR stateR0)
+        , step
+        }
+      where
+        step (runningL, runningR) = do
+          result <- race runningL runningR
+          case result of
+            Left (Result stateL' b, runningR') -> return $ Result (stepL stateL', runningR') b
+            Right (runningL', Result stateR' b) -> return $ Result (runningL', stepR stateR') b
+
+-- FIXME it's hard to write it down with explicit states, but it ought to be possible.
+{-
+scheduleList (MSF {getMSF = AutomatonT {state, step}} :| msfs) = scheduleList' msfs $ StatesAndSteps $ ExplicitStateAutomaton state step :* Nil
+ where
+  scheduleList' :: [MSF m a b] -> StatesAndSteps m a b -> MSF m a (NonEmpty b)
+  scheduleList' (MSF {getMSF = AutomatonT {state, step}} : msfs) (StatesAndSteps automata) = scheduleList' msfs $ StatesAndSteps $ ExplicitStateAutomaton state step :* automata
+  scheduleList' [] (StatesAndSteps automata) = scheduleList'' automata
+
+  scheduleList'' :: NP (ExplicitStateAutomaton m a b) (state ': states) -> MSF m a (NonEmpty b)
+  scheduleList'' automata = MSF AutomatonT
+    {state = liftA_NP (I . explicitState) automata
+    , step = _
+    }
+
+data ExplicitStateAutomaton m a b s = ExplicitStateAutomaton
+  { explicitState :: s
+  , explicitStep :: s -> ReaderT a m (Result s b)}
+
+data StatesAndSteps m a b = forall state states . StatesAndSteps {getStatesAndSteps :: NP (ExplicitStateAutomaton m a b) (state ': states)}
+-}
 
 {- | Two clocks in the 'ScheduleT' monad transformer
   can always be canonically scheduled.
@@ -58,7 +102,7 @@ runningSchedule ::
   RunningClock m (Time cl1) (Tag cl1) ->
   RunningClock m (Time cl2) (Tag cl2) ->
   RunningClock m (Time cl1) (Either (Tag cl1) (Tag cl2))
-runningSchedule _ _ rc1 rc2 = concatS $ scheduleList [rc1 >>> arr (second Left), rc2 >>> arr (second Right)] >>> arr N.toList
+runningSchedule _ _ rc1 rc2 = schedulePair (rc1 >>> arr (second Left)) (rc2 >>> arr (second Right))
 
 {- | A schedule implements a combination of two clocks.
    It outputs a time stamp and an 'Either' value,

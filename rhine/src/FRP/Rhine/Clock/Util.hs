@@ -7,6 +7,9 @@ module FRP.Rhine.Clock.Util where
 import Data.TimeDomain
 
 -- rhine
+
+import Control.Arrow
+import Data.Automaton.MSF (MSF, delay)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 
@@ -21,7 +24,7 @@ genTimeInfo ::
   Time cl ->
   MSF m (Time cl, Tag cl) (TimeInfo cl)
 genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- iPre initialTime -< absolute
+  lastTime <- delay initialTime -< absolute
   returnA
     -<
       TimeInfo

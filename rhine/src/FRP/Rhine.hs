@@ -12,12 +12,9 @@ main = flow \$ constMCl (putStrLn \"Hello World!\") \@\@ (waitClock :: Milliseco
 -}
 module FRP.Rhine (module X) where
 
--- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
-import Data.VectorSpace as X
-
 -- rhine
-
+import Data.Automaton.MSF as X
+import Data.VectorSpace as X
 import FRP.Rhine.ClSF as X
 import FRP.Rhine.Clock as X
 import FRP.Rhine.Clock.Proxy as X

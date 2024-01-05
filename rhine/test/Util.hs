@@ -1,11 +1,12 @@
 module Util where
 
+-- base
+import Data.Functor.Identity (Identity (runIdentity))
+
 -- monad-schedule
 import Control.Monad.Schedule.Trans (Schedule, runScheduleT)
 
 -- rhine
-
-import Data.Functor.Identity (Identity (runIdentity))
 import FRP.Rhine
 
 runScheduleRhinePure :: (Clock (Schedule (Diff (Time cl))) cl, GetClockProxy cl) => Rhine (Schedule (Diff (Time cl))) cl a b -> [a] -> [Maybe b]
