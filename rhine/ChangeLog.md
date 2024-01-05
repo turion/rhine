@@ -1,5 +1,14 @@
 # Revision history for rhine
 
+## 1.3
+
+* Dropped `dunai` dependency in favour of state automata.
+  See [the versions readme](./versions.md) for details.
+* Moved the monad argument `m` in `ClSFExcept`:
+  It is now `ClSFExcept cl a b m e` instead of `ClSFExcept m cl a b e`.
+  The advantage is that now the type is an instance of `MonadTrans` and `MFunctor`.
+  Analogous changes have been made to `BehaviourFExcept`.
+
 ## 1.2.1
 
 * Added `FRP.Rhine.Clock.Realtime.Never` (clock that never ticks)

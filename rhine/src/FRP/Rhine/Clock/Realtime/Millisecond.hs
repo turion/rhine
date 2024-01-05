@@ -9,14 +9,20 @@ Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
+import Control.Arrow
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
-import Data.Time.Clock
 import GHC.TypeLits
+
+-- time
+import Data.Time.Clock
 
 -- vector-sized
 import Data.Vector.Sized (Vector, fromList)
+
+-- automaton
+import Data.Automaton (arrM)
 
 -- rhine
 import FRP.Rhine.Clock

@@ -10,11 +10,11 @@ import Numeric.Log hiding (sum)
 import Control.Monad.Bayes.Class
 import Control.Monad.Bayes.Population
 
--- dunai
-import qualified Control.Monad.Trans.MSF.Reader as DunaiReader
+-- automaton
+import qualified Data.Automaton.Trans.Reader as AutomatonReader
 
--- dunai-bayes
-import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
+-- rhine-bayes
+import qualified Data.Automaton.Bayes as AutomatonBayes
 
 -- rhine
 import FRP.Rhine
@@ -24,18 +24,18 @@ import FRP.Rhine
 -- | Run the Sequential Monte Carlo algorithm continuously on a 'ClSF'.
 runPopulationCl ::
   forall m cl a b.
-  (Monad m) =>
+  (Monad m, MonadDistribution m) =>
   -- | Number of particles
   Int ->
   -- | Resampler (see 'Control.Monad.Bayes.PopulationT' for some standard choices)
-  (forall x. PopulationT m x -> PopulationT m x) ->
+  (forall x m. (MonadDistribution m) => PopulationT m x -> PopulationT m x) ->
   -- | A signal function modelling the stochastic process on which to perform inference.
   --   @a@ represents observations upon which the model should condition, using e.g. 'score'.
   --   It can also additionally contain hyperparameters.
   --   @b@ is the type of estimated current state.
   ClSF (PopulationT m) cl a b ->
   ClSF m cl a [(b, Log Double)]
-runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
+runPopulationCl nParticles resampler = AutomatonReader.readerS . AutomatonBayes.runPopulationS nParticles resampler . AutomatonReader.runReaderS
 
 -- * Short standard library of stochastic processes
 

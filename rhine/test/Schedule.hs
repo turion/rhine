@@ -16,8 +16,11 @@ import Test.Tasty.HUnit
 -- monad-schedule
 import Control.Monad.Schedule.Trans (Schedule, runScheduleT, wait)
 
+-- automaton
+import Data.Automaton (accumulateWith, constM, embed)
+
 -- rhine
-import FRP.Rhine.Clock (Clock (initClock), RunningClockInit, accumulateWith, constM, embed)
+import FRP.Rhine.Clock (Clock (initClock), RunningClockInit)
 import FRP.Rhine.Clock.FixedStep (FixedStep (FixedStep))
 import FRP.Rhine.Schedule
 import Util
