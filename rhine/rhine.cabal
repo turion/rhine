@@ -40,10 +40,9 @@ extra-source-files:  ChangeLog.md
 extra-doc-files:     README.md
 
 tested-with:
-  GHC == 8.10.7
   GHC == 9.0.2
-  GHC == 9.2.5
-  GHC == 9.4.4
+  GHC == 9.2.8
+  GHC == 9.4.7
 
 source-repository head
   type:     git
@@ -134,6 +133,7 @@ library
                      , time         >= 1.8
                      , free         >= 5.1
                      , containers   >= 0.5
+                     , text         >= 1.2 && < 2.1
                      , deepseq      >= 1.4
                      , random       >= 1.1
                      , MonadRandom  >= 0.5

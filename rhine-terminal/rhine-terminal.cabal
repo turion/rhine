@@ -52,7 +52,7 @@ executable rhine-terminal-simple
                      , rhine        == 1.1
                      , rhine-terminal
                      , terminal     >= 0.2.0.0
-                     , text         >= 1.2.5.0
+                     , text         >= 1.2
                      , time         >= 1.9.3
 
   default-language:    Haskell2010
@@ -72,7 +72,7 @@ test-suite rhine-terminal-tests
                      , exceptions   >= 0.10.4
                      , transformers >= 0.5
                      , terminal     >= 0.2.0.0
-                     , text         >= 1.2.5.0
+                     , text         >= 1.2
                      , time         >= 1.9.3
                      , stm          >= 2.5.0
                      , hspec
