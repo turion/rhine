@@ -23,11 +23,10 @@ import Data.Text.Lazy.IO (hGetContents)
 import Criterion.Main
 
 -- dunai
+import Control.Monad.Trans.MSF.Except qualified as Dunai
 import Data.MonadicStreamFunction qualified as Dunai
 
 -- rhine
-
-import Control.Monad.Trans.MSF.Except qualified as Dunai
 import FRP.Rhine
 import FRP.Rhine.Clock.Except (
   DelayIOError,

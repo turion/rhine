@@ -13,8 +13,8 @@ import Data.Tuple (swap)
 -- transformers
 import Control.Monad.Trans.Reader
 
--- dunai
-import Control.Monad.Trans.MSF.Reader qualified as MSF
+-- automaton
+import Data.Automaton.Trans.Reader qualified as Automaton
 
 -- rhine
 import FRP.Rhine.ClSF.Core
@@ -23,6 +23,7 @@ import FRP.Rhine.ClSF.Core
 commuteReaders :: ReaderT r1 (ReaderT r2 m) a -> ReaderT r2 (ReaderT r1 m) a
 commuteReaders a =
   ReaderT $ \r1 -> ReaderT $ \r2 -> runReaderT (runReaderT a r2) r1
+{-# INLINE commuteReaders #-}
 
 {- | Create ("wrap") a 'ReaderT' layer in the monad stack of a behaviour.
    Each tick, the 'ReaderT' side effect is performed
@@ -33,7 +34,8 @@ readerS ::
   ClSF m cl (a, r) b ->
   ClSF (ReaderT r m) cl a b
 readerS behaviour =
-  morphS commuteReaders $ MSF.readerS $ arr swap >>> behaviour
+  hoistS commuteReaders $ Automaton.readerS $ arr swap >>> behaviour
+{-# INLINE readerS #-}
 
 {- | Remove ("run") a 'ReaderT' layer from the monad stack
    by making it an explicit input to the behaviour.
@@ -43,7 +45,8 @@ runReaderS ::
   ClSF (ReaderT r m) cl a b ->
   ClSF m cl (a, r) b
 runReaderS behaviour =
-  arr swap >>> MSF.runReaderS (morphS commuteReaders behaviour)
+  arr swap >>> Automaton.runReaderS (hoistS commuteReaders behaviour)
+{-# INLINE runReaderS #-}
 
 -- | Remove a 'ReaderT' layer by passing the readonly environment explicitly.
 runReaderS_ ::
@@ -52,3 +55,4 @@ runReaderS_ ::
   r ->
   ClSF m cl a b
 runReaderS_ behaviour r = arr (,r) >>> runReaderS behaviour
+{-# INLINE runReaderS_ #-}

@@ -19,6 +19,9 @@ import Control.Monad.IO.Class
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 
+-- automaton
+import Data.Automaton (constM)
+
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy

@@ -39,8 +39,8 @@ import Control.Monad.Bayes.Class hiding (posterior, prior)
 import Control.Monad.Bayes.Population hiding (hoist)
 import Control.Monad.Bayes.Sampler.Strict
 
--- dunai
-import Control.Monad.Trans.MSF.Except
+-- automaton
+import Data.Automaton.Trans.Except
 
 -- rhine
 import FRP.Rhine
@@ -239,21 +239,11 @@ drawParticleTemperature = proc (temperature, probability) -> do
   arrMCl paintIO -< toThermometer $ translate 0 (double2Float temperature * thermometerScale) $ color (withAlpha (double2Float $ exp $ 0.2 * ln probability) white) $ rectangleSolid thermometerWidth 2
 
 drawParticles :: BehaviourF App td [(Pos, Log Double)] ()
-drawParticles = proc particlesPosition -> do
-  case particlesPosition of
-    [] -> returnA -< ()
-    p : ps -> do
-      drawParticle -< p
-      drawParticles -< ps
+drawParticles = traverseS_ drawParticle
 
 -- FIXME abstract using a library
 drawParticlesTemperature :: BehaviourF App td [(Temperature, Log Double)] ()
-drawParticlesTemperature = proc particlesPosition -> do
-  case particlesPosition of
-    [] -> returnA -< ()
-    p : ps -> do
-      drawParticleTemperature -< p
-      drawParticlesTemperature -< ps
+drawParticlesTemperature = traverseS_ drawParticleTemperature
 
 glossSettings :: GlossSettings
 glossSettings =
@@ -398,19 +388,19 @@ userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr 
 -}
 inference :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
 inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
-  where
-    inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
-    inferenceBehaviour = proc (temperature, (measured, latent)) -> do
-      positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
-      returnA
-        -<
-          Result
-            { temperature
-            , measured
-            , latent
-            , particlesPosition = first snd <$> positionsAndTemperatures
-            , particlesTemperature = first fst <$> positionsAndTemperatures
-            }
+
+inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+  positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
+  returnA
+    -<
+      Result
+        { temperature
+        , measured
+        , latent
+        , particlesPosition = first snd <$> positionsAndTemperatures
+        , particlesTemperature = first fst <$> positionsAndTemperatures
+        }
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()

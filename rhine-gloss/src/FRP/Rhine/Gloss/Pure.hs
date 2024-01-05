@@ -30,15 +30,15 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 
--- dunai
-import Control.Monad.Trans.MSF (performOnFirstSample)
-import qualified Control.Monad.Trans.MSF.Reader as MSFReader
-import qualified Control.Monad.Trans.MSF.Writer as MSFWriter
-import Data.MonadicStreamFunction.InternalCore
-
 -- monad-schedule
 import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Yield
+
+-- automaton
+import Data.Automaton.Trans.Except (performOnFirstSample)
+import qualified Data.Automaton.Trans.Reader as AutomatonReader
+import qualified Data.Automaton.Trans.Writer as AutomatonWriter
+import Data.Stream.Result (Result (..))
 
 -- rhine
 import FRP.Rhine
@@ -114,7 +114,7 @@ flowGlossClSF ::
   IO ()
 flowGlossClSF settings clsf = flowGloss settings $ clsf >-> arrMCl paintAll @@ GlossClock
 
-type WorldMSF = MSF Identity ((Float, Maybe Event), ()) (Picture, Maybe ())
+type WorldAutomaton = Automaton Identity ((Float, Maybe Event), ()) (Picture, Maybe ())
 
 -- | The main function that will start the @gloss@ backend and run the 'Rhine'
 flowGloss ::
@@ -123,12 +123,12 @@ flowGloss ::
   Rhine GlossM cl () () ->
   IO ()
 flowGloss GlossSettings {..} rhine =
-  play display backgroundColor stepsPerSecond (worldMSF, Blank) getPic handleEvent simStep
+  play display backgroundColor stepsPerSecond (worldAutomaton, Blank) getPic handleEvent simStep
   where
-    worldMSF :: WorldMSF
-    worldMSF = MSFWriter.runWriterS $ MSFReader.runReaderS $ morphS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
-    stepWith :: (Float, Maybe Event) -> (WorldMSF, Picture) -> (WorldMSF, Picture)
-    stepWith (diff, eventMaybe) (msf, _) = let ((picture, _), msf') = runIdentity $ unMSF msf ((diff, eventMaybe), ()) in (msf', picture)
+    worldAutomaton :: WorldAutomaton
+    worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
+    stepWith :: (Float, Maybe Event) -> (WorldAutomaton, Picture) -> (WorldAutomaton, Picture)
+    stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = runIdentity $ stepAutomaton automaton ((diff, eventMaybe), ()) in (automaton', picture)
     getPic (_, pic) = pic
     handleEvent event = stepWith (0, Just event)
     simStep diff = stepWith (diff, Nothing)
