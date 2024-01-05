@@ -8,8 +8,9 @@ module FRP.Rhine.ResamplingBuffer.ClSF where
 -- transformers
 import Control.Monad.Trans.Reader (runReaderT)
 
--- dunai
-import Data.MonadicStreamFunction.InternalCore (unMSF)
+-- automaton
+import Data.Automaton
+import Data.Stream.Result
 
 -- rhine
 import FRP.Rhine.ClSF.Core
@@ -36,9 +37,9 @@ clsfBuffer = clsfBuffer' []
       [(TimeInfo cl1, a)] ->
       ClSF m cl2 [(TimeInfo cl1, a)] b ->
       ResamplingBuffer m cl1 cl2 a b
-    clsfBuffer' as msf = ResamplingBuffer {..}
+    clsfBuffer' as automaton = ResamplingBuffer {..}
       where
-        put ti1 a = return $ clsfBuffer' ((ti1, a) : as) msf
+        put ti1 a = return $ clsfBuffer' ((ti1, a) : as) automaton
         get ti2 = do
-          (b, msf') <- runReaderT (unMSF msf as) ti2
-          return (b, clsfBuffer msf')
+          Result automaton' b <- runReaderT (stepAutomaton automaton as) ti2
+          return (b, clsfBuffer automaton')

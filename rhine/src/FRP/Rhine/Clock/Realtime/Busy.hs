@@ -5,10 +5,14 @@
 module FRP.Rhine.Clock.Realtime.Busy where
 
 -- base
+import Control.Arrow
 import Control.Monad.IO.Class
 
 -- time
 import Data.Time.Clock
+
+-- automaton
+import Data.Automaton (constM)
 
 -- rhine
 import FRP.Rhine.Clock

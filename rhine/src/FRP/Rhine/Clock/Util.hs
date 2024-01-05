@@ -3,8 +3,14 @@
 
 module FRP.Rhine.Clock.Util where
 
+-- base
+import Control.Arrow
+
 -- time-domain
 import Data.TimeDomain
+
+-- automaton
+import Data.Automaton (Automaton, delay)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -19,9 +25,9 @@ genTimeInfo ::
   (Monad m, Clock m cl) =>
   ClockProxy cl ->
   Time cl ->
-  MSF m (Time cl, Tag cl) (TimeInfo cl)
+  Automaton m (Time cl, Tag cl) (TimeInfo cl)
 genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- iPre initialTime -< absolute
+  lastTime <- delay initialTime -< absolute
   returnA
     -<
       TimeInfo

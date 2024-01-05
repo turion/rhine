@@ -8,20 +8,18 @@ import Control.Monad ((<=<))
 import Data.Functor ((<&>))
 import Data.Void
 
--- transformers
-import Control.Monad.Trans.MSF.Except
-
 -- time
 import Data.Time (UTCTime, getCurrentTime)
 
 -- mtl
 import Control.Monad.Error.Class
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Trans.MSF qualified as MSFExcept
 
--- dunai
-import Control.Monad.Trans.MSF.Reader (readerS, runReaderS)
-import Data.MonadicStreamFunction (morphS)
+-- automaton
+import Data.Automaton (hoistS)
+import Data.Automaton.Trans.Except
+import Data.Automaton.Trans.Except qualified as AutomatonExcept
+import Data.Automaton.Trans.Reader (readerS, runReaderS)
 
 -- rhine
 import FRP.Rhine.ClSF.Core (ClSF)
@@ -54,7 +52,7 @@ instance (Exception e, Clock IO cl, MonadIO eio, MonadError e eio) => Clock eio 
     ioerror $
       Exception.try $
         initClock getExceptClock
-          <&> first (morphS (ioerror . Exception.try))
+          <&> first (hoistS (ioerror . Exception.try))
     where
       ioerror :: (MonadError e eio, MonadIO eio) => IO (Either e a) -> eio a
       ioerror = liftEither <=< liftIO
@@ -81,7 +79,7 @@ instance (Time cl1 ~ Time cl2, Clock (ExceptT e m) cl1, Clock m cl2, Monad m) =>
     case tryToInit of
       Right (runningClock, initTime) -> do
         let catchingClock = safely $ do
-              e <- MSFExcept.try runningClock
+              e <- AutomatonExcept.try runningClock
               let cl2 = handler e
               (runningClock', _) <- once_ $ initClock cl2
               safe $ runningClock' >>> arr (second Left)
@@ -136,7 +134,7 @@ instance (TimeDomain time, MonadError e m) => Clock m (Single m time tag e) wher
   type Tag (Single m time tag e) = tag
   initClock Single {singleTag, getTime, exception} = do
     initTime <- getTime
-    let runningClock = morphS (errorT . runExceptT) $ runMSFExcept $ do
+    let runningClock = hoistS (errorT . runExceptT) $ runAutomatonExcept $ do
           step_ (initTime, singleTag)
           return exception
         errorT :: (MonadError e m) => m (Either e a) -> m a

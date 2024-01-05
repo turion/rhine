@@ -1,5 +1,5 @@
 {- |
-Clocked signal functions, i.e. monadic stream functions ('MSF's)
+Clocked signal functions, i.e. monadic stream functions ('Automaton's)
 that are aware of time.
 This module reexports core functionality
 (such as time effects and 'Behaviour's),

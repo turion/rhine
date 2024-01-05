@@ -144,6 +144,13 @@ packages:
       size: 2232
   original:
     hackage: dunai-0.12.2
+- completed:
+    hackage: mmorph-1.2.0@sha256:df9b213ec18f811cb3137b478d148f3f1680ee43f841cb775835fa282fdb0295,1083
+    pantry-tree:
+      sha256: 3dff3f49e5604657a2874faa3a0a2f38990a02b48d6c2b6ae56c2f22b4184a04
+      size: 346
+  original:
+    hackage: mmorph-1.2.0@sha256:df9b213ec18f811cb3137b478d148f3f1680ee43f841cb775835fa282fdb0295,1083
 snapshots:
 - completed:
     sha256: f1c4aca9b9b81afbb9db55571acb0690cdc01ac97a178234de281f9dc075e95e

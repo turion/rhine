@@ -10,8 +10,8 @@ A signal network together with a matching clock value.
 -}
 module FRP.Rhine.Type where
 
--- dunai
-import Data.MonadicStreamFunction
+-- automaton
+import Data.Automaton
 
 -- rhine
 import FRP.Rhine.Clock
@@ -51,13 +51,14 @@ the input 'a' has to be given at all times, even those when it doesn't tick.
 eraseClock ::
   (Monad m, Clock m cl, GetClockProxy cl) =>
   Rhine m cl a b ->
-  m (MSF m a (Maybe b))
+  m (Automaton m a (Maybe b))
 eraseClock Rhine {..} = do
   (runningClock, initTime) <- initClock clock
   -- Run the main loop
   return $ proc a -> do
     (time, tag) <- runningClock -< ()
     eraseClockSN initTime sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
+{-# INLINE eraseClock #-}
 
 {- |
 Loop back data from the output to the input.
@@ -79,3 +80,4 @@ feedbackRhine buf Rhine {..} =
     { sn = Feedback buf sn
     , clock
     }
+{-# INLINE feedbackRhine #-}

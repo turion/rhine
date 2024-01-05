@@ -1,0 +1,99 @@
+cabal-version: 3.0
+name: automaton
+version: 0.1.0.0
+synopsis: Effectful streams and automata in initial encoding
+description:
+  Effectful streams have an internal state and a step function.
+  Varying the effect type, this gives many different useful concepts:
+  For example with a reader effect, it results in automata/transducers/state machines.
+
+license: MIT
+license-file: LICENSE
+author: Manuel Bärenz
+maintainer: programming@manuelbaerenz.de
+category: Streaming
+build-type: Simple
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+common opts
+  build-depends:
+    MonadRandom >=0.5,
+    base >=4.14 && <4.18,
+    mmorph ^>=1.2,
+    mtl >=2.2 && <2.4,
+    profunctors ^>=5.6,
+    selective ^>=0.7,
+    semialign ^>=1.3,
+    simple-affine-space ^>=0.2,
+    these ^>=1.2,
+    transformers >=0.5,
+
+  if flag(dev)
+    ghc-options: -Werror
+  ghc-options:
+    -W
+
+  default-extensions:
+    Arrows
+    DataKinds
+    FlexibleContexts
+    FlexibleInstances
+    ImportQualifiedPost
+    MultiParamTypeClasses
+    NamedFieldPuns
+    NoStarIsType
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+
+  default-language: Haskell2010
+
+library
+  import: opts
+  exposed-modules:
+    Data.Automaton
+    Data.Automaton.Final
+    Data.Automaton.Trans.Except
+    Data.Automaton.Trans.Maybe
+    Data.Automaton.Trans.RWS
+    Data.Automaton.Trans.Random
+    Data.Automaton.Trans.Reader
+    Data.Automaton.Trans.State
+    Data.Automaton.Trans.Writer
+    Data.Stream
+    Data.Stream.Except
+    Data.Stream.Final
+    Data.Stream.Internal
+    Data.Stream.Optimized
+    Data.Stream.Result
+
+  other-modules:
+    Data.Automaton.Trans.Except.Internal
+    Data.Stream.Final.Except
+
+  hs-source-dirs: src
+
+test-suite automaton-test
+  import: opts
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+  other-modules:
+    Automaton
+    Automaton.Except
+    Stream
+
+  build-depends:
+    QuickCheck ^>=2.14,
+    automaton,
+    tasty ^>=1.4,
+    tasty-hunit ^>=0.10,
+    tasty-quickcheck ^>=0.10,
+
+flag dev
+  description: Enable warnings as errors. Active on ci.
+  default: False
+  manual: True

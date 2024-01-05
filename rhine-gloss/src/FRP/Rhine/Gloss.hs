@@ -17,7 +17,6 @@ import Control.Arrow as X
 import FRP.Rhine as X
 
 -- rhine-gloss
-
 import FRP.Rhine.Gloss.Common as X
 import FRP.Rhine.Gloss.IO as X
 import FRP.Rhine.Gloss.Pure as X
