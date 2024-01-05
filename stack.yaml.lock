@@ -5,15 +5,85 @@
 
 packages:
 - completed:
+    hackage: dunai-0.11.1@sha256:b527b801c8b3901a4ebec733ac0bb6ff9cdd2b6b04ec385e18922f49c39e4b51,6372
+    pantry-tree:
+      sha256: 7d851bd99aa0b02b43a4238c3b963de6e207b79b3ddc55e10aea6dc550936ad0
+      size: 2172
+  original:
+    hackage: dunai-0.11.1@sha256:b527b801c8b3901a4ebec733ac0bb6ff9cdd2b6b04ec385e18922f49c39e4b51,6372
+- completed:
+    hackage: simple-affine-space-0.2.1@sha256:bc9b1f5ae236b2898cd6f20da2d4589fd662fac2e2057f29b01330f65c030434,2046
+    pantry-tree:
+      sha256: 13dd2303e75c96fe2ea318d2e724005840211f4af44ba78da1886a16a4b0ec82
+      size: 696
+  original:
+    hackage: simple-affine-space-0.2.1@sha256:bc9b1f5ae236b2898cd6f20da2d4589fd662fac2e2057f29b01330f65c030434,2046
+- completed:
     hackage: terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
     pantry-tree:
       sha256: 54160663bf0cbcd1d9fa52e136740faaf91a82d1ca1efeb08e8e58575a7446e7
       size: 1775
   original:
     hackage: terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
+- completed:
+    hackage: monad-bayes-1.2.0@sha256:bf83cf8e6d163c461b9964dbff48d4476b2a82421962af317b3a3d0d738ea2a2,6456
+    pantry-tree:
+      sha256: ce4a9db9888b589ae56493862ae62f2efb5af8d17d3d55bac0b3f59177881b2b
+      size: 3823
+  original:
+    hackage: monad-bayes-1.2.0@sha256:bf83cf8e6d163c461b9964dbff48d4476b2a82421962af317b3a3d0d738ea2a2,6456
+- completed:
+    hackage: hspec-2.11.7@sha256:2869580a2a29e7beb6268ea3dc561583f4ae229ed1f47fb1c92e8c09ce35acec,1763
+    pantry-tree:
+      sha256: f241a7710ebee50583f9aebff61aaf4d36619ba7d6538b39b80ee4695c70552e
+      size: 584
+  original:
+    hackage: hspec-2.11.7@sha256:2869580a2a29e7beb6268ea3dc561583f4ae229ed1f47fb1c92e8c09ce35acec,1763
+- completed:
+    hackage: lens-5.2.3@sha256:637287c76adff383063b3206a4213640de1a74839ec16008cc71b5b407f7d05e,15237
+    pantry-tree:
+      sha256: 2a69ee338ef79da9aaa0d406f8307b11e3b8f969aa8fc28e46ca250c1f6ef40d
+      size: 8351
+  original:
+    hackage: lens-5.2.3@sha256:637287c76adff383063b3206a4213640de1a74839ec16008cc71b5b407f7d05e,15237
+- completed:
+    hackage: linear-1.22@sha256:6402f0140156d2792ca0cbef3f5af2ec3675660e381574ac968cd5884724b8ba,4132
+    pantry-tree:
+      sha256: 8ccd6646c1a5f2f7998a19a04f00200e44ee08186e980153ec371d6d114eb0e6
+      size: 2042
+  original:
+    hackage: linear-1.22@sha256:6402f0140156d2792ca0cbef3f5af2ec3675660e381574ac968cd5884724b8ba,4132
+- completed:
+    hackage: vty-5.38@sha256:c3b46c8072f92b61dad09dac45ede37f1a093836e14ac84ece6515a4d3222864,5628
+    pantry-tree:
+      sha256: b413c72281bb0f48eb0e4b45e272e3a18036ea91b4850315e8c2487ef719f9f3
+      size: 3499
+  original:
+    hackage: vty-5.38@sha256:c3b46c8072f92b61dad09dac45ede37f1a093836e14ac84ece6515a4d3222864,5628
+- completed:
+    hackage: hspec-core-2.11.7@sha256:90d8873356d7e15f843bc523360e206e8e356ff6b82a1fa4b3889dc31d073ea1,6814
+    pantry-tree:
+      sha256: 8db12c1f6965d9f0898f04d7b5f1d77682c8ab2d5c394c4a431229df7c4acb14
+      size: 6231
+  original:
+    hackage: hspec-core-2.11.7@sha256:90d8873356d7e15f843bc523360e206e8e356ff6b82a1fa4b3889dc31d073ea1,6814
+- completed:
+    hackage: hspec-discover-2.11.7@sha256:6307eb16d308258a99a242025df50217d835ba0a3f205b1202a100a175877b38,2169
+    pantry-tree:
+      sha256: 141b4987d519ad1ca1114737f510f20adc2456bf44c040f41a63792f47d009eb
+      size: 829
+  original:
+    hackage: hspec-discover-2.11.7@sha256:6307eb16d308258a99a242025df50217d835ba0a3f205b1202a100a175877b38,2169
+- completed:
+    hackage: hspec-expectations-0.8.4@sha256:4237f094a7931202ff57ac6475542b0b314b50a7024550e2b6eb87cfb0d4ff93,1702
+    pantry-tree:
+      sha256: 87681840d430b84686f83f1ab8b5873b09c349775698665233443914acf9ba2b
+      size: 741
+  original:
+    hackage: hspec-expectations-0.8.4@sha256:4237f094a7931202ff57ac6475542b0b314b50a7024550e2b6eb87cfb0d4ff93,1702
 snapshots:
 - completed:
-    sha256: 3770dfd79f5aed67acdcc65c4e7730adddffe6dba79ea723cfb0918356fc0f94
-    size: 648660
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/4.yaml
-  original: lts-20.4
+    sha256: 5a59b2a405b3aba3c00188453be172b85893cab8ebc352b1ef58b0eae5d248a2
+    size: 650475
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/26.yaml
+  original: lts-20.26
