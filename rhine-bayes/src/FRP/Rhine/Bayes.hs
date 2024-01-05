@@ -27,13 +27,13 @@ runPopulationCl ::
   (Monad m) =>
   -- | Number of particles
   Int ->
-  -- | Resampler (see 'Control.Monad.Bayes.Population' for some standard choices)
-  (forall x. Population m x -> Population m x) ->
+  -- | Resampler (see 'Control.Monad.Bayes.PopulationT' for some standard choices)
+  (forall x. PopulationT m x -> PopulationT m x) ->
   -- | A signal function modelling the stochastic process on which to perform inference.
   --   @a@ represents observations upon which the model should condition, using e.g. 'score'.
   --   It can also additionally contain hyperparameters.
   --   @b@ is the type of estimated current state.
-  ClSF (Population m) cl a b ->
+  ClSF (PopulationT m) cl a b ->
   ClSF m cl a [(b, Log Double)]
 runPopulationCl nParticles resampler = DunaiReader.readerS . DunaiBayes.runPopulationS nParticles resampler . DunaiReader.runReaderS
 

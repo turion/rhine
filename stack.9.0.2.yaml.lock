@@ -68,12 +68,82 @@ packages:
   original:
     hackage: time-domain-0.1.0.2@sha256:33f0a6efe6eb03e729f3dc828cd673b0bb511a0e50ac0b621c5acebd82f6d329,1007
 - completed:
-    hackage: monad-bayes-1.1.1@sha256:d76401f5b7bdcfe0b454f63f932c97049d633ef2623f19981bba02c63af3a16c,6292
+    hackage: monad-bayes-1.2.0@sha256:bf83cf8e6d163c461b9964dbff48d4476b2a82421962af317b3a3d0d738ea2a2,6456
     pantry-tree:
-      sha256: bf2bdaaf51aaa9b24b3ec3757d83db0e9f5507435984a452788e71cc2bd3b9b7
-      size: 3567
+      sha256: ce4a9db9888b589ae56493862ae62f2efb5af8d17d3d55bac0b3f59177881b2b
+      size: 3823
   original:
-    hackage: monad-bayes-1.1.1
+    hackage: monad-bayes-1.2.0@sha256:bf83cf8e6d163c461b9964dbff48d4476b2a82421962af317b3a3d0d738ea2a2,6456
+- completed:
+    hackage: criterion-1.6.3.0@sha256:cf27e6c83f91674fb67ef253cae644ad0ce079b7e2cfa6402e13e930f78499ec,5373
+    pantry-tree:
+      sha256: 2102113a4ac228305ea9396967878c6921377bafc92425c1b8cf82f8afbef40e
+      size: 2323
+  original:
+    hackage: criterion-1.6.3.0
+- completed:
+    hackage: criterion-measurement-0.2.1.0@sha256:646d5b5c55499580747746396b731ef9d6e2cd59fa7b488354788e68eae8e9bc,2098
+    pantry-tree:
+      sha256: 2557db6ed7b4e5718d9ca6271caf4bcfc97b966ed32b051f346c8d17e1c31809
+      size: 726
+  original:
+    hackage: criterion-measurement-0.2.1.0@sha256:646d5b5c55499580747746396b731ef9d6e2cd59fa7b488354788e68eae8e9bc,2098
+- completed:
+    hackage: hspec-2.11.7@sha256:2869580a2a29e7beb6268ea3dc561583f4ae229ed1f47fb1c92e8c09ce35acec,1763
+    pantry-tree:
+      sha256: f241a7710ebee50583f9aebff61aaf4d36619ba7d6538b39b80ee4695c70552e
+      size: 584
+  original:
+    hackage: hspec-2.11.7@sha256:2869580a2a29e7beb6268ea3dc561583f4ae229ed1f47fb1c92e8c09ce35acec,1763
+- completed:
+    hackage: lens-5.2.3@sha256:637287c76adff383063b3206a4213640de1a74839ec16008cc71b5b407f7d05e,15237
+    pantry-tree:
+      sha256: 2a69ee338ef79da9aaa0d406f8307b11e3b8f969aa8fc28e46ca250c1f6ef40d
+      size: 8351
+  original:
+    hackage: lens-5.2.3@sha256:637287c76adff383063b3206a4213640de1a74839ec16008cc71b5b407f7d05e,15237
+- completed:
+    hackage: linear-1.22@sha256:6402f0140156d2792ca0cbef3f5af2ec3675660e381574ac968cd5884724b8ba,4132
+    pantry-tree:
+      sha256: 8ccd6646c1a5f2f7998a19a04f00200e44ee08186e980153ec371d6d114eb0e6
+      size: 2042
+  original:
+    hackage: linear-1.22@sha256:6402f0140156d2792ca0cbef3f5af2ec3675660e381574ac968cd5884724b8ba,4132
+- completed:
+    hackage: optparse-applicative-0.18.1.0@sha256:b4cf8d9018e5e67cb1f14edb5130b6d05ad8bc1b5f6bd4efaa6ec0b7f28f559d,5132
+    pantry-tree:
+      sha256: 32f52adc150eb146bf4d167ff0cb21fc1e3cd7ecc1b9e5e83b986a1cd1bc58cd
+      size: 3124
+  original:
+    hackage: optparse-applicative-0.18.1.0@sha256:b4cf8d9018e5e67cb1f14edb5130b6d05ad8bc1b5f6bd4efaa6ec0b7f28f559d,5132
+- completed:
+    hackage: pretty-simple-4.1.2.0@sha256:1c0a96e4205010d704c52883c53c98258c588ce7196763b408949d9db712ba14,4113
+    pantry-tree:
+      sha256: af1fc182e52bace1cb472830a7af4354bf5475056855f4df8137411de6306965
+      size: 1229
+  original:
+    hackage: pretty-simple-4.1.2.0@sha256:1c0a96e4205010d704c52883c53c98258c588ce7196763b408949d9db712ba14,4113
+- completed:
+    hackage: hspec-core-2.11.7@sha256:90d8873356d7e15f843bc523360e206e8e356ff6b82a1fa4b3889dc31d073ea1,6814
+    pantry-tree:
+      sha256: 8db12c1f6965d9f0898f04d7b5f1d77682c8ab2d5c394c4a431229df7c4acb14
+      size: 6231
+  original:
+    hackage: hspec-core-2.11.7@sha256:90d8873356d7e15f843bc523360e206e8e356ff6b82a1fa4b3889dc31d073ea1,6814
+- completed:
+    hackage: hspec-discover-2.11.7@sha256:6307eb16d308258a99a242025df50217d835ba0a3f205b1202a100a175877b38,2169
+    pantry-tree:
+      sha256: 141b4987d519ad1ca1114737f510f20adc2456bf44c040f41a63792f47d009eb
+      size: 829
+  original:
+    hackage: hspec-discover-2.11.7@sha256:6307eb16d308258a99a242025df50217d835ba0a3f205b1202a100a175877b38,2169
+- completed:
+    hackage: hspec-expectations-0.8.4@sha256:4237f094a7931202ff57ac6475542b0b314b50a7024550e2b6eb87cfb0d4ff93,1702
+    pantry-tree:
+      sha256: 87681840d430b84686f83f1ab8b5873b09c349775698665233443914acf9ba2b
+      size: 741
+  original:
+    hackage: hspec-expectations-0.8.4@sha256:4237f094a7931202ff57ac6475542b0b314b50a7024550e2b6eb87cfb0d4ff93,1702
 snapshots:
 - completed:
     sha256: f1c4aca9b9b81afbb9db55571acb0690cdc01ac97a178234de281f9dc075e95e
