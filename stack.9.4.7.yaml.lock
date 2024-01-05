@@ -19,12 +19,12 @@ packages:
   original:
     hackage: terminal-0.2.0.0@sha256:de6770ecaae3197c66ac1f0db5a80cf5a5b1d3b64a66a05b50f442de5ad39570,2977
 - completed:
-    hackage: monad-bayes-1.1.1@sha256:d76401f5b7bdcfe0b454f63f932c97049d633ef2623f19981bba02c63af3a16c,6292
+    hackage: monad-bayes-1.2.0@sha256:bf83cf8e6d163c461b9964dbff48d4476b2a82421962af317b3a3d0d738ea2a2,6456
     pantry-tree:
-      sha256: bf2bdaaf51aaa9b24b3ec3757d83db0e9f5507435984a452788e71cc2bd3b9b7
-      size: 3567
+      sha256: ce4a9db9888b589ae56493862ae62f2efb5af8d17d3d55bac0b3f59177881b2b
+      size: 3823
   original:
-    hackage: monad-bayes-1.1.1
+    hackage: monad-bayes-1.2.0@sha256:bf83cf8e6d163c461b9964dbff48d4476b2a82421962af317b3a3d0d738ea2a2,6456
 - completed:
     hackage: hspec-2.11.7@sha256:2869580a2a29e7beb6268ea3dc561583f4ae229ed1f47fb1c92e8c09ce35acec,1763
     pantry-tree:
