@@ -30,10 +30,10 @@ library
   other-modules:
     Data.MonadicStreamFunction.Bayes
   build-depends:       base         >= 4.11 && < 4.18
-                     , transformers >= 0.5
+                     , transformers ^>= 0.5
                      , rhine        == 1.2
                      , dunai        ^>= 0.11
-                     , log-domain   >= 0.12
+                     , log-domain   ^>= 0.12
                      , monad-bayes  ^>= 1.2
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -66,8 +66,8 @@ executable rhine-bayes-gloss
                      , monad-bayes
                      , transformers
                      , log-domain
-                     , mmorph
-                     , time
+                     , mmorph ^>= 1.1
+                     , time >= 1.8 && < 1.14
   default-language:    Haskell2010
   default-extensions:
     Arrows
