@@ -1,5 +1,5 @@
 name:                rhine-bayes
-version:             1.1
+version:             1.2
 synopsis:            monad-bayes backend for Rhine
 description:
   This package provides a backend to the @monad-bayes@ library,
@@ -31,7 +31,7 @@ library
     Data.MonadicStreamFunction.Bayes
   build-depends:       base         >= 4.11 && < 4.18
                      , transformers >= 0.5
-                     , rhine        == 1.1
+                     , rhine        == 1.2
                      , dunai        ^>= 0.11
                      , log-domain   >= 0.12
                      , monad-bayes  ^>= 1.2
@@ -61,7 +61,7 @@ executable rhine-bayes-gloss
   build-depends:       base         >= 4.11 && < 4.18
                      , rhine
                      , rhine-bayes
-                     , rhine-gloss
+                     , rhine-gloss  == 1.2
                      , dunai
                      , monad-bayes
                      , transformers
