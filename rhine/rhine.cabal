@@ -2,7 +2,7 @@ cabal-version:       2.2
 
 name:                rhine
 
-version:             1.1
+version:             1.2
 
 synopsis: Functional Reactive Programming with type-level clocks
 

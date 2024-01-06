@@ -1,5 +1,9 @@
 # Revision history for rhine
 
+## 1.2
+
+* Changed Stdin clock Tag type to Text
+
 ## 1.1
 
 * dunai-0.11 compatibility
