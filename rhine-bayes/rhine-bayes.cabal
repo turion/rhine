@@ -12,8 +12,7 @@ maintainer:          programming@manuelbaerenz.de
 -- copyright:
 category:            FRP
 build-type:          Simple
-extra-source-files:  ChangeLog.md
-extra-doc-files:     README.md
+extra-doc-files:     README.md ChangeLog.md
 cabal-version:       2.0
 
 source-repository head
