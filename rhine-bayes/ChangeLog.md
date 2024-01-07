@@ -1,5 +1,9 @@
 # Revision history for rhine-gloss
 
+## 1.2
+
+* Updated to monad-bayes 1.2.0
+
 ## 1.1
 
 * dunai-0.11 compatibility

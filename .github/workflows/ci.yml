@@ -122,6 +122,14 @@ jobs:
       # nix flake check breaks on IFD in multi-platform flake https://github.com/NixOS/nix/issues/4265
       # - run: nix flake check
 
+  cabal-check:
+    name: Check all cabal files
+    runs-on:
+      - ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./cabal_check.sh
+
   success:
     name: Success
     needs:
