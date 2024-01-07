@@ -36,9 +36,12 @@ jobs:
 
   generateMatrix:
     name: "Generate matrix from cabal"
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     runs-on: ubuntu-latest
     steps:
       - uses: kleidukos/get-tested@v0.1.6.0
+        id: set-matrix
         with:
           cabal-file: "rhine/rhine.cabal"
           ubuntu: true
