@@ -131,7 +131,8 @@ library
   -- Other library packages from which modules are imported.
   build-depends:
                      , dunai        ^>= 0.11
-                     , transformers >= 0.5
+                     -- Only added because dunai doesn't have the right bounds: https://github.com/ivanperez-keera/dunai/issues/402
+                     , transformers ^>= 0.5.6
                      , time         >= 1.8
                      , free         >= 5.1
                      , containers   >= 0.5
