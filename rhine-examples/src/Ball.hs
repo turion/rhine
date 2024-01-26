@@ -10,7 +10,8 @@ import Data.Vector.Sized as VS
 
 -- rhine
 import FRP.Rhine hiding (sn, flow, Rhine)
-import FRP.Rhine.SN.Free as Free
+import FRP.Rhine.SN.Free
+import FRP.Rhine.Rhine.Free
 
 type Ball = (Double, Double, Double)
 type BallVel = (Double, Double, Double)
