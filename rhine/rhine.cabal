@@ -114,9 +114,11 @@ library
     FRP.Rhine.ResamplingBuffer.MSF
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
+    FRP.Rhine.Rhine.Free
     FRP.Rhine.Schedule
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
+    FRP.Rhine.SN.Free
     FRP.Rhine.Type
 
   other-modules:
@@ -140,6 +142,9 @@ library
                      , simple-affine-space ^>= 0.2
                      , time-domain ^>= 0.1.0.2
                      , monad-schedule ^>= 0.1.2
+                     , free-category ^>= 0.0.4.5
+                     , sop-core ^>= 0.5.0.2
+                     , profunctors ^>= 5.6.2
 
   -- Directories containing source files.
   hs-source-dirs:      src

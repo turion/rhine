@@ -30,7 +30,9 @@ when the user stops pressing the key.
 module Main where
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (Rhine, flow, (-->), (>--), (>>>^), (@@), (^>>>))
+import FRP.Rhine.Rhine.Free
+import FRP.Rhine.SN.Free
 
 -- * The definition of an ADSR
 
@@ -133,8 +135,10 @@ linearly timeSpan initialAmplitude finalAmplitude overdue = proc _ -> do
   let
     remainingTime = timeSpan - time
     currentLevel =
-      ( initialAmplitude * remainingTime
-          + finalAmplitude * time
+      ( initialAmplitude
+          * remainingTime
+          + finalAmplitude
+          * time
       )
         / timeSpan
   _ <- throwOn' -< (remainingTime < 0, remainingTime)
@@ -203,14 +207,15 @@ release r s = linearly r s 0 0
 -- * The main program
 
 -- | A signal that alternates between 'False' and 'True' on every console newline.
-key :: Rhine IO StdinClock () Bool
-key = (count @Integer >>^ odd) @@ StdinClock
+key :: Rhine IO UTCTime '[StdinClock] () (At StdinClock Bool)
+key = Present ^>>> (count @Integer >>^ odd) @@ StdinClock
 
-{- | Output the current amplitude of the ADSR hull on the console,
-   every 0.03 seconds.
--}
-consoleADSR :: Rhine IO (Millisecond 30) Bool ()
-consoleADSR = runADSR myADSR >-> arrMCl print @@ waitClock
+-- | Output is produced every 0.03 seconds
+type OutputClock = Millisecond 30
+
+-- | Output the current amplitude of the ADSR hull on the console.
+consoleADSR :: Rhine IO UTCTime '[OutputClock] (At OutputClock Bool) ()
+consoleADSR = (runADSR myADSR >-> arrMCl print @@ waitClock) >>>^ const ()
 
 {- | Runs the main program, where you have the choice between console output
    and pulse output.
