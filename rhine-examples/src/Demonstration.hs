@@ -56,9 +56,10 @@ main =
     $ Rhine
       { clocks = waitClock @500 .:. waitClock @1200 .:. waitClock @1000 .:. cnil
       , sn = proc _ -> do
-          msg500 <- resampling collect <<< synchronous ms500 -< Present ()
-          msg1200 <- resampling collect <<< synchronous ms1200 -< Present ()
-          synchronous printEverySecond -< (++) <$> msg500 <*> msg1200
+          msg1200 <- synchronous ms1200 -< Present ()
+          msg500 <- synchronous ms500 -< Present ()
+          msgs <- resampling collect <<< fanIn2 -< (msg500, msg1200)
+          synchronous printEverySecond -< msgs
       }
 
 {- | Rhine prevents the consumption of a signal at a different clock than it is created,

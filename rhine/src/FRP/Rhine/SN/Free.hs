@@ -1,11 +1,13 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RecordWildCards #-} -- FIXME consider using lenses instead
+-- FIXME consider using lenses instead
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE RankNTypes #-}
@@ -25,6 +27,7 @@ module FRP.Rhine.SN.Free (
   synchronous,
   resampling,
   feedbackSN,
+  fanIn2,
   always,
   with,
   handle,
@@ -58,22 +61,24 @@ import Control.Monad.Schedule.Class (MonadSchedule)
 import Data.Automaton.Trans.Except (performOnFirstSample)
 import Data.Automaton.Trans.Reader (readerS, runReaderS)
 import Data.Stream.Result (Result (..))
-import Control.Monad.Trans.Reader (ReaderT)
+import Control.Monad.Trans.Reader (ReaderT (..), withReaderT)
 import Data.Kind (Type)
 import Data.List.NonEmpty (fromList, toList)
 import Data.Automaton (concatS)
 import Data.Proxy (Proxy (..))
-import Data.SOP (NP (..), NS (..))
+import Data.SOP (All, NP (..), NS (..), SListI)
 import Data.Type.Equality ((:~:) (Refl))
 
 import Data.Profunctor (Profunctor (..), WrappedArrow (..))
 
+import Data.SOP.NP (liftA_NP)
 import FRP.Rhine.ClSF.Core
-import FRP.Rhine.Clock (Clock (..), TimeInfo (..), tag)
+import FRP.Rhine.Clock (Clock (..), TimeDomain, TimeInfo (..), tag)
 import FRP.Rhine.Clock.Proxy (GetClockProxy (getClockProxy))
 import FRP.Rhine.Clock.Util (genTimeInfo)
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer (..))
 import FRP.Rhine.Schedule (scheduleList)
+import GHC.Stack (HasCallStack)
 
 -- FIXME Don't export Absent, maybe by having an internal module?
 data At cl a = Present !a | Absent
@@ -148,6 +153,24 @@ secondPosition :: OrderedPositions clA clB cls -> Position clB cls
 secondPosition (OPHere pos) = S pos
 secondPosition (OPThere positions) = S $ secondPosition positions
 
+newtype PositionIn cls cl = PositionIn {getPositionIn :: Position cl cls}
+
+-- | Whether 'clsSub' is a subsequence of 'cls'
+class HasClocks clsSub cls where
+  positions :: NP (PositionIn cls) clsSub
+
+instance HasClocks '[] cls where
+  positions = Nil
+
+instance (SListI clsSub, HasClocks clsSub cls) => HasClocks (cl ': clsSub) (cl ': cls) where
+  positions = PositionIn position :* liftA_NP (PositionIn . S . getPositionIn) positions
+
+instance (SListI clsSub, HasClocks clsSub cls) => HasClocks clsSub (cl ': cls) where
+  positions = liftA_NP (PositionIn . S . getPositionIn) positions
+
+instance HasClocks clsSub cls => HasClock (Clocks m td clsSub) cls where
+  position = _
+
 data SNComponent m cls a b where
   Synchronous ::
     (Clock m cl) =>
@@ -164,6 +187,10 @@ data SNComponent m cls a b where
     ResamplingBuffer m clA clB a b ->
     FreeSN m cls (At clB b, c) (At clA a, d) ->
     SNComponent m cls c d
+  FanIn2 ::
+    Position cl1 cls ->
+    Position cl2 cls ->
+    SNComponent m cls (At cl1 a, At cl2 a) (At (Clocks m td '[cl1, cl2]) a)
   Always ::
     Automaton m a b -> SNComponent m cls a b
   With ::
@@ -178,6 +205,12 @@ data SNComponent m cls a b where
   -- FIXME generalise to a NP of arguments, but I don't know how I zip type level lists
   -- FIXME generalise to `forall t . (MonadTrans t, MFunctor t) => ...` to allow e.g. for exception handling
   --   or maybe even arbitrary monads
+
+-- -- Like clocks, but without the Clock dicts
+-- newtype JustClocks cls = JustClocks {getJustClocks :: NP I cls }
+
+-- -- Like clocks, but without the Clock dicts
+-- newtype JustClocks cls = JustClocks {getJustClocks :: NP I cls }
 
 newtype FreeSN m cls a b = FreeSN {getFreeSN :: A (SNComponent m cls) a b}
   deriving (Category, Arrow)
@@ -201,6 +234,12 @@ feedbackSN ::
   FreeSN m cls c d
 feedbackSN sn = FreeSN . liftFree2 . Feedback position position sn
 
+fanIn2 :: (HasClock cl1 cls, HasClock cl2 cls) => FreeSN m cls (At cl1 a, At cl2 a) (At (Clocks m td '[cl1, cl2]) a)
+fanIn2 = FreeSN $ liftFree2 $ FanIn2 position position
+
+fanIn2 :: (HasClock cl1 cls, HasClock cl2 cls) => FreeSN m cls (At cl1 a, At cl2 a) (At (Clocks m td '[cl1, cl2]) a)
+fanIn2 = FreeSN $ liftFree2 $ FanIn2 position position
+
 always :: Automaton m a b -> FreeSN m cls a b
 always = FreeSN . liftFree2 . Always
 
@@ -210,7 +249,7 @@ with morph = FreeSN . liftFree2 . With morph
 handle :: (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d -> Automaton (ReaderT r m) e f) -> FreeSN m cls a b -> FreeSN m cls c d -> FreeSN m cls e f
 handle handler sn1 sn2 = FreeSN $ liftFree2 $ Handle handler sn1 sn2
 
-eraseClockSNComponent :: forall m cls a b. (Monad m) => SNComponent m cls a b -> Automaton (ReaderT (Tick cls) m) a b
+eraseClockSNComponent :: forall m cls a b. (HasCallStack, Monad m) => SNComponent m cls a b -> Automaton (ReaderT (Tick cls) m) a b
 eraseClockSNComponent (Synchronous position clsf) = readerS $ proc (tick, a) -> do
   case (projectPosition position (getTick tick), a) of
     (Nothing, _) -> returnA -< Absent
@@ -233,12 +272,16 @@ eraseClockSNComponent (Feedback posA posB ResamplingBuffer {buffer = buffer0, ge
       buffer'' <- case (projectPosition posA $ getTick tick, aAt) of
         (Nothing, _) -> returnA -< buffer'
         (Just ti, Present a) -> do
-          arrM $ uncurry $ uncurry put -< ((ti, a), buffer')
-        _ -> returnA -< error "eraseClockSNComponent: internal error (Feedback)"
-      returnA -< (b, buffer'')
-eraseClockSNComponent (Always msf) = liftS msf
-eraseClockSNComponent (With morph sn) = morph $ eraseClockFreeSN sn
-eraseClockSNComponent (Handle handler sn1 sn2)= handler (eraseClockFreeSN sn1) (eraseClockFreeSN sn2)
+          arrM $ uncurry $ uncurry put -< ((resbuf', ti), a)
+        _ -> error "eraseClockSNComponent: internal error (Feedback)" -< ()
+      returnA -< (b, resbuf'')
+eraseClockSNComponent (Always msf) = liftTransS msf
+
+ifTicks :: HasCallStack => Position cl cls -> Tick cls -> At cl a -> Maybe a
+ifTicks pos tick aAt = case (projectPosition pos $ getTick tick, aAt) of
+  (Just _, Present a) -> Just a
+  (Nothing, _) -> Nothing
+  (Just _, Absent) -> error "ifTicks: internal error"
 
 eraseClockResBuf ::
   (Monad m) =>
@@ -303,23 +346,15 @@ type Position cl cls = NS ((:~:) cl) cls
 
 instance (TimeDomain td) => Clock m (Clocks m td cls) where
   type Time (Clocks m td cls) = td
-  type Tag (Clocks m td cls) = Tags cls
+  type Tag (Clocks m td cls) = Tags td cls
 
 clocksTimeInfoToTick :: TimeInfo (Clocks m td cls) -> Tick cls
-clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = Here TheTag {getTheTag}}, ..} = Tick $ Here TimeInfo {tag = getTheTag, ..}
-clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = There tag}, ..} = Tick $ There $ getTick $ clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = tag}, ..}
+clocksTimeInfoToTick TimeInfo {tag = Z TheTag {getTheTag}, ..} = Tick $ Z TimeInfo {tag = getTheTag, ..}
+clocksTimeInfoToTick TimeInfo {tag = S tag, ..} = Tick $ S $ getTick $ clocksTimeInfoToTick TimeInfo {tag = tag, ..}
 
-instance (TimeDomain td) => Clock m (Clocks m td cls) where
-  type Time (Clocks m td cls) = td
-  type Tag (Clocks m td cls) = Tags cls
+data TheTag td cl = (Time cl ~ td) => TheTag {getTheTag :: Tag cl}
 
-clocksTimeInfoToTick :: TimeInfo (Clocks m td cls) -> Tick cls
-clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = Here TheTag {getTheTag}}, ..} = Tick $ Here TimeInfo {tag = getTheTag, ..}
-clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = There tag}, ..} = Tick $ There $ getTick $ clocksTimeInfoToTick TimeInfo {tag = Tags {getTags = tag}, ..}
-
-newtype TheTag cl = TheTag {getTheTag :: Tag cl}
-
-newtype Tags cls = Tags {getTags :: HSum TheTag cls}
+type Tags td cls = NS (TheTag td) cls
 
 data OrderedPositions cl1 cl2 cls where
   OPHere :: Position cl2 cls -> OrderedPositions cl1 cl2 (cl1 ': cls)
