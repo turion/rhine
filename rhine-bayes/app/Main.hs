@@ -380,7 +380,7 @@ glossClockUTC cl =
     }
 
 {- | The part of the program which simulates latent position and sensor,
-   running 100 times a second.
+   running 10 times a second.
 -}
 modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) Temperature (Temperature, (Sensor, Pos))
 modelRhine = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature) @@ liftClock waitClock
