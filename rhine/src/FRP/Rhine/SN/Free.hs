@@ -78,11 +78,6 @@ currently :: At cl a -> Maybe a
 currently (Present a) = Just a
 currently Absent = Nothing
 
--- Internal use in this module only
-unsafeAssumePresent :: String -> At cl a -> a
-unsafeAssumePresent _ (Present a) = a
-unsafeAssumePresent msg Absent = error msg
-
 instance Applicative (At cl) where
   pure = Present
 
