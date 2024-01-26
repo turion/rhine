@@ -3,15 +3,15 @@
 
 module FRP.Rhine.Rhine.Free where
 
-import FRP.Rhine.SN.Free
+import Control.Arrow.Free
+import Control.Monad.Schedule.Class
+import Control.Monad.Trans.MSF.Reader (runReaderS)
 import Data.Profunctor
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
-import Control.Monad.Schedule.Class
-import Control.Arrow.Free
-import Control.Monad.Trans.MSF.Reader (runReaderS)
+import FRP.Rhine.SN.Free
 
 data Rhine m td cls a b = Rhine
   { clocks :: Clocks m td cls
@@ -76,4 +76,15 @@ Rhine cls1 sn1 *@* Rhine cls2 sn2 =
   Rhine
     { clocks = appendClocks cls1 cls2
     , sn = appendClocksSN cls2 sn1 *** prependClocksSN cls1 sn2
+    }
+
+feedback ::
+  (HasClock clA cls, HasClock clB cls) =>
+  ResamplingBuffer m clA clB a b ->
+  Rhine m td cls (At clB b, c) (At clA a, d) ->
+  Rhine m td cls c d
+feedback resBuf Rhine {clocks, sn} =
+  Rhine
+    { clocks
+    , sn = feedbackSN resBuf sn
     }
