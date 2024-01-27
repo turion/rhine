@@ -81,6 +81,27 @@ packages:
       size: 2232
   original:
     hackage: dunai-0.12.2
+- completed:
+    hackage: criterion-1.6.3.0@sha256:cf27e6c83f91674fb67ef253cae644ad0ce079b7e2cfa6402e13e930f78499ec,5373
+    pantry-tree:
+      sha256: 2102113a4ac228305ea9396967878c6921377bafc92425c1b8cf82f8afbef40e
+      size: 2323
+  original:
+    hackage: criterion-1.6.3.0@sha256:cf27e6c83f91674fb67ef253cae644ad0ce079b7e2cfa6402e13e930f78499ec,5373
+- completed:
+    hackage: criterion-measurement-0.2.1.0@sha256:646d5b5c55499580747746396b731ef9d6e2cd59fa7b488354788e68eae8e9bc,2098
+    pantry-tree:
+      sha256: 2557db6ed7b4e5718d9ca6271caf4bcfc97b966ed32b051f346c8d17e1c31809
+      size: 726
+  original:
+    hackage: criterion-measurement-0.2.1.0@sha256:646d5b5c55499580747746396b731ef9d6e2cd59fa7b488354788e68eae8e9bc,2098
+- completed:
+    hackage: optparse-applicative-0.18.1.0@sha256:b4cf8d9018e5e67cb1f14edb5130b6d05ad8bc1b5f6bd4efaa6ec0b7f28f559d,5132
+    pantry-tree:
+      sha256: 32f52adc150eb146bf4d167ff0cb21fc1e3cd7ecc1b9e5e83b986a1cd1bc58cd
+      size: 3124
+  original:
+    hackage: optparse-applicative-0.18.1.0@sha256:b4cf8d9018e5e67cb1f14edb5130b6d05ad8bc1b5f6bd4efaa6ec0b7f28f559d,5132
 snapshots:
 - completed:
     sha256: 5a59b2a405b3aba3c00188453be172b85893cab8ebc352b1ef58b0eae5d248a2
