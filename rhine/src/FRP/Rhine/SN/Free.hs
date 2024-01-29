@@ -168,9 +168,6 @@ instance (SListI clsSub, HasClocks clsSub cls) => HasClocks (cl ': clsSub) (cl '
 instance (SListI clsSub, HasClocks clsSub cls) => HasClocks clsSub (cl ': cls) where
   positions = liftA_NP (PositionIn . S . getPositionIn) positions
 
-instance HasClocks clsSub cls => HasClock (Clocks m td clsSub) cls where
-  position = _
-
 data SNComponent m cls a b where
   Synchronous ::
     (Clock m cl) =>
