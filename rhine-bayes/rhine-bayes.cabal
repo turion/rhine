@@ -80,7 +80,9 @@ executable rhine-bayes-gloss
     TypeFamilies
     TypeOperators
 
-  ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -W -rtsopts -with-rtsopts=-N
+  if !os(darwin)
+    ghc-options: -threaded
   if flag(dev)
     ghc-options: -Werror
 
