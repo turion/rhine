@@ -159,6 +159,7 @@ test-suite test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+    Automaton
     Clock
     Clock.Except
     Clock.FixedStep
@@ -174,6 +175,27 @@ test-suite test
     rhine,
     tasty ^>=1.4,
     tasty-hunit ^>=0.10,
+
+test-suite inspection
+  import: opts
+  hs-source-dirs: inspection
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+
+  if flag(core)
+    ghc-options:
+      -fforce-recomp
+      -ddump-to-file
+      -ddump-simpl
+      -ddump-simpl-stats
+      -ddump-rule-firings
+      -dsuppress-all
+      -dno-suppress-type-signatures
+      -dno-suppress-type-applications
+
+  build-depends:
+    inspection-testing ^>=0.5,
+    rhine,
 
 flag dev
   description: Enable warnings as errors. Active on ci.
@@ -219,3 +241,7 @@ benchmark benchmark
       -dno-suppress-type-applications
 
 -- -dno-suppress-module-prefixes
+flag core
+  description: Dump optimized and unoptimized core
+  default: False
+  manual: True

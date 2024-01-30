@@ -304,6 +304,7 @@ step f = try $ proc a -> do
 step_ :: (Monad m) => b -> MSFExcept m a b ()
 step_ b = step $ const $ return (b, ())
 
+-- FIXME need to benchmark
 {- | Converts a list to an 'MSFExcept', which outputs an element of the list at
 each step, throwing '()' when the list ends.
 -}

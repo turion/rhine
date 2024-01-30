@@ -4,7 +4,7 @@ module Util where
 import Control.Monad.Schedule.Trans (Schedule, runScheduleT)
 
 -- rhine
-
+import Data.Automaton.MSF (embed)
 import Data.Functor.Identity (Identity (runIdentity))
 import FRP.Rhine
 

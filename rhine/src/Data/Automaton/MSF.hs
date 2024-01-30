@@ -4,8 +4,8 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.Automaton.MSF where
 
@@ -16,14 +16,14 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.Automaton
 import Data.Automaton qualified as Automaton
+import Data.Coerce (coerce)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Profunctor (Choice (..), Profunctor (..), Strong)
 import Data.Profunctor.Strong (Strong (..))
 import Data.Profunctor.Traversing
-import Prelude hiding (id, (.))
 import Data.VectorSpace (VectorSpace (..))
-import Data.Coerce (coerce)
+import Prelude hiding (id, (.))
 
 newtype MSF m a b = MSF {getMSF :: AutomatonT (ReaderT a m) b}
   deriving newtype (Functor, Applicative, Num, Fractional, Floating)
@@ -41,7 +41,7 @@ instance (Monad m) => Category (MSF m) where
 
   MSF (AutomatonT stateF0 stepF) . MSF (AutomatonT stateG0 stepG) =
     MSF
-      $! AutomatonT
+      $! automatonT
         (JointState stateF0 stateG0)
         ( \(JointState stateF stateG) -> do
             Result stateG' b <- stepG stateG
@@ -66,6 +66,8 @@ instance (Monad m) => Arrow (MSF m) where
               )
         )
   {-# INLINE first #-}
+
+-- FIXME efficient parallelized ***?
 
 instance (Monad m) => ArrowChoice (MSF m) where
   MSF (AutomatonT stateL0 stepL) +++ MSF (AutomatonT stateR0 stepR) =
@@ -213,3 +215,9 @@ sumFrom = accumulateWith (^+^)
 sumS :: (Monad m, VectorSpace v s) => MSF m v v
 sumS = sumFrom zeroVector
 
+embed :: (Monad m) => MSF m a b -> [a] -> m [b]
+embed _ [] = pure []
+embed msf (a : as) = do
+  StrictTuple b msf' <- stepMSF msf a
+  bs <- embed msf' as
+  return $ b : bs

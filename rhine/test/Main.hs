@@ -4,6 +4,7 @@ module Main where
 import Test.Tasty
 
 -- rhine
+import Automaton
 import Clock
 import Schedule
 
@@ -11,6 +12,7 @@ main =
   defaultMain $
     testGroup
       "Main"
-      [ Clock.tests
+      [ Automaton.tests
+      , Clock.tests
       , Schedule.tests
       ]

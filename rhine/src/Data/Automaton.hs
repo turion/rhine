@@ -48,12 +48,12 @@ automatonT :: (Functor m) => s -> (s -> m (Result s b)) -> AutomatonT m b
 automatonT = AutomatonT
 {-# INLINE CONLIKE [1] automatonT #-}
 {-# RULES
-"automatonT @((), _)" forall s f.
-  automatonT ((), s) f =
-    AutomatonT s (\s1 -> f ((), s1) <&> \(Result ((), s2) b) -> Result s2 b)
-"automatonT @(_, ())" forall s f.
-  automatonT (s, ()) f =
-    AutomatonT s (\s1 -> f (s1, ()) <&> \(Result (s2, ()) b) -> Result s2 b)
+"automatonT @(JointState () _)" forall s f.
+  automatonT (JointState () s) f =
+    AutomatonT s (\s1 -> f (JointState () s1) <&> \(Result (JointState () s2) b) -> Result s2 b)
+"automatonT @(JointState _ ())" forall s f.
+  automatonT (JointState s ()) f =
+    AutomatonT s (\s1 -> f (JointState s1 ()) <&> \(Result (JointState s2 ()) b) -> Result s2 b)
   #-}
 
 instance (Functor m) => Functor (AutomatonT m) where
@@ -123,12 +123,10 @@ instance (Alternative m) => Alternative (AutomatonT m) where
   {-# INLINE empty #-}
 
   AutomatonT stateL0 stepL <|> AutomatonT stateR0 stepR =
-    AutomatonT
-      { state = JointState stateL0 stateR0
-      , step = \(JointState stateL stateR) ->
+    automatonT (JointState stateL0 stateR0) $
+      \(JointState stateL stateR) ->
           (mapResultState (`JointState` stateR) <$> stepL stateL)
             <|> (mapResultState (JointState stateL) <$> stepR stateR)
-      }
   {-# INLINE (<|>) #-}
 
 instance MFunctor AutomatonT where
