@@ -55,6 +55,7 @@ common opts
   ghc-options:
     -W
     -Wno-unticked-promoted-constructors
+    -fwarn-incomplete-patterns
 
   default-extensions:
     Arrows
