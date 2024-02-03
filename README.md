@@ -102,6 +102,7 @@ would be:
 * `rhine/`: The main library, which is also mirrored on hackage.
 * `rhine-gloss/`: A wrapper library to [`gloss`](https://hackage.haskell.org/package/gloss), a functional OpenGL library.
 * `rhine-bayes/`: A library for stochastic processes and online machine learning, using [`monad-bayes`](https://hackage.haskell.org/package/monad-bayes).
+* `rhine-terminal/`: A wrapper library to [`terminal`](https://hackage.haskell.org/package/terminal), a library to write terminal applications.
 * `rhine-examples/`: Different examples as a starting point to learn Rhine.
 
 ## Documentation
