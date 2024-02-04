@@ -162,6 +162,7 @@ test-suite test
     Clock.Except
     Clock.FixedStep
     Clock.Millisecond
+    Except
     Paths_rhine
     Schedule
     Util
