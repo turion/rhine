@@ -83,7 +83,7 @@ jobs:
       - name: Install dependencies
         # If we had an exact cache hit, the dependencies will be up to date.
         if: steps.cache.outputs.cache-hit != 'true'
-        run: cabal build all --enable-tests --only-dependencies
+        run: cabal build all --enable-tests --enable-benchmarks --only-dependencies
 
       # Cache dependencies already here, so that we do not have to rebuild them should the subsequent steps fail.
       - name: Save cached dependencies
@@ -95,9 +95,11 @@ jobs:
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: Cabal build packages
-        run: cabal build all --enable-tests -fdev
+        run: cabal build all --enable-tests --enable-benchmarks -fdev
       - name: Cabal test
         run: cabal test all --enable-tests --test-show-details=Always
+      - name: Cabal bench
+        run: cabal bench all
 
   build-stack:
     runs-on: ubuntu-latest
