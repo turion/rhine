@@ -68,8 +68,22 @@ rhineWordCount = do
     wc :: IORef Int -> ClSF IO StdinClock () ()
     wc wcOut = proc _ -> do
       line <- tagS -< ()
-      words <- mappendS -< Sum $ length $ words line
-      arrMCl $ writeIORef wcOut -< getSum words
+      nWords <- mappendS -< Sum $ length $ words line
+      arrMCl $ writeIORef wcOut -< getSum nWords
+      returnA -< ()
+
+automatonWordCount :: IO Int
+automatonWordCount = do
+  wcOut <- newIORef (0 :: Int)
+  catch (withInput $ reactimate (wc wcOut) >> readIORef wcOut) $ \(e :: IOError) ->
+    if isEOFError e
+      then readIORef wcOut
+      else throwIO e
+  where
+    wc wcOut = proc () -> do
+      line <- constM getLine -< ()
+      nWords <- mappendS -< Sum $ length $ words line
+      arrM $ writeIORef wcOut -< getSum nWords
       returnA -< ()
 
 dunaiWordCount :: IO Int
@@ -79,27 +93,11 @@ dunaiWordCount = do
     if isEOFError e
       then readIORef wcOut
       else throwIO e
-  readIORef wcOut
   where
     wc wcOut = proc () -> do
       line <- Dunai.constM getLine -< ()
-      words <- Dunai.mappendS -< Sum $ length $ words line
-      Dunai.arrM $ writeIORef wcOut -< getSum words
-      returnA -< ()
-
-automatonWordCount :: FilePath -> IO Int
-automatonWordCount inputFileName = do
-  wcOut <- newIORef (0 :: Int)
-  catch (withInput inputFileName $ reactimate (wc wcOut) >> readIORef wcOut) $ \(e :: IOError) ->
-    if isEOFError e
-      then readIORef wcOut
-      else throwIO e
-  readIORef wcOut
-  where
-    wc wcOut = proc () -> do
-      line <- constM getLine -< ()
-      words <- mappendS -< Sum $ length $ words line
-      arrM $ writeIORef wcOut -< getSum words
+      nWords <- Dunai.mappendS -< Sum $ length $ words line
+      Dunai.arrM $ writeIORef wcOut -< getSum nWords
       returnA -< ()
 
 {- | This is what 'rhineWordCount' should reduce to roughly (except the way the IORef is handled).
@@ -124,11 +122,11 @@ textWordCountNoIORef :: IO Int
 textWordCountNoIORef = do
   withInput $ go 0
   where
-    step n = do
+    processLine n = do
       line <- getLine
       return $ Right $ n + length (words line)
     go n = do
-      n' <- catch (step n) $
+      n' <- catch (processLine n) $
         \(e :: IOError) ->
           if isEOFError e
             then return $ Left n
@@ -138,5 +136,5 @@ textWordCountNoIORef = do
 textLazy :: IO Int
 textLazy = do
   inputFileName <- testFile
-  handle <- openFile inputFileName ReadMode
-  length . Lazy.words <$> hGetContents handle
+  h <- openFile inputFileName ReadMode
+  length . Lazy.words <$> hGetContents h
