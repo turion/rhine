@@ -20,6 +20,7 @@ import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 -- rhine
 import FRP.Rhine
 import Data.MonadicStreamFunction.Bayes (runPopulationS)
+import GHC.Stack (HasCallStack)
 
 -- * Inference methods
 
@@ -110,7 +111,7 @@ wienerVaryingLogDomain = wienerVarying >>> arr Exp
   * The output is the number of events since the last tick.
 -}
 poissonInhomogeneous ::
-  (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
+  (HasCallStack, MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
   BehaviourF m td (Diff td) Int
 poissonInhomogeneous = arrM $ \rate -> ReaderT $ \timeInfo -> poisson $ realToFrac $ max 0 (sinceLast timeInfo) / rate
 
