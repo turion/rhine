@@ -377,10 +377,7 @@ glossClockUTC cl =
   RescaledClockS
     { unscaledClockS = cl
     , rescaleS = const $ do
-        now <- liftIO $ do
-          time <- getCurrentTime
-          print (time, "rescaled")
-          return time
+        now <- liftIO getCurrentTime
         return (arrM $ \(_timePassed, event) -> (, event) <$> liftIO getCurrentTime, now)
     }
 
