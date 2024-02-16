@@ -269,6 +269,7 @@ mains =
   [ ("single rate", mainSingleRate)
   , ("single rate, parameter collapse", mainSingleRateCollapse)
   , ("multi rate, temperature process", mainMultiRate)
+  , ("multi rate, inference buffer", mainMultiRateInferenceBuffer)
   ]
 
 main :: IO ()
@@ -434,6 +435,33 @@ mainMultiRate =
   void $
     launchInGlossThread glossSettings $
       flow mainRhineMultiRate
+
+-- ** Multi-rate: Inference in separate buffer
+
+mainRhineMultiRateInferenceBuffer =
+  userTemperature
+    @@ glossClockUTC GlossEventClockIO
+    >-- keepLast initialTemperature
+    --> modelRhine
+    @>>^ (\(temperature, (sensor, pos)) -> (sensor, (temperature, sensor, pos)))
+    >-- hoistResamplingBuffer sampleIOGloss (inferenceBuffer nParticles resampleSystematic (temperatureProcess >-> (prior &&& clId)) (\(pos, _) sensor -> sensorLikelihood pos sensor))
+    *-* keepLast (initialTemperature, zeroVector, zeroVector)
+    --> ( \(particles, (temperature, measured, latent)) ->
+            Result
+              { temperature
+              , measured
+              , latent
+              , particlesPosition = second (const (1 / fromIntegral nParticles)) <$> particles
+              , particlesTemperature = (, 1 / fromIntegral nParticles) . snd <$> particles
+              }
+        )
+    ^>>@ visualisationRhine
+
+mainMultiRateInferenceBuffer :: IO ()
+mainMultiRateInferenceBuffer =
+  void $
+    launchInGlossThread glossSettings $
+      flow mainRhineMultiRateInferenceBuffer
 
 -- * Utilities
 

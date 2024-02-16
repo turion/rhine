@@ -19,9 +19,6 @@ import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 
 -- rhine
 import FRP.Rhine
-import Data.MonadicStreamFunction.InternalCore (unMSF)
-import Data.Coerce (coerce)
-import Control.Monad (forM)
 import Data.MonadicStreamFunction.Bayes (runPopulationS)
 
 -- * Inference methods
@@ -147,17 +144,19 @@ bernoulliInhomogeneous :: (MonadDistribution m) => BehaviourF m td Double Bool
 bernoulliInhomogeneous = arrMCl bernoulli
 
 
-inferenceBuffer :: forall clA clS time m s a . (time ~ Time clS, time ~ Time clA, Monad m, MonadDistribution m)
+inferenceBuffer :: forall clA clS time m s a . (TimeDomain time, time ~ Time clS, time ~ Time clA, Monad m, MonadDistribution m)
      => Int ->
       (forall n a . MonadDistribution n =>  PopulationT n a -> PopulationT n a) ->
          Behaviour m time s -> (s -> a -> Log Double) -> ResamplingBuffer m clA clS a [s]
-inferenceBuffer nParticles resampler process likelihood = msfBuffer' $ runPopulationS nParticles resampler thing >>> arr (fmap fst)
+inferenceBuffer nParticles resampler process likelihood = msfBuffer' $ runPopulationS nParticles resampler posterior >>> arr (fmap fst)
  where
   processParClock :: ClSF m (ParallelClock clA clS) () s
   processParClock = process
-  thing :: Monad m => MSF (PopulationT m) (Either (TimeInfo clS) (TimeInfo clA, a)) s
-  thing = proc tia -> do
-    s <- DunaiReader.runReaderS $ liftClSF processParClock -< (either (retag Right) (retag Left . fst) tia, ())
+  posterior :: Monad m => MSF (PopulationT m) (Either (TimeInfo clS) (TimeInfo clA, a)) s
+  posterior = proc tia -> do
+    lastTime <- iPre Nothing -< Just $ either absolute (absolute . fst) tia
+    let ti = (either (retag Right) (retag Left . fst) tia) { sinceLast = maybe (sinceInit ti) (absolute ti `diffTime`) lastTime }
+    s <- DunaiReader.runReaderS $ liftClSF processParClock -< (ti, ())
     case tia of
       Left _ -> returnA -< s
       Right (_, a) -> do
