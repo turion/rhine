@@ -112,7 +112,7 @@ wienerVaryingLogDomain = wienerVarying >>> arr Exp
 poissonInhomogeneous ::
   (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
   BehaviourF m td (Diff td) Int
-poissonInhomogeneous = arrM $ \rate -> ReaderT $ \timeInfo -> poisson $ realToFrac $ sinceLast timeInfo / rate
+poissonInhomogeneous = arrM $ \rate -> ReaderT $ \timeInfo -> poisson $ realToFrac $ max 0 (sinceLast timeInfo) / rate
 
 -- | Like 'poissonInhomogeneous', but the rate is constant.
 poissonHomogeneous ::
