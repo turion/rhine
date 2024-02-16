@@ -27,6 +27,10 @@ import Control.Concurrent
 import Control.Monad (when)
 import Data.Functor (void)
 import Data.IORef
+import GHC.Float (float2Double)
+
+-- time
+import Data.Time.Clock
 
 -- transformers
 import Control.Monad.Trans.Class
@@ -199,4 +203,32 @@ runGlossEnvClock env unhoistedClock =
   HoistClock
     { monadMorphism = flip runReaderT env . unGlossConcT
     , ..
+    }
+
+-- * Rescaled clocks in other time domains
+
+-- | Rescale a 'GlossSimClockIO' to the 'Double' time domain
+type GlossSimClockIODouble = RescaledClock GlossSimClockIO Double
+
+glossSimClockIODouble :: GlossSimClockIODouble
+glossSimClockIODouble =
+  RescaledClock
+    { unscaledClock = GlossSimClockIO
+    , rescale = float2Double
+    }
+
+{- | Rescale the gloss clocks so they will be compatible with real 'UTCTime'.
+
+This is needed for compatibility with other realtime clocks like 'Millisecond'.
+-}
+type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
+
+-- | Rescale a gloss clock like 'GlossSimClockIO' or 'GlossEventClockIO' to the UTC time domain.
+glossClockUTC :: cl -> GlossClockUTC cl
+glossClockUTC cl =
+  RescaledClockS
+    { unscaledClockS = cl
+    , rescaleS = const $ do
+        now <- liftIO getCurrentTime
+        return (arrM $ \(_timePassed, event) -> (,event) <$> liftIO getCurrentTime, now)
     }

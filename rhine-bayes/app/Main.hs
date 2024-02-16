@@ -25,9 +25,6 @@ import Text.Printf (printf)
 -- transformers
 import Control.Monad.Trans.Class
 
--- time
-import Data.Time (addUTCTime, getCurrentTime)
-
 -- mmorph
 import Control.Monad.Morph
 
@@ -280,16 +277,6 @@ main = do
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
--- | Rescale to the 'Double' time domain
-type GlossClock = RescaledClock GlossSimClockIO Double
-
-glossClock :: GlossClock
-glossClock =
-  RescaledClock
-    { unscaledClock = GlossSimClockIO
-    , rescale = float2Double
-    }
-
 -- *** Poor attempt at temperature inference: Particle collapse
 
 -- | Choose an exponential distribution as prior for the temperature
@@ -367,19 +354,6 @@ mainSingleRate =
         reactimateCl glossClock mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
-
--- | Rescale the gloss clocks so they will be compatible with real 'UTCTime' (needed for compatibility with 'Millisecond')
-type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
-
--- FIXME: If it's so easy to get this wrong, I should put the UTC variants in Gloss IO
-glossClockUTC :: cl -> GlossClockUTC cl
-glossClockUTC cl =
-  RescaledClockS
-    { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arrM $ \(_timePassed, event) -> (, event) <$> liftIO getCurrentTime, now)
-    }
 
 {- | The part of the program which simulates latent position and sensor,
    running 100 times a second.
