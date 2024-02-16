@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module FRP.Rhine.Bayes where
 
 -- transformers
@@ -18,6 +19,10 @@ import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 
 -- rhine
 import FRP.Rhine
+import Data.MonadicStreamFunction.InternalCore (unMSF)
+import Data.Coerce (coerce)
+import Control.Monad (forM)
+import Data.MonadicStreamFunction.Bayes (runPopulationS)
 
 -- * Inference methods
 
@@ -140,3 +145,39 @@ gammaInhomogeneous gamma = proc rate -> do
 -}
 bernoulliInhomogeneous :: (MonadDistribution m) => BehaviourF m td Double Bool
 bernoulliInhomogeneous = arrMCl bernoulli
+
+
+inferenceBuffer :: forall clA clS time m s a . (time ~ Time clS, time ~ Time clA, Monad m, MonadDistribution m)
+     => Int ->
+      (forall n a . MonadDistribution n =>  PopulationT n a -> PopulationT n a) ->
+         Behaviour m time s -> (s -> a -> Log Double) -> ResamplingBuffer m clA clS a [s]
+inferenceBuffer nParticles resampler process likelihood = msfBuffer' $ runPopulationS nParticles resampler thing >>> arr (fmap fst)
+ where
+  processParClock :: ClSF m (ParallelClock clA clS) () s
+  processParClock = process
+  thing :: Monad m => MSF (PopulationT m) (Either (TimeInfo clS) (TimeInfo clA, a)) s
+  thing = proc tia -> do
+    s <- DunaiReader.runReaderS $ liftClSF processParClock -< (either (retag Right) (retag Left . fst) tia, ())
+    case tia of
+      Left _ -> returnA -< s
+      Right (_, a) -> do
+        arrM factor -< likelihood s a
+        returnA -< s
+-- inferenceBuffer nParticles process likelihood = go $ replicate nParticles process
+--  where
+--   stepToTime :: TimeInfo cl -> ClSF m cl () s -> m (s, ClSF m cl () s)
+--   stepToTime ti clsf = second SomeBehaviour <$> runReaderT (unMSF (getSomeBehaviour clsf) ()) ti
+
+--   -- Add resamplnig here
+--   stepAllToTime :: Monad m => (forall n . MonadDistribution n =>  PopulationT n a -> PopulationT n a) -> TimeInfo cl -> [ClSF m cl () s] -> m [(s, ClSF m cl () s)]
+--   stepAllToTime resampler ti = fmap _ . runPopulationT . resampler . fromWeightedList . fmap _ . mapM (stepToTime ti)
+
+--   go :: [ClSF m (ParallelClock clA clB) () s] -> ResamplingBuffer m clA clS a s
+--   go msfs = ResamplingBuffer
+--     { put = \ti a -> do
+--         stepped <- forM msfs $ \msf -> do
+--           msf' <- stepToTime (retag Left ti) msf
+--           _ -- factor each msf individually, resample all at the end
+--         return $ go $ snd <$> stepped
+--     , get = _
+--     }

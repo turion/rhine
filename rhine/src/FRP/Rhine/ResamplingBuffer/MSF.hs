@@ -38,3 +38,9 @@ msfBuffer = msfBuffer' []
         get ti2 = do
           (b, msf') <- unMSF msf (ti2, as)
           return (b, msfBuffer msf')
+
+msfBuffer' :: Functor m => MSF m (Either (TimeInfo cl2) (TimeInfo cl1, a)) b -> ResamplingBuffer m cl1 cl2 a b
+msfBuffer' msf = ResamplingBuffer
+  { get = \ti -> second msfBuffer' <$> unMSF msf (Left ti)
+  , put = \ti a -> msfBuffer' . snd <$> unMSF msf (Right (ti, a))
+  }
