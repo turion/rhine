@@ -371,7 +371,8 @@ mainSingleRate =
 -- | Rescale the gloss clocks so they will be compatible with real 'UTCTime' (needed for compatibility with 'Millisecond')
 type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
 
-glossClockUTC :: (Real (Time cl)) => cl -> GlossClockUTC cl
+-- FIXME: If it's so easy to get this wrong, I should put the UTC variants in Gloss IO
+glossClockUTC :: cl -> GlossClockUTC cl
 glossClockUTC cl =
   RescaledClockS
     { unscaledClockS = cl
