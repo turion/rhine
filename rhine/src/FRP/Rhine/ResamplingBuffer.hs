@@ -35,15 +35,19 @@ or specific to certain clocks.
 * 'clb': The clock at which data leaves the buffer
 * 'a': The input type
 * 'b': The output type
+
+The 'TimeInfo's for input and output are independent.
 -}
 data ResamplingBuffer m cla clb a b = ResamplingBuffer
   { put ::
+      -- | Time since the last 'put', and other tick information
       TimeInfo cla ->
       a ->
       m (ResamplingBuffer m cla clb a b)
   -- ^ Store one input value of type 'a' at a given time stamp,
   --   and return a continuation.
   , get ::
+      -- | Time since the last 'get', and other tick information
       TimeInfo clb ->
       m (b, ResamplingBuffer m cla clb a b)
   -- ^ Retrieve one output value of type 'b' at a given time stamp,
