@@ -187,6 +187,7 @@ visualisation :: (Diff td ~ Double) => BehaviourF App td Result ()
 visualisation = proc Result {temperature, measured, latent, particlesPosition, particlesTemperature} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
+  dt <- sinceLastS -< ()
   arrMCl paintIO
     -<
       toThermometer $
@@ -198,6 +199,7 @@ visualisation = proc Result {temperature, measured, latent, particlesPosition, p
                   [ printf "Temperature: %.2f" temperature
                   , printf "Particles: %i" $ length particlesPosition
                   , printf "Time: %.1f" time
+                  , printf "FPS: %.1f" $ 1 / dt
                   ]
               return $ translate 0 ((-150) * n) $ text message
           , color red $ rectangleUpperSolid thermometerWidth $ double2Float temperature * thermometerScale
