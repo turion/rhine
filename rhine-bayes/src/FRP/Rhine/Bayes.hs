@@ -122,7 +122,7 @@ poissonHomogeneous ::
   (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
   -- | The (constant) rate of the process
   Diff td ->
-  BehaviourF m td () Int
+  Behaviour m td Int
 poissonHomogeneous rate = arr (const rate) >>> poissonInhomogeneous
 
 {- | The Gamma process, https://en.wikipedia.org/wiki/Gamma_process.

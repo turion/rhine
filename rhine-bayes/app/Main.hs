@@ -113,7 +113,7 @@ initialTemperature :: Temperature
 initialTemperature = 7
 
 -- | We assume the user changes the temperature randomly every 3 seconds.
-temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () Temperature
+temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => Behaviour m td Temperature
 temperatureProcess =
   -- Draw events from a Poisson process with a rate of one event per 3 seconds
   poissonHomogeneous 3
