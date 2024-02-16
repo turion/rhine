@@ -19,14 +19,11 @@ module Main where
 import Control.Monad (replicateM, void)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Product (Product, getProduct))
-import GHC.Float (double2Float, float2Double)
+import GHC.Float (double2Float)
 import Text.Printf (printf)
 
 -- transformers
 import Control.Monad.Trans.Class
-
--- time
-import Data.Time (addUTCTime, getCurrentTime)
 
 -- mmorph
 import Control.Monad.Morph
@@ -269,15 +266,8 @@ main = do
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
--- | Rescale to the 'Double' time domain
-type GlossClock = RescaledClock GlossSimClockIO Double
-
-glossClock :: GlossClock
-glossClock =
-  RescaledClock
-    { unscaledClock = GlossSimClockIO
-    , rescale = float2Double
-    }
+glossClockSingleRate :: GlossClockUTC SamplerIO GlossSimClockIO
+glossClockSingleRate = glossClockUTC GlossSimClockIO
 
 -- *** Poor attempt at temperature inference: Particle collapse
 
@@ -322,7 +312,7 @@ mainSingleRateCollapse =
   void $
     sampleIO $
       launchInGlossThread glossSettings $
-        reactimateCl glossClock mainClSFCollapse
+        reactimateCl glossClockSingleRate mainClSFCollapse
 
 -- *** Infer temperature with a stochastic process
 
@@ -353,21 +343,9 @@ mainSingleRate =
   void $
     sampleIO $
       launchInGlossThread glossSettings $
-        reactimateCl glossClock mainClSF
+        reactimateCl glossClockSingleRate mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
-
--- | Rescale the gloss clocks so they will be compatible with real 'UTCTime' (needed for compatibility with 'Millisecond')
-type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
-
-glossClockUTC :: (Real (Time cl)) => cl -> GlossClockUTC cl
-glossClockUTC cl =
-  RescaledClockS
-    { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arr $ \(timePassed, event) -> (addUTCTime (realToFrac timePassed) now, event), now)
-    }
 
 {- | The part of the program which simulates latent position and sensor,
    running 10 times a second.
@@ -376,7 +354,7 @@ modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) 
 modelRhine = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature) @@ liftClock waitClock
 
 -- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC GlossEventClockIO) () Temperature
+userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC IO GlossEventClockIO) () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
     selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
@@ -403,7 +381,7 @@ inferenceBehaviour = proc (temperature, (measured, latent)) -> do
         }
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
-visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
+visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC IO GlossSimClockIO) Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
 
 {- FOURMOLU_DISABLE -}

@@ -22,6 +22,8 @@ module FRP.Rhine.Gloss.IO (
   flowGlossIO,
   runGlossEnvClock,
   RunGlossEnvClock,
+  GlossClockUTC,
+  glossClockUTC,
 )
 where
 
@@ -46,6 +48,7 @@ import Control.Monad.Schedule.Class
 
 -- rhine
 import FRP.Rhine
+import FRP.Rhine.Clock.Realtime (UTCClock, addUTC)
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -211,3 +214,19 @@ runGlossEnvClock env unhoistedClock =
     { monadMorphism = flip runReaderT env . unGlossConcT
     , ..
     }
+
+-- * Rescaled clocks in other time domains
+
+{- | Rescale a gloss clock like 'GlossSimClockIO' or 'GlossEventClockIO' to 'UTCTime'.
+
+This is needed for compatibility with other realtime clocks like 'Millisecond'.
+-}
+type GlossClockUTC m cl = UTCClock (GlossConcT m) cl
+
+{- | Rescale a gloss clock like 'GlossSimClockIO' or 'GlossEventClockIO' to 'UTCTime'.
+
+Uses 'addUTC'. For other strategies to rescale a gloss clock to 'UTCTime',
+see "FRP.Rhine.Clock.Realtime".
+-}
+glossClockUTC :: (MonadIO m, Real (Time cl)) => cl -> GlossClockUTC m cl
+glossClockUTC = addUTC
