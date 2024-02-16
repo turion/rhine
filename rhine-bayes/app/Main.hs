@@ -206,8 +206,8 @@ visualisation = proc Result {temperature, measured, latent, particlesPosition, p
           ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
-  drawParticles -< particlesPosition
-  drawParticlesTemperature -< particlesTemperature
+  drawParticles -< take 100 particlesPosition
+  drawParticlesTemperature -< take 100 particlesTemperature
 
 -- ** Parameters for the temperature display
 
