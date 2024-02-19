@@ -25,9 +25,6 @@ import Text.Printf (printf)
 -- transformers
 import Control.Monad.Trans.Class
 
--- time
-import Data.Time (addUTCTime, getCurrentTime)
-
 -- mmorph
 import Control.Monad.Morph
 
@@ -113,7 +110,7 @@ initialTemperature :: Temperature
 initialTemperature = 7
 
 -- | We assume the user changes the temperature randomly every 3 seconds.
-temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () Temperature
+temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => Behaviour m td Temperature
 temperatureProcess =
   -- Draw events from a Poisson process with a rate of one event per 3 seconds
   poissonHomogeneous 3
@@ -171,7 +168,7 @@ emptyResult =
 
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
-nParticles = 100
+nParticles = 200
 
 -- * Visualization
 
@@ -190,6 +187,7 @@ visualisation :: (Diff td ~ Double) => BehaviourF App td Result ()
 visualisation = proc Result {temperature, measured, latent, particlesPosition, particlesTemperature} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
+  dt <- sinceLastS -< ()
   arrMCl paintIO
     -<
       toThermometer $
@@ -201,14 +199,15 @@ visualisation = proc Result {temperature, measured, latent, particlesPosition, p
                   [ printf "Temperature: %.2f" temperature
                   , printf "Particles: %i" $ length particlesPosition
                   , printf "Time: %.1f" time
+                  , printf "FPS: %.1f" $ 1 / dt
                   ]
               return $ translate 0 ((-150) * n) $ text message
           , color red $ rectangleUpperSolid thermometerWidth $ double2Float temperature * thermometerScale
           ]
   drawBall -< (measured, 0.3, red)
   drawBall -< (latent, 0.3, green)
-  drawParticles -< particlesPosition
-  drawParticlesTemperature -< particlesTemperature
+  drawParticles -< take 100 particlesPosition
+  drawParticlesTemperature -< take 100 particlesTemperature
 
 -- ** Parameters for the temperature display
 
@@ -269,6 +268,7 @@ mains =
   [ ("single rate", mainSingleRate)
   , ("single rate, parameter collapse", mainSingleRateCollapse)
   , ("multi rate, temperature process", mainMultiRate)
+  , ("multi rate, inference buffer", mainMultiRateInferenceBuffer)
   ]
 
 main :: IO ()
@@ -279,15 +279,8 @@ main = do
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
--- | Rescale to the 'Double' time domain
-type GlossClock = RescaledClock GlossSimClockIO Double
-
-glossClock :: GlossClock
-glossClock =
-  RescaledClock
-    { unscaledClock = GlossSimClockIO
-    , rescale = float2Double
-    }
+glossClockSingleRate :: GlossClockUTC SamplerIO GlossSimClockIO
+glossClockSingleRate = glossClockUTC GlossSimClockIO
 
 -- *** Poor attempt at temperature inference: Particle collapse
 
@@ -328,11 +321,12 @@ mainClSFCollapse = proc () -> do
   output <- filteredCollapse -< initialTemperature
   visualisation -< output
 
+mainSingleRateCollapse :: IO ()
 mainSingleRateCollapse =
   void $
     sampleIO $
       launchInGlossThread glossSettings $
-        reactimateCl glossClock mainClSFCollapse
+        reactimateCl glossClockSingleRate mainClSFCollapse
 
 -- *** Infer temperature with a stochastic process
 
@@ -359,25 +353,14 @@ mainClSF = proc () -> do
   output <- filtered -< initialTemperature
   visualisation -< output
 
+mainSingleRate :: IO ()
 mainSingleRate =
   void $
     sampleIO $
       launchInGlossThread glossSettings $
-        reactimateCl glossClock mainClSF
+        reactimateCl glossClockSingleRate mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
-
--- | Rescale the gloss clocks so they will be compatible with real 'UTCTime' (needed for compatibility with 'Millisecond')
-type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
-
-glossClockUTC :: (Real (Time cl)) => cl -> GlossClockUTC cl
-glossClockUTC cl =
-  RescaledClockS
-    { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arr $ \(timePassed, event) -> (addUTCTime (realToFrac timePassed) now, event), now)
-    }
 
 {- | The part of the program which simulates latent position and sensor,
    running 100 times a second.
@@ -386,7 +369,7 @@ modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) 
 modelRhine = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature) @@ liftClock waitClock
 
 -- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC GlossEventClockIO) () Temperature
+userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC IO GlossEventClockIO) () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
     selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
@@ -413,7 +396,7 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
             }
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
-visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
+visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC IO GlossSimClockIO) Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
 
 {- FOURMOLU_DISABLE -}
@@ -434,6 +417,33 @@ mainMultiRate =
   void $
     launchInGlossThread glossSettings $
       flow mainRhineMultiRate
+
+-- ** Multi-rate: Inference in separate buffer
+
+mainRhineMultiRateInferenceBuffer =
+  userTemperature
+    @@ glossClockUTC GlossEventClockIO
+    >-- keepLast initialTemperature
+    --> modelRhine
+    @>>^ (\(temperature, (sensor, pos)) -> (sensor, (temperature, sensor, pos)))
+    >-- hoistResamplingBuffer sampleIOGloss (inferenceBuffer nParticles resampleSystematic (temperatureProcess >-> (prior &&& clId)) (\(pos, _) sensor -> sensorLikelihood pos sensor))
+    *-* keepLast (initialTemperature, zeroVector, zeroVector)
+    --> ( \(particles, (temperature, measured, latent)) ->
+            Result
+              { temperature
+              , measured
+              , latent
+              , particlesPosition = second (const (1 / fromIntegral nParticles)) <$> particles
+              , particlesTemperature = (, 1 / fromIntegral nParticles) . snd <$> particles
+              }
+        )
+    ^>>@ visualisationRhine
+
+mainMultiRateInferenceBuffer :: IO ()
+mainMultiRateInferenceBuffer =
+  void $
+    launchInGlossThread glossSettings $
+      flow mainRhineMultiRateInferenceBuffer
 
 -- * Utilities
 

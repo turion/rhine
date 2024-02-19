@@ -61,7 +61,7 @@ common opts
   if flag(dev)
     ghc-options: -Werror
 
-  ghc-options:  -W
+  ghc-options:  -Wall
                 -Wno-unticked-promoted-constructors
 
   default-extensions:

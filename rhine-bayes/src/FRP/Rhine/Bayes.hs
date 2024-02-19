@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module FRP.Rhine.Bayes where
 
 -- transformers
@@ -7,7 +8,7 @@ import Control.Monad.Trans.Reader (ReaderT (..))
 import Numeric.Log hiding (sum)
 
 -- monad-bayes
-import Control.Monad.Bayes.Class
+import Control.Monad.Bayes.Class hiding (posterior)
 import Control.Monad.Bayes.Population
 
 -- dunai
@@ -18,6 +19,8 @@ import qualified Data.MonadicStreamFunction.Bayes as DunaiBayes
 
 -- rhine
 import FRP.Rhine
+import Data.MonadicStreamFunction.Bayes (runPopulationS)
+import GHC.Stack (HasCallStack)
 
 -- * Inference methods
 
@@ -108,16 +111,16 @@ wienerVaryingLogDomain = wienerVarying >>> arr Exp
   * The output is the number of events since the last tick.
 -}
 poissonInhomogeneous ::
-  (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
+  (HasCallStack, MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
   BehaviourF m td (Diff td) Int
-poissonInhomogeneous = arrM $ \rate -> ReaderT $ \timeInfo -> poisson $ realToFrac $ sinceLast timeInfo / rate
+poissonInhomogeneous = arrM $ \rate -> ReaderT $ \timeInfo -> poisson $ realToFrac $ max 0 (sinceLast timeInfo) / rate
 
 -- | Like 'poissonInhomogeneous', but the rate is constant.
 poissonHomogeneous ::
   (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
   -- | The (constant) rate of the process
   Diff td ->
-  BehaviourF m td () Int
+  Behaviour m td Int
 poissonHomogeneous rate = arr (const rate) >>> poissonInhomogeneous
 
 {- | The Gamma process, https://en.wikipedia.org/wiki/Gamma_process.
@@ -140,3 +143,38 @@ gammaInhomogeneous gamma = proc rate -> do
 -}
 bernoulliInhomogeneous :: (MonadDistribution m) => BehaviourF m td Double Bool
 bernoulliInhomogeneous = arrMCl bernoulli
+
+
+inferenceBuffer :: forall clA clS time m s a . (TimeDomain time, time ~ Time clS, time ~ Time clA, Monad m, MonadDistribution m)
+     => Int ->
+      (forall n x . MonadDistribution n =>  PopulationT n x -> PopulationT n x) ->
+         Behaviour m time s -> (s -> a -> Log Double) -> ResamplingBuffer m clA clS a [s]
+inferenceBuffer nParticles resampler process likelihood = msfBuffer' $ runPopulationS nParticles resampler posterior >>> arr (fmap fst)
+ where
+  processParClock :: ClSF m (ParallelClock clA clS) () s
+  processParClock = process
+  posterior :: Monad m => MSF (PopulationT m) (Either (TimeInfo clS) (TimeInfo clA, a)) s
+  posterior = proc tia -> do
+    lastTime <- iPre Nothing -< Just $ either absolute (absolute . fst) tia
+    let ti = (either (retag Right) (retag Left . fst) tia) { sinceLast = maybe (sinceInit ti) (absolute ti `diffTime`) lastTime }
+    s <- DunaiReader.runReaderS $ liftClSF processParClock -< (ti, ())
+    right $ arrM factor -< likelihood s . snd <$> tia
+    returnA -< s
+-- inferenceBuffer nParticles process likelihood = go $ replicate nParticles process
+--  where
+--   stepToTime :: TimeInfo cl -> ClSF m cl () s -> m (s, ClSF m cl () s)
+--   stepToTime ti clsf = second SomeBehaviour <$> runReaderT (unMSF (getSomeBehaviour clsf) ()) ti
+
+--   -- Add resamplnig here
+--   stepAllToTime :: Monad m => (forall n . MonadDistribution n =>  PopulationT n a -> PopulationT n a) -> TimeInfo cl -> [ClSF m cl () s] -> m [(s, ClSF m cl () s)]
+--   stepAllToTime resampler ti = fmap _ . runPopulationT . resampler . fromWeightedList . fmap _ . mapM (stepToTime ti)
+
+--   go :: [ClSF m (ParallelClock clA clB) () s] -> ResamplingBuffer m clA clS a s
+--   go msfs = ResamplingBuffer
+--     { put = \ti a -> do
+--         stepped <- forM msfs $ \msf -> do
+--           msf' <- stepToTime (retag Left ti) msf
+--           _ -- factor each msf individually, resample all at the end
+--         return $ go $ snd <$> stepped
+--     , get = _
+--     }
