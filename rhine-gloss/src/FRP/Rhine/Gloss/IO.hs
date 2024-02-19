@@ -19,6 +19,10 @@ module FRP.Rhine.Gloss.IO (
   flowGlossIO,
   runGlossEnvClock,
   RunGlossEnvClock,
+  GlossSimClockIODouble,
+  glossSimClockIODouble,
+  GlossClockUTC,
+  glossClockUTC
 )
 where
 
@@ -221,10 +225,10 @@ glossSimClockIODouble =
 
 This is needed for compatibility with other realtime clocks like 'Millisecond'.
 -}
-type GlossClockUTC cl = RescaledClockS (GlossConcT IO) cl UTCTime (Tag cl)
+type GlossClockUTC m cl = RescaledClockS (GlossConcT m) cl UTCTime (Tag cl)
 
 -- | Rescale a gloss clock like 'GlossSimClockIO' or 'GlossEventClockIO' to the UTC time domain.
-glossClockUTC :: cl -> GlossClockUTC cl
+glossClockUTC :: (Monad m, MonadIO m) => cl -> GlossClockUTC m cl
 glossClockUTC cl =
   RescaledClockS
     { unscaledClockS = cl

@@ -279,6 +279,9 @@ main = do
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
+glossClockSingleRate :: GlossClockUTC SamplerIO GlossSimClockIO
+glossClockSingleRate = glossClockUTC GlossSimClockIO
+
 -- *** Poor attempt at temperature inference: Particle collapse
 
 -- | Choose an exponential distribution as prior for the temperature
@@ -322,7 +325,7 @@ mainSingleRateCollapse =
   void $
     sampleIO $
       launchInGlossThread glossSettings $
-        reactimateCl glossClock mainClSFCollapse
+        reactimateCl glossClockSingleRate mainClSFCollapse
 
 -- *** Infer temperature with a stochastic process
 
@@ -353,7 +356,7 @@ mainSingleRate =
   void $
     sampleIO $
       launchInGlossThread glossSettings $
-        reactimateCl glossClock mainClSF
+        reactimateCl glossClockSingleRate mainClSF
 
 -- ** Multi-rate: Simulation, inference, display at different rates
 
@@ -364,7 +367,7 @@ modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) 
 modelRhine = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature) @@ liftClock waitClock
 
 -- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC GlossEventClockIO) () Temperature
+userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC IO GlossEventClockIO) () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
     selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
@@ -391,7 +394,7 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
             }
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
-visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
+visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC IO GlossSimClockIO) Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
 
 {- FOURMOLU_DISABLE -}
