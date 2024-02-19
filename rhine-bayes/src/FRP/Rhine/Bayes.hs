@@ -158,11 +158,8 @@ inferenceBuffer nParticles resampler process likelihood = msfBuffer' $ runPopula
     lastTime <- iPre Nothing -< Just $ either absolute (absolute . fst) tia
     let ti = (either (retag Right) (retag Left . fst) tia) { sinceLast = maybe (sinceInit ti) (absolute ti `diffTime`) lastTime }
     s <- DunaiReader.runReaderS $ liftClSF processParClock -< (ti, ())
-    case tia of
-      Left _ -> returnA -< s
-      Right (_, a) -> do
-        arrM factor -< likelihood s a
-        returnA -< s
+    right $ arrM factor -< likelihood s . snd <$> tia
+    returnA -< s
 -- inferenceBuffer nParticles process likelihood = go $ replicate nParticles process
 --  where
 --   stepToTime :: TimeInfo cl -> ClSF m cl () s -> m (s, ClSF m cl () s)
