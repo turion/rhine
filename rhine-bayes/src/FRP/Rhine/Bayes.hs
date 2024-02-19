@@ -8,7 +8,7 @@ import Control.Monad.Trans.Reader (ReaderT (..))
 import Numeric.Log hiding (sum)
 
 -- monad-bayes
-import Control.Monad.Bayes.Class
+import Control.Monad.Bayes.Class hiding (posterior)
 import Control.Monad.Bayes.Population
 
 -- dunai
@@ -147,7 +147,7 @@ bernoulliInhomogeneous = arrMCl bernoulli
 
 inferenceBuffer :: forall clA clS time m s a . (TimeDomain time, time ~ Time clS, time ~ Time clA, Monad m, MonadDistribution m)
      => Int ->
-      (forall n a . MonadDistribution n =>  PopulationT n a -> PopulationT n a) ->
+      (forall n x . MonadDistribution n =>  PopulationT n x -> PopulationT n x) ->
          Behaviour m time s -> (s -> a -> Log Double) -> ResamplingBuffer m clA clS a [s]
 inferenceBuffer nParticles resampler process likelihood = msfBuffer' $ runPopulationS nParticles resampler posterior >>> arr (fmap fst)
  where

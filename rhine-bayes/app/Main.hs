@@ -321,6 +321,7 @@ mainClSFCollapse = proc () -> do
   output <- filteredCollapse -< initialTemperature
   visualisation -< output
 
+mainSingleRateCollapse :: IO ()
 mainSingleRateCollapse =
   void $
     sampleIO $
@@ -352,6 +353,7 @@ mainClSF = proc () -> do
   output <- filtered -< initialTemperature
   visualisation -< output
 
+mainSingleRate :: IO ()
 mainSingleRate =
   void $
     sampleIO $
