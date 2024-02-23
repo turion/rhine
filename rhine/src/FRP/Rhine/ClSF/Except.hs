@@ -37,7 +37,8 @@ import qualified Control.Monad.Trans.MSF.Except as MSFE
 -- rhine
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except.Util
-import FRP.Rhine.Clock
+import FRP.Rhine.SN.Tick
+import Data.SOP (All)
 
 -- * Throwing exceptions
 
@@ -102,14 +103,14 @@ and `(>>=)` is exception handling.
 * @b@:  The output type
 * @e@:  The type of exceptions that can be thrown
 -}
-type ClSFExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
+type ClSFExcept m cls a b e = MSFExcept (ReaderT (Tick cls) m) a b e
 
 {- | A clock polymorphic 'ClSFExcept',
 or equivalently an exception-throwing behaviour.
 Any clock with time domain @time@ may occur.
 -}
 type BehaviourFExcept m time a b e =
-  forall cl. (time ~ Time cl) => ClSFExcept m cl a b e
+  forall cls. (All (HasTimeDomain time) cls) => ClSFExcept m cls a b e
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
