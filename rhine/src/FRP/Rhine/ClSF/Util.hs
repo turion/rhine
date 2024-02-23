@@ -16,8 +16,8 @@ module FRP.Rhine.ClSF.Util where
 import Control.Arrow
 import Control.Category (Category)
 import qualified Control.Category (id)
-import Data.Maybe (fromJust)
 import Data.Functor (($>))
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (Last), getLast)
 
 -- containers
@@ -453,4 +453,4 @@ onLocalClock behaviour = readerS $ proc (ti, aMaybe) -> do
    defaulting to the given initialisation value.
 -}
 lastS :: (Monad m) => a -> MSF m (Maybe a) a
-lastS a = arr Last >>> mappendFrom (Last (Just a)) >>> arr (getLast >>> fromJust)
+lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
