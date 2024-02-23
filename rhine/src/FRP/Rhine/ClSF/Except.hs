@@ -34,7 +34,8 @@ import Data.Automaton.Trans.Except qualified as AutomatonE
 -- rhine
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except.Util
-import FRP.Rhine.Clock
+import FRP.Rhine.SN.Tick
+import Data.SOP (All)
 
 -- * Throwing exceptions
 
@@ -100,14 +101,14 @@ and `(>>=)` is exception handling.
 * @m@:  The monad that the signal function may take side effects in
 * @e@:  The type of exceptions that can be thrown
 -}
-type ClSFExcept cl a b m e = AutomatonExcept a b (ReaderT (TimeInfo cl) m) e
+type ClSFExcept cls a b m e = AutomatonExcept a b (ReaderT (Tick cls) m) e
 
 {- | A clock polymorphic 'ClSFExcept',
 or equivalently an exception-throwing behaviour.
 Any clock with time domain @time@ may occur.
 -}
 type BehaviourFExcept time a b m e =
-  forall cl. (time ~ Time cl) => ClSFExcept cl a b m e
+  forall cls. (All (HasTimeDomain time) cls) => ClSFExcept cls a b m e
 
 -- | Compatibility to U.S. american spelling.
 type BehaviorFExcept time a b m e = BehaviourFExcept time a b m e

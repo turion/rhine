@@ -244,7 +244,7 @@ instance
       )
 
 -- | Lift a clock type into a monad transformer.
-type LiftClock m t cl = HoistClock m (t m) cl
+type LiftClock m t = HoistClock m (t m)
 
 -- | Lift a clock value into a monad transformer.
 liftClock :: (Monad m, MonadTrans t) => cl -> LiftClock m t cl

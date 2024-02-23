@@ -78,6 +78,7 @@ import FRP.Rhine.Clock.Proxy (GetClockProxy (getClockProxy))
 import FRP.Rhine.Clock.Util (genTimeInfo)
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer (..))
 import FRP.Rhine.Schedule (scheduleList)
+import FRP.Rhine.SN.Tick
 import GHC.Stack (HasCallStack)
 
 -- FIXME Don't export Absent, maybe by having an internal module?
@@ -100,73 +101,6 @@ instance Monad (At cl) where
     b@(Present _) -> b
     Absent -> error "At.>>=: internal error, mixed Absent and Present"
   Absent >>= _ = Absent
-
--- FIXME look up how something like this is done properly
--- type family HasClock cl (cls :: [Type]) :: Constraint where
---   HasClock cl (cl ': cls) = ()
---   HasClock cl1 (cl2 ': cls) = HasClock cl1 cls
-
--- FIXME rewrite with sop-core?
--- FIXME rewrite with prisms?
-class HasClock cl cls where
-  position :: Position cl cls
-
-instance HasClock cl (cl ': cls) where
-  position = Z Refl
-
-instance {-# OVERLAPPABLE #-} (HasClock cl cls) => HasClock cl (cl' ': cls) where
-  position = S position
-
-inject :: forall cl cls. (HasClock cl cls) => Proxy cl -> TimeInfo cl -> Tick cls
-inject _ = Tick . injectPosition (position @cl @cls)
-
-injectPosition :: Position cl cls -> f cl -> NS f cls
-injectPosition (Z Refl) ti = Z ti
-injectPosition (S pointer) ti = S $ injectPosition pointer ti
-
-project :: forall cl cls. (HasClock cl cls) => Proxy cl -> Tick cls -> Maybe (TimeInfo cl)
-project _ = projectPosition (position @cl @cls) . getTick
-
-projectPosition :: Position cl cls -> NS f cls -> Maybe (f cl)
-projectPosition (Z Refl) (Z ti) = Just ti
-projectPosition (S position) (S tick) = projectPosition position tick
-projectPosition _ _ = Nothing
-
--- type family HasClocksOrdered clA clB (cls :: [Type]) :: Constraint where
---   HasClocksOrdered clA clB (clA ': cls) = HasClock clB cls
---   HasClocksOrdered clA clB (cl ': cls) = HasClocksOrdered clA clB cls
-
-class HasClocksOrdered clA clB cls where
-  orderedPositions :: OrderedPositions clA clB cls
-
-instance (HasClock clB cls) => HasClocksOrdered clA clB (clA ': cls) where
-  orderedPositions = OPHere position
-
-instance {-# OVERLAPPABLE #-} (HasClocksOrdered clA clB cls) => HasClocksOrdered clA clB (cl ': cls) where
-  orderedPositions = OPThere orderedPositions
-
-firstPosition :: OrderedPositions clA clB cls -> Position clA cls
-firstPosition (OPHere _) = Z Refl
-firstPosition (OPThere positions) = S $ firstPosition positions
-
-secondPosition :: OrderedPositions clA clB cls -> Position clB cls
-secondPosition (OPHere pos) = S pos
-secondPosition (OPThere positions) = S $ secondPosition positions
-
-newtype PositionIn cls cl = PositionIn {getPositionIn :: Position cl cls}
-
--- | Whether 'clsSub' is a subsequence of 'cls'
-class HasClocks clsSub cls where
-  positions :: NP (PositionIn cls) clsSub
-
-instance HasClocks '[] cls where
-  positions = Nil
-
-instance (SListI clsSub, HasClocks clsSub cls) => HasClocks (cl ': clsSub) (cl ': cls) where
-  positions = PositionIn position :* liftA_NP (PositionIn . S . getPositionIn) positions
-
-instance (SListI clsSub, HasClocks clsSub cls) => HasClocks clsSub (cl ': cls) where
-  positions = liftA_NP (PositionIn . S . getPositionIn) positions
 
 data SNComponent m cls a b where
   Synchronous ::
@@ -339,7 +273,6 @@ data ClassyClock m td cl where
 -- FIXME This is
 newtype Clocks m td cls = Clocks {getClocks :: NP (ClassyClock m td) cls}
 
-type Position cl cls = NS ((:~:) cl) cls
 
 instance (TimeDomain td) => Clock m (Clocks m td cls) where
   type Time (Clocks m td cls) = td
@@ -353,11 +286,6 @@ data TheTag td cl = (Time cl ~ td) => TheTag {getTheTag :: Tag cl}
 
 type Tags td cls = NS (TheTag td) cls
 
-data OrderedPositions cl1 cl2 cls where
-  OPHere :: Position cl2 cls -> OrderedPositions cl1 cl2 (cl1 ': cls)
-  OPThere :: OrderedPositions cl1 cl2 cls -> OrderedPositions cl1 cl2 (cl ': cls)
-
-newtype Tick cls = Tick {getTick :: NS TimeInfo cls}
 
 type family Append (cls1 :: [Type]) (cls2 :: [Type]) :: [Type] where
   Append '[] cls = cls

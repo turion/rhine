@@ -13,7 +13,9 @@ import Data.Automaton.Trans.Reader
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Schedule
+import FRP.Rhine.SN.Tick
 
+-- FIXME rewrite with Traversing
 {- | An 'Automaton' can be given arbitrary other arguments
    that cause it to tick without doing anything
    and replicating the last output.
@@ -33,11 +35,11 @@ upsampleAutomaton b automaton = right automaton >>> accumulateWith (<>) (Right b
    (with the given @b@ as initialisation).
 -}
 upsampleR ::
-  (Monad m, Time clL ~ Time clR) =>
+  (Monad m, HasClocks clsSub cls) =>
   b ->
-  ClSF m clR a b ->
-  ClSF m (ParallelClock clL clR) a b
-upsampleR b clsf = readerS $ arr remap >>> upsampleAutomaton b (runReaderS clsf)
+  ClSF m clsSub a b ->
+  ClSF m cls a b
+upsampleR b clsf = readerS $ arr (_) >>> upsampleAutomaton b (runReaderS clsf)
   where
     remap (TimeInfo {tag = Left tag}, _) = Left tag
     remap (TimeInfo {tag = Right tag, ..}, a) = Right (TimeInfo {..}, a)
@@ -48,10 +50,10 @@ upsampleR b clsf = readerS $ arr remap >>> upsampleAutomaton b (runReaderS clsf)
    (with the given @b@ as initialisation).
 -}
 upsampleL ::
-  (Monad m, Time clL ~ Time clR) =>
+  (Monad m, HasClocks clsSub cls) =>
   b ->
-  ClSF m clL a b ->
-  ClSF m (ParallelClock clL clR) a b
+  ClSF m clsSub a b ->
+  ClSF m cls a b
 upsampleL b clsf = readerS $ arr remap >>> upsampleAutomaton b (runReaderS clsf)
   where
     remap (TimeInfo {tag = Right tag}, _) = Left tag

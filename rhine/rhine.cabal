@@ -132,6 +132,7 @@ library
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
     FRP.Rhine.Rhine.Free
+    FRP.Rhine.SN.Tick
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
     FRP.Rhine.SN.Free
