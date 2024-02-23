@@ -17,6 +17,7 @@ import Control.Arrow
 import Control.Category (Category)
 import qualified Control.Category (id)
 import Data.Maybe (fromJust)
+import Data.Functor (($>))
 import Data.Monoid (Last (Last), getLast)
 
 -- containers
@@ -26,7 +27,7 @@ import Data.Sequence
 import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
-import Control.Monad.Trans.MSF.Reader (readerS)
+import Control.Monad.Trans.MSF.Reader (readerS, runReaderS)
 import Data.MonadicStreamFunction.Instances.Num ()
 import Data.MonadicStreamFunction.Instances.VectorSpace ()
 
@@ -435,6 +436,16 @@ scaledTimer ::
   Diff td ->
   BehaviorF (ExceptT () m) td a (Diff td)
 scaledTimer diff = timer diff >>> arr (/ diff)
+
+-- * Ad-hoc re-clocking utilities
+
+-- | Define a local clock for one 'BehaviourF' which ticks exactly when the input is @'Just' a@.
+onLocalClock :: (Monad m, TimeDomain td) => BehaviourF m td a b -> BehaviourF m td (Maybe a) (Maybe b)
+onLocalClock behaviour = readerS $ proc (ti, aMaybe) -> do
+  let now = absolute ti
+  x <- iPre mempty <<< mappendS -< Last $ aMaybe $> now
+  let sinceLast' = maybe (sinceLast ti) (`diffTime` now) $ getLast x
+  mapMaybeS $ runReaderS behaviour -< (ti {sinceLast = sinceLast'},) <$> aMaybe
 
 -- * To be ported to Dunai
 
