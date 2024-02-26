@@ -147,7 +147,7 @@ jobs:
       - run: ./cabal_check.sh
 
   success:
-    name: Success
+    name: Successfully build and test on all systems
     needs:
       - build-cabal
       - build-flake
