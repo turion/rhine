@@ -1,122 +1,181 @@
-name:                rhine-examples
-version:             1.2
-synopsis:            Some simple example applications with rhine
-description:         Diverse console example applications with rhine
-                     that show some of the standard components.
-license:             BSD3
-license-file:        LICENSE
-author:              Manuel Bärenz
-maintainer:          programming@manuelbaerenz.de
+name: rhine-examples
+version: 1.2
+synopsis: Some simple example applications with rhine
+description:
+  Diverse console example applications with rhine
+  that show some of the standard components.
+
+license: BSD3
+license-file: LICENSE
+author: Manuel Bärenz
+maintainer: programming@manuelbaerenz.de
 -- copyright:
-category:            FRP
-build-type:          Simple
-extra-doc-files:     ChangeLog.md
-cabal-version:       2.0
+category: FRP
+build-type: Simple
+extra-doc-files: ChangeLog.md
+cabal-version: 2.0
 
 executable HelloWorld
-  hs-source-dirs:      src
-  main-is:             HelloWorld.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-  default-language:    Haskell2010
-  default-extensions:
-     TypeOperators
+  hs-source-dirs: src
+  main-is: HelloWorld.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    rhine ==1.2
+
+  default-language: Haskell2010
+  default-extensions: TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
 executable Demonstration
-  hs-source-dirs:      src
-  main-is:             Demonstration.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-  default-language:    Haskell2010
-  default-extensions:
-     TypeOperators
+  hs-source-dirs: src
+  main-is: Demonstration.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    rhine ==1.2
+
+  default-language: Haskell2010
+  default-extensions: TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
 executable ADSR
-  hs-source-dirs:      src
-  main-is:             ADSR.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-  default-language:    Haskell2010
-  default-extensions:
-     TypeOperators
+  hs-source-dirs: src
+  main-is: ADSR.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    rhine ==1.2
+
+  default-language: Haskell2010
+  default-extensions: TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
 executable Ball
-  hs-source-dirs:      src
-  main-is:             Ball.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-                     , vector-sized >= 1.4
-                     , random       >= 1.1
-  default-language:    Haskell2010
+  hs-source-dirs: src
+  main-is: Ball.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    random >=1.1,
+    rhine ==1.2,
+    vector-sized >=1.4
+
+  default-language: Haskell2010
   default-extensions:
     Arrows
     DataKinds
     RankNTypes
     TypeFamilies
     TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
 executable Periodic
-  hs-source-dirs:      src
-  main-is:             Periodic.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-                     , transformers >= 0.5
-                     , monad-schedule >= 0.1
-  default-language:    Haskell2010
-  default-extensions:
-     TypeOperators
+  hs-source-dirs: src
+  main-is: Periodic.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    monad-schedule >=0.1,
+    rhine ==1.2,
+    transformers >=0.5
+
+  default-language: Haskell2010
+  default-extensions: TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
 executable EventClock
-  hs-source-dirs:      src
-  main-is:             EventClock.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-                     , random       >= 1.1
-  default-language:    Haskell2010
-  default-extensions:
-     TypeOperators
+  hs-source-dirs: src
+  main-is: EventClock.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    random >=1.1,
+    rhine ==1.2
+
+  default-language: Haskell2010
+  default-extensions: TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
 executable Sawtooth
-  hs-source-dirs:      src
-  main-is:             Sawtooth.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-  default-language:    Haskell2010
-  default-extensions:
-     TypeOperators
+  hs-source-dirs: src
+  main-is: Sawtooth.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    rhine ==1.2
+
+  default-language: Haskell2010
+  default-extensions: TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
 executable RandomWalk
-  hs-source-dirs:      src
-  main-is:             RandomWalk.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base         >= 4.14 && < 4.18
-                     , rhine        == 1.2
-                     , random       >= 1.1
-                     , simple-affine-space
-  default-language:    Haskell2010
-  default-extensions:
-     TypeOperators
+  hs-source-dirs: src
+  main-is: RandomWalk.hs
+  ghc-options:
+    -Wall
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base >=4.14 && <4.18,
+    random >=1.1,
+    rhine ==1.2,
+    simple-affine-space
+
+  default-language: Haskell2010
+  default-extensions: TypeOperators
+
   if flag(dev)
     ghc-options: -Werror
 
