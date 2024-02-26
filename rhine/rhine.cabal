@@ -1,11 +1,7 @@
-cabal-version:       2.2
-
-name:                rhine
-
-version:             1.2
-
+cabal-version: 2.2
+name: rhine
+version: 1.2
 synopsis: Functional Reactive Programming with type-level clocks
-
 description:
   Rhine is a library for synchronous and asynchronous Functional Reactive Programming (FRP).
   It separates the aspects of clocking, scheduling and resampling
@@ -22,67 +18,66 @@ description:
   A (synchronous) program outputting "Hello World!" every tenth of a second looks like this:
   @flow $ constMCl (putStrLn "Hello World!") \@\@ (waitClock :: Millisecond 100)@
 
-
-license:             BSD-3-Clause
-
-license-file:        LICENSE
-
-author:              Manuel Bärenz
-
-maintainer:          maths@manuelbaerenz.de
-
-category:            FRP
-
-build-type:          Simple
-
-extra-source-files:  ChangeLog.md
-
-extra-doc-files:     README.md
-
+license: BSD-3-Clause
+license-file: LICENSE
+author: Manuel Bärenz
+maintainer: maths@manuelbaerenz.de
+category: FRP
+build-type: Simple
+extra-source-files: ChangeLog.md
+extra-doc-files: README.md
 tested-with:
-  GHC == 9.0.2
-  GHC == 9.2.8
-  GHC == 9.4.7
+  ghc ==9.0.2
+  ghc ==9.2.8
+  ghc ==9.4.7
 
 source-repository head
-  type:     git
+  type: git
   location: https://github.com/turion/rhine.git
 
 source-repository this
-  type:     git
+  type: git
   location: https://github.com/turion/rhine.git
-  tag:      v1.0
+  tag: v1.0
 
 common opts
   build-depends:
-    , base         >= 4.14 && < 4.18
-    , vector-sized >= 1.4
+    base >=4.14 && <4.18,
+    vector-sized >=1.4,
 
   if flag(dev)
     ghc-options: -Werror
 
-  ghc-options:  -W
-                -Wno-unticked-promoted-constructors
+  ghc-options:
+    -W
+    -Wno-unticked-promoted-constructors
 
   default-extensions:
-      DataKinds
-    , FlexibleContexts
-    , FlexibleInstances
-    , MultiParamTypeClasses
-    , NamedFieldPuns
-    , NoStarIsType
-    , TupleSections
-    , TypeApplications
-    , TypeFamilies
-    , TypeOperators
+    DataKinds
+    FlexibleContexts
+    FlexibleInstances
+    MultiParamTypeClasses
+    NamedFieldPuns
+    NoStarIsType
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
 
   -- Base language which the package is written in.
-  default-language:    Haskell2010
+  default-language: Haskell2010
 
 library
   import: opts
   exposed-modules:
     FRP.Rhine
+    FRP.Rhine.ClSF
+    FRP.Rhine.ClSF.Core
+    FRP.Rhine.ClSF.Except
+    FRP.Rhine.ClSF.Random
+    FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.Upsample
+    FRP.Rhine.ClSF.Util
     FRP.Rhine.Clock
     FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
@@ -95,13 +90,6 @@ library
     FRP.Rhine.Clock.Select
     FRP.Rhine.Clock.Unschedule
     FRP.Rhine.Clock.Util
-    FRP.Rhine.ClSF
-    FRP.Rhine.ClSF.Core
-    FRP.Rhine.ClSF.Except
-    FRP.Rhine.ClSF.Random
-    FRP.Rhine.ClSF.Reader
-    FRP.Rhine.ClSF.Upsample
-    FRP.Rhine.ClSF.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.ClockErasure
     FRP.Rhine.Reactimation.Combinators
@@ -114,52 +102,52 @@ library
     FRP.Rhine.ResamplingBuffer.MSF
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
-    FRP.Rhine.Schedule
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
+    FRP.Rhine.Schedule
     FRP.Rhine.Type
 
   other-modules:
-    FRP.Rhine.ClSF.Random.Util
     FRP.Rhine.ClSF.Except.Util
+    FRP.Rhine.ClSF.Random.Util
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
-
   -- Other library packages from which modules are imported.
   build-depends:
-                     , dunai        ^>= 0.11
-                     , transformers >= 0.5
-                     , time         >= 1.8
-                     , free         >= 5.1
-                     , containers   >= 0.5
-                     , text         >= 1.2 && < 2.1
-                     , deepseq      >= 1.4
-                     , random       >= 1.1
-                     , MonadRandom  >= 0.5
-                     , simple-affine-space ^>= 0.2
-                     , time-domain ^>= 0.1.0.2
-                     , monad-schedule ^>= 0.1.2
+    MonadRandom >=0.5,
+    containers >=0.5,
+    deepseq >=1.4,
+    dunai ^>=0.11,
+    free >=5.1,
+    monad-schedule ^>=0.1.2,
+    random >=1.1,
+    simple-affine-space ^>=0.2,
+    text >=1.2 && <2.1,
+    time >=1.8,
+    time-domain ^>=0.1.0.2,
+    transformers >=0.5,
 
   -- Directories containing source files.
-  hs-source-dirs:      src
+  hs-source-dirs: src
 
 test-suite test
   import: opts
-  hs-source-dirs:     test
-  type:               exitcode-stdio-1.0
-  main-is:            Main.hs
+  hs-source-dirs: test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
   other-modules:
     Clock
     Clock.FixedStep
     Clock.Millisecond
     Schedule
     Util
+
   build-depends:
-    , rhine
-    , monad-schedule
-    , tasty ^>= 1.4
-    , tasty-hunit ^>= 0.10
+    monad-schedule,
+    rhine,
+    tasty ^>=1.4,
+    tasty-hunit ^>=0.10,
 
 flag dev
   description: Enable warnings as errors. Active on ci.
