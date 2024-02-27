@@ -138,15 +138,16 @@ jobs:
       # - run: nix flake check
 
   cabal-check:
-    name: Check all cabal files
+    name: Check and format all cabal files
     runs-on:
       - ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: tfausak/cabal-gild-setup-action@v2
       - run: ./cabal_check.sh
 
   success:
-    name: Success
+    name: Successfully build and test on all systems
     needs:
       - build-cabal
       - build-flake
