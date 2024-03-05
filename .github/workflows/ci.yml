@@ -144,6 +144,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: tfausak/cabal-gild-setup-action@v2
+        with:
+          version: 1.0.2.4
       - run: ./cabal_check.sh
 
   success:
