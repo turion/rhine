@@ -35,7 +35,7 @@ library
     base >=4.11 && <4.19,
     dunai ^>=0.12.2,
     log-domain >=0.12,
-    monad-bayes ^>=1.2,
+    monad-bayes ^>=1.3,
     rhine ==1.2,
     transformers >=0.5
 
