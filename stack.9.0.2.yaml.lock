@@ -40,13 +40,6 @@ packages:
   original:
     hackage: vty-5.38@sha256:c3b46c8072f92b61dad09dac45ede37f1a093836e14ac84ece6515a4d3222864,5628
 - completed:
-    hackage: dunai-0.11.0@sha256:fc82a2ac6e2f7efcc2cd7f01412544ebe10d25143febdb0c3ebfb090220f4660,6372
-    pantry-tree:
-      sha256: 5435c0e0ccd848461ead40b59dd4c8dd7f36a010ed3f10c6795e0c52f8e614b4
-      size: 2172
-  original:
-    hackage: dunai-0.11.0@sha256:fc82a2ac6e2f7efcc2cd7f01412544ebe10d25143febdb0c3ebfb090220f4660,6372
-- completed:
     hackage: simple-affine-space-0.2.1@sha256:bc9b1f5ae236b2898cd6f20da2d4589fd662fac2e2057f29b01330f65c030434,2046
     pantry-tree:
       sha256: 13dd2303e75c96fe2ea318d2e724005840211f4af44ba78da1886a16a4b0ec82
@@ -144,6 +137,13 @@ packages:
       size: 741
   original:
     hackage: hspec-expectations-0.8.4@sha256:4237f094a7931202ff57ac6475542b0b314b50a7024550e2b6eb87cfb0d4ff93,1702
+- completed:
+    hackage: dunai-0.12.2@sha256:e769c1b89b5571138c20c387c304758f87f2b9c599fcfe6fc5a81cd7c4ec86b7,6982
+    pantry-tree:
+      sha256: 79a567d02d6d018530dcfa5ac9f7d5e9fead24e9038ba63fa1ed902369f7df31
+      size: 2232
+  original:
+    hackage: dunai-0.12.2
 snapshots:
 - completed:
     sha256: f1c4aca9b9b81afbb9db55571acb0690cdc01ac97a178234de281f9dc075e95e

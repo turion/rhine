@@ -36,6 +36,12 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
       with haskell-flake-utils.lib;
       tunePackages pkgs super {
         monad-bayes = [ (jailbreakUnbreak pkgs) dontCheck ];
+      } // {
+        dunai = super.callHackageDirect {
+          pkg = "dunai";
+          ver = "0.12.2";
+          sha256 = "sha256-zc0jFKV5maAqCY5C8ZLdLWuSOpX30l5ZjbFiA+ESA2A=";
+        } {};
       };
 
     name = "rhine";
