@@ -33,7 +33,7 @@ library
   other-modules: Data.MonadicStreamFunction.Bayes
   build-depends:
     base >=4.11 && <4.18,
-    dunai ^>=0.11,
+    dunai ^>=0.12.2,
     log-domain >=0.12,
     monad-bayes ^>=1.2,
     rhine ==1.2,
