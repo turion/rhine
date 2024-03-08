@@ -118,7 +118,7 @@ library
     MonadRandom >=0.5,
     containers >=0.5,
     deepseq >=1.4,
-    dunai ^>=0.11,
+    dunai ^>=0.12.2,
     free >=5.1,
     monad-schedule ^>=0.1.2,
     random >=1.1,
