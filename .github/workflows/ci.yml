@@ -40,7 +40,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     runs-on: ubuntu-latest
     steps:
-      - uses: kleidukos/get-tested@v0.1.6.0
+      - uses: kleidukos/get-tested@v0.1.7.0
         id: set-matrix
         with:
           cabal-file: "rhine/rhine.cabal"
