@@ -1,5 +1,9 @@
 # Revision history for rhine
 
+## 1.2.1
+
+* Added `FRP.Rhine.Clock.Realtime.Never` (clock that never ticks)
+
 ## 1.2
 
 * Changed Stdin clock Tag type to Text
