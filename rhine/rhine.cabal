@@ -86,6 +86,7 @@ library
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Event
     FRP.Rhine.Clock.Realtime.Millisecond
+    FRP.Rhine.Clock.Realtime.Never
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
     FRP.Rhine.Clock.Unschedule

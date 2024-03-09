@@ -38,6 +38,7 @@ import FRP.Rhine.Clock.Realtime.Audio as X
 import FRP.Rhine.Clock.Realtime.Busy as X
 import FRP.Rhine.Clock.Realtime.Event as X
 import FRP.Rhine.Clock.Realtime.Millisecond as X
+import FRP.Rhine.Clock.Realtime.Never as X
 import FRP.Rhine.Clock.Realtime.Stdin as X
 import FRP.Rhine.Clock.Select as X
 import FRP.Rhine.Clock.Unschedule as X
