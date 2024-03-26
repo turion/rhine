@@ -16,8 +16,8 @@ import Data.Time.Clock
 import Control.Monad.IO.Class
 
 -- text
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
 
 -- rhine
 import FRP.Rhine.Clock

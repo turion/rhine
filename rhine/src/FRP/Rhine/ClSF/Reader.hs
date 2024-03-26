@@ -14,7 +14,7 @@ import Data.Tuple (swap)
 import Control.Monad.Trans.Reader
 
 -- dunai
-import qualified Control.Monad.Trans.MSF.Reader as MSF
+import Control.Monad.Trans.MSF.Reader qualified as MSF
 
 -- rhine
 import FRP.Rhine.ClSF.Core

@@ -22,7 +22,7 @@ module FRP.Rhine.Clock (
 where
 
 -- base
-import qualified Control.Category as Category
+import Control.Category qualified as Category
 
 -- transformers
 import Control.Monad.IO.Class (MonadIO, liftIO)
