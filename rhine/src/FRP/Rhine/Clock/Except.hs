@@ -1,5 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-
 module FRP.Rhine.Clock.Except where
 
 -- base

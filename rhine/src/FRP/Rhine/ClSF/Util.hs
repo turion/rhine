@@ -15,7 +15,7 @@ module FRP.Rhine.ClSF.Util where
 -- base
 import Control.Arrow
 import Control.Category (Category)
-import qualified Control.Category (id)
+import Control.Category qualified (id)
 import Data.Maybe (fromJust)
 import Data.Monoid (Last (Last), getLast)
 

@@ -21,7 +21,7 @@ import Control.Monad.Random
 -- dunai
 import Control.Monad.Trans.MSF.Except (performOnFirstSample)
 import Control.Monad.Trans.MSF.Random as X hiding (evalRandS, getRandomRS, getRandomRS_, getRandomS, runRandS)
-import qualified Control.Monad.Trans.MSF.Random as MSF
+import Control.Monad.Trans.MSF.Random qualified as MSF
 
 -- rhine
 import FRP.Rhine.ClSF.Core

@@ -20,7 +20,7 @@ module FRP.Rhine.ClSF.Except (
 where
 
 -- base
-import qualified Control.Category as Category
+import Control.Category qualified as Category
 
 -- transformers
 import Control.Monad.Trans.Class (lift)
@@ -32,7 +32,7 @@ import Control.Monad.Trans.MSF.Except hiding (once, once_, throwOn, throwOn', th
 import Data.MonadicStreamFunction
 
 -- TODO Find out whether there is a cleverer way to handle exports
-import qualified Control.Monad.Trans.MSF.Except as MSFE
+import Control.Monad.Trans.MSF.Except qualified as MSFE
 
 -- rhine
 import FRP.Rhine.ClSF.Core

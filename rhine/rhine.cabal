@@ -60,6 +60,7 @@ common opts
     DataKinds
     FlexibleContexts
     FlexibleInstances
+    ImportQualifiedPost
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType

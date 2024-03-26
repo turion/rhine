@@ -5,7 +5,7 @@
 module FRP.Rhine.Clock.Unschedule where
 
 -- base
-import qualified Control.Concurrent as Concurrent (yield)
+import Control.Concurrent qualified as Concurrent (yield)
 import Control.Monad.IO.Class
 
 -- monad-schedule
