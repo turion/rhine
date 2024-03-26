@@ -5,6 +5,9 @@
 module FRP.Rhine.Clock.Realtime.Busy where
 
 -- base
+import Control.Monad.IO.Class
+
+-- time
 import Data.Time.Clock
 
 -- rhine
@@ -18,14 +21,14 @@ side effects, time measurement and framework overhead.
 -}
 data Busy = Busy
 
-instance Clock IO Busy where
+instance (MonadIO m) => Clock m Busy where
   type Time Busy = UTCTime
   type Tag Busy = ()
 
   initClock _ = do
-    initialTime <- getCurrentTime
+    initialTime <- liftIO getCurrentTime
     return
-      ( constM getCurrentTime
+      ( constM (liftIO getCurrentTime)
           &&& arr (const ())
       , initialTime
       )
