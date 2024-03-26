@@ -49,10 +49,10 @@ printEverySecond = arrMCl print
 main :: IO ()
 main =
   flow $
-    ms500 @@ waitClock |@|
-      ms1200 @@ waitClock
-        >-- collect
-        --> printEverySecond @@ waitClock
+    (ms500 @@ waitClock)
+      |@| (ms1200 @@ waitClock)
+      >-- collect
+      --> (printEverySecond @@ waitClock)
 
 {- | Rhine prevents the consumption of a signal at a different clock than it is created,
    if no explicit resampling strategy is given.

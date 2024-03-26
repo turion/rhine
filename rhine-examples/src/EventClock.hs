@@ -56,8 +56,8 @@ eventExample :: IO ()
 eventExample =
   runEventChanT $
     flow $
-      emitEventSystem |@|
-        handleEventSystem
+      emitEventSystem
+        |@| handleEventSystem
   where
     emitEventSystem = message >-> emitS @@ liftClock waitClock
     handleEventSystem = handleEvents @@ EventClock
