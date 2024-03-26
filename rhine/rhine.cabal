@@ -26,6 +26,12 @@ category: FRP
 build-type: Simple
 extra-source-files: ChangeLog.md
 extra-doc-files: README.md
+<<<<<<< HEAD
+data-files: test/assets/*.txt
+=======
+
+data-files:          test/assets/*.txt
+>>>>>>> f7d003c (WIP)
 tested-with:
   ghc ==9.0.2
   ghc ==9.2.8
@@ -43,7 +49,11 @@ source-repository this
 common opts
   build-depends:
     base >=4.14 && <4.18,
+    text >=1.2 && <2.1,
+    transformers >=0.5,
     vector-sized >=1.4,
+    transformers >= 0.5,
+    text         >= 1.2 && < 2.1,
 
   if flag(dev)
     ghc-options: -Werror
@@ -53,6 +63,7 @@ common opts
     -Wno-unticked-promoted-constructors
 
   default-extensions:
+    Arrows
     DataKinds
     FlexibleContexts
     FlexibleInstances
@@ -79,6 +90,11 @@ library
     FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Clock
+<<<<<<< HEAD
+=======
+    FRP.Rhine.Clock.Catch
+>>>>>>> f7d003c (WIP)
+    FRP.Rhine.Clock.Except
     FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
     FRP.Rhine.Clock.Proxy
@@ -122,12 +138,14 @@ library
     dunai ^>=0.12.2,
     free >=5.1,
     monad-schedule ^>=0.1.2,
+    mtl >=2.2 && <2.4,
     random >=1.1,
     simple-affine-space ^>=0.2,
     text >=1.2 && <2.1,
     time >=1.8,
     time-domain ^>=0.1.0.2,
     transformers >=0.5,
+    mtl          >= 2.2 && < 2.4,
 
   -- Directories containing source files.
   hs-source-dirs: src
@@ -139,16 +157,31 @@ test-suite test
   main-is: Main.hs
   other-modules:
     Clock
+<<<<<<< HEAD
+=======
+    Clock.Catch
+>>>>>>> f7d003c (WIP)
+    Clock.Except
     Clock.FixedStep
     Clock.Millisecond
+    Paths_rhine
     Schedule
     Util
 
+<<<<<<< HEAD
+  autogen-modules: Paths_rhine
+=======
+    Paths_rhine
+  autogen-modules:
+    Paths_rhine
+>>>>>>> f7d003c (WIP)
   build-depends:
     monad-schedule,
+    mtl,
     rhine,
     tasty ^>=1.4,
     tasty-hunit ^>=0.10,
+    mtl,
 
 flag dev
   description: Enable warnings as errors. Active on ci.
