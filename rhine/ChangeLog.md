@@ -3,6 +3,7 @@
 ## 1.2.1
 
 * Added `FRP.Rhine.Clock.Realtime.Never` (clock that never ticks)
+* Changed Busy clock effect to `MonadIO`
 
 ## 1.2
 
