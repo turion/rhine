@@ -5,36 +5,40 @@ Collect and process all incoming values statefully and with time stamps.
 -}
 module FRP.Rhine.ResamplingBuffer.MSF where
 
+-- transformers
+import Control.Monad.Trans.Reader (runReaderT)
+
 -- dunai
-import Data.MonadicStreamFunction.InternalCore
+import Data.MonadicStreamFunction.InternalCore (unMSF)
 
 -- rhine
+import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ResamplingBuffer
 
-{- | Given a monadic stream function that accepts
-   a varying number of inputs (a list),
+{- | Given a clocked signal function that accepts
+   a varying number of timestamped inputs (a list),
    a `ResamplingBuffer` can be formed
-   that collects all input in a timestamped list.
+   that collects all this input and steps the signal function
+   whenever output is requested.
 -}
-msfBuffer ::
+sfBuffer ::
   (Monad m) =>
-  -- | The monadic stream function that consumes
-  --   a single time stamp for the moment when an output value is required,
+  -- | The clocked signal function that consumes
   --   and a list of timestamped inputs,
   --   and outputs a single value.
   --   The list will contain the /newest/ element in the head.
-  MSF m (TimeInfo cl2, [(TimeInfo cl1, a)]) b ->
+  ClSF m cl2 [(TimeInfo cl1, a)] b ->
   ResamplingBuffer m cl1 cl2 a b
-msfBuffer = msfBuffer' []
+sfBuffer = sfBuffer' []
   where
-    msfBuffer' ::
+    sfBuffer' ::
       (Monad m) =>
       [(TimeInfo cl1, a)] ->
-      MSF m (TimeInfo cl2, [(TimeInfo cl1, a)]) b ->
+      ClSF m cl2 [(TimeInfo cl1, a)] b ->
       ResamplingBuffer m cl1 cl2 a b
-    msfBuffer' as msf = ResamplingBuffer {..}
+    sfBuffer' as msf = ResamplingBuffer {..}
       where
-        put ti1 a = return $ msfBuffer' ((ti1, a) : as) msf
+        put ti1 a = return $ sfBuffer' ((ti1, a) : as) msf
         get ti2 = do
-          (b, msf') <- unMSF msf (ti2, as)
-          return (b, msfBuffer msf')
+          (b, msf') <- runReaderT (unMSF msf as) ti2
+          return (b, sfBuffer msf')
