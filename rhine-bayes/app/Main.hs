@@ -269,6 +269,8 @@ mains =
   [ ("single rate", mainSingleRate)
   , ("single rate, parameter collapse", mainSingleRateCollapse)
   , ("multi rate, temperature process", mainMultiRate)
+  , ("multi rate, temperature process, RMSMC", mainMultiRateRMSMC)
+  , ("multi rate, temperature process, RMSMC dynamic", mainMultiRateRMSMCDyn)
   ]
 
 main :: IO ()
@@ -412,6 +414,25 @@ inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
             , particlesTemperature = first fst <$> positionsAndTemperatures
             }
 
+{- | This part performs the inference (and passes along temperature, sensor and position simulations).
+   It runs as fast as possible, so this will potentially drain the CPU.
+-}
+inferenceRMSMC :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
+inferenceRMSMC = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+ where
+  inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+  inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+    particles <- resampleMoveSequentialMonteCarloCl 10 1 resampleSystematic posteriorTemperatureProcess -< measured
+    returnA -< Result{temperature, measured, latent, particles}
+
+inferenceRMSMCDyn :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
+inferenceRMSMCDyn = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+ where
+  inferenceBehaviour :: (MonadDistribution m, TimeDomain td, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+  inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+    particles <- resampleMoveSequentialMonteCarloDynCl 10 1 (onlyBelowEffectiveSampleSize 5 resampleSystematic) posteriorTemperatureProcess -< measured
+    returnA -< Result{temperature, measured, latent, particles}
+
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
 visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC GlossSimClockIO) Result ()
 visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
@@ -429,11 +450,44 @@ mainRhineMultiRate =
               visualisationRhine
 {- FOURMOLU_ENABLE -}
 
+mainRhineMultiRateRMSMC =
+  userTemperature
+    @@ glossClockUTC GlossEventClockIO
+      >-- keepLast initialTemperature -@- glossConcurrently -->
+        modelRhine
+        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
+          inferenceRMSMC
+            >-- keepLast Result{temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+              visualisationRhine
+
+
+mainRhineMultiRateRMSMCDyn =
+  userTemperature
+    @@ glossClockUTC GlossEventClockIO
+      >-- keepLast initialTemperature -@- glossConcurrently -->
+        modelRhine
+        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -@- glossConcurrently -->
+          inferenceRMSMCDyn
+            >-- keepLast Result{temperature = initialTemperature, measured = zeroVector, latent = zeroVector, particles = []} -@- glossConcurrently -->
+              visualisationRhine
+
 mainMultiRate :: IO ()
 mainMultiRate =
   void $
     launchInGlossThread glossSettings $
       flow mainRhineMultiRate
+
+mainMultiRateRMSMC :: IO ()
+mainMultiRateRMSMC =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineMultiRateRMSMC
+
+mainMultiRateRMSMCDyn :: IO ()
+mainMultiRateRMSMCDyn =
+  void $
+    launchGlossThread glossSettings $
+      flow mainRhineMultiRateRMSMCDyn
 
 -- * Utilities
 
