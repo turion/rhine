@@ -42,6 +42,8 @@ newtype Millisecond (n :: Nat) = Millisecond (RescaledClockS IO (UnscheduleClock
 
 -- TODO Consider changing the tag to Maybe Double
 
+newtype MillisecondYield (n :: Nat) = MillisecondYield (RescaledClockS (YieldT IO) (FixedStep n) UTCTime Bool)
+
 instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Bool
@@ -79,6 +81,7 @@ waitClock = Millisecond $ RescaledClockS (unyieldClock FixedStep) $ \_ -> do
       return (now, remaining > 0)
   return (runningClock, initTime)
 
+-- FIXME this can actually only run reliably for MillisecondYield, otherwise GHC scheduling can come in the way
 -- TODO It would be great if this could be directly implemented in terms of downsampleFixedStep
 downsampleMillisecond ::
   (KnownNat n, Monad m) =>
