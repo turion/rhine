@@ -183,3 +183,22 @@ benchmark benchmark
     text ^>=2.0,
 
   main-is: Main.hs
+
+test-suite benchmark-test
+  import: opts
+  type: exitcode-stdio-1.0
+  hs-source-dirs: bench
+  autogen-modules: Paths_rhine
+  other-modules:
+    Paths_rhine
+    WordCount
+
+  build-depends:
+    criterion ^>=1.6,
+    dunai ^>=0.12.2,
+    rhine,
+    text ^>=2.0,
+    tasty ^>=1.4,
+    tasty-hunit ^>=0.10,
+
+  main-is: Test.hs

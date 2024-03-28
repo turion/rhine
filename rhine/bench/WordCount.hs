@@ -1,8 +1,7 @@
--- | Count the number of words in the complete works of Shakespeare.
-
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- | Count the number of words in the complete works of Shakespeare.
 module WordCount where
 
 -- base
@@ -28,6 +27,11 @@ import Data.MonadicStreamFunction qualified as Dunai
 
 -- rhine
 import FRP.Rhine
+import FRP.Rhine.Clock.Except (
+  DelayIOError,
+  ExceptClock (..),
+  delayIOError,
+ )
 import Paths_rhine
 
 benchmarks :: Benchmark
@@ -54,22 +58,16 @@ withInput action = do
     hDuplicateTo stdinFile stdin
     action
 
--- FIXME the StdinClock should really throw something in Except instead.
--- Or there should be utilities to transform an IO exception into ExceptT, in rhine
 rhineWordCount :: IO Int
 rhineWordCount = do
-  wcOut <- newIORef (0 :: Int)
-  catch (withInput $ flow (wc wcOut @@ StdinClock) >> readIORef wcOut) $ \(e :: IOError) ->
-    if isEOFError e
-      then readIORef wcOut
-      else throwIO e
+  Left (Right count) <- withInput $ runExceptT $ flow $ wc @@ delayIOError (ExceptClock StdinClock) Left
+  return count
   where
-    wc :: IORef Int -> ClSF IO StdinClock () ()
-    wc wcOut = proc _ -> do
-      line <- tagS -< ()
-      words <- mappendS -< Sum $ length $ words line
-      arrMCl $ writeIORef wcOut -< getSum words
-      returnA -< ()
+    wc :: ClSF (ExceptT (Either IOError Int) IO) (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int)) () ()
+    wc = proc _ -> do
+      lineOrStop <- tagS -< ()
+      words <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
+      throwOn' -< (either isEOFError (const False) lineOrStop, Right $ getSum words)
 
 dunaiWordCount :: IO Int
 dunaiWordCount = do
