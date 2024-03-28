@@ -101,6 +101,52 @@ instance (Alternative m) => Alternative (AutomatonT m) where
       }
   {-# INLINE (<|>) #-}
 
+-- many AutomatonT {state, step} =
+--   AutomatonT
+--     { state = Undecided
+--     , step = \case
+--         Undecided ->
+--           let init =
+--                 ( (\(Result s a) (Result manyS as) -> Result (Progress s manyS) (a : as))
+--                     <$> step state
+--                     <*> init
+--                 )
+--                   <|> pure Result {resultState = Terminated, output = []}
+--            in init
+--         Terminated -> pure $! Result Terminated []
+--         manyS@(Progress _ _)  -> _
+--     }
+
+-- FIXME Not quite the right encoding because there can't be more Undecided further down?
+-- In fact I probably want a Maybe [s]?
+data Many s = Undecided | Terminated | Progress s ~(Many s)
+  deriving (Foldable, Functor, Traversable)
+
+mySome :: (Alternative m) => AutomatonT m a -> AutomatonT m [a]
+mySome ma = let go = (:) <$> ma <*> (go <|> pure []) in go
+
+-- X = Maybe (Either () (s, X))
+myMany :: (Alternative m) => AutomatonT m a -> AutomatonT m [a]
+myMany ma = let go = ((:) <$> ma <*> go) <|> pure [] in go
+
+{-
+= let go = Automaton
+    { state = Nothing
+    , step =
+          maybe ((mapResultState (Just . Left) <$> (step ((:) <$> ma <*> go)) (state ((:) <$> ma <*> go)))
+                  <|> (mapResultState (Just . Right) <$> stepR stateR0)) $
+            either
+              (fmap (mapResultState (Just . Left)) . stepL)
+              (fmap (mapResultState (Just . Right)) . stepR)
+    }
+  in go
+-}
+
+afix f b = let a = f $ a <|> b in a
+
+-- mySome' :: (Alternative m) => AutomatonT m a -> AutomatonT m [a]
+-- mySome' = _
+
 instance MFunctor AutomatonT where
   hoist f AutomatonT {state, step} = AutomatonT {state, step = f <$> step}
   {-# INLINE hoist #-}
