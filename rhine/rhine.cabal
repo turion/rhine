@@ -27,6 +27,7 @@ build-type: Simple
 extra-source-files: ChangeLog.md
 extra-doc-files: README.md
 data-files: test/assets/*.txt
+   bench/pg100.txt
 tested-with:
   ghc ==9.0.2
   ghc ==9.2.8
@@ -165,3 +166,39 @@ flag dev
   description: Enable warnings as errors. Active on ci.
   default: False
   manual: True
+
+benchmark benchmark
+  import: opts
+  type: exitcode-stdio-1.0
+  hs-source-dirs: bench
+  autogen-modules: Paths_rhine
+  other-modules:
+    Paths_rhine
+    WordCount
+
+  build-depends:
+    criterion ^>=1.6,
+    dunai ^>=0.12.2,
+    rhine,
+    text ^>=2.0,
+
+  main-is: Main.hs
+
+test-suite benchmark-test
+  import: opts
+  type: exitcode-stdio-1.0
+  hs-source-dirs: bench
+  autogen-modules: Paths_rhine
+  other-modules:
+    Paths_rhine
+    WordCount
+
+  build-depends:
+    criterion ^>=1.6,
+    dunai ^>=0.12.2,
+    rhine,
+    text ^>=2.0,
+    tasty ^>=1.4,
+    tasty-hunit ^>=0.10,
+
+  main-is: Test.hs
