@@ -35,6 +35,7 @@ benchmarks =
     "WordCount"
     [ bench "rhine" $ nfIO rhineWordCount
     , bench "dunai" $ nfIO dunaiWordCount
+    , bench "automaton" $ nfIO automatonWordCount
     , bgroup
         "Text"
         [ bench "IORef" $ nfIO textWordCount
@@ -68,6 +69,20 @@ rhineWordCount = do
       line <- tagS -< ()
       nWords <- mappendS -< Sum $ length $ words line
       arrMCl $ writeIORef wcOut -< getSum nWords
+      returnA -< ()
+
+automatonWordCount :: IO Int
+automatonWordCount = do
+  wcOut <- newIORef (0 :: Int)
+  catch (withInput $ reactimate (wc wcOut) >> readIORef wcOut) $ \(e :: IOError) ->
+    if isEOFError e
+      then readIORef wcOut
+      else throwIO e
+  where
+    wc wcOut = proc () -> do
+      line <- constM getLine -< ()
+      nWords <- mappendS -< Sum $ length $ words line
+      arrM $ writeIORef wcOut -< getSum nWords
       returnA -< ()
 
 dunaiWordCount :: IO Int

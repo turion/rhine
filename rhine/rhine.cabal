@@ -206,3 +206,13 @@ benchmark benchmark
     text ^>=2.0,
 
   main-is: Main.hs
+  ghc-options:
+    -Wall
+    -fforce-recomp
+    -ddump-to-file
+    -ddump-simpl
+    -dsuppress-all
+    -dno-suppress-type-signatures
+    -dno-suppress-type-applications
+
+-- -dno-suppress-module-prefixes
