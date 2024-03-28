@@ -190,12 +190,24 @@ benchmark benchmark
   autogen-modules: Paths_rhine
   other-modules:
     Paths_rhine
+    Sum
     WordCount
 
   build-depends:
     rhine
 
   main-is: Main.hs
+  ghc-options:
+    -Wall
+
+  if flag(core)
+    ghc-options:
+      -fforce-recomp
+      -ddump-to-file
+      -ddump-simpl
+      -dsuppress-all
+      -dno-suppress-type-signatures
+      -dno-suppress-type-applications
 
 test-suite benchmark-test
   import: opts, bench-deps, test-deps
@@ -204,9 +216,15 @@ test-suite benchmark-test
   autogen-modules: Paths_rhine
   other-modules:
     Paths_rhine
+    Sum
     WordCount
 
   build-depends:
     rhine
 
   main-is: Test.hs
+
+flag core
+  description: Dump GHC core files for debugging.
+  default: False
+  manual: True

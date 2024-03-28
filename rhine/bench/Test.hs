@@ -1,3 +1,6 @@
+-- rhine
+
+import Sum
 import WordCount
 
 -- tasty
@@ -14,7 +17,17 @@ main :: IO ()
 main =
   defaultMain $
     testGroup
-      "WordCount"
-      [ testCase "rhine" $ rhineWordCount >>= (@?= wordCount)
-      , testCase "dunai" $ dunaiWordCount >>= (@?= wordCount)
+      "Benchmark tests"
+      [ testGroup
+          "WordCount"
+          [ testCase "rhine" $ rhineWordCount >>= (@?= wordCount)
+          , testCase "dunai" $ dunaiWordCount >>= (@?= wordCount)
+          ]
+      , testGroup
+          "Sum"
+          [ testCase "rhine" $ Sum.rhine Sum.nMax @?= Sum.direct Sum.nMax
+          , testCase "dunai" $ Sum.dunai Sum.nMax @?= Sum.direct Sum.nMax
+          , testCase "automaton" $ Sum.automaton Sum.nMax @?= Sum.direct Sum.nMax
+          , testCase "rhine flow" $ Sum.rhineFlow Sum.nMax @?= Sum.direct Sum.nMax
+          ]
       ]
