@@ -24,6 +24,9 @@ import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Trans (ScheduleT, wait)
 
 -- rhine
+
+import Control.Arrow
+import Data.Automaton.MSF (accumulateWith, arrM)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
@@ -47,12 +50,12 @@ instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n)
   type Tag (FixedStep n) = ()
   initClock cl =
     let step = stepsize cl
-     in return
-          ( arr (const step)
-              >>> accumulateWith (+) 0
-              >>> arrM (\time -> wait step $> (time, ()))
-          , 0
-          )
+     in wait 0
+          $> ( arr (const step)
+                >>> accumulateWith (+) 0
+                >>> arrM (\time -> wait step $> (time, ()))
+             , 0
+             )
 
 instance GetClockProxy (FixedStep n)
 

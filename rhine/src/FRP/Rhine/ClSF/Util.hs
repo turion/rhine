@@ -26,9 +26,7 @@ import Data.Sequence
 import Control.Monad.Trans.Reader (ask, asks)
 
 -- dunai
-import Control.Monad.Trans.MSF.Reader (readerS)
-import Data.MonadicStreamFunction.Instances.Num ()
-import Data.MonadicStreamFunction.Instances.VectorSpace ()
+import Data.Automaton.MSF.Trans.Reader (readerS)
 
 -- simple-affine-space
 import Data.VectorSpace
@@ -178,7 +176,7 @@ derivativeFrom ::
   v ->
   BehaviorF m td v v
 derivativeFrom v0 = proc v -> do
-  vLast <- iPre v0 -< v
+  vLast <- delay v0 -< v
   TimeInfo {..} <- timeInfo -< ()
   returnA -< (v ^-^ vLast) ^/ sinceLast
 
@@ -205,7 +203,7 @@ threePointDerivativeFrom ::
   BehaviorF m td v v
 threePointDerivativeFrom v0 = proc v -> do
   dv <- derivativeFrom v0 -< v
-  dv' <- iPre zeroVector -< dv
+  dv' <- delay zeroVector -< dv
   returnA -< (dv ^+^ dv') ^/ 2
 
 {- | Like 'threePointDerivativeFrom',

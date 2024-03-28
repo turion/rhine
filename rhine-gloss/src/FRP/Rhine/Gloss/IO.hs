@@ -97,7 +97,9 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
       getEvent = do
         GlossEnv {eventVar, timeRef} <- GlossConcT ask
         liftIO $ do
+          yield
           event <- takeMVar eventVar
+          yield
           time <- readIORef timeRef
           return (time, event)
 
@@ -109,11 +111,15 @@ data GlossSimClockIO = GlossSimClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
   type Time GlossSimClockIO = Float
   type Tag GlossSimClockIO = ()
-  initClock _ = return (constM getTime &&& arr (const ()), 0)
+  initClock _ = do
+    return (constM getTime &&& arr (const ()), 0)
     where
       getTime = do
         GlossEnv {timeVar} <- GlossConcT ask
-        liftIO $ takeMVar timeVar
+        liftIO yield
+        time <- liftIO $ takeMVar timeVar
+        liftIO yield
+        return time
 
 instance GetClockProxy GlossSimClockIO
 
@@ -138,12 +144,16 @@ launchGlossThread GlossSettings {..} = do
     getPic GlossEnv {picRef} = readIORef picRef
     -- Only try to put so this doesn't hang in case noone is listening for events or ticks
     handleEvent event vars@GlossEnv {eventVar} = do
+      yield
       void $ tryPutMVar eventVar event
+      yield
       return vars
     simStep diffTime vars@GlossEnv {timeVar, timeRef} = do
       time <- readIORef timeRef
       let !time' = time + diffTime
+      yield
       timeUpdate <- tryPutMVar timeVar time'
+      yield
       when timeUpdate $ writeIORef timeRef time'
       return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep

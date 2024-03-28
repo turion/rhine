@@ -66,7 +66,7 @@ Ideally, this action is run _outside_ of 'flow',
 e.g. @runEventChanT $ flow myRhine@.
 This way, exactly one channel is created.
 
-Caution: Don't use this with 'morphS',
+Caution: Don't use this with 'hoistS',
 since it would create a new channel every tick.
 Instead, create one @chan :: Chan c@, e.g. with 'newChan',
 and then use 'withChanS'.
@@ -154,9 +154,13 @@ instance (MonadIO m) => Clock (EventChanT event m) (EventClock event) where
     initialTime <- liftIO getCurrentTime
     return
       ( constM $ do
+          liftIO $ putStrLn "asking"
           chan <- ask
+          liftIO $ putStrLn "asked"
           event <- liftIO $ readChan chan
+          liftIO $ putStrLn "got event"
           time <- liftIO getCurrentTime
+          liftIO $ putStrLn "got time"
           return (time, event)
       , initialTime
       )

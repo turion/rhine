@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,17 +16,15 @@ The time differences are supplied at the type level.
 module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
+import Control.Arrow
 import Data.List.NonEmpty hiding (unfold)
-import Data.Maybe (fromMaybe)
 import GHC.TypeLits (KnownNat, Nat, natVal)
-
--- dunai
-import Data.MonadicStreamFunction
 
 -- monad-schedule
 import Control.Monad.Schedule.Trans
 
 -- rhine
+import Data.Automaton.MSF (MSF (..), accumulateWith, concatS, withSideEffect)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 
@@ -80,15 +79,6 @@ instance
 
 -- * Utilities
 
--- TODO Port back to dunai when naming issues are resolved
-
 -- | Repeatedly outputs the values of a given list, in order.
 cycleS :: (Monad m) => NonEmpty a -> MSF m () a
-cycleS as = unfold (second (fromMaybe as) . uncons) as
-
-{-
--- TODO Port back to dunai when naming issues are resolved
-delayList :: [a] -> MSF a a
-delayList [] = id
-delayList (a : as) = delayList as >>> delay a
--}
+cycleS as = concatS $ arr $ const $ toList as

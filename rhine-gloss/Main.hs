@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Example application for the @gloss@ wrapper.
@@ -8,6 +9,7 @@ import Data.Maybe (maybeToList)
 
 -- rhine-gloss
 import FRP.Rhine.Gloss
+import GHC.Float (double2Float)
 
 -- | Calculate a gear wheel rotated by a certain angle.
 gears :: Float -> Picture
@@ -43,3 +45,15 @@ pureRhine = tagS @@ glossEventClock >-- collect --> sim >-> arrMCl paintAll @@ g
 
 -- | Run the gears simulation with the 'IO' backend.
 ioRhine = tagS @@ GlossEventClockIO >-- collect --> sim >-> arrMCl paintAllIO @@ GlossSimClockIO
+
+-- ioRhine = tagS @@ GlossEventClockIO >-- collect --> arrMCl (const $ liftIO $ putStrLn "hi") >-> arr (const []) @@ glossBusyClock >-- keepLast [] --> sim >-> arrMCl paintAllIO @@ GlossSimClockIO
+
+glossBusyClock :: LiftClock IO GlossConcT (RescaledClockS IO Busy Float ())
+glossBusyClock = (liftClock $ scaleDownToFloat Busy)
+
+scaleDownToFloat :: (Monad m, TimeDomain (Time cl), Diff (Time cl) ~ Double) => cl -> RescaledClockS m cl Float (Tag cl)
+scaleDownToFloat cl =
+  RescaledClockS
+    { unscaledClockS = cl
+    , rescaleS = \initTime -> return (arr (\(utctime, tag) -> (double2Float $ diffTime utctime initTime, tag)), 0)
+    }

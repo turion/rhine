@@ -22,10 +22,8 @@ import Control.Arrow
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 
--- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
-
 -- rhine
+import Data.Automaton.MSF as X
 import FRP.Rhine.Clock
 
 -- * Clocked signal functions and behaviours
@@ -67,7 +65,7 @@ hoistClSF ::
   (forall c. m1 c -> m2 c) ->
   ClSF m1 cl a b ->
   ClSF m2 cl a b
-hoistClSF hoist = morphS $ mapReaderT hoist
+hoistClSF hoist = hoistS $ mapReaderT hoist
 
 -- | Hoist a 'ClSF' and its clock along a monad morphism.
 hoistClSFAndClock ::
@@ -76,7 +74,7 @@ hoistClSFAndClock ::
   ClSF m1 cl a b ->
   ClSF m2 (HoistClock m1 m2 cl) a b
 hoistClSFAndClock hoist =
-  morphS $ withReaderT (retag id) . mapReaderT hoist
+  hoistS $ withReaderT (retag id) . mapReaderT hoist
 
 -- | Lift a 'ClSF' into a monad transformer.
 liftClSF ::
@@ -96,7 +94,7 @@ liftClSFAndClock = hoistClSFAndClock lift
    is a 'ClSF' for any clock.
 -}
 timeless :: (Monad m) => MSF m a b -> ClSF m cl a b
-timeless = liftTransS
+timeless = liftS
 
 -- | Utility to lift Kleisli arrows directly to 'ClSF's.
 arrMCl :: (Monad m) => (a -> m b) -> ClSF m cl a b

@@ -14,15 +14,14 @@ that ticks only on certain subevents.
 -}
 module FRP.Rhine.Clock.Select where
 
+-- base
+import Control.Arrow
+import Data.Maybe (maybeToList)
+
 -- rhine
+import Data.Automaton.MSF (MSF, concatS)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-
--- dunai
-import Data.MonadicStreamFunction.Async (concatS)
-
--- base
-import Data.Maybe (maybeToList)
 
 {- | A clock that selects certain subevents of type 'a',
    from the tag of a main clock.

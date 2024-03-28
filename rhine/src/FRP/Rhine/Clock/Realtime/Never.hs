@@ -7,17 +7,16 @@ module FRP.Rhine.Clock.Realtime.Never where
 -- base
 import Control.Concurrent (threadDelay)
 import Control.Monad (forever)
+import Control.Monad.IO.Class
 import Data.Void (Void)
 
 -- time
 import Data.Time.Clock
 
 -- rhine
+import Data.Automaton.MSF (constM)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-
--- transformers
-import Control.Monad.IO.Class
 
 -- | A clock that never ticks.
 data Never = Never

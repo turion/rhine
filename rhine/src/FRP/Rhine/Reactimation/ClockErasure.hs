@@ -14,12 +14,8 @@ module FRP.Rhine.Reactimation.ClockErasure where
 -- base
 import Control.Monad (join)
 
--- dunai
-import Control.Monad.Trans.MSF.Reader
-import Data.MonadicStreamFunction
-
 -- rhine
-
+import Data.Automaton.MSF.Trans.Reader
 import FRP.Rhine.ClSF hiding (runReaderS)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
@@ -39,6 +35,7 @@ eraseClockClSF ::
 eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
   timeInfo <- genTimeInfo proxy initialTime -< (time, tag)
   runReaderS clsf -< (timeInfo, a)
+{-# INLINE eraseClockClSF #-}
 
 {- | Run a signal network as a monadic stream function.
 
@@ -133,6 +130,7 @@ eraseClockSN initialTime (FirstResampling sn buf) =
           _ -> Nothing
       dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) initialTime buf -< resBufInput
       returnA -< (,) <$> bMaybe <*> join dMaybe
+{-# INLINE eraseClockSN #-}
 
 {- | Translate a resampling buffer into a monadic stream function.
 
@@ -160,3 +158,4 @@ eraseClockResBuf proxy1 proxy2 initialTime resBuf0 = feedback resBuf0 $ proc (in
       timeInfo2 <- genTimeInfo proxy2 initialTime -< (time2, tag2)
       (b, resBuf') <- arrM (uncurry get) -< (resBuf, timeInfo2)
       returnA -< (Just b, resBuf')
+{-# INLINE eraseClockResBuf #-}
