@@ -26,6 +26,9 @@ import Criterion.Main
 import Control.Monad.Trans.MSF.Except qualified as Dunai
 import Data.MonadicStreamFunction qualified as Dunai
 
+-- automaton
+import Data.Automaton.Trans.Except qualified as Automaton
+
 -- rhine
 import FRP.Rhine
 import FRP.Rhine.Clock.Except (
@@ -43,6 +46,7 @@ benchmarks =
     "WordCount"
     [ bench "rhine" $ nfIO rhineWordCount
     , bench "dunai" $ nfIO dunaiWordCount
+    , bench "automaton" $ nfIO automatonWordCount
     , bgroup
         "Text"
         [ bench "IORef" $ nfIO textWordCount
@@ -78,6 +82,24 @@ rhineWordCount = do
       lineOrStop <- tagS -< ()
       nWords <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
       throwOn' -< (either isEOFError (const False) lineOrStop, Right $ getSum nWords)
+
+{- | Implementation using automata.
+
+Within the automata framework, this is what the Rhine implementation could optimize to at most,
+if all the extra complexity introduced by clocks is optimized away completely.
+-}
+automatonWordCount :: IO Int
+automatonWordCount = do
+  Left (Right nWords) <- withInput $ runExceptT $ reactimate wc
+  return nWords
+  where
+    wc = proc () -> do
+      lineOrEOF <- constM $ liftIO $ Control.Exception.try getLine -< ()
+      nWords <- mappendS -< either (const 0) (Sum . length . words) lineOrEOF
+      case lineOrEOF of
+        Right _ -> returnA -< ()
+        Left e ->
+          Automaton.throwS -< if isEOFError e then Right $ getSum nWords else Left e
 
 {- | Idiomatic dunai implementation.
 
