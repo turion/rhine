@@ -1,0 +1,148 @@
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | Count the number of words in the complete works of Shakespeare.
+module WordCount where
+
+-- base
+import Control.Exception
+import Data.IORef (modifyIORef', newIORef, readIORef)
+import Data.Monoid (Sum (..))
+import GHC.IO.Handle hiding (hGetContents)
+import System.IO (IOMode (ReadMode), openFile, stdin, withFile)
+import System.IO.Error (isEOFError)
+import Prelude hiding (getContents, getLine, words)
+
+-- text
+import Data.Text (words)
+import Data.Text.IO (getLine)
+import Data.Text.Lazy qualified as Lazy
+import Data.Text.Lazy.IO (hGetContents)
+
+-- criterion
+import Criterion.Main
+
+-- dunai
+import Data.MonadicStreamFunction qualified as Dunai
+
+-- rhine
+
+import Control.Monad.Trans.MSF.Except qualified as Dunai
+import FRP.Rhine
+import FRP.Rhine.Clock.Except (
+  DelayIOError,
+  ExceptClock (..),
+  delayIOError,
+ )
+import Paths_rhine
+
+-- * Top level benchmarks
+
+benchmarks :: Benchmark
+benchmarks =
+  bgroup
+    "WordCount"
+    [ bench "rhine" $ nfIO rhineWordCount
+    , bench "dunai" $ nfIO dunaiWordCount
+    , bgroup
+        "Text"
+        [ bench "IORef" $ nfIO textWordCount
+        , bench "no IORef" $ nfIO textWordCountNoIORef
+        , bench "Lazy" $ nfIO textLazy
+        ]
+    ]
+
+-- * Benchmark helpers
+
+-- | The path to Shakespeare's complete works
+testFile :: IO FilePath
+testFile = getDataFileName "bench/pg100.txt"
+
+-- | Provide Shakespeare's complete works on stdin
+withInput :: IO b -> IO b
+withInput action = do
+  inputFileName <- testFile
+  withFile inputFileName ReadMode $ \stdinFile -> do
+    hDuplicateTo stdinFile stdin
+    action
+
+-- * Frameworks specific implementations of word count
+
+-- | Idiomatic Rhine implementation with a single clock
+rhineWordCount :: IO Int
+rhineWordCount = do
+  Left (Right count) <- withInput $ runExceptT $ flow $ wc @@ delayIOError (ExceptClock StdinClock) Left
+  return count
+  where
+    wc :: ClSF (ExceptT (Either IOError Int) IO) (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int)) () ()
+    wc = proc _ -> do
+      lineOrStop <- tagS -< ()
+      words <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
+      throwOn' -< (either isEOFError (const False) lineOrStop, Right $ getSum words)
+
+{- | Idiomatic dunai implementation.
+
+Compared to Rhine, this doesn't have the overhead of clocks and exception handling.
+-}
+dunaiWordCount :: IO Int
+dunaiWordCount = do
+  Left (Right nWords) <- withInput $ runExceptT $ Dunai.reactimate wc
+  return nWords
+  where
+    wc = proc () -> do
+      lineOrEOF <- Dunai.constM $ liftIO $ Control.Exception.try getLine -< ()
+      nWords <- Dunai.mappendS -< either (const 0) (Sum . length . words) lineOrEOF
+      case lineOrEOF of
+        Right _ -> returnA -< ()
+        Left e ->
+          if isEOFError e
+            then Dunai.throwS -< Right $ getSum nWords
+            else Dunai.throwS -< Left e
+
+-- ** Reference implementations in Haskell
+
+{- | The fastest line-based word count implementation that I could think of.
+
+This is what 'rhineWordCount' would reduce to roughly, if all possible optimizations kick in,
+except for the way the IORef is handled.
+-}
+textWordCount :: IO Int
+textWordCount = do
+  wcOut <- newIORef (0 :: Int)
+  catch (withInput $ go wcOut) $ \(e :: IOError) ->
+    if isEOFError e
+      then return ()
+      else throwIO e
+  readIORef wcOut
+  where
+    go wcOut = do
+      line <- getLine
+      modifyIORef' wcOut (+ length (words line))
+      go wcOut
+
+{- | The fastest line-based word count implementation that I could think of, not using IORefs.
+
+This is what 'rhineWordCount' would reduce to roughly, if all possible optimizations kick in.
+It is a bit slower than the version with IORef.
+-}
+textWordCountNoIORef :: IO Int
+textWordCountNoIORef = do
+  withInput $ go 0
+  where
+    step n = do
+      line <- getLine
+      return $ Right $ n + length (words line)
+    go n = do
+      n' <- catch (step n) $
+        \(e :: IOError) ->
+          if isEOFError e
+            then return $ Left n
+            else throwIO e
+      either return go n'
+
+-- | Just for fun the probably most readable but not the fastest way to count the number of words.
+textLazy :: IO Int
+textLazy = do
+  inputFileName <- testFile
+  handle <- openFile inputFileName ReadMode
+  length . Lazy.words <$> hGetContents handle
