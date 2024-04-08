@@ -39,7 +39,7 @@ keyboard = proc currentPoint -> do
 
 -- | Every millisecond, go one step up, down, right or left.
 simulation :: ClSF IO SimulationClock () Point
-simulation = feedback zeroVector $ proc ((), lastPoint) -> do
+simulation = FRP.Rhine.feedback zeroVector $ proc ((), lastPoint) -> do
   direction <- constMCl $ randomRIO (0, 3 :: Int) -< ()
   let
     shift = case direction of
