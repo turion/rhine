@@ -68,13 +68,18 @@ withInput action = do
 
 -- * Frameworks specific implementations of word count
 
+type WordCountClock = (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int))
+
+wordCountClock :: WordCountClock
+wordCountClock = delayIOError (ExceptClock StdinClock) Left
+
 -- | Idiomatic Rhine implementation with a single clock
 rhineWordCount :: IO Int
 rhineWordCount = do
-  Left (Right count) <- withInput $ runExceptT $ flow $ wc @@ delayIOError (ExceptClock StdinClock) Left
+  Left (Right count) <- withInput $ runExceptT $ flow $ wc @@ wordCountClock
   return count
   where
-    wc :: ClSF (ExceptT (Either IOError Int) IO) (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int)) () ()
+    wc :: ClSF (ExceptT (Either IOError Int) IO) WordCountClock () ()
     wc = proc _ -> do
       lineOrStop <- tagS -< ()
       words <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
