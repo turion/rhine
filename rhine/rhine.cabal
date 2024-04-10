@@ -57,6 +57,7 @@ common opts
     time >=1.8,
     transformers >=0.5,
     vector-sized >=1.4,
+    profunctors ^>= 5.6.2,
 
   if flag(dev)
     ghc-options: -Werror
@@ -164,7 +165,6 @@ library
     transformers >=0.5,
     free-category ^>= 0.0.4.5,
     sop-core ^>= 0.5.0.2,
-    profunctors ^>= 5.6.2,
 
   -- Directories containing source files.
   hs-source-dirs: src
