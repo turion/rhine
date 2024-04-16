@@ -3,8 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TupleSections #-}
 
-{- |
-Translate clocked signal processing components to stream functions without explicit clock types.
+{- | Translate clocked signal processing components to stream functions without explicit clock types.
 
 This module is not meant to be used externally,
 and is thus not exported from 'FRP.Rhine'.
