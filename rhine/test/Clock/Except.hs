@@ -86,7 +86,7 @@ catchClockTests =
     , testCase "Can recover from an exception" $ withTestStdin $ do
         let stopInClsf :: ClSF ME TestCatchClockMaybe () ()
             stopInClsf = catchClSF clId $ constMCl empty
-        result <- runExceptT $ runMaybeT $ flow $ stopInClsf @@ testClockMaybe
+        result <- runExceptT $ runMaybeT $ flow_ $ stopInClsf @@ testClockMaybe
         result @?= Right Nothing
     ]
 
@@ -115,13 +115,13 @@ failingClockTests =
   testGroup
     "FailingClock"
     [ testCase "flow fails immediately" $ do
-        result <- runExceptT $ flow $ clId @@ FailingClock
+        result <- runExceptT $ flow_ $ clId @@ FailingClock
         result @?= Left ()
     , testCase "CatchClock recovers from failure at init" $ do
         let
           clsfStops :: ClSF (MaybeT IO) CatchFailingClock () ()
           clsfStops = catchClSF clId $ constM $ lift empty
-        result <- runMaybeT $ flow $ clsfStops @@ catchFailingClock
+        result <- runMaybeT $ flow_ $ clsfStops @@ catchFailingClock
         result @?= Nothing -- The ClSF stopped the execution, not the clock
     ]
 
@@ -143,13 +143,13 @@ delayedClockTests =
             tag <- tagS -< ()
             textSoFar <- mappendS -< either (const []) pure tag
             throwOn' -< (isLeft tag, Just textSoFar)
-        result <- runExceptT $ flow $ throwCollectedText @@ delayedClock
+        result <- runExceptT $ flow_ $ throwCollectedText @@ delayedClock
         result @?= Left (Just ["data", "test"])
     , testCase "DelayException throws error after 1 step" $ withTestStdin $ do
         let
           dontThrow :: ClSF (ExceptT (Maybe [Text]) IO) DelayedClock () ()
           dontThrow = clId
-        result <- runExceptT $ flow $ dontThrow @@ delayedClock
+        result <- runExceptT $ flow_ $ dontThrow @@ delayedClock
         result @?= Left Nothing
     ]
 
