@@ -11,6 +11,9 @@ import Prelude hiding (length, take)
 -- containers
 import Data.Sequence
 
+-- automaton
+import Data.Stream.Result (Result (..))
+
 -- rhine
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Timeless
@@ -25,8 +28,8 @@ lifoUnbounded = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as
     amGet as = case viewl as of
-      EmptyL -> return (Nothing, empty)
-      a :< as' -> return (Just a, as')
+      EmptyL -> return $! Result empty Nothing
+      a :< as' -> return $! Result as' (Just a)
 
 {- |  A bounded LIFO buffer that forgets the oldest values when the size is above a given threshold.
    If the buffer is empty, it will return 'Nothing'.
@@ -36,8 +39,8 @@ lifoBounded threshold = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ take threshold $ a <| as
     amGet as = case viewl as of
-      EmptyL -> return (Nothing, empty)
-      a :< as' -> return (Just a, as')
+      EmptyL -> return $! Result empty Nothing
+      a :< as' -> return $! Result as' (Just a)
 
 -- | An unbounded LIFO buffer that also returns its current size.
 lifoWatch :: (Monad m) => ResamplingBuffer m cl1 cl2 a (Maybe a, Int)
@@ -45,5 +48,5 @@ lifoWatch = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as
     amGet as = case viewl as of
-      EmptyL -> return ((Nothing, 0), empty)
-      a :< as' -> return ((Just a, length as'), as')
+      EmptyL -> return $! Result empty (Nothing, 0)
+      a :< as' -> return $! Result as' (Just a, length as')
