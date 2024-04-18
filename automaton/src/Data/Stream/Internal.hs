@@ -1,6 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StrictData #-}
 
+-- | Helper functions and types for Data.Stream. You will typically not need them.
 module Data.Stream.Internal where
 
 -- | A strict tuple type

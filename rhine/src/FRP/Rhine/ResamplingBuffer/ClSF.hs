@@ -1,16 +1,16 @@
-{-# LANGUAGE RecordWildCards #-}
-
 {- |
 Collect and process all incoming values statefully and with time stamps.
 -}
 module FRP.Rhine.ResamplingBuffer.ClSF where
 
 -- transformers
-import Control.Monad.Trans.Reader (runReaderT)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 
 -- automaton
 import Data.Automaton
-import Data.Stream.Result
+import Data.Stream
+import Data.Stream.Optimized (toStreamT)
+import Data.Stream.Result (mapResultState)
 
 -- rhine
 import FRP.Rhine.ClSF.Core
@@ -30,16 +30,15 @@ clsfBuffer ::
   --   The list will contain the /newest/ element in the head.
   ClSF m cl2 [(TimeInfo cl1, a)] b ->
   ResamplingBuffer m cl1 cl2 a b
-clsfBuffer = clsfBuffer' []
+clsfBuffer = clsfBuffer' . toStreamT . getAutomaton
   where
     clsfBuffer' ::
       (Monad m) =>
-      [(TimeInfo cl1, a)] ->
-      ClSF m cl2 [(TimeInfo cl1, a)] b ->
+      StreamT (ReaderT [(TimeInfo cl1, a)] (ReaderT (TimeInfo cl2) m)) b ->
       ResamplingBuffer m cl1 cl2 a b
-    clsfBuffer' as automaton = ResamplingBuffer {..}
-      where
-        put ti1 a = return $ clsfBuffer' ((ti1, a) : as) automaton
-        get ti2 = do
-          Result automaton' b <- runReaderT (stepAutomaton automaton as) ti2
-          return (b, clsfBuffer automaton')
+    clsfBuffer' StreamT {state, step} =
+      ResamplingBuffer
+        { buffer = (state, [])
+        , put = \ti1 a (s, as) -> return (s, (ti1, a) : as)
+        , get = \ti2 (s, as) -> mapResultState (,[]) <$> runReaderT (runReaderT (step s) as) ti2
+        }

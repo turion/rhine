@@ -12,6 +12,8 @@ import Prelude hiding (length, take)
 import Data.Sequence
 
 -- rhine
+
+import Data.Stream.Result (Result (..))
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Timeless
 
@@ -25,8 +27,8 @@ fifoUnbounded = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as
     amGet as = case viewr as of
-      EmptyR -> return (Nothing, empty)
-      as' :> a -> return (Just a, as')
+      EmptyR -> return $! Result empty Nothing
+      as' :> a -> return $! Result as' (Just a)
 
 {- |  A bounded FIFO buffer that forgets the oldest values when the size is above a given threshold.
     If the buffer is empty, it will return 'Nothing'.
@@ -36,8 +38,8 @@ fifoBounded threshold = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ take threshold $ a <| as
     amGet as = case viewr as of
-      EmptyR -> return (Nothing, empty)
-      as' :> a -> return (Just a, as')
+      EmptyR -> return $! Result empty Nothing
+      as' :> a -> return $! Result as' (Just a)
 
 -- | An unbounded FIFO buffer that also returns its current size.
 fifoWatch :: (Monad m) => ResamplingBuffer m cl1 cl2 a (Maybe a, Int)
@@ -45,5 +47,5 @@ fifoWatch = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as
     amGet as = case viewr as of
-      EmptyR -> return ((Nothing, 0), empty)
-      as' :> a -> return ((Just a, length as'), as')
+      EmptyR -> return $! Result empty (Nothing, 0)
+      as' :> a -> return $! Result as' (Just a, length as')
