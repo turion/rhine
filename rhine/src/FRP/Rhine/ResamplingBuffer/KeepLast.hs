@@ -5,6 +5,10 @@ A buffer keeping the last value, or zero-order hold.
 -}
 module FRP.Rhine.ResamplingBuffer.KeepLast where
 
+-- automaton
+import Data.Stream.Result (Result (..))
+
+-- rhine
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Timeless
 
@@ -16,5 +20,5 @@ import FRP.Rhine.ResamplingBuffer.Timeless
 keepLast :: (Monad m) => a -> ResamplingBuffer m cl1 cl2 a a
 keepLast = timelessResamplingBuffer AsyncMealy {..}
   where
-    amGet a = return (a, a)
+    amGet a = return $! Result a a
     amPut _ = return
