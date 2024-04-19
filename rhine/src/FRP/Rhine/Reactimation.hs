@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GADTs #-}
 
 {- |
@@ -55,7 +56,7 @@ flow ::
   Rhine m cl () () ->
   m void
 flow rhine = do
-  automaton <- eraseClock rhine
+  !automaton <- eraseClock rhine
   reactimate $ automaton >>> arr (const ())
 {-# INLINE flow #-}
 

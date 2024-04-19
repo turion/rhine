@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RankNTypes #-}
@@ -160,8 +161,8 @@ handleOptimized f stream = Stateful $ f $ toStreamT stream
 See 'Data.Stream.reactimate'.
 -}
 reactimate :: (Monad m) => OptimizedStreamT m () -> m void
-reactimate (Stateful stream) = StreamT.reactimate stream
-reactimate (Stateless f) = go
+reactimate (Stateful !stream) = StreamT.reactimate stream
+reactimate (Stateless !f) = go
   where
     go = f *> go
 {-# INLINE reactimate #-}
@@ -173,7 +174,6 @@ since the optimized version doesn't create a state type.
 -}
 constM :: m a -> OptimizedStreamT m a
 constM = Stateless
-{-# INLINE constM #-}
 
 -- | Perform one step of a stream, resulting in an updated stream and an output value.
 stepOptimizedStream :: (Functor m) => OptimizedStreamT m a -> m (Result (OptimizedStreamT m a) a)
