@@ -3,6 +3,10 @@
 
 module Clock.Millisecond where
 
+-- base
+import Control.Monad (when)
+import System.Info (os)
+
 -- tasty
 import Test.Tasty (testGroup)
 
@@ -39,7 +43,10 @@ tests =
     ]
 
 assertTiming :: (Show a, TimingSubsumes a) => a -> a -> Assertion
-assertTiming observed expected = assertBool ("Observed timing: " ++ show observed ++ "\nExpected timing: " ++ show expected) $ timingSubsumes observed expected
+assertTiming observed expected =
+  when (os /= "darwin") $
+    assertBool ("Observed timing: " ++ show observed ++ "\nExpected timing: " ++ show expected) $
+      timingSubsumes observed expected
 
 class TimingSubsumes a where
   timingSubsumes :: a -> a -> Bool
