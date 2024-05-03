@@ -18,7 +18,7 @@ import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Timeless
 
 {- | Collects all input in a list, with the newest element at the head,
-   which is returned and emptied upon `get`.
+   which is returned and emptied upon 'get'.
 -}
 collect :: (Monad m) => ResamplingBuffer m cl1 cl2 a [a]
 collect = timelessResamplingBuffer AsyncMealy {..} []
