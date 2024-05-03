@@ -31,7 +31,7 @@ import FRP.Rhine.Clock
 {- | A stateful buffer from which one may 'get' a value,
 or to which one may 'put' a value,
 depending on the clocks.
-`ResamplingBuffer`s can be clock-polymorphic,
+'ResamplingBuffer's can be clock-polymorphic,
 or specific to certain clocks.
 
 * 'm': Monad in which the 'ResamplingBuffer' may have side effects
