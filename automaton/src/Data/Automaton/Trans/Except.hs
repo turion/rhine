@@ -178,10 +178,10 @@ This type is useful because it is a monad in the /exception type/ @e@.
 
 Consider this example:
 @
-automaton :: AutomatonExcept m a b e1
-f :: e1 -> AutomatonExcept m a b e2
+automaton :: AutomatonExcept a b m e1
+f :: e1 -> AutomatonExcept a b m e2
 
-example :: AutomatonExcept m a b e2
+example :: AutomatonExcept a b m e2
 example = automaton >>= f
 @
 
@@ -196,7 +196,7 @@ or just the '(>>)' operator, you should do this.
 The encoding of the internal state type will be much more efficiently optimized.
 
 The reason for this is that in an expression @ma >>= f@,
-the type of @f@ is @e1 -> AutomatonExcept m a b e2@,
+the type of @f@ is @e1 -> AutomatonExcept a b m e2@,
 which implies that the state of the 'AutomatonExcept' produced isn't known at compile time,
 and thus GHC cannot optimize the automaton.
 But often the full expressiveness of '>>=' isn't necessary, and in these cases,
@@ -204,17 +204,23 @@ a much faster automaton is produced by using 'Functor', 'Applicative' and 'Selec
 
 Note: By "exceptions", we mean an 'ExceptT' transformer layer, not 'IO' exceptions.
 -}
-newtype AutomatonExcept m a b e = AutomatonExcept {getAutomatonExcept :: StreamExcept (ReaderT a m) b e}
+newtype AutomatonExcept a b m e = AutomatonExcept {getAutomatonExcept :: StreamExcept b (ReaderT a m) e}
   deriving newtype (Functor, Applicative, Selective, Monad)
 
-runAutomatonExcept :: (Monad m) => AutomatonExcept m a b e -> Automaton (ExceptT e m) a b
+instance MonadTrans (AutomatonExcept a b) where
+  lift = AutomatonExcept . lift . lift
+
+instance MFunctor (AutomatonExcept a b) where
+  hoist morph = AutomatonExcept . hoist (mapReaderT morph) . getAutomatonExcept
+
+runAutomatonExcept :: (Monad m) => AutomatonExcept a b m e -> Automaton (ExceptT e m) a b
 runAutomatonExcept = Automaton . hoist commuteReaderBack . runStreamExcept . getAutomatonExcept
 
 {- | Execute an 'Automaton' in 'ExceptT' until it raises an exception.
 
 Typically used to enter the monad context of 'AutomatonExcept'.
 -}
-try :: (Monad m) => Automaton (ExceptT e m) a b -> AutomatonExcept m a b e
+try :: (Monad m) => Automaton (ExceptT e m) a b -> AutomatonExcept a b m e
 try = AutomatonExcept . InitialExcept . hoist commuteReader . getAutomaton
 
 {- | Immediately throw the current input as an exception.
@@ -222,7 +228,7 @@ try = AutomatonExcept . InitialExcept . hoist commuteReader . getAutomaton
 Useful inside 'AutomatonExcept' if you don't want to advance a further step in execution,
 but first see what the current input is before continuing.
 -}
-currentInput :: (Monad m) => AutomatonExcept m e b e
+currentInput :: (Monad m) => AutomatonExcept e b m e
 currentInput = try throwS
 
 {- | If no exception can occur, the 'Automaton' can be executed without the 'ExceptT'
@@ -236,7 +242,7 @@ automaton = safely $ do
   once $ \input -> putStrLn $ "Whoops, something happened when receiving input " ++ show input ++ ": " ++ show e ++ ", but I'll continue now."
   safe fallbackAutomaton
 -}
-safely :: (Monad m) => AutomatonExcept m a b Void -> Automaton m a b
+safely :: (Monad m) => AutomatonExcept a b m Void -> Automaton m a b
 safely = Automaton . StreamExcept.safely . getAutomatonExcept
 
 {- | An 'Automaton' without an 'ExceptT' layer never throws an exception, and can
@@ -245,21 +251,21 @@ thus have an arbitrary exception type.
 In particular, the exception type can be 'Void', so it can be used as the last statement in an 'AutomatonExcept' @do@-block.
 See 'safely' for an example.
 -}
-safe :: (Monad m) => Automaton m a b -> AutomatonExcept m a b e
+safe :: (Monad m) => Automaton m a b -> AutomatonExcept a b m e
 safe = try . liftS
 
 {- | Inside the 'AutomatonExcept' monad, execute an action of the wrapped monad.
 This passes the last input value to the action, but doesn't advance a tick.
 -}
-once :: (Monad m) => (a -> m e) -> AutomatonExcept m a b e
+once :: (Monad m) => (a -> m e) -> AutomatonExcept a b m e
 once f = AutomatonExcept $ InitialExcept $ StreamOptimized.constM $ ExceptT $ ReaderT $ fmap Left <$> f
 
 -- | Variant of 'once' without input.
-once_ :: (Monad m) => m e -> AutomatonExcept m a b e
+once_ :: (Monad m) => m e -> AutomatonExcept a b m e
 once_ = once . const
 
 -- | Advances a single tick with the given Kleisli arrow, and then throws an exception.
-step :: (Monad m) => (a -> m (b, e)) -> AutomatonExcept m a b e
+step :: (Monad m) => (a -> m (b, e)) -> AutomatonExcept a b m e
 step f = try $ proc a -> do
   n <- count -< ()
   (b, e) <- arrM (lift . f) -< a
@@ -267,13 +273,13 @@ step f = try $ proc a -> do
   returnA -< b
 
 -- | Advances a single tick outputting the value, and then throws '()'.
-step_ :: (Monad m) => b -> AutomatonExcept m a b ()
+step_ :: (Monad m) => b -> AutomatonExcept a b m ()
 step_ b = step $ const $ return (b, ())
 
 {- | Converts a list to an 'AutomatonExcept', which outputs an element of the list at
 each step, throwing '()' when the list ends.
 -}
-listToAutomatonExcept :: (Monad m) => [b] -> AutomatonExcept m a b ()
+listToAutomatonExcept :: (Monad m) => [b] -> AutomatonExcept a b m ()
 listToAutomatonExcept = mapM_ step_
 
 -- * Utilities definable in terms of 'AutomatonExcept'
@@ -289,7 +295,7 @@ performOnFirstSample mAutomaton = safely $ do
   safe automaton
 
 -- | 'reactimate's an 'AutomatonExcept' until it throws an exception.
-reactimateExcept :: (Monad m) => AutomatonExcept m () () e -> m e
+reactimateExcept :: (Monad m) => AutomatonExcept () () m e -> m e
 reactimateExcept ae = fmap (either id absurd) $ runExceptT $ reactimate $ runAutomatonExcept ae
 
 -- | 'reactimate's an 'Automaton' until it returns 'True'.

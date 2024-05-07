@@ -56,7 +56,7 @@ falling v0 = proc _ -> do
   throwMaybe -< guard $ height < 0
   returnA -< pos
 
-ballModes :: ClSFExcept IO SimClock (Maybe BallVel) Ball void
+ballModes :: ClSFExcept SimClock (Maybe BallVel) Ball IO void
 ballModes = do
   v0 <- try waiting
   once_ $ putStrLn "Catch!"
