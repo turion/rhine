@@ -99,41 +99,41 @@ and `(>>=)` is exception handling.
 * @b@:  The output type
 * @e@:  The type of exceptions that can be thrown
 -}
-type ClSFExcept m cl a b e = AutomatonExcept (ReaderT (TimeInfo cl) m) a b e
+type ClSFExcept cl a b m e = AutomatonExcept a b (ReaderT (TimeInfo cl) m) e
 
 {- | A clock polymorphic 'ClSFExcept',
 or equivalently an exception-throwing behaviour.
 Any clock with time domain @time@ may occur.
 -}
-type BehaviourFExcept m time a b e =
-  forall cl. (time ~ Time cl) => ClSFExcept m cl a b e
+type BehaviourFExcept time a b m e =
+  forall cl. (time ~ Time cl) => ClSFExcept cl a b m e
 
 -- | Compatibility to U.S. american spelling.
-type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
+type BehaviorFExcept time a b m e = BehaviourFExcept time a b m e
 
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
-runClSFExcept :: (Monad m) => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
+runClSFExcept :: (Monad m) => ClSFExcept cl a b m e -> ClSF (ExceptT e m) cl a b
 runClSFExcept = hoistS commuteExceptReader . runAutomatonExcept
 
 {- | Enter the monad context in the exception
    for 'ClSF's in the 'ExceptT' monad.
    The 'ClSF' will be run until it encounters an exception.
 -}
-try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
+try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept cl a b m e
 try = AutomatonE.try . hoistS commuteReaderExcept
 
 {- | Within the same tick, perform a monadic action,
    and immediately throw the value as an exception.
 -}
-once :: (Monad m) => (a -> m e) -> ClSFExcept m cl a b e
+once :: (Monad m) => (a -> m e) -> ClSFExcept cl a b m e
 once f = AutomatonE.once $ lift . f
 
 -- | A variant of 'once' without input.
-once_ :: (Monad m) => m e -> ClSFExcept m cl a b e
+once_ :: (Monad m) => m e -> ClSFExcept cl a b m e
 once_ = once . const
 
 {- | Advances a single tick with the given Kleisli arrow,
    and then throws an exception.
 -}
-step :: (Monad m) => (a -> m (b, e)) -> ClSFExcept m cl a b e
+step :: (Monad m) => (a -> m (b, e)) -> ClSFExcept cl a b m e
 step f = AutomatonE.step $ lift . f
