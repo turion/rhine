@@ -86,6 +86,8 @@ throwMaybe = proc me -> case me of
 
 -- * Monad interface
 
+-- FIXME docs
+
 {- | A synchronous exception-throwing signal function.
 It is based on a @newtype@ from Dunai, 'AutomatonExcept',
 to exhibit a monad interface /in the exception type/.
