@@ -5,6 +5,7 @@ import Test.Tasty
 
 -- rhine
 import Clock
+import Except
 import Schedule
 
 main =
@@ -12,5 +13,6 @@ main =
     testGroup
       "Main"
       [ Clock.tests
+      , Except.tests
       , Schedule.tests
       ]

@@ -22,14 +22,15 @@ module FRP.Rhine.Clock (
 where
 
 -- base
+import Control.Arrow
 import Control.Category qualified as Category
 
 -- transformers
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
--- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+-- automaton
+import Data.Automaton (Automaton, arrM, hoistS)
 
 -- time-domain
 import Data.TimeDomain as X
@@ -41,7 +42,7 @@ A clock creates a stream of time stamps and additional information,
 possibly together with side effects in a monad 'm'
 that cause the environment to wait until the specified time is reached.
 -}
-type RunningClock m time tag = MSF m () (time, tag)
+type RunningClock m time tag = Automaton m () (time, tag)
 
 {- |
 When initialising a clock, the initial time is measured
@@ -109,11 +110,11 @@ type Rescaling cl time = Time cl -> time
 -}
 type RescalingM m cl time = Time cl -> m time
 
-{- | An effectful, stateful morphism of time domains is an 'MSF'
+{- | An effectful, stateful morphism of time domains is an 'Automaton'
    that uses side effects to rescale a point in one time domain
    into another one.
 -}
-type RescalingS m cl time tag = MSF m (Time cl, Tag cl) (time, tag)
+type RescalingS m cl time tag = Automaton m (Time cl, Tag cl) (time, tag)
 
 {- | Like 'RescalingS', but allows for an initialisation
    of the rescaling morphism, together with the initial time.
@@ -128,7 +129,7 @@ rescaleMToSInit ::
   (Monad m) =>
   (time1 -> m time2) ->
   time1 ->
-  m (MSF m (time1, tag) (time2, tag), time2)
+  m (Automaton m (time1, tag) (time2, tag), time2)
 rescaleMToSInit rescaling time1 = (arrM rescaling *** Category.id,) <$> rescaling time1
 
 -- ** Applying rescalings to clocks
@@ -241,10 +242,8 @@ instance
   type Tag (HoistClock m1 m2 cl) = Tag cl
   initClock HoistClock {..} = do
     (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
-    let hoistMSF = morphS
-    -- TODO Look out for API changes in dunai here
     return
-      ( hoistMSF monadMorphism runningClock
+      ( hoistS monadMorphism runningClock
       , initialTime
       )
 

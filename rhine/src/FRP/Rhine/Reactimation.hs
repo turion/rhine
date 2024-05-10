@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GADTs #-}
 
 {- |
@@ -5,9 +6,6 @@ Run closed 'Rhine's (which are signal functions together with matching clocks)
 as main loops.
 -}
 module FRP.Rhine.Reactimation where
-
--- dunai
-import Data.MonadicStreamFunction.InternalCore
 
 -- rhine
 import FRP.Rhine.ClSF.Core
@@ -56,10 +54,26 @@ flow ::
   , Time cl ~ Time (Out cl)
   ) =>
   Rhine m cl () () ->
-  m ()
+  m void
 flow rhine = do
-  msf <- eraseClock rhine
-  reactimate $ msf >>> arr (const ())
+  !automaton <- eraseClock rhine
+  reactimate $ automaton >>> arr (const ())
+{-# INLINE flow #-}
+
+{- | Like 'flow', but with the type signature specialized to @m ()@.
+
+This is sometimes useful when dealing with ambiguous types.
+-}
+flow_ ::
+  ( Monad m
+  , Clock m cl
+  , GetClockProxy cl
+  , Time cl ~ Time (In cl)
+  , Time cl ~ Time (Out cl)
+  ) =>
+  Rhine m cl () () ->
+  m ()
+flow_ = flow
 
 {- | Run a synchronous 'ClSF' with its clock as a main loop,
    similar to Yampa's, or Dunai's, 'reactimate'.
@@ -75,3 +89,4 @@ reactimateCl ::
   ClSF m cl () () ->
   m ()
 reactimateCl cl clsf = flow $ clsf @@ cl
+{-# INLINE reactimateCl #-}

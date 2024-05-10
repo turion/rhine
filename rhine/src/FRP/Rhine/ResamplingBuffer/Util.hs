@@ -8,11 +8,14 @@ module FRP.Rhine.ResamplingBuffer.Util where
 -- transformers
 import Control.Monad.Trans.Reader (runReaderT)
 
--- dunai
-import Data.MonadicStreamFunction.InternalCore
+-- automaton
+import Data.Stream (StreamT (..))
+import Data.Stream.Internal (JointState (..))
+import Data.Stream.Optimized (toStreamT)
+import Data.Stream.Result (Result (..), mapResultState)
 
 -- rhine
-import FRP.Rhine.ClSF
+import FRP.Rhine.ClSF hiding (step)
 import FRP.Rhine.Clock
 import FRP.Rhine.ResamplingBuffer
 
@@ -28,13 +31,16 @@ infix 2 >>-^
   ResamplingBuffer m cl1 cl2 a b   ->
   ClSF             m     cl2   b c ->
   ResamplingBuffer m cl1 cl2 a   c
-resBuf >>-^ clsf = ResamplingBuffer put_ get_
+resbuf  >>-^ clsf = helper resbuf $ toStreamT $ getAutomaton clsf
   where
-    put_ theTimeInfo a = (>>-^ clsf) <$> put resBuf theTimeInfo a
-    get_ theTimeInfo = do
-      (b, resBuf') <- get resBuf theTimeInfo
-      (c, clsf') <- unMSF clsf b `runReaderT` theTimeInfo
-      return (c, resBuf' >>-^ clsf')
+    helper ResamplingBuffer { buffer, put, get} StreamT { state, step} = ResamplingBuffer
+      { buffer = JointState buffer state,
+      put = \theTimeInfo a (JointState b s) -> (`JointState` s) <$> put theTimeInfo a b
+      , get = \theTimeInfo (JointState b s) -> do
+          Result b' b <- get theTimeInfo b
+          Result s' c <- step s `runReaderT` b `runReaderT` theTimeInfo
+          return $! Result (JointState b' s') c
+      }
 
 infix 1 ^->>
 
@@ -44,13 +50,17 @@ infix 1 ^->>
   ClSF             m cl1     a b   ->
   ResamplingBuffer m cl1 cl2   b c ->
   ResamplingBuffer m cl1 cl2 a   c
-clsf ^->> resBuf = ResamplingBuffer put_ get_
+clsf ^->> resBuf = helper (toStreamT (getAutomaton clsf)) resBuf
   where
-    put_ theTimeInfo a = do
-      (b, clsf') <- unMSF clsf a `runReaderT` theTimeInfo
-      resBuf' <- put resBuf theTimeInfo b
-      return $ clsf' ^->> resBuf'
-    get_ theTimeInfo = second (clsf ^->>) <$> get resBuf theTimeInfo
+   helper StreamT {state, step} ResamplingBuffer {buffer, put, get} = ResamplingBuffer
+      {
+        buffer = JointState buffer state
+    , put = \theTimeInfo a (JointState buf s) -> do
+      Result s' b <- step s `runReaderT` a `runReaderT` theTimeInfo
+      buf' <- put theTimeInfo b buf
+      return $! JointState buf' s'
+    , get = \theTimeInfo (JointState buf s) -> mapResultState (`JointState` s) <$> get theTimeInfo buf
+      }
 
 infixl 4 *-*
 
@@ -60,16 +70,18 @@ infixl 4 *-*
   ResamplingBuffer m cl1 cl2  a      b    ->
   ResamplingBuffer m cl1 cl2     c      d ->
   ResamplingBuffer m cl1 cl2 (a, c) (b, d)
-resBuf1 *-* resBuf2 = ResamplingBuffer put_ get_
-  where
-    put_ theTimeInfo (a, c) = do
-      resBuf1' <- put resBuf1 theTimeInfo a
-      resBuf2' <- put resBuf2 theTimeInfo c
-      return $ resBuf1' *-* resBuf2'
-    get_ theTimeInfo = do
-      (b, resBuf1') <- get resBuf1 theTimeInfo
-      (d, resBuf2') <- get resBuf2 theTimeInfo
-      return ((b, d), resBuf1' *-* resBuf2')
+ResamplingBuffer buf1 put1 get1 *-* ResamplingBuffer buf2 put2 get2 = ResamplingBuffer
+  {
+    buffer = JointState buf1 buf2
+  , put = \theTimeInfo (a, c) (JointState s1 s2) -> do
+      s1' <- put1 theTimeInfo a s1
+      s2' <- put2 theTimeInfo c s2
+      return $! JointState s1' s2'
+  , get = \theTimeInfo (JointState s1 s2) -> do
+      Result s1' b <- get1 theTimeInfo s1
+      Result s2' d <- get2 theTimeInfo s2
+      return $! Result (JointState s1' s2') (b, d)
+  }
 
 infixl 4 &-&
 

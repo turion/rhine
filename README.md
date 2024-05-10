@@ -8,12 +8,11 @@ Rhine is a library for synchronous and asynchronous Functional Reactive Programm
 It separates the aspects of clocking, scheduling and resampling
 from each other, and ensures clock-safety on the type level.
 
-## Versions 1.* vs. 0.*
+## Recent breakage?
 
 Confused because some examples from the article don't work anymore?
-As a big simplification and breaking change,
-explicit schedules were removed in version 1.0.
-For an overview of the required changes, see [this page](/version1.md).
+Rhine went through a few bigger API simplifications and changes.
+If this broke your code, have a look at [the versions readme](./versions.md) to fix it.
 
 ## Concept
 

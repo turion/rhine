@@ -22,8 +22,8 @@ import Control.Arrow
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
 
--- dunai
-import Data.MonadicStreamFunction as X hiding ((>>>^), (^>>>))
+-- automaton
+import Data.Automaton as X
 
 -- rhine
 import FRP.Rhine.Clock
@@ -34,7 +34,7 @@ import FRP.Rhine.Clock
    with the additional side effect of being time-aware,
    that is, reading the current 'TimeInfo' of the clock @cl@.
 -}
-type ClSF m cl a b = MSF (ReaderT (TimeInfo cl) m) a b
+type ClSF m cl a b = Automaton (ReaderT (TimeInfo cl) m) a b
 
 {- | A clocked signal is a 'ClSF' with no input required.
    It produces its output on its own.
@@ -67,7 +67,7 @@ hoistClSF ::
   (forall c. m1 c -> m2 c) ->
   ClSF m1 cl a b ->
   ClSF m2 cl a b
-hoistClSF hoist = morphS $ mapReaderT hoist
+hoistClSF hoist = hoistS $ mapReaderT hoist
 
 -- | Hoist a 'ClSF' and its clock along a monad morphism.
 hoistClSFAndClock ::
@@ -76,7 +76,7 @@ hoistClSFAndClock ::
   ClSF m1 cl a b ->
   ClSF m2 (HoistClock m1 m2 cl) a b
 hoistClSFAndClock hoist =
-  morphS $ withReaderT (retag id) . mapReaderT hoist
+  hoistS $ withReaderT (retag id) . mapReaderT hoist
 
 -- | Lift a 'ClSF' into a monad transformer.
 liftClSF ::
@@ -95,8 +95,8 @@ liftClSFAndClock = hoistClSFAndClock lift
 {- | A monadic stream function without dependency on time
    is a 'ClSF' for any clock.
 -}
-timeless :: (Monad m) => MSF m a b -> ClSF m cl a b
-timeless = liftTransS
+timeless :: (Monad m) => Automaton m a b -> ClSF m cl a b
+timeless = liftS
 
 -- | Utility to lift Kleisli arrows directly to 'ClSF's.
 arrMCl :: (Monad m) => (a -> m b) -> ClSF m cl a b

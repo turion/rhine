@@ -11,17 +11,18 @@ module FRP.Rhine.ResamplingBuffer.Collect where
 import Data.Sequence
 
 -- rhine
+import Data.Stream.Result (Result (..))
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Timeless
 
 {- | Collects all input in a list, with the newest element at the head,
-   which is returned and emptied upon `get`.
+   which is returned and emptied upon 'get'.
 -}
 collect :: (Monad m) => ResamplingBuffer m cl1 cl2 a [a]
 collect = timelessResamplingBuffer AsyncMealy {..} []
   where
     amPut as a = return $ a : as
-    amGet as = return (as, [])
+    amGet as = return $! Result [] as
 
 {- | Reimplementation of 'collect' with sequences,
    which gives a performance benefit if the sequence needs to be reversed or searched.
@@ -30,7 +31,7 @@ collectSequence :: (Monad m) => ResamplingBuffer m cl1 cl2 a (Seq a)
 collectSequence = timelessResamplingBuffer AsyncMealy {..} empty
   where
     amPut as a = return $ a <| as
-    amGet as = return (as, empty)
+    amGet as = return $! Result empty as
 
 {- | 'pureBuffer' collects all input values lazily in a list
    and processes it when output is required.
@@ -41,7 +42,7 @@ pureBuffer :: (Monad m) => ([a] -> b) -> ResamplingBuffer m cl1 cl2 a b
 pureBuffer f = timelessResamplingBuffer AsyncMealy {..} []
   where
     amPut as a = return (a : as)
-    amGet as = return (f as, [])
+    amGet as = return $! Result [] $! f as
 
 -- TODO Test whether strictness works here, or consider using deepSeq
 
@@ -58,4 +59,4 @@ foldBuffer ::
 foldBuffer f = timelessResamplingBuffer AsyncMealy {..}
   where
     amPut b a = let !b' = f a b in return b'
-    amGet b = return (b, b)
+    amGet b = return $! Result b b

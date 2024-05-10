@@ -5,7 +5,7 @@
 {- | This module provides exception handling, and thus control flow,
 to synchronous signal functions.
 
-The API presented here closely follows dunai's 'Control.Monad.Trans.MSF.Except',
+The API presented here closely follows @automaton@'s 'Data.Automaton.Trans.Except',
 and reexports everything needed from there.
 -}
 module FRP.Rhine.ClSF.Except (
@@ -14,7 +14,7 @@ module FRP.Rhine.ClSF.Except (
   safe,
   safely,
   exceptS,
-  runMSFExcept,
+  runAutomatonExcept,
   currentInput,
 )
 where
@@ -27,12 +27,9 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except as X
 import Control.Monad.Trans.Reader
 
--- dunai
-import Control.Monad.Trans.MSF.Except hiding (once, once_, throwOn, throwOn', throwS, try)
-import Data.MonadicStreamFunction
-
--- TODO Find out whether there is a cleverer way to handle exports
-import Control.Monad.Trans.MSF.Except qualified as MSFE
+-- automaton
+import Data.Automaton.Trans.Except hiding (once, once_, throwOn, throwOn', throwS, try)
+import Data.Automaton.Trans.Except qualified as AutomatonE
 
 -- rhine
 import FRP.Rhine.ClSF.Core
@@ -46,11 +43,11 @@ throwS :: (Monad m) => ClSF (ExceptT e m) cl e a
 throwS = arrMCl throwE
 
 -- | Immediately throw the given exception.
-throw :: (Monad m) => e -> MSF (ExceptT e m) a b
+throw :: (Monad m) => e -> Automaton (ExceptT e m) a b
 throw = constM . throwE
 
 -- | Do not throw an exception.
-pass :: (Monad m) => MSF (ExceptT e m) a a
+pass :: (Monad m) => Automaton (ExceptT e m) a a
 pass = Category.id
 
 -- | Throw the given exception when the 'Bool' turns true.
@@ -89,12 +86,14 @@ throwMaybe = proc me -> case me of
 
 -- * Monad interface
 
+-- FIXME docs
+
 {- | A synchronous exception-throwing signal function.
-It is based on a @newtype@ from Dunai, 'MSFExcept',
+It is based on a @newtype@ from Dunai, 'AutomatonExcept',
 to exhibit a monad interface /in the exception type/.
 `return` then corresponds to throwing an exception,
 and `(>>=)` is exception handling.
-(For more information, see the documentation of 'MSFExcept'.)
+(For more information, see the documentation of 'AutomatonExcept'.)
 
 * @m@:  The monad that the signal function may take side effects in
 * @cl@: The clock on which the signal function ticks
@@ -102,41 +101,41 @@ and `(>>=)` is exception handling.
 * @b@:  The output type
 * @e@:  The type of exceptions that can be thrown
 -}
-type ClSFExcept m cl a b e = MSFExcept (ReaderT (TimeInfo cl) m) a b e
+type ClSFExcept cl a b m e = AutomatonExcept a b (ReaderT (TimeInfo cl) m) e
 
 {- | A clock polymorphic 'ClSFExcept',
 or equivalently an exception-throwing behaviour.
 Any clock with time domain @time@ may occur.
 -}
-type BehaviourFExcept m time a b e =
-  forall cl. (time ~ Time cl) => ClSFExcept m cl a b e
+type BehaviourFExcept time a b m e =
+  forall cl. (time ~ Time cl) => ClSFExcept cl a b m e
 
 -- | Compatibility to U.S. american spelling.
-type BehaviorFExcept m time a b e = BehaviourFExcept m time a b e
+type BehaviorFExcept time a b m e = BehaviourFExcept time a b m e
 
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
-runClSFExcept :: (Monad m) => ClSFExcept m cl a b e -> ClSF (ExceptT e m) cl a b
-runClSFExcept = morphS commuteExceptReader . runMSFExcept
+runClSFExcept :: (Monad m) => ClSFExcept cl a b m e -> ClSF (ExceptT e m) cl a b
+runClSFExcept = hoistS commuteExceptReader . runAutomatonExcept
 
 {- | Enter the monad context in the exception
    for 'ClSF's in the 'ExceptT' monad.
    The 'ClSF' will be run until it encounters an exception.
 -}
-try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept m cl a b e
-try = MSFE.try . morphS commuteReaderExcept
+try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept cl a b m e
+try = AutomatonE.try . hoistS commuteReaderExcept
 
 {- | Within the same tick, perform a monadic action,
    and immediately throw the value as an exception.
 -}
-once :: (Monad m) => (a -> m e) -> ClSFExcept m cl a b e
-once f = MSFE.once $ lift . f
+once :: (Monad m) => (a -> m e) -> ClSFExcept cl a b m e
+once f = AutomatonE.once $ lift . f
 
 -- | A variant of 'once' without input.
-once_ :: (Monad m) => m e -> ClSFExcept m cl a b e
+once_ :: (Monad m) => m e -> ClSFExcept cl a b m e
 once_ = once . const
 
 {- | Advances a single tick with the given Kleisli arrow,
    and then throws an exception.
 -}
-step :: (Monad m) => (a -> m (b, e)) -> ClSFExcept m cl a b e
-step f = MSFE.step $ lift . f
+step :: (Monad m) => (a -> m (b, e)) -> ClSFExcept cl a b m e
+step f = AutomatonE.step $ lift . f
