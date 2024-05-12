@@ -20,6 +20,7 @@ import Data.Stream.Final.Except
 import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
 
+-- FIXME basic haddocks in this file
 data StreamExcept a m e
   = -- | When using '>>=', this encoding needs to be used.
     FinalExcept (Final (ExceptT e m) a)
