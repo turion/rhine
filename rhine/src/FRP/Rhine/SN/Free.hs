@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 
 module FRP.Rhine.SN.Free (
   At (
@@ -24,6 +25,8 @@ module FRP.Rhine.SN.Free (
   resampling,
   feedbackSN,
   always,
+  with,
+  handle,
   currently,
   Clocks (..),
   NP (..),
@@ -161,6 +164,18 @@ data SNComponent m cls a b where
     SNComponent m cls c d
   Always ::
     MSF m a b -> SNComponent m cls a b
+  With ::
+    (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d) ->
+    FreeSN m cls a b ->
+    SNComponent m cls c d
+  Handle ::
+    (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d -> MSF (ReaderT r m) e f) ->
+    FreeSN m cls a b ->
+    FreeSN m cls c d ->
+    SNComponent m cls e f
+  -- FIXME generalise to a NP of arguments, but I don't know how I zip type level lists
+  -- FIXME generalise to `forall t . (MonadTrans t, MFunctor t) => ...` to allow e.g. for exception handling
+  --   or maybe even arbitrary monads
 
 newtype FreeSN m cls a b = FreeSN {getFreeSN :: A (SNComponent m cls) a b}
   deriving (Category, Arrow)
@@ -186,6 +201,12 @@ feedbackSN sn = FreeSN . liftFree2 . Feedback position position sn
 
 always :: MSF m a b -> FreeSN m cls a b
 always = FreeSN . liftFree2 . Always
+
+with :: (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d) -> FreeSN m cls a b -> FreeSN m cls c d
+with morph = FreeSN . liftFree2 . With morph
+
+handle :: (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d -> MSF (ReaderT r m) e f) -> FreeSN m cls a b -> FreeSN m cls c d -> FreeSN m cls e f
+handle handler sn1 sn2 = FreeSN $ liftFree2 $ Handle handler sn1 sn2
 
 eraseClockSNComponent :: forall m cls a b. (Monad m) => SNComponent m cls a b -> MSF (ReaderT (Tick cls) m) a b
 eraseClockSNComponent (Synchronous position clsf) = readerS $ proc (tick, a) -> do
@@ -214,6 +235,8 @@ eraseClockSNComponent (Feedback posA posB resbuf0 sn) =
         _ -> error "eraseClockSNComponent: internal error (Feedback)" -< ()
       returnA -< (b, resbuf'')
 eraseClockSNComponent (Always msf) = liftTransS msf
+eraseClockSNComponent (With morph sn) = morph $ eraseClockFreeSN sn
+eraseClockSNComponent (Handle handler sn1 sn2)= handler (eraseClockFreeSN sn1) (eraseClockFreeSN sn2)
 
 eraseClockResBuf ::
   (Monad m) =>
