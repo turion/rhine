@@ -1,6 +1,6 @@
 {- | An 'Automaton' with a 'WriterT' layer outputs an extra monoid value on every step.
 
-It is based on the _strict_ writer monad 'Control.Monad.Trans.Writer.Strict',
+It is based on the /strict/ writer monad 'Control.Monad.Trans.Writer.Strict',
 so when combining it with other modules such as @mtl@'s,
 the strict version has to be included, i.e. 'Control.Monad.Writer.Strict'
 instead of 'Control.Monad.Writer' or 'Control.Monad.Writer.Lazy'.

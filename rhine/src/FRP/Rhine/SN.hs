@@ -35,7 +35,7 @@ The type parameters are:
 * 'b': The output type. Output arrives at the rate @Out cl@.
 -}
 data SN m cl a b where
-  -- | A synchronous monadic stream function is the basic building block.
+  -- | A synchronous automaton is the basic building block.
   --   For such an 'SN', data enters and leaves the system at the same rate as it is processed.
   Synchronous ::
     ( cl ~ In cl, cl ~ Out cl) =>

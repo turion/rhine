@@ -30,7 +30,7 @@ that is, the 'Rhine' is "closed",
 then it is a standalone reactive program
 that can be run with the function 'flow'.
 
-Otherwise, one can start the clock and the signal network jointly as a monadic stream function,
+Otherwise, one can start the clock and the signal network jointly as an automaton,
 using 'eraseClock'.
 -}
 data Rhine m cl a b = Rhine
