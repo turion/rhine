@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: rhine
-version: 1.2
+version: 1.3
 synopsis: Functional Reactive Programming with type-level clocks
 description:
   Rhine is a library for synchronous and asynchronous Functional Reactive Programming (FRP).
@@ -44,11 +44,11 @@ source-repository head
 source-repository this
   type: git
   location: https://github.com/turion/rhine.git
-  tag: v1.0
+  tag: v1.3
 
 common opts
   build-depends:
-    automaton ^>=0.1.0.0,
+    automaton ^>=1.3,
     base >=4.14 && <4.20,
     monad-schedule ^>=0.1.2,
     mtl >=2.2 && <2.4,
