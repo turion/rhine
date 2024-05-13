@@ -241,6 +241,7 @@ automaton = safely $ do
   e <- try someAutomaton
   once $ \input -> putStrLn $ "Whoops, something happened when receiving input " ++ show input ++ ": " ++ show e ++ ", but I'll continue now."
   safe fallbackAutomaton
+@
 -}
 safely :: (Monad m) => AutomatonExcept a b m Void -> Automaton m a b
 safely = Automaton . StreamExcept.safely . getAutomatonExcept

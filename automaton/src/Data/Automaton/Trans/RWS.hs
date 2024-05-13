@@ -1,7 +1,7 @@
 {- | This module combines the wrapping and running functions for the 'Reader',
 'Writer' and 'State' monad layers in a single layer.
 
-It is based on the _strict_ 'RWS' monad 'Control.Monad.Trans.RWS.Strict',
+It is based on the /strict/ 'RWS' monad 'Control.Monad.Trans.RWS.Strict',
 so when combining it with other modules such as @mtl@'s, the strict version
 has to be included, i.e. 'Control.Monad.RWS.Strict' instead of
 'Control.Monad.RWS' or 'Control.Monad.RWS.Lazy'.

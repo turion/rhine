@@ -22,13 +22,13 @@ import Data.Stream.Optimized qualified as StreamOptimized
 
 {- | A stream that can terminate with an exception.
 
-In @automaton@, such streams mainly serve as a vehicle to bring control flow to 'AutomatonExcept'
+In @automaton@, such streams mainly serve as a vehicle to bring control flow to 'Data.Automaton.Trans.Except.AutomatonExcept'
 (which is based on 'StreamExcept'), and the docs there apply here as well.
 
 'StreamExcept' is not only a 'Monad', it also has more efficient 'Selective', 'Applicative', and 'Functor' interfaces.
 -}
 data StreamExcept a m e
-  = -- | When using '>>=', this encoding needs to be used.
+  = -- | When using '>>=', this encoding will be used.
     FinalExcept (Final (ExceptT e m) a)
   | -- | This is usually the faster encoding, as it can be optimized by GHC.
     InitialExcept (OptimizedStreamT (ExceptT e m) a)

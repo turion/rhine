@@ -30,7 +30,7 @@ import FRP.Rhine.Clock
 
 -- * Clocked signal functions and behaviours
 
-{- | A (synchronous, clocked) monadic stream function
+{- | A (synchronous, clocked) automaton
    with the additional side effect of being time-aware,
    that is, reading the current 'TimeInfo' of the clock @cl@.
 -}
@@ -92,7 +92,7 @@ liftClSFAndClock ::
   ClSF (t m) (LiftClock m t cl) a b
 liftClSFAndClock = hoistClSFAndClock lift
 
-{- | A monadic stream function without dependency on time
+{- | An automaton without dependency on time
    is a 'ClSF' for any clock.
 -}
 timeless :: (Monad m) => Automaton m a b -> ClSF m cl a b

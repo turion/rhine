@@ -2,7 +2,7 @@
 
 A global state can be hidden by an automaton by making it an internal state.
 
-This module is based on the _strict_ state monad 'Control.Monad.Trans.State.Strict',
+This module is based on the /strict/ state monad 'Control.Monad.Trans.State.Strict',
 so when combining it with other modules such as @mtl@'s,
 the strict version has to be included, i.e. 'Control.Monad.State.Strict'
 instead of 'Control.Monad.State' or 'Control.Monad.State.Lazy'.
