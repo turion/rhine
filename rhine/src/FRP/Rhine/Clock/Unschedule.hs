@@ -26,11 +26,14 @@ data UnscheduleClock m cl = UnscheduleClock
   , scheduleWait :: Diff (Time cl) -> m ()
   }
 
--- The 'yield' action is interpreted as thread yielding in 'IO'.
+{- | Remove a 'ScheduleT' layer from the monad transformer stack of the clock.
+
+The 'yield' action is interpreted as thread yielding in 'IO'.
+-}
 unyieldClock :: cl -> UnscheduleClock IO cl
 unyieldClock cl = UnscheduleClock cl $ const $ liftIO Concurrent.yield
 
-instance (Clock (ScheduleT (Diff (Time cl)) m) cl, Monad m) => Clock m (UnscheduleClock m cl) where
+instance (TimeDomain (Time cl), Clock (ScheduleT (Diff (Time cl)) m) cl, Monad m) => Clock m (UnscheduleClock m cl) where
   type Tag (UnscheduleClock _ cl) = Tag cl
   type Time (UnscheduleClock _ cl) = Time cl
   initClock UnscheduleClock {scheduleClock, scheduleWait} = run $ first (hoistS run) <$> initClock scheduleClock

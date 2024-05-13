@@ -1,5 +1,11 @@
 # Revision history for rhine-gloss
 
+## 1.3
+
+* Dropped `dunai` dependency in favour of state automata.
+  See [the versions readme](./versions.md) for details.
+* Support GHC 9.6
+
 ## 1.1
 
 * dunai-0.11 compatibility

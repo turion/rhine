@@ -22,10 +22,6 @@ import Data.Text.Lazy.IO (hGetContents)
 -- criterion
 import Criterion.Main
 
--- dunai
-import Control.Monad.Trans.MSF.Except qualified as Dunai
-import Data.MonadicStreamFunction qualified as Dunai
-
 -- automaton
 import Data.Automaton.Trans.Except qualified as Automaton
 
@@ -45,7 +41,6 @@ benchmarks =
   bgroup
     "WordCount"
     [ bench "rhine" $ nfIO rhineWordCount
-    , bench "dunai" $ nfIO dunaiWordCount
     , bench "automaton" $ nfIO automatonWordCount
     , bgroup
         "Text"
@@ -100,24 +95,6 @@ automatonWordCount = do
         Right _ -> returnA -< ()
         Left e ->
           Automaton.throwS -< if isEOFError e then Right $ getSum nWords else Left e
-
-{- | Idiomatic dunai implementation.
-
-Compared to Rhine, this doesn't have the overhead of clocks,
-but it's implemented with continuations and not explicit state machines.
--}
-dunaiWordCount :: IO Int
-dunaiWordCount = do
-  Left (Right nWords) <- withInput $ runExceptT $ Dunai.reactimate wc
-  return nWords
-  where
-    wc = proc () -> do
-      lineOrEOF <- Dunai.constM $ liftIO $ Control.Exception.try getLine -< ()
-      nWords <- Dunai.mappendS -< either (const 0) (Sum . length . words) lineOrEOF
-      case lineOrEOF of
-        Right _ -> returnA -< ()
-        Left e ->
-          Dunai.throwS -< if isEOFError e then Right $ getSum nWords else Left e
 
 -- ** Reference implementations in Haskell
 
