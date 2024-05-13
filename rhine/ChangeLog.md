@@ -8,7 +8,7 @@
   It is now `ClSFExcept cl a b m e` instead of `ClSFExcept m cl a b e`.
   The advantage is that now the type is an instance of `MonadTrans` and `MFunctor`.
   Analogous changes have been made to `BehaviourFExcept`.
-* Support GHC 9.6
+* Support GHC 9.6 and 9.8
 
 ## 1.2.1
 
