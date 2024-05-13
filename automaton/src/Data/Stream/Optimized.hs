@@ -11,8 +11,9 @@ Since both variants are semantically the same, not the full API of "Data.Stream"
 module Data.Stream.Optimized where
 
 -- base
-import Control.Applicative (Alternative (..), liftA2)
+import Control.Applicative (Alternative (..), Applicative (..), liftA2)
 import Data.Monoid (Ap (..))
+import Prelude hiding (Applicative (..))
 
 -- transformers
 import Control.Monad.Trans.Except (ExceptT)
