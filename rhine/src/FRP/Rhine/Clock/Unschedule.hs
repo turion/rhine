@@ -26,7 +26,10 @@ data UnscheduleClock m cl = UnscheduleClock
   , scheduleWait :: Diff (Time cl) -> m ()
   }
 
--- The 'yield' action is interpreted as thread yielding in 'IO'.
+{- | Remove a 'ScheduleT' layer from the monad transformer stack of the clock.
+
+The 'yield' action is interpreted as thread yielding in 'IO'.
+-}
 unyieldClock :: cl -> UnscheduleClock IO cl
 unyieldClock cl = UnscheduleClock cl $ const $ liftIO Concurrent.yield
 
