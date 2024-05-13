@@ -12,6 +12,7 @@ import Control.Applicative (Alternative (..), liftA2)
 import Control.Monad ((<$!>))
 import Data.Bifunctor (bimap)
 import Data.Monoid (Ap (..))
+import Prelude hiding (liftA2)
 
 -- transformers
 import Control.Monad.Trans.Class
