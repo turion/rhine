@@ -5,7 +5,7 @@
 
 * Dropped `dunai` dependency in favour of state automata.
   See [the versions readme](./versions.md) for details.
-* Support GHC 9.6
+* Support GHC 9.6 and 9.8
 * Updated to monad-bayes 1.3
 
 ## 1.2
