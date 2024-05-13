@@ -5,7 +5,7 @@ synopsis: Effectful streams and automata in initial encoding
 description:
   Effectful streams have an internal state and a step function.
   Varying the effect type, this gives many different useful concepts:
-  For example with a reader effect, it results in automata/transducers/state machines.
+  For example with a reader effect, it results in automata (a.k.a transducers or state machines).
 
 license: MIT
 license-file: LICENSE
