@@ -34,14 +34,18 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
     hpPreOverrides = { pkgs, ... }: self: super:
       with pkgs.haskell.lib;
       with haskell-flake-utils.lib;
-      tunePackages pkgs super {
-        monad-bayes = [ dontCheck ];
-      } // {
+      {
         time-domain = super.callHackageDirect {
           pkg = "time-domain";
           ver = "0.1.0.4";
           sha256 = "sha256-6o0dsCDUSjyBx7X979o3oDSRbrWYvkf45DUF5AyvbGY=";
         } {};
+        brick = super.brick_2_3_1; # monad-bayes
+        monad-bayes = dontCheck (super.callHackageDirect {
+          pkg = "monad-bayes";
+          ver = "1.3.0.1";
+          sha256 = "sha256-66IUFRWNY7flGR3Qb22keSb3FDP4zIjoYXfRH7yvCts=";
+        } {});
       };
 
     name = "rhine";
