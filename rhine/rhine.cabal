@@ -35,6 +35,7 @@ tested-with:
   ghc ==9.2.8
   ghc ==9.4.7
   ghc ==9.6.4
+  ghc ==9.8.2
 
 source-repository head
   type: git
@@ -48,11 +49,11 @@ source-repository this
 common opts
   build-depends:
     automaton ^>=0.1.0.0,
-    base >=4.14 && <4.19,
+    base >=4.14 && <4.20,
     monad-schedule ^>=0.1.2,
     mtl >=2.2 && <2.4,
     selective ^>=0.7,
-    text >=1.2 && <2.1,
+    text >=1.2 && <2.2,
     time >=1.8,
     transformers >=0.5,
     vector-sized >=1.4,
@@ -83,7 +84,7 @@ common opts
 common test-deps
   build-depends:
     QuickCheck ^>=2.14,
-    tasty ^>=1.4,
+    tasty >=1.4 && <1.6,
     tasty-hunit ^>=0.10,
     tasty-quickcheck ^>=0.10,
 
@@ -151,7 +152,7 @@ library
     random >=1.1,
     simple-affine-space ^>=0.2,
     sop-core ^>=0.5,
-    text >=1.2 && <2.1,
+    text >=1.2 && <2.2,
     time >=1.8,
     time-domain ^>=0.1.0.2,
     transformers >=0.5,
