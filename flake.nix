@@ -34,14 +34,8 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
     hpPreOverrides = { pkgs, ... }: self: super:
       with pkgs.haskell.lib;
       with haskell-flake-utils.lib;
-      tunePackages pkgs {
-        monad-bayes = super.callHackageDirect {
-          pkg = "monad-bayes";
-          ver = "1.3.0";
-          sha256 = "sha256-9cNoHvqZ1D0PEykZMvh8yAx3nZjMGFrsgnNRmANwIUk=";
-        } {};
-      } {
-        monad-bayes = [ (jailbreakUnbreak pkgs) dontCheck ];
+      tunePackages pkgs super {
+        monad-bayes = [ dontCheck ];
       };
 
     name = "rhine";
