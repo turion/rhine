@@ -254,7 +254,7 @@ eraseClockResBuf _ orderedPositions resbuf0 =
         (Nothing, _) -> returnA -< resbuf
         (Just ti, Present a) -> do
           arrM $ uncurry $ uncurry put -< ((resbuf, ti), a)
-        _ -> error "eraseClockSNComponent: internal error (Resampling)" -< ()
+        _ -> error "eraseClockResBuf: internal error" -< ()
       case projectPosition posOut $ getTick tick of
         Nothing -> returnA -< (Absent, resbuf')
         Just ti -> do
