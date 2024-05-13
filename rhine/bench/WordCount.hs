@@ -23,11 +23,13 @@ import Data.Text.Lazy.IO (hGetContents)
 import Criterion.Main
 
 -- dunai
+import Control.Monad.Trans.MSF.Except qualified as Dunai
 import Data.MonadicStreamFunction qualified as Dunai
 
--- rhine
+-- automaton
+import Data.Automaton.Trans.Except qualified as Automaton
 
-import Control.Monad.Trans.MSF.Except qualified as Dunai
+-- rhine
 import FRP.Rhine
 import FRP.Rhine.Clock.Except (
   DelayIOError,
@@ -44,6 +46,7 @@ benchmarks =
     "WordCount"
     [ bench "rhine" $ nfIO rhineWordCount
     , bench "dunai" $ nfIO dunaiWordCount
+    , bench "automaton" $ nfIO automatonWordCount
     , bgroup
         "Text"
         [ bench "IORef" $ nfIO textWordCount
@@ -71,18 +74,37 @@ withInput action = do
 -- | Idiomatic Rhine implementation with a single clock
 rhineWordCount :: IO Int
 rhineWordCount = do
-  Left (Right count) <- withInput $ runExceptT $ flow $ wc @@ delayIOError (ExceptClock StdinClock) Left
-  return count
+  Left (Right nWords) <- withInput $ runExceptT $ flow $ wc @@ delayIOError (ExceptClock StdinClock) Left
+  return nWords
   where
     wc :: ClSF (ExceptT (Either IOError Int) IO) (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int)) () ()
     wc = proc _ -> do
       lineOrStop <- tagS -< ()
-      words <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
-      throwOn' -< (either isEOFError (const False) lineOrStop, Right $ getSum words)
+      nWords <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
+      throwOn' -< (either isEOFError (const False) lineOrStop, Right $ getSum nWords)
+
+{- | Implementation using automata.
+
+Within the automata framework, this is what the Rhine implementation could optimize to at most,
+if all the extra complexity introduced by clocks is optimized away completely.
+-}
+automatonWordCount :: IO Int
+automatonWordCount = do
+  Left (Right nWords) <- withInput $ runExceptT $ reactimate wc
+  return nWords
+  where
+    wc = proc () -> do
+      lineOrEOF <- constM $ liftIO $ Control.Exception.try getLine -< ()
+      nWords <- mappendS -< either (const 0) (Sum . length . words) lineOrEOF
+      case lineOrEOF of
+        Right _ -> returnA -< ()
+        Left e ->
+          Automaton.throwS -< if isEOFError e then Right $ getSum nWords else Left e
 
 {- | Idiomatic dunai implementation.
 
-Compared to Rhine, this doesn't have the overhead of clocks and exception handling.
+Compared to Rhine, this doesn't have the overhead of clocks,
+but it's implemented with continuations and not explicit state machines.
 -}
 dunaiWordCount :: IO Int
 dunaiWordCount = do
@@ -95,16 +117,15 @@ dunaiWordCount = do
       case lineOrEOF of
         Right _ -> returnA -< ()
         Left e ->
-          if isEOFError e
-            then Dunai.throwS -< Right $ getSum nWords
-            else Dunai.throwS -< Left e
+          Dunai.throwS -< if isEOFError e then Right $ getSum nWords else Left e
 
 -- ** Reference implementations in Haskell
 
 {- | The fastest line-based word count implementation that I could think of.
 
-This is what 'rhineWordCount' would reduce to roughly, if all possible optimizations kick in,
-except for the way the IORef is handled.
+Except for the way the IORef is handled,
+this is what 'rhineWordCount' would reduce to roughly if all possible optimizations kick in,
+and automata don't add any overhead.
 -}
 textWordCount :: IO Int
 textWordCount = do
@@ -129,11 +150,11 @@ textWordCountNoIORef :: IO Int
 textWordCountNoIORef = do
   withInput $ go 0
   where
-    step n = do
+    processLine n = do
       line <- getLine
       return $ Right $ n + length (words line)
     go n = do
-      n' <- catch (step n) $
+      n' <- catch (processLine n) $
         \(e :: IOError) ->
           if isEOFError e
             then return $ Left n
@@ -144,5 +165,5 @@ textWordCountNoIORef = do
 textLazy :: IO Int
 textLazy = do
   inputFileName <- testFile
-  handle <- openFile inputFileName ReadMode
-  length . Lazy.words <$> hGetContents handle
+  h <- openFile inputFileName ReadMode
+  length . Lazy.words <$> hGetContents h

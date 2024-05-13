@@ -3,8 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TupleSections #-}
 
-{- |
-Translate clocked signal processing components to stream functions without explicit clock types.
+{- | Translate clocked signal processing components to stream functions without explicit clock types.
 
 This module is not meant to be used externally,
 and is thus not exported from 'FRP.Rhine'.
@@ -14,12 +13,11 @@ module FRP.Rhine.Reactimation.ClockErasure where
 -- base
 import Control.Monad (join)
 
--- dunai
-import Control.Monad.Trans.MSF.Reader
-import Data.MonadicStreamFunction
+-- automaton
+import Data.Automaton.Trans.Reader
+import Data.Stream.Result (Result (..))
 
 -- rhine
-
 import FRP.Rhine.ClSF hiding (runReaderS)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
@@ -35,10 +33,11 @@ eraseClockClSF ::
   ClockProxy cl ->
   Time cl ->
   ClSF m cl a b ->
-  MSF m (Time cl, Tag cl, a) b
+  Automaton m (Time cl, Tag cl, a) b
 eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
   timeInfo <- genTimeInfo proxy initialTime -< (time, tag)
   runReaderS clsf -< (timeInfo, a)
+{-# INLINE eraseClockClSF #-}
 
 {- | Run a signal network as a monadic stream function.
 
@@ -53,7 +52,7 @@ eraseClockSN ::
   (Monad m, Clock m cl, GetClockProxy cl) =>
   Time cl ->
   SN m cl a b ->
-  MSF m (Time cl, Tag cl, Maybe a) (Maybe b)
+  Automaton m (Time cl, Tag cl, Maybe a) (Maybe b)
 -- A synchronous signal network is run by erasing the clock from the clocked signal function.
 eraseClockSN initialTime sn@(Synchronous clsf) = proc (time, tag, Just a) -> do
   b <- eraseClockClSF (toClockProxy sn) initialTime clsf -< (time, tag, a)
@@ -100,17 +99,17 @@ eraseClockSN initialTime (Precompose clsf sn) =
     proc (time, tag, aMaybe) -> do
       bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
       eraseClockSN initialTime sn -< (time, tag, bMaybe)
-eraseClockSN initialTime (Feedback buf0 sn) =
+eraseClockSN initialTime (Feedback ResamplingBuffer {buffer, put, get} sn) =
   let
     proxy = toClockProxy sn
    in
-    feedback buf0 $ proc ((time, tag, aMaybe), buf) -> do
+    feedback buffer $ proc ((time, tag, aMaybe), buf) -> do
       (cMaybe, buf') <- case inTag proxy tag of
         Nothing -> do
           returnA -< (Nothing, buf)
         Just tagIn -> do
           timeInfo <- genTimeInfo (inProxy proxy) initialTime -< (time, tagIn)
-          (c, buf') <- arrM $ uncurry get -< (buf, timeInfo)
+          Result buf' c <- arrM $ uncurry get -< (timeInfo, buf)
           returnA -< (Just c, buf')
       bdMaybe <- eraseClockSN initialTime sn -< (time, tag, (,) <$> aMaybe <*> cMaybe)
       case (,) <$> outTag proxy tag <*> bdMaybe of
@@ -118,7 +117,7 @@ eraseClockSN initialTime (Feedback buf0 sn) =
           returnA -< (Nothing, buf')
         Just (tagOut, (b, d)) -> do
           timeInfo <- genTimeInfo (outProxy proxy) initialTime -< (time, tagOut)
-          buf'' <- arrM $ uncurry $ uncurry put -< ((buf', timeInfo), d)
+          buf'' <- arrM $ uncurry $ uncurry put -< ((timeInfo, d), buf')
           returnA -< (Just b, buf'')
 eraseClockSN initialTime (FirstResampling sn buf) =
   let
@@ -133,6 +132,7 @@ eraseClockSN initialTime (FirstResampling sn buf) =
           _ -> Nothing
       dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) initialTime buf -< resBufInput
       returnA -< (,) <$> bMaybe <*> join dMaybe
+{-# INLINE eraseClockSN #-}
 
 {- | Translate a resampling buffer into a monadic stream function.
 
@@ -149,14 +149,15 @@ eraseClockResBuf ::
   ClockProxy cl2 ->
   Time cl1 ->
   ResBuf m cl1 cl2 a b ->
-  MSF m (Either (Time cl1, Tag cl1, a) (Time cl2, Tag cl2)) (Maybe b)
-eraseClockResBuf proxy1 proxy2 initialTime resBuf0 = feedback resBuf0 $ proc (input, resBuf) -> do
+  Automaton m (Either (Time cl1, Tag cl1, a) (Time cl2, Tag cl2)) (Maybe b)
+eraseClockResBuf proxy1 proxy2 initialTime ResamplingBuffer {buffer, put, get} = feedback buffer $ proc (input, resBuf) -> do
   case input of
     Left (time1, tag1, a) -> do
       timeInfo1 <- genTimeInfo proxy1 initialTime -< (time1, tag1)
-      resBuf' <- arrM (uncurry $ uncurry put) -< ((resBuf, timeInfo1), a)
+      resBuf' <- arrM (uncurry $ uncurry put) -< ((timeInfo1, a), resBuf)
       returnA -< (Nothing, resBuf')
     Right (time2, tag2) -> do
       timeInfo2 <- genTimeInfo proxy2 initialTime -< (time2, tag2)
-      (b, resBuf') <- arrM (uncurry get) -< (resBuf, timeInfo2)
+      Result resBuf' b <- arrM (uncurry get) -< (timeInfo2, resBuf)
       returnA -< (Just b, resBuf')
+{-# INLINE eraseClockResBuf #-}

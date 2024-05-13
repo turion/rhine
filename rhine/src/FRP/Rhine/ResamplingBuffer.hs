@@ -1,3 +1,4 @@
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,6 +16,9 @@ module FRP.Rhine.ResamplingBuffer (
 )
 where
 
+-- automaton
+import Data.Stream.Result
+
 -- rhine
 import FRP.Rhine.Clock
 
@@ -27,7 +31,7 @@ import FRP.Rhine.Clock
 {- | A stateful buffer from which one may 'get' a value,
 or to which one may 'put' a value,
 depending on the clocks.
-`ResamplingBuffer`s can be clock-polymorphic,
+'ResamplingBuffer's can be clock-polymorphic,
 or specific to certain clocks.
 
 * 'm': Monad in which the 'ResamplingBuffer' may have side effects
@@ -36,18 +40,23 @@ or specific to certain clocks.
 * 'a': The input type
 * 'b': The output type
 -}
-data ResamplingBuffer m cla clb a b = ResamplingBuffer
-  { put ::
+data ResamplingBuffer m cla clb a b = forall s.
+  ResamplingBuffer
+  { buffer :: s
+  -- ^ The internal state of the buffer.
+  , put ::
       TimeInfo cla ->
       a ->
-      m (ResamplingBuffer m cla clb a b)
+      s ->
+      m s
   -- ^ Store one input value of type 'a' at a given time stamp,
-  --   and return a continuation.
+  --   and return an updated state.
   , get ::
       TimeInfo clb ->
-      m (b, ResamplingBuffer m cla clb a b)
+      s ->
+      m (Result s b)
   -- ^ Retrieve one output value of type 'b' at a given time stamp,
-  --   and a continuation.
+  --   and an updated state.
   }
 
 -- | A type synonym to allow for abbreviation.
@@ -59,8 +68,9 @@ hoistResamplingBuffer ::
   (forall c. m1 c -> m2 c) ->
   ResamplingBuffer m1 cla clb a b ->
   ResamplingBuffer m2 cla clb a b
-hoistResamplingBuffer hoist ResamplingBuffer {..} =
+hoistResamplingBuffer morph ResamplingBuffer {..} =
   ResamplingBuffer
-    { put = (((hoistResamplingBuffer hoist <$>) . hoist) .) . put
-    , get = (second (hoistResamplingBuffer hoist) <$>) . hoist . get
+    { put = ((morph .) .) . put
+    , get = (morph .) . get
+    , buffer
     }

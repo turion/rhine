@@ -14,15 +14,16 @@ that ticks only on certain subevents.
 -}
 module FRP.Rhine.Clock.Select where
 
+-- base
+import Control.Arrow
+import Data.Maybe (maybeToList)
+
+-- automaton
+import Data.Automaton (Automaton, concatS)
+
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-
--- dunai
-import Data.MonadicStreamFunction.Async (concatS)
-
--- base
-import Data.Maybe (maybeToList)
 
 {- | A clock that selects certain subevents of type 'a',
    from the tag of a main clock.
@@ -66,8 +67,8 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
 
 instance GetClockProxy (SelectClock cl a)
 
-{- | Helper function that runs an 'MSF' with 'Maybe' output
+{- | Helper function that runs an 'Automaton' with 'Maybe' output
    until it returns a value.
 -}
-filterS :: (Monad m) => MSF m () (Maybe b) -> MSF m () b
+filterS :: (Monad m) => Automaton m () (Maybe b) -> Automaton m () b
 filterS = concatS . (>>> arr maybeToList)
