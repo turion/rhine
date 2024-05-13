@@ -89,8 +89,7 @@ common test-deps
 
 common bench-deps
   build-depends:
-    criterion ^>=1.6,
-    dunai ^>=0.12.2,
+    criterion ^>=1.6
 
 library
   import: opts
