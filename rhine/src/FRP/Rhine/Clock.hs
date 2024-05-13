@@ -186,7 +186,7 @@ rescaledClockToM RescaledClock {..} =
     }
 
 {- | Instead of a mere function as morphism of time domains,
-   we can transform one time domain into the other with a monadic stream function.
+   we can transform one time domain into the other with an automaton.
 -}
 data RescaledClockS m cl time tag = RescaledClockS
   { unscaledClockS :: cl

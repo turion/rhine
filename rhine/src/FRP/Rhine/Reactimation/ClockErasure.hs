@@ -25,7 +25,7 @@ import FRP.Rhine.Clock.Util
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.SN
 
-{- | Run a clocked signal function as a monadic stream function,
+{- | Run a clocked signal function as an automaton,
    accepting the timestamps and tags as explicit inputs.
 -}
 eraseClockClSF ::
@@ -39,7 +39,7 @@ eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
   runReaderS clsf -< (timeInfo, a)
 {-# INLINE eraseClockClSF #-}
 
-{- | Run a signal network as a monadic stream function.
+{- | Run a signal network as an automaton.
 
    Depending on the incoming clock,
    input data may need to be provided,
@@ -134,7 +134,7 @@ eraseClockSN initialTime (FirstResampling sn buf) =
       returnA -< (,) <$> bMaybe <*> join dMaybe
 {-# INLINE eraseClockSN #-}
 
-{- | Translate a resampling buffer into a monadic stream function.
+{- | Translate a resampling buffer into an automaton.
 
    The input decides whether the buffer is to accept input or has to produce output.
    (In the latter case, only time information is provided.)

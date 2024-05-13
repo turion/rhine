@@ -416,8 +416,6 @@ traverseS = traverse'
 traverseS_ :: (Monad m, Traversable f) => Automaton m a b -> Automaton m (f a) ()
 traverseS_ automaton = traverse' automaton >>> arr (const ())
 
--- FIXME separate issue to generalise to something from recursion schemes?
-
 {- | Launch arbitrarily many copies of the automaton in parallel.
 
 * The copies of the automaton are launched on demand as the input lists grow.

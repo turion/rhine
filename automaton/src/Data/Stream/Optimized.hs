@@ -4,9 +4,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{- | An optimization layer on 'Data.Stream'.
+{- | An optimization layer on "Data.Stream".
 
-Since both variants are semantically the same, not the full API of 'Data.Stream' is replicated here.
+Since both variants are semantically the same, not the full API of "Data.Stream" is replicated here.
 -}
 module Data.Stream.Optimized where
 

@@ -72,7 +72,7 @@ An stream defined thusly will typically hang and/or leak memory, trying to build
 
 It is nevertheless possible to define streams recursively, but one needs to first identify the recursive definition of its /state type/.
 Then for the greatest generality, 'fixStream' and 'fixStream'' can be used, and some special cases are covered by functions
-such as 'fixA', 'parallely', 'many' and 'some'.
+such as 'fixA', 'Data.Automaton.parallely', 'many' and 'some'.
 -}
 data StreamT m a = forall s.
   StreamT
