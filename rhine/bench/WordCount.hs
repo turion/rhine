@@ -28,12 +28,15 @@ import Data.MonadicStreamFunction qualified as Dunai
 -- rhine
 
 import Control.Monad.Trans.MSF.Except qualified as Dunai
+import Data.Profunctor (Profunctor (lmap))
 import FRP.Rhine
 import FRP.Rhine.Clock.Except (
   DelayIOError,
   ExceptClock (..),
   delayIOError,
  )
+import FRP.Rhine.Rhine.Free qualified as Free
+import FRP.Rhine.SN.Free (At (..))
 import Paths_rhine
 
 -- * Top level benchmarks
@@ -43,6 +46,7 @@ benchmarks =
   bgroup
     "WordCount"
     [ bench "rhine" $ nfIO rhineWordCount
+    , bench "rhine (free sn)" $ nfIO rhineFreeWordCount
     , bench "dunai" $ nfIO dunaiWordCount
     , bgroup
         "Text"
@@ -68,13 +72,29 @@ withInput action = do
 
 -- * Frameworks specific implementations of word count
 
+type WordCountClock = (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int))
+
+wordCountClock :: WordCountClock
+wordCountClock = delayIOError (ExceptClock StdinClock) Left
+
 -- | Idiomatic Rhine implementation with a single clock
 rhineWordCount :: IO Int
 rhineWordCount = do
-  Left (Right count) <- withInput $ runExceptT $ flow $ wc @@ delayIOError (ExceptClock StdinClock) Left
+  Left (Right count) <- withInput $ runExceptT $ flow $ wc @@ wordCountClock
   return count
   where
-    wc :: ClSF (ExceptT (Either IOError Int) IO) (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int)) () ()
+    wc :: ClSF (ExceptT (Either IOError Int) IO) WordCountClock () ()
+    wc = proc _ -> do
+      lineOrStop <- tagS -< ()
+      words <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
+      throwOn' -< (either isEOFError (const False) lineOrStop, Right $ getSum words)
+
+rhineFreeWordCount :: IO Int
+rhineFreeWordCount = do
+  Left (Right count) <- withInput $ runExceptT $ Free.flow $ lmap Present $ wc Free.@@ wordCountClock
+  return count
+  where
+    wc :: ClSF (ExceptT (Either IOError Int) IO) WordCountClock () ()
     wc = proc _ -> do
       lineOrStop <- tagS -< ()
       words <- mappendS -< either (const 0) (Sum . length . words) lineOrStop
