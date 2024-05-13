@@ -14,12 +14,10 @@ import "base" Data.Void (absurd)
 
 import "criterion" Criterion.Main
 
-import "dunai" Data.MonadicStreamFunction as Dunai
-
 import "automaton" Data.Stream as Stream (StreamT (..))
 import "automaton" Data.Stream.Optimized (OptimizedStreamT (Stateful))
 import "automaton" Data.Stream.Result (Result (..))
-import "rhine" FRP.Rhine as Rhine
+import "rhine" FRP.Rhine
 
 nMax :: Int
 nMax = 1_000_000
@@ -30,14 +28,13 @@ benchmarks =
     "Sum"
     [ bench "rhine" $ nf rhine nMax
     , bench "rhine flow" $ nf rhineFlow nMax
-    , bench "dunai" $ nf dunai nMax
     , bench "automaton" $ nf automaton nMax
     , bench "direct" $ nf direct nMax
     , bench "direct monad" $ nf directM nMax
     ]
 
 rhine :: Int -> Int
-rhine n = sum $ runIdentity $ Rhine.embed Rhine.count $ replicate n ()
+rhine n = sum $ runIdentity $ embed count $ replicate n ()
 
 -- FIXME separate ticket to improve performance of this
 rhineFlow :: Int -> Int
@@ -45,17 +42,14 @@ rhineFlow n =
   either id absurd $
     flow $
       (@@ Trivial) $ proc () -> do
-        k <- Rhine.count -< ()
-        s <- Rhine.sumN -< k
+        k <- count -< ()
+        s <- sumN -< k
         if k < n
           then returnA -< ()
           else arrMCl Left -< s
 
-dunai :: Int -> Int
-dunai n = sum $ runIdentity $ Dunai.embed Dunai.count $ replicate n ()
-
 automaton :: Int -> Int
-automaton n = sum $ runIdentity $ Rhine.embed myCount $ replicate n ()
+automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
   where
     myCount :: Automaton Identity () Int
     myCount =

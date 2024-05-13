@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: dunai-0.12.2@sha256:e769c1b89b5571138c20c387c304758f87f2b9c599fcfe6fc5a81cd7c4ec86b7,6982
-    pantry-tree:
-      sha256: 79a567d02d6d018530dcfa5ac9f7d5e9fead24e9038ba63fa1ed902369f7df31
-      size: 2232
-  original:
-    hackage: dunai-0.12.2
-- completed:
     hackage: monad-schedule-0.1.2.1@sha256:95d6b9c6fd36f585e4a52938ebd1762c2e2caa8bb3c11ce86985dd11a2caae1a,1776
     pantry-tree:
       sha256: 5c2fed7fb93cdf87abdd56b0df7e5c03719110d6aa538bc903ed6a6357f21393

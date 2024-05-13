@@ -68,13 +68,6 @@ packages:
   original:
     hackage: hspec-expectations-0.8.4@sha256:4237f094a7931202ff57ac6475542b0b314b50a7024550e2b6eb87cfb0d4ff93,1702
 - completed:
-    hackage: dunai-0.12.2@sha256:e769c1b89b5571138c20c387c304758f87f2b9c599fcfe6fc5a81cd7c4ec86b7,6982
-    pantry-tree:
-      sha256: 79a567d02d6d018530dcfa5ac9f7d5e9fead24e9038ba63fa1ed902369f7df31
-      size: 2232
-  original:
-    hackage: dunai-0.12.2
-- completed:
     hackage: criterion-1.6.3.0@sha256:cf27e6c83f91674fb67ef253cae644ad0ce079b7e2cfa6402e13e930f78499ec,5373
     pantry-tree:
       sha256: 2102113a4ac228305ea9396967878c6921377bafc92425c1b8cf82f8afbef40e

@@ -35,11 +35,6 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
       with pkgs.haskell.lib;
       with haskell-flake-utils.lib;
       tunePackages pkgs {
-        dunai = super.callHackageDirect {
-          pkg = "dunai";
-          ver = "0.12.2";
-          sha256 = "sha256-zc0jFKV5maAqCY5C8ZLdLWuSOpX30l5ZjbFiA+ESA2A=";
-        } {};
         monad-bayes = super.callHackageDirect {
           pkg = "monad-bayes";
           ver = "1.3.0";
