@@ -1,5 +1,13 @@
 # Revision history for rhine-gloss
 
+
+## 1.3
+
+* Dropped `dunai` dependency in favour of state automata.
+  See [the versions readme](./versions.md) for details.
+* Support GHC 9.6
+* Updated to monad-bayes 1.3
+
 ## 1.2
 
 * Updated to monad-bayes 1.2.0
