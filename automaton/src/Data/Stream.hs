@@ -8,11 +8,11 @@
 module Data.Stream where
 
 -- base
-import Control.Applicative (Alternative (..), liftA2)
+import Control.Applicative (Alternative (..), Applicative (..), liftA2)
 import Control.Monad ((<$!>))
 import Data.Bifunctor (bimap)
 import Data.Monoid (Ap (..))
-import Prelude hiding (liftA2)
+import Prelude hiding (Applicative (..))
 
 -- transformers
 import Control.Monad.Trans.Class
