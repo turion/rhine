@@ -6,6 +6,7 @@ module Automaton where
 -- base
 import Control.Applicative (Alternative (..))
 import Control.Arrow
+import Control.Monad
 import Data.Functor.Identity (runIdentity)
 import Data.List (uncons)
 import Data.Maybe (maybeToList)
