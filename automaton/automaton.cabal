@@ -65,6 +65,7 @@ library
   exposed-modules:
     Data.Automaton
     Data.Automaton.Final
+    Data.Automaton.Trans.Accum
     Data.Automaton.Trans.Except
     Data.Automaton.Trans.Maybe
     Data.Automaton.Trans.RWS
@@ -93,6 +94,7 @@ test-suite automaton-test
   other-modules:
     Automaton
     Automaton.Except
+    Automaton.Trans.Accum
     Stream
 
   build-depends:
