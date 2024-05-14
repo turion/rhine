@@ -9,7 +9,7 @@ import Test.Tasty (testGroup)
 -- tasty-hunit
 import Test.Tasty.HUnit (testCase, (@?=))
 
--- rhine
+-- automaton
 import Data.Automaton (embed)
 import Data.Automaton.Trans.Except (safe, safely, step)
 
