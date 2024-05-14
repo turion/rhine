@@ -28,6 +28,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
 import Automaton.Except
+import Automaton.Trans.Accum
 import Data.Automaton
 import Data.Automaton.Final
 import Data.Automaton.Trans.Maybe
@@ -70,6 +71,7 @@ tests =
     , testCase "sumN" $ runIdentity (embed (arr (const (1 :: Integer)) >>> sumN) [(), (), ()]) @?= [1, 2, 3]
     , testCase "lastS" $ runIdentity (embed (lastS 0) [Nothing, Just 10]) @?= [0, 10]
     , Automaton.Except.tests
+    , Automaton.Trans.Accum.tests
     ]
 
 inMaybe :: Automaton Maybe (Maybe a) a
