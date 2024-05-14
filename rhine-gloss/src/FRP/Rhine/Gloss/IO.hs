@@ -8,12 +8,15 @@
 
 -- | Wrapper to write @gloss@ applications in Rhine, using concurrency.
 module FRP.Rhine.Gloss.IO (
-  GlossConcT,
+  GlossEnv (..),
+  GlossConcT (..),
+  runGlossConcT,
   paintIO,
   clearIO,
   paintAllIO,
   GlossEventClockIO (..),
   GlossSimClockIO (..),
+  makeGlossEnv,
   launchInGlossThread,
   launchGlossThread,
   flowGlossIO,
@@ -60,6 +63,10 @@ data GlossEnv = GlossEnv
 newtype GlossConcT m a = GlossConcT
   {unGlossConcT :: ReaderT GlossEnv m a}
   deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MFunctor, MMonad)
+
+-- | Remove the 'GlossConcT' transformer by explicitly providing an environment.
+runGlossConcT :: GlossConcT m a -> GlossEnv -> m a
+runGlossConcT ma = runReaderT (unGlossConcT ma)
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (GlossConcT m) where
   schedule actions = GlossConcT $ fmap (second $ map GlossConcT) $ schedule $ unGlossConcT <$> actions
@@ -119,21 +126,25 @@ instance GetClockProxy GlossSimClockIO
 
 -- * Reactimation
 
-{- | Apply this to supply the 'GlossConcT' effect.
-   Creates a new thread in which @gloss@ is run,
-   and feeds the clocks 'GlossEventClockIO' and 'GlossSimClockIO'.
+{- | Create the concurrent variables to communicate with the @gloss@ backend.
 
-   Usually, this function is applied to the result of 'flow',
-   so you can handle all occurring effects as needed.
-   If you only use @gloss@ in your whole signal network,
-   you can use 'flowGlossIO' instead.
+You will usually not need this function, have a look at 'launchInGlossThread' and 'flowGlossIO' instead.
+-}
+makeGlossEnv ::
+  (MonadIO m) =>
+  m GlossEnv
+makeGlossEnv = liftIO $ GlossEnv <$> newEmptyMVar <*> newEmptyMVar <*> newIORef Blank <*> newIORef 0
+
+{- | Helper function for 'launchInGlossThread'.
+
+Creates concurrent variables and launches the @gloss@ backend in a separate thread.
 -}
 launchGlossThread ::
   (MonadIO m) =>
   GlossSettings ->
   m GlossEnv
 launchGlossThread GlossSettings {..} = do
-  vars <- liftIO $ GlossEnv <$> newEmptyMVar <*> newEmptyMVar <*> newIORef Blank <*> newIORef 0
+  vars <- makeGlossEnv
   let
     getPic GlossEnv {picRef} = readIORef picRef
     -- Only try to put so this doesn't hang in case noone is listening for events or ticks
