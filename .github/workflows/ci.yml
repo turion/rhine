@@ -103,26 +103,6 @@ jobs:
       - name: Cabal bench
         run: cabal bench all
 
-  build-stack:
-    runs-on: ubuntu-latest
-    needs: generateMatrix
-    strategy:
-      matrix: ${{ fromJSON(needs.generateMatrix.outputs.matrix) }}
-    name: Haskell GHC ${{ matrix.ghc }} stack
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
-      - name: Cache stack build artifacts
-        uses:  freckle/stack-cache-action@v2
-        with:
-          stack-yaml: stack.${{ matrix.ghc }}.yaml
-      - name: Stack build and test
-        run: |
-          stack build --system-ghc --test --stack-yaml stack.${{ matrix.ghc }}.yaml
-
   build-flake:
     name: Nix Flake
     strategy:
@@ -157,7 +137,6 @@ jobs:
     needs:
       - build-cabal
       - build-flake
-      - build-stack
     runs-on:
       - ubuntu-latest
     steps:
