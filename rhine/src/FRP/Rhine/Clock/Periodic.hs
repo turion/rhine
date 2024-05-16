@@ -47,11 +47,7 @@ instance
   where
   type Time (Periodic v) = Integer
   type Tag (Periodic v) = ()
-  initClock cl =
-    return
-      ( cycleS (theList cl) >>> withSideEffect wait >>> accumulateWith (+) 0 &&& arr (const ())
-      , 0
-      )
+  initClock cl = cycleS (theList cl) >>> withSideEffect wait >>> accumulateWith (+) 0 &&& arr (const ())
 
 instance GetClockProxy (Periodic v)
 

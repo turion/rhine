@@ -364,9 +364,9 @@ glossClockUTC :: (Real (Time cl)) => cl -> GlossClockUTC cl
 glossClockUTC cl =
   RescaledClockS
     { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arr $ \(timePassed, event) -> (addUTCTime (realToFrac timePassed) now, event), now)
+    , rescaleS = proc (timePassed, event) -> do
+        initTime <- onStart_ $ liftIO getCurrentTime -< ()
+        returnA -< (addUTCTime (realToFrac timePassed) initTime, event)
     }
 
 {- | The part of the program which simulates latent position and sensor,

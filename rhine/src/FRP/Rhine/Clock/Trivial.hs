@@ -13,6 +13,6 @@ data Trivial = Trivial
 instance (Monad m) => Clock m Trivial where
   type Time Trivial = ()
   type Tag Trivial = ()
-  initClock _ = return (arr $ const ((), ()), ())
+  initClock _ = arr $ const ((), ())
 
 instance GetClockProxy Trivial
