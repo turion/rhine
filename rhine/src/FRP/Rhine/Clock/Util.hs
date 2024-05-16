@@ -5,12 +5,13 @@ module FRP.Rhine.Clock.Util where
 
 -- base
 import Control.Arrow
+import Data.Maybe (fromMaybe)
 
 -- time-domain
 import Data.TimeDomain
 
 -- automaton
-import Data.Automaton (Automaton, delay)
+import Data.Automaton (Automaton, cacheFirst, delay)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -24,14 +25,14 @@ import FRP.Rhine.Clock.Proxy
 genTimeInfo ::
   (Monad m, Clock m cl) =>
   ClockProxy cl ->
-  Time cl ->
   Automaton m (Time cl, Tag cl) (TimeInfo cl)
-genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- delay initialTime -< absolute
+genTimeInfo _ = proc (absolute, tag) -> do
+  initialTime <- cacheFirst -< absolute
+  lastTime <- delay Nothing -< Just absolute
   returnA
     -<
       TimeInfo
-        { sinceLast = absolute `diffTime` lastTime
+        { sinceLast = absolute `diffTime` fromMaybe initialTime lastTime
         , sinceInit = absolute `diffTime` initialTime
         , ..
         }

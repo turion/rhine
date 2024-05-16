@@ -35,7 +35,6 @@ import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Yield
 
 -- automaton
-import Data.Automaton.Trans.Except (performOnFirstSample)
 import qualified Data.Automaton.Trans.Reader as AutomatonReader
 import qualified Data.Automaton.Trans.Writer as AutomatonWriter
 
@@ -82,7 +81,7 @@ instance Semigroup GlossClock where
 instance Clock GlossM GlossClock where
   type Time GlossClock = Float
   type Tag GlossClock = Maybe Event
-  initClock _ = return (constM (GlossM $ yield >> lift ask) >>> (sumS *** Category.id), 0)
+  initClock _ = constM (GlossM $ yield >> lift ask) >>> (sumS *** Category.id)
 
 instance GetClockProxy GlossClock
 
@@ -125,7 +124,7 @@ flowGloss GlossSettings {..} rhine =
   play display backgroundColor stepsPerSecond (worldAutomaton, Blank) getPic handleEvent simStep
   where
     worldAutomaton :: WorldAutomaton
-    worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
+    worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (runYieldT . unGlossM) $ eraseClock rhine
     stepWith :: (Float, Maybe Event) -> (WorldAutomaton, Picture) -> (WorldAutomaton, Picture)
     stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = runIdentity $ stepAutomaton automaton ((diff, eventMaybe), ()) in (automaton', picture)
     getPic (_, pic) = pic

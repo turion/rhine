@@ -14,7 +14,6 @@ import Control.Monad.Writer.Class
 
 -- transformers
 -- Replace Strict by CPS when bumping mtl to 2.3
-import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Writer.Strict hiding (tell)
 
@@ -88,41 +87,6 @@ catchClockTests =
             stopInClsf = catchClSF clId $ constMCl empty
         result <- runExceptT $ runMaybeT $ flow_ $ stopInClsf @@ testClockMaybe
         result @?= Right Nothing
-    ]
-
--- ** Clock failing at init
-
-{- | This clock throws an exception at initialization.
-
-Useful for testing clock initialization.
--}
-data FailingClock = FailingClock
-
-instance (Monad m) => Clock (ExceptT () m) FailingClock where
-  type Time FailingClock = UTCTime
-  type Tag FailingClock = ()
-  initClock FailingClock = throwE ()
-
-instance GetClockProxy FailingClock
-
-type CatchFailingClock = CatchClock FailingClock () Busy
-
-catchFailingClock :: CatchFailingClock
-catchFailingClock = CatchClock FailingClock $ const Busy
-
-failingClockTests :: TestTree
-failingClockTests =
-  testGroup
-    "FailingClock"
-    [ testCase "flow fails immediately" $ do
-        result <- runExceptT $ flow_ $ clId @@ FailingClock
-        result @?= Left ()
-    , testCase "CatchClock recovers from failure at init" $ do
-        let
-          clsfStops :: ClSF (MaybeT IO) CatchFailingClock () ()
-          clsfStops = catchClSF clId $ constM $ lift empty
-        result <- runMaybeT $ flow_ $ clsfStops @@ catchFailingClock
-        result @?= Nothing -- The ClSF stopped the execution, not the clock
     ]
 
 -- ** 'DelayException'

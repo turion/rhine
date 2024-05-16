@@ -51,12 +51,9 @@ instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n)
   type Tag (FixedStep n) = ()
   initClock cl =
     let step = stepsize cl
-     in return
-          ( arr (const step)
-              >>> accumulateWith (+) 0
-              >>> arrM (\time -> wait step $> (time, ()))
-          , 0
-          )
+     in arr (const step)
+          >>> accumulateWith (+) 0
+          >>> arrM (\time -> wait step $> (time, ()))
 
 instance GetClockProxy (FixedStep n)
 

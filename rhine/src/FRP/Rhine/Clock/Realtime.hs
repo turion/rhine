@@ -1,7 +1,7 @@
 module FRP.Rhine.Clock.Realtime where
 
 -- base
-import Control.Arrow (arr)
+import Control.Arrow (returnA, (<<<))
 import Control.Concurrent (threadDelay)
 import Control.Monad (guard)
 import Control.Monad.IO.Class
@@ -29,9 +29,9 @@ overwriteUTC :: (MonadIO m) => cl -> UTCClock m cl
 overwriteUTC cl =
   RescaledClockS
     { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arrM $ \(_timePassed, tag) -> (,tag) <$> liftIO getCurrentTime, now)
+    , rescaleS = proc (_timePassed, tag) -> do
+        now <- constM $ liftIO getCurrentTime -< ()
+        returnA -< (now, tag)
     }
 
 {- | Rescale a clock to the UTC time domain.
@@ -45,9 +45,9 @@ addUTC :: (Real (Time cl), MonadIO m) => cl -> UTCClock m cl
 addUTC cl =
   RescaledClockS
     { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arr $ \(timePassed, tag) -> (addUTCTime (realToFrac timePassed) now, tag), now)
+    , rescaleS = proc (timePassed, tag) -> do
+        initialTime <- cacheFirst <<< constM (liftIO getCurrentTime) -< ()
+        returnA -< (addUTCTime (realToFrac timePassed) initialTime, tag)
     }
 
 {- | Like 'UTCClock', but also output in the tag whether and by how much the target realtime was missed.
@@ -78,17 +78,14 @@ waitUTC :: (Real (Time cl), MonadIO m, Fractional (Diff (Time cl))) => cl -> Wai
 waitUTC unscaledClockS =
   RescaledClockS
     { unscaledClockS
-    , rescaleS = \_ -> do
-        initTime <- liftIO getCurrentTime
+    , rescaleS = hoistS liftIO $ proc (sinceInitTarget, tag) -> do
+        beforeSleep <- constM getCurrentTime -< ()
+        initTime <- cacheFirst -< beforeSleep
         let
-          runningClock = arrM $ \(sinceInitTarget, tag) -> liftIO $ do
-            beforeSleep <- getCurrentTime
-            let
-              diff :: Rational
-              diff = toRational $ beforeSleep `diffUTCTime` initTime
-              remaining = toRational sinceInitTarget - diff
-            threadDelay $ round $ 1000000 * remaining
-            now <- getCurrentTime
-            return (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
-        return (runningClock, initTime)
+          diff :: Rational
+          diff = toRational $ beforeSleep `diffUTCTime` initTime
+          remaining = toRational sinceInitTarget - diff
+        arrM threadDelay -< round $ 1000000 * remaining
+        now <- constM getCurrentTime -< ()
+        returnA -< (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
     }
