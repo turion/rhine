@@ -13,9 +13,7 @@ runScheduleRhinePure :: (Clock (Schedule (Diff (Time cl))) cl, GetClockProxy cl)
 runScheduleRhinePure rhine = runSchedule . runRhine rhine
 
 runRhine :: (Clock m cl, GetClockProxy cl, Monad m) => Rhine m cl a b -> [a] -> m [Maybe b]
-runRhine rhine input = do
-  automaton <- eraseClock rhine
-  embed automaton input
+runRhine rhine = embed (eraseClock rhine)
 
 -- FIXME Move to monad-schedule
 runSchedule :: Schedule diff a -> a
