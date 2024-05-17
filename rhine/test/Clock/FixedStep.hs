@@ -24,6 +24,11 @@ tests =
           output = runScheduleRhinePure (absoluteS @@ (FixedStep @5)) $ replicate 4 ()
          in
           output @?= Just <$> [5, 10, 15, 20]
+    , testCase "Outputs linearly increasing ticks" $
+        let
+          output = runScheduleRhinePure (sinceInitS @@ (FixedStep @5)) $ replicate 4 ()
+         in
+          output @?= Just <$> [5, 10, 15, 20]
     , testCase "Outputs scheduled ticks in order" $
         let
           output = runScheduleRhinePure ((absoluteS @@ (FixedStep @5)) |@| (absoluteS @@ (FixedStep @3))) $ replicate 6 ()
