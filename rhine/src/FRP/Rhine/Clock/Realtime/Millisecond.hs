@@ -11,7 +11,6 @@ module FRP.Rhine.Clock.Realtime.Millisecond where
 -- base
 import Control.Arrow
 import Control.Concurrent (threadDelay)
-import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 import GHC.TypeLits
 
@@ -22,7 +21,7 @@ import Data.Time.Clock
 import Data.Vector.Sized (Vector, fromList)
 
 -- automaton
-import Data.Automaton (arrM)
+import Data.Automaton (arrM, cacheFirst, constM)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -71,19 +70,16 @@ instance GetClockProxy (Millisecond n)
    the wait time, up to no wait time at all, to catch up when a tick is missed.
 -}
 waitClock :: (KnownNat n) => Millisecond n
-waitClock = Millisecond $ RescaledClockS (unyieldClock FixedStep) $ \_ -> do
-  initTime <- liftIO getCurrentTime
+waitClock = Millisecond $ RescaledClockS (unyieldClock FixedStep) $ proc (n, ()) -> do
+  beforeSleep <- constM getCurrentTime -< ()
+  initTime <- cacheFirst -< beforeSleep
   let
-    runningClock = arrM $ \(n, ()) -> liftIO $ do
-      beforeSleep <- getCurrentTime
-      let
-        diff :: Double
-        diff = realToFrac $ beforeSleep `diffUTCTime` initTime
-        remaining = fromInteger $ n * 1000 - round (diff * 1000000)
-      threadDelay remaining
-      now <- getCurrentTime -- TODO Test whether this is a performance penalty
-      return (now, remaining > 0)
-  return (runningClock, initTime)
+    diff :: Double
+    diff = realToFrac $ beforeSleep `diffUTCTime` initTime
+    remaining = fromInteger $ n * 1000 - round (diff * 1000000)
+  arrM threadDelay -< remaining
+  now <- constM getCurrentTime -< () -- TODO Test whether this is a performance penalty
+  returnA -< (now, remaining > 0)
 
 -- TODO It would be great if this could be directly implemented in terms of downsampleFixedStep
 downsampleMillisecond ::
