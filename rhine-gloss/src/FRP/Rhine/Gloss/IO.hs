@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -10,6 +12,7 @@
 module FRP.Rhine.Gloss.IO (
   GlossEnv (..),
   GlossConcT (..),
+  GlossConc,
   runGlossConcT,
   paintIO,
   clearIO,
@@ -24,6 +27,10 @@ module FRP.Rhine.Gloss.IO (
   RunGlossEnvClock,
   GlossClockUTC,
   glossClockUTC,
+  GlossConcTClock,
+  glossConcTClock,
+  GlossConcClock,
+  glossConcClock,
 )
 where
 
@@ -37,14 +44,12 @@ import System.Timeout (timeout)
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 
--- mmorph
-import Control.Monad.Morph
-
 -- gloss
 import Graphics.Gloss.Interface.IO.Game
 
 -- monad-schedule
 import Control.Monad.Schedule.Class
+import Control.Monad.Schedule.FreeAsync
 
 -- rhine
 import FRP.Rhine
@@ -55,6 +60,7 @@ import FRP.Rhine.Gloss.Common
 
 -- * Gloss effects
 
+-- | Concurrent variables needed to communicate with the gloss backend.
 data GlossEnv = GlossEnv
   { timeVar :: MVar Float
   , eventVar :: MVar Event
@@ -62,16 +68,29 @@ data GlossEnv = GlossEnv
   , timeRef :: IORef Float
   }
 
--- | Wraps the concurrent variables needed for communication with the @gloss@ backend.
+{- | Effects in the gloss backend
+
+* Wraps the concurrent variables needed for communication with the @gloss@ backend.
+* Adds the 'FreeAsyncT' concurrency layer for fairer scheduling
+-}
 newtype GlossConcT m a = GlossConcT
-  {unGlossConcT :: ReaderT GlossEnv m a}
-  deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MFunctor, MMonad)
+  {unGlossConcT :: ReaderT GlossEnv (FreeAsyncT m) a}
+  deriving (Functor, Applicative, Monad, MonadIO)
+
+-- | When @gloss@ is the only effect you are using, use this monad to simplify your type signatures.
+type GlossConc = GlossConcT IO
+
+instance MonadTrans GlossConcT where
+  lift = GlossConcT . lift . lift
+
+-- FIXME MFunctor & MMonad instances pending https://github.com/HeinrichApfelmus/operational/pull/28/
 
 -- | Remove the 'GlossConcT' transformer by explicitly providing an environment.
-runGlossConcT :: GlossConcT m a -> GlossEnv -> m a
-runGlossConcT ma = runReaderT (unGlossConcT ma)
+runGlossConcT :: (MonadIO m) => GlossConcT m a -> GlossEnv -> m a
+runGlossConcT ma env = runFreeAsyncT $ runReaderT (unGlossConcT ma) env
 
-instance (Monad m, MonadSchedule m) => MonadSchedule (GlossConcT m) where
+-- | Disregards scheduling capabilities of @m@, as it uses 'FreeAsync'.
+instance (MonadIO m) => MonadSchedule (GlossConcT m) where
   schedule actions = GlossConcT $ fmap (second $ map GlossConcT) $ schedule $ unGlossConcT <$> actions
 
 withPicRef ::
@@ -92,11 +111,16 @@ clearIO = withPicRef $ \ref -> writeIORef ref Blank
 
 -- | Clear the canvas and then paint.
 paintAllIO :: (MonadIO m) => Picture -> GlossConcT m ()
-paintAllIO pic = clearIO >> paintIO pic
+paintAllIO pic = withPicRef $ \ref -> writeIORef ref pic
 
 -- * Gloss clocks in 'IO'
 
--- | Concurrently block on @gloss@ events.
+{- | Concurrently block on @gloss@ events.
+
+Caution: Currently, you should only add one such clock in a 'Rhine'.
+If you add several 'GlossEventClockIO', only one will be chosen at random and receive the event.
+See https://github.com/turion/rhine/issues/330.
+-}
 data GlossEventClockIO = GlossEventClockIO
 
 instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
@@ -106,14 +130,19 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
     where
       getEvent = do
         GlossEnv {eventVar, timeRef} <- GlossConcT ask
+        event <- GlossConcT $ lift $ asyncMVar eventVar
         liftIO $ do
-          event <- takeMVar eventVar
           time <- readIORef timeRef
           return (time, event)
 
 instance GetClockProxy GlossEventClockIO
 
--- | Concurrently block on @gloss@ simulation ticks.
+{- | Concurrently block on @gloss@ simulation ticks.
+
+Caution: Currently, you should only add one such clock in a 'Rhine'.
+If you add several 'GlossSimClockIO', only one will be chosen at random and receive the event.
+See https://github.com/turion/rhine/issues/330.
+-}
 data GlossSimClockIO = GlossSimClockIO
 
 instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
@@ -121,9 +150,9 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
   type Tag GlossSimClockIO = ()
   initClock _ = return (constM getTime &&& arr (const ()), 0)
     where
-      getTime = do
-        GlossEnv {timeVar} <- GlossConcT ask
-        liftIO $ takeMVar timeVar
+      getTime = GlossConcT $ do
+        GlossEnv {timeVar} <- ask
+        lift $ asyncMVar timeVar
 
 instance GetClockProxy GlossSimClockIO
 
@@ -184,7 +213,7 @@ launchInGlossThread ::
   m a
 launchInGlossThread settings glossLoop = do
   vars <- launchGlossThread settings
-  runReaderT (unGlossConcT glossLoop) vars
+  runGlossConcT glossLoop vars
 
 {- | Run a 'Rhine' in the 'GlossConcT' monad by launching a separate thread for the @gloss@ backend,
    and reactimate in the foreground.
@@ -211,14 +240,42 @@ type RunGlossEnvClock m cl = HoistClock (GlossConcT m) m cl
   You will have to have initialized a 'GlossEnv', for example by calling 'launchGlossThread'.
 -}
 runGlossEnvClock ::
+  (MonadIO m) =>
   GlossEnv ->
   cl ->
   RunGlossEnvClock m cl
 runGlossEnvClock env unhoistedClock =
   HoistClock
-    { monadMorphism = flip runReaderT env . unGlossConcT
+    { monadMorphism = flip runGlossConcT env
     , ..
     }
+
+-- * Lifting clocks to 'GlossConcT'
+
+{- | Lift a 'MonadIO' clock to 'GlossConcT'.
+
+You should use this instead of 'IOClock', otherwise scheduling will probably not work.
+(This is because 'GlossConcT' uses 'FreeAsyncT', but 'liftIO' is not asynchronous.)
+-}
+type GlossConcTClock m = HoistClock IO (GlossConcT m)
+
+-- | A 'MonadIO' clock lifted to 'GlossConcT'.
+glossConcTClock :: (MonadIO m) => cl -> GlossConcTClock m cl
+glossConcTClock unhoistedClock =
+  HoistClock
+    { unhoistedClock
+    , monadMorphism = GlossConcT . lift . freeAsync
+    }
+
+{- | Lift an 'IO' clock to 'GlossConc'.
+
+See 'GlossConcTClock'.
+-}
+type GlossConcClock = GlossConcTClock IO
+
+-- | An 'IO' clock lifted to 'GlossConc'.
+glossConcClock :: cl -> GlossConcClock cl
+glossConcClock = glossConcTClock
 
 -- * Rescaled clocks in other time domains
 
