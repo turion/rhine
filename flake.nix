@@ -35,6 +35,11 @@ outputs = { self, nixpkgs, flake-utils, haskell-flake-utils, flake-compat, ... }
       with pkgs.haskell.lib;
       with haskell-flake-utils.lib;
       {
+        monad-schedule = dontCheck (super.callHackageDirect {
+          pkg = "monad-schedule";
+          ver = "0.2";
+          sha256 = "sha256-Z9lAxkvJDH9aQZd65bGOQI3EGH7oSAhK0nuBKULgiCE=";
+        } {});
         time-domain = super.callHackageDirect {
           pkg = "time-domain";
           ver = "0.1.0.4";
