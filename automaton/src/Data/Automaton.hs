@@ -111,6 +111,16 @@ unfoldM ::
   Automaton m a b
 unfoldM state step = Automaton $! Stateful $! StreamT {state, step = \s -> ReaderT $ \a -> step a s}
 
+-- | Like 'unfold', but output the current state.
+unfold_ ::
+  (Applicative m) =>
+  -- | The initial state
+  s ->
+  -- | The step function
+  (a -> s -> s) ->
+  Automaton m a s
+unfold_ state step = unfold state $ \a s -> let s' = step a s in Result s' s'
+
 instance (Eq s, Floating s, VectorSpace v s, Applicative m) => VectorSpace (Automaton m a v) (Automaton m a s) where
   zeroVector = Automaton zeroVector
   Automaton s *^ Automaton v = coerce $ s *^ v
