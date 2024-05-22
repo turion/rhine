@@ -33,6 +33,9 @@ import Control.Monad.IO.Class
 import Data.Automaton
 import Data.Automaton.Trans.Except hiding (step)
 
+-- time-domain
+import Data.TimeDomain (diffTime)
+
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy

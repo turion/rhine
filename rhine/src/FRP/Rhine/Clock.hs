@@ -15,11 +15,7 @@ This module provides the 'Clock' type class, several utilities,
 and certain general constructions of 'Clock's,
 such as clocks lifted along monad morphisms or time rescalings.
 -}
-module FRP.Rhine.Clock (
-  module FRP.Rhine.Clock,
-  module X,
-)
-where
+module FRP.Rhine.Clock where
 
 -- base
 import Control.Arrow
@@ -33,7 +29,7 @@ import Control.Monad.Trans.Class (MonadTrans, lift)
 import Data.Automaton (Automaton, arrM, hoistS)
 
 -- time-domain
-import Data.TimeDomain as X
+import Data.TimeDomain
 
 -- * The 'Clock' type class
 

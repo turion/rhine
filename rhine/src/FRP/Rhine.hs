@@ -12,6 +12,9 @@ main = flow \$ constMCl (putStrLn \"Hello World!\") \@\@ (waitClock :: Milliseco
 -}
 module FRP.Rhine (module X) where
 
+-- time-domain
+import Data.TimeDomain as X
+
 -- automaton
 import Data.Automaton as X
 
