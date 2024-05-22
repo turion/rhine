@@ -9,16 +9,12 @@ Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
-import Control.Arrow
+import Control.Arrow (arr, first, second, (>>>))
 import Data.Functor ((<&>))
-import Data.Maybe (fromMaybe)
 import GHC.TypeLits
 
 -- time
 import Data.Time.Clock
-
--- vector-sized
-import Data.Vector.Sized (Vector, fromList)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -26,9 +22,6 @@ import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Realtime (WaitUTCClock, waitUTC)
 import FRP.Rhine.Clock.Unschedule
-import FRP.Rhine.ResamplingBuffer
-import FRP.Rhine.ResamplingBuffer.Collect
-import FRP.Rhine.ResamplingBuffer.Util
 
 {- | A clock ticking every 'n' milliseconds, in real time.
 
@@ -54,13 +47,3 @@ instance GetClockProxy (Millisecond n)
 -- | Tries to achieve real time by using 'waitUTC', see its docs.
 waitClock :: (KnownNat n) => Millisecond n
 waitClock = Millisecond $ waitUTC $ RescaledClock (unyieldClock FixedStep) ((/ 1000) . fromInteger)
-
--- TODO It would be great if this could be directly implemented in terms of downsampleFixedStep
-downsampleMillisecond ::
-  (KnownNat n, Monad m) =>
-  ResamplingBuffer m (Millisecond k) (Millisecond (n * k)) a (Vector n a)
-downsampleMillisecond = collect >>-^ arr (fromList >>> assumeSize)
-  where
-    assumeSize =
-      fromMaybe $
-        error "downsampleMillisecond: Internal error. Please report this as a bug: https://github.com/turion/rhine/issues"
