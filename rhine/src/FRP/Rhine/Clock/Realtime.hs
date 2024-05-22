@@ -15,6 +15,9 @@ import Data.Automaton
 -- rhine
 import FRP.Rhine.Clock
 
+-- time-domain
+import Data.TimeDomain (Diff, UTCTime)
+
 {- | A clock rescaled to the 'UTCTime' time domain.
 
 There are different strategies how a clock may be rescaled, see below.

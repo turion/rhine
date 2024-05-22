@@ -29,6 +29,9 @@ import Data.Automaton.Trans.Reader (readerS)
 -- simple-affine-space
 import Data.VectorSpace
 
+-- time-domain
+import Data.TimeDomain
+
 -- rhine
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except

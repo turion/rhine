@@ -15,6 +15,9 @@ import Data.Time (UTCTime, getCurrentTime)
 import Control.Monad.Error.Class
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
+-- time-domain
+import Data.TimeDomain (TimeDomain)
+
 -- automaton
 import Data.Automaton (hoistS)
 import Data.Automaton.Trans.Except
@@ -26,7 +29,6 @@ import FRP.Rhine.ClSF.Core (ClSF)
 import FRP.Rhine.Clock (
   Clock (..),
   HoistClock (..),
-  TimeDomain,
   TimeInfo (..),
   retag,
  )
