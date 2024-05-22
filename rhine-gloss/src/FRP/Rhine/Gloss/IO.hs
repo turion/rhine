@@ -29,7 +29,6 @@ where
 
 -- base
 import Control.Concurrent
-import Control.Monad (when)
 import Data.Functor (void)
 import Data.IORef
 import System.Timeout (timeout)
@@ -163,8 +162,8 @@ launchGlossThread GlossSettings {..} = do
       let !time' = time + diffTime
       -- We don't do this in a separate thread, because forkIO putMVar would create a race condition on putting the MVar,
       -- which can lead to non-monotonous time updates.
-      timeUpdate <- tryPutMVar timeVar time'
-      when timeUpdate $ writeIORef timeRef time'
+      tryPutMVar timeVar time'
+      writeIORef timeRef time'
       return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
   return vars
