@@ -76,7 +76,7 @@ debugLocalTime :: BehaviourF IO UTCTime a a
 debugLocalTime = proc a -> do
   sinceInit_ <- sinceInitS -< ()
   sinceStart_ <- sinceStart -< ()
-  arrMCl putStrLn -< "since init: " ++ show sinceInit_ ++ "\nsince start: " ++ show sinceStart_
+  arrMCl putStrLn -< "since init: " ++ show sinceInit_ ++ "\nsince first local tick: " ++ show sinceStart_
   returnA -< a
 
 -- | Wire together all components

@@ -67,7 +67,9 @@ tagS :: (Monad m) => ClSF m cl a (Tag cl)
 tagS = timeInfoOf tag
 
 {- |
-Calculate the time passed since this 'ClSF' was instantiated.
+Calculate the time passed since this 'ClSF' was instantiated,
+i.e. since the first tick on which this 'ClSF' was run.
+
 This is _not_ the same as 'sinceInitS',
 which measures the time since clock initialisation.
 
@@ -84,6 +86,11 @@ sawtooth = safely $ do
 If you replace 'sinceStart' by 'sinceInitS',
 it will usually hang after one second,
 since it doesn't reset after restarting the sawtooth.
+
+Even in the absence of conditional activation of 'ClSF's,
+there is a difference:
+For a clock that doesn't tick at its initialisation time,
+'sinceStart' and 'sinceInitS' will have a constant offset of the duration between initialisation time and first tick.
 -}
 sinceStart :: (Monad m, TimeDomain time) => BehaviourF m time a (Diff time)
 sinceStart =
