@@ -43,11 +43,11 @@ import Data.Automaton.Trans.Except
 import FRP.Rhine
 
 -- rhine-gloss
+import FRP.Rhine.Gloss.Common
 import FRP.Rhine.Gloss.IO
 
 -- rhine-bayes
 import FRP.Rhine.Bayes
-import FRP.Rhine.Gloss.Common
 
 type Temperature = Double
 type Pos = (Double, Double)
