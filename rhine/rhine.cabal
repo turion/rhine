@@ -108,6 +108,7 @@ library
     FRP.Rhine.Clock.FixedStep
     FRP.Rhine.Clock.Periodic
     FRP.Rhine.Clock.Proxy
+    FRP.Rhine.Clock.Realtime
     FRP.Rhine.Clock.Realtime.Audio
     FRP.Rhine.Clock.Realtime.Busy
     FRP.Rhine.Clock.Realtime.Event

@@ -14,6 +14,9 @@ import Data.Sequence
 -- simple-affine-space
 import Data.VectorSpace
 
+-- time-domain
+import Data.TimeDomain (Diff)
+
 -- rhine
 import FRP.Rhine.ClSF
 import FRP.Rhine.ResamplingBuffer

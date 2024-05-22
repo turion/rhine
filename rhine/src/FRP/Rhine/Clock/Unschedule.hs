@@ -15,6 +15,9 @@ import Control.Monad.Schedule.Trans
 -- automaton
 import Data.Automaton (hoistS)
 
+-- time-domain
+import Data.TimeDomain (Diff, TimeDomain)
+
 -- rhine
 import FRP.Rhine.Clock
 

@@ -5,10 +5,9 @@ import Text.Printf
 -- random
 import System.Random
 
--- vector-sized
-import Data.Vector.Sized as VS
-
 -- rhine
+
+import Data.Maybe (fromMaybe, listToMaybe)
 import FRP.Rhine
 
 type Ball = (Double, Double, Double)
@@ -68,9 +67,7 @@ ball :: ClSF IO SimClock (Maybe BallVel) Ball
 ball = safely ballModes
 
 downsampleSimToStatus :: ResBuf IO SimClock StatusClock Ball Ball
-downsampleSimToStatus =
-  downsampleMillisecond
-    >>-^ arr VS.head
+downsampleSimToStatus = collect >>-^ arr (listToMaybe >>> fromMaybe zeroVector)
 
 statusMsg :: ClSF IO StatusClock Ball ()
 statusMsg = arrMCl $ \(x, y, z) ->
