@@ -80,7 +80,7 @@ responsive :: ClSF IO (Millisecond 100) () ()
 responsive =
   timeInfo >>> proc TimeInfo {..} -> do
     arrMCl putStrLn -< "Current time: " ++ show sinceInit
-    arrMCl putStrLn -< "Real time " ++ (if tag then "" else "UN") ++ "successful"
+    arrMCl putStrLn -< "Real time " ++ (if null tag then "" else "UN") ++ "successful"
 
 -- | Producing random numbers using a lot of CPU causes all subsystems on the same thread to lag.
 randomsExample :: IO ()
