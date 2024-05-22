@@ -4,7 +4,7 @@
 with separated event and simulation loop.
 
 To run pure Rhine apps with @gloss@,
-write a signal network ('SN') in the 'GlossCombinedClock' and use 'flowGlossCombined'.
+write a signal network ('SN') in the 'GlossCombinedClock' and use 'flowGloss'.
 As an easy starter, you can use the helper function 'buildGlossRhine'.
 -}
 module FRP.Rhine.Gloss.Pure.Combined where

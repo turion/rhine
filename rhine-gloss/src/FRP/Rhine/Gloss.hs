@@ -3,7 +3,7 @@
 A pure Rhine app with @gloss@ backend must use the 'GlossClock' or 'GlossCombinedClock'
 (from 'FRP.Rhine.Gloss.Pure.Single' and 'FRP.Rhine.Gloss.Pure.Combined', respectively),
 since the @gloss@ API only offers callbacks.
-In order to run such a reactive program, you have to use 'flowGloss' or 'flowGlossCombined'.
+In order to run such a reactive program, you have to use 'flowGloss'.
 
 A more flexible alternative, at the cost of introducing 'IO' concurrency,
 is the 'FRP.Rhine.Gloss.IO' wrapper.
