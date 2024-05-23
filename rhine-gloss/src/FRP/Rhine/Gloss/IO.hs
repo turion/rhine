@@ -29,9 +29,9 @@ where
 
 -- base
 import Control.Concurrent
-import Control.Monad (when)
 import Data.Functor (void)
 import Data.IORef
+import System.Timeout (timeout)
 
 -- transformers
 import Control.Monad.Trans.Class
@@ -150,15 +150,20 @@ launchGlossThread GlossSettings {..} = do
   vars <- makeGlossEnv
   let
     getPic GlossEnv {picRef} = readIORef picRef
-    -- Only try to put so this doesn't hang in case noone is listening for events or ticks
     handleEvent event vars@GlossEnv {eventVar} = do
-      void $ tryPutMVar eventVar event
+      void $
+        forkIO $ -- Perform non-blocking so other actions are not delayed
+          void $
+            timeout 100000 $ -- timeout in case noone is listening for events
+              putMVar eventVar event
       return vars
     simStep diffTime vars@GlossEnv {timeVar, timeRef} = do
       time <- readIORef timeRef
       let !time' = time + diffTime
-      timeUpdate <- tryPutMVar timeVar time'
-      when timeUpdate $ writeIORef timeRef time'
+      -- We don't do this in a separate thread, because forkIO putMVar would create a race condition on putting the MVar,
+      -- which can lead to non-monotonous time updates.
+      tryPutMVar timeVar time'
+      writeIORef timeRef time'
       return vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
   return vars
