@@ -17,6 +17,7 @@ import Data.TimeDomain as X
 
 -- automaton
 import Data.Automaton as X
+import Data.Stream.Result as X (Result (..))
 
 -- rhine
 import Data.VectorSpace as X
