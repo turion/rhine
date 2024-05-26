@@ -37,7 +37,7 @@ import Control.Monad.Bayes.Sampler.Strict
 import Data.Automaton.Trans.Except
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (Result)
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common

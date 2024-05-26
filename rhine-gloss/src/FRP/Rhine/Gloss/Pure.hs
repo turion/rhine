@@ -38,7 +38,6 @@ import Control.Monad.Schedule.Yield
 import Data.Automaton.Trans.Except (performOnFirstSample)
 import qualified Data.Automaton.Trans.Reader as AutomatonReader
 import qualified Data.Automaton.Trans.Writer as AutomatonWriter
-import Data.Stream.Result (Result (..))
 
 -- rhine
 import FRP.Rhine
