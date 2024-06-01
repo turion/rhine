@@ -16,7 +16,6 @@ import "criterion" Criterion.Main
 
 import "automaton" Data.Stream as Stream (StreamT (..))
 import "automaton" Data.Stream.Optimized (OptimizedStreamT (Stateful))
-import "automaton" Data.Stream.Result (Result (..))
 import "rhine" FRP.Rhine
 
 nMax :: Int

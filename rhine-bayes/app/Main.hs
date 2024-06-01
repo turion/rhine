@@ -25,9 +25,6 @@ import Text.Printf (printf)
 -- transformers
 import Control.Monad.Trans.Class
 
--- mmorph
-import Control.Monad.Morph
-
 -- log-domain
 import Numeric.Log hiding (sum)
 
@@ -40,7 +37,7 @@ import Control.Monad.Bayes.Sampler.Strict
 import Data.Automaton.Trans.Except
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (Result)
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -168,7 +165,7 @@ emptyResult =
 
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
-nParticles = 400
+nParticles = 200
 
 -- * Visualization
 
@@ -350,11 +347,11 @@ mainSingleRate =
 {- | The part of the program which simulates latent position and sensor,
    running 10 times a second.
 -}
-modelRhine :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT (Millisecond 100)) Temperature (Temperature, (Sensor, Pos))
-modelRhine = hoistClSF sampleIOGloss (clId &&& genModelWithoutTemperature) @@ liftClock waitClock
+modelRhine :: Rhine App (GlossConcTClock SamplerIO (Millisecond 100)) Temperature (Temperature, (Sensor, Pos))
+modelRhine = (clId &&& genModelWithoutTemperature) @@ glossConcTClock waitClock
 
 -- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF (GlossConcT IO) (GlossClockUTC IO GlossEventClockIO) () Temperature
+userTemperature :: ClSF App (GlossClockUTC SamplerIO GlossEventClockIO) () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
     selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
@@ -364,8 +361,8 @@ userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr 
 {- | This part performs the inference (and passes along temperature, sensor and position simulations).
    It runs as fast as possible, so this will potentially drain the CPU.
 -}
-inference :: Rhine (GlossConcT IO) (LiftClock IO GlossConcT Busy) (Temperature, (Sensor, Pos)) Result
-inference = hoistClSF sampleIOGloss inferenceBehaviour @@ liftClock Busy
+inference :: Rhine App (GlossConcTClock SamplerIO (Millisecond 100)) (Temperature, (Sensor, Pos)) Result
+inference = inferenceBehaviour @@ glossConcTClock waitClock
 
 inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
 inferenceBehaviour = proc (temperature, (measured, latent)) -> do
@@ -381,8 +378,8 @@ inferenceBehaviour = proc (temperature, (measured, latent)) -> do
         }
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
-visualisationRhine :: Rhine (GlossConcT IO) (GlossClockUTC IO GlossSimClockIO) Result ()
-visualisationRhine = hoistClSF sampleIOGloss visualisation @@ glossClockUTC GlossSimClockIO
+visualisationRhine :: Rhine App (GlossClockUTC SamplerIO GlossSimClockIO) Result ()
+visualisationRhine = visualisation @@ glossClockUTC GlossSimClockIO
 
 {- FOURMOLU_DISABLE -}
 -- | Compose all four asynchronous components to a single 'Rhine'.
@@ -400,8 +397,9 @@ mainRhineMultiRate =
 mainMultiRate :: IO ()
 mainMultiRate =
   void $
-    launchInGlossThread glossSettings $
-      flow mainRhineMultiRate
+    sampleIO $
+      launchInGlossThread glossSettings $
+        flow mainRhineMultiRate
 
 -- * Utilities
 
@@ -412,6 +410,3 @@ instance (MonadFactor m) => MonadFactor (GlossConcT m) where
   score = lift . score
 
 instance (MonadMeasure m) => MonadMeasure (GlossConcT m)
-
-sampleIOGloss :: App a -> GlossConcT IO a
-sampleIOGloss = hoist sampleIO
