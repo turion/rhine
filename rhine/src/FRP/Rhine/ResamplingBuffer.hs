@@ -16,6 +16,9 @@ module FRP.Rhine.ResamplingBuffer (
 )
 where
 
+-- profunctors
+import Data.Profunctor (Profunctor (..))
+
 -- automaton
 import Data.Stream.Result
 
@@ -74,3 +77,20 @@ hoistResamplingBuffer morph ResamplingBuffer {..} =
     , get = (morph .) . get
     , buffer
     }
+
+instance (Functor m) => Profunctor (ResamplingBuffer m cla clb) where
+  lmap f ResamplingBuffer {put, get, buffer} =
+    ResamplingBuffer
+      { put = (. f) <$> put
+      , get
+      , buffer
+      }
+  rmap = fmap
+
+instance (Functor m) => Functor (ResamplingBuffer m cla clb a) where
+  fmap f ResamplingBuffer {put, get, buffer} =
+    ResamplingBuffer
+      { put
+      , get = fmap (fmap (fmap f)) <$> get
+      , buffer
+      }
