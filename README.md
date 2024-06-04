@@ -104,17 +104,22 @@ would be:
 * `rhine-terminal/`: A wrapper library to [`terminal`](https://hackage.haskell.org/package/terminal), a library to write terminal applications.
 * `rhine-examples/`: Different examples as a starting point to learn Rhine.
 
-## Documentation
+## Learn Rhine
 
-The best way to learn about Rhine is currently the [article _Rhine: FRP with Type-Level Clocks_](https://www.manuelbaerenz.de/files/Rhine.pdf).
+The recommended way to start is the https://github.com/turion/rhine-koans/ tutorial.
+It leads you through basic and advanced Rhine concepts by solving many self-contained puzzles.
 
-For a quick reference of the most important concepts,
+For a quick reference of the most important functions, operators, and concepts,
 see the [cheatsheet](https://github.com/turion/rhine/blob/master/CHEATSHEET.md).
 
-### Additional documentation
+### Documentation resources
 
+* https://www.tweag.io/blog/2023-10-12-rhine-bayes/: A blog post about how to do machine learning with Rhine.
+* https://github.com/turion/rhine/tree/master/rhine-examples/src: Many self-contained examples showcasing typical Rhine concepts in an idiomatic style.
+* The research article [Rhine: FRP with Type-Level Clocks](https://www.manuelbaerenz.de/files/Rhine.pdf) is not quite up to date with the most recent changes,
+  but gives a good overview behind the concepts and design ideas.
+* [`hackage`](https://hackage.haskell.org/package/rhine): Reference documentation
 * [`stackage`](https://www.stackage.org/package/rhine)
-* [`hackage`](https://hackage.haskell.org/package/rhine)
 * https://github.com/turion/rhine-tutorial: Presentation and tutorial app
 * https://github.com/turion/sonnendemo: Demo application
 
