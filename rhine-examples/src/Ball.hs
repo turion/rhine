@@ -1,13 +1,13 @@
 -- base
 import Control.Monad (guard)
+import Data.Functor ((<&>))
+import Data.Maybe (fromMaybe, listToMaybe)
 import Text.Printf
 
 -- random
 import System.Random
 
 -- rhine
-
-import Data.Maybe (fromMaybe, listToMaybe)
 import FRP.Rhine
 
 type Ball = (Double, Double, Double)
@@ -33,7 +33,7 @@ startVel = arrMCl $ const $ do
   return (velX, velY, velZ)
 
 waiting ::
-  (MonadIO m) =>
+  (Monad m) =>
   ClSF
     (ExceptT BallVel m)
     SimClock
@@ -67,7 +67,7 @@ ball :: ClSF IO SimClock (Maybe BallVel) Ball
 ball = safely ballModes
 
 downsampleSimToStatus :: ResBuf IO SimClock StatusClock Ball Ball
-downsampleSimToStatus = collect >>-^ arr (listToMaybe >>> fromMaybe zeroVector)
+downsampleSimToStatus = collect <&> (listToMaybe >>> fromMaybe zeroVector)
 
 statusMsg :: ClSF IO StatusClock Ball ()
 statusMsg = arrMCl $ \(x, y, z) ->
