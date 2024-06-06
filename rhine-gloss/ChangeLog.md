@@ -1,5 +1,11 @@
 # Revision history for rhine-gloss
 
+## 1.4
+
+* Use `FreeAsyncT` in the gloss IO backend for fairer concurrency.
+  See https://hackage.haskell.org/package/monad-schedule-0.2/docs/Control-Monad-Schedule-FreeAsync.html.
+* Improvements, utilities, and hardenings for the IO backend
+
 ## 1.3
 
 * Dropped `dunai` dependency in favour of state automata.
