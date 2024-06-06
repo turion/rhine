@@ -5,7 +5,7 @@
 {- | This module provides exception handling, and thus control flow,
 to synchronous signal functions.
 
-The API presented here closely follows @automaton@'s 'Data.Automaton.Trans.Except',
+The API presented here closely follows @automaton@'s "Data.Automaton.Trans.Except",
 and reexports everything needed from there.
 -}
 module FRP.Rhine.ClSF.Except (
