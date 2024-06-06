@@ -2,6 +2,15 @@
   description = "rhine";
   nixConfig.bash-prompt = "\[rhine\]$ ";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://rhine.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "rhine.cachix.org-1:oFsONI6lXn3XG4aVmIURDa2Rn0dW5XTPy6eJWROIs8k="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
     flake-utils.url = "github:numtide/flake-utils";
