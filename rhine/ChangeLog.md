@@ -1,5 +1,12 @@
 # Revision history for rhine
 
+## 1.4
+
+* Add `Profunctor` instance for `ResamplingBuffer`
+* Fix imports of `FRP.Rhine` prelude
+* Add `UTCClock` and `WaitUTCClock`, corresponding refactorings
+* Remove unreliable `downsampleMillisecond` `ResamplingBuffer`
+
 ## 1.3
 
 * Dropped `dunai` dependency in favour of state automata.
