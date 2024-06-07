@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: rhine
-version: 1.4
+version: 1.4.0.1
 synopsis: Functional Reactive Programming with type-level clocks
 description:
   Rhine is a library for synchronous and asynchronous Functional Reactive Programming (FRP).
