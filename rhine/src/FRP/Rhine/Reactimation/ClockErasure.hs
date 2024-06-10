@@ -49,6 +49,7 @@ instance (GetClockProxy cl) => ToClockProxy (SN m cl a b) where
 
 eraseClockSN :: Time cl -> SN m cl a b -> (Automaton m (Time cl, Tag cl, Maybe a) (Maybe b))
 eraseClockSN time = flip runReader time . getSN
+{-# INLINE eraseClockSN #-}
 
 -- A synchronous signal network is run by erasing the clock from the clocked signal function.
 synchronous ::
@@ -59,6 +60,7 @@ synchronous ::
 synchronous clsf = SN $ reader $ \initialTime -> proc (time, tag, Just a) -> do
   b <- eraseClockClSF (getClockProxy @cl) initialTime clsf -< (time, tag, a)
   returnA -< Just b
+{-# INLINE synchronous #-}
 
 -- A sequentially composed signal network may either be triggered in its first component,
 -- or its second component. In either case,
@@ -101,11 +103,13 @@ sequential sn1 resBuf sn2 = SN $ reader $ \initialTime ->
           returnA -< Nothing
         Right tagR -> do
           eraseClockSN initialTime sn2 -< (time, tagR, join maybeC)
+{-# INLINE sequential #-}
 
 parallel snL snR = SN $ reader $ \initialTime -> proc (time, tag, maybeA) -> do
   case tag of
     Left tagL -> eraseClockSN initialTime snL -< (time, tagL, maybeA)
     Right tagR -> eraseClockSN initialTime snR -< (time, tagR, maybeA)
+{-# INLINE parallel #-}
 
 postcompose sn clsf = SN $ reader $ \initialTime ->
   let
@@ -114,6 +118,7 @@ postcompose sn clsf = SN $ reader $ \initialTime ->
     proc input@(time, tag, _) -> do
       bMaybe <- eraseClockSN initialTime sn -< input
       mapMaybeS $ eraseClockClSF (outProxy proxy) initialTime clsf -< (time,,) <$> outTag proxy tag <*> bMaybe
+{-# INLINE postcompose #-}
 
 precompose clsf sn = SN $ reader $ \initialTime ->
   let
@@ -122,6 +127,7 @@ precompose clsf sn = SN $ reader $ \initialTime ->
     proc (time, tag, aMaybe) -> do
       bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
       eraseClockSN initialTime sn -< (time, tag, bMaybe)
+{-# INLINE precompose #-}
 
 feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $ reader $ \initialTime ->
   let
@@ -143,6 +149,8 @@ feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $ reader $ \initialTime -
           timeInfo <- genTimeInfo (outProxy proxy) initialTime -< (time, tagOut)
           buf'' <- arrM $ uncurry $ uncurry put -< ((timeInfo, d), buf')
           returnA -< (Just b, buf'')
+{-# INLINE feedbackSN #-}
+
 firstResampling sn buf = SN $ reader $ \initialTime ->
   let
     proxy = toClockProxy sn
