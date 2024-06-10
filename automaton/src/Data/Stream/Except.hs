@@ -33,6 +33,11 @@ data StreamExcept a m e
   | -- | This is usually the faster encoding, as it can be optimized by GHC.
     CoalgebraicExcept (OptimizedStreamT (ExceptT e m) a)
 
+-- | Apply a function to the output of the stream
+mapOutput :: (Functor m) => (a -> b) -> StreamExcept a m e -> StreamExcept b m e
+mapOutput f (RecursiveExcept final) = RecursiveExcept $ f <$> final
+mapOutput f (CoalgebraicExcept initial) = CoalgebraicExcept $ f <$> initial
+
 toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
 toRecursive (RecursiveExcept coalgebraic) = coalgebraic
 toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
