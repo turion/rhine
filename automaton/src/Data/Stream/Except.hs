@@ -33,6 +33,10 @@ data StreamExcept a m e
   | -- | This is usually the faster encoding, as it can be optimized by GHC.
     InitialExcept (OptimizedStreamT (ExceptT e m) a)
 
+mapOutput :: Functor m => (a -> b) -> StreamExcept a m e -> StreamExcept b m e
+mapOutput f (FinalExcept final) = FinalExcept $ f <$> final
+mapOutput f (InitialExcept initial) = InitialExcept $ f <$> initial
+
 toFinal :: (Functor m) => StreamExcept a m e -> Final (ExceptT e m) a
 toFinal (FinalExcept final) = final
 toFinal (InitialExcept initial) = StreamOptimized.toFinal initial
