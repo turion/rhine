@@ -1,6 +1,8 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
 {- | Translate clocked signal processing components to stream functions without explicit clock types.
@@ -23,7 +25,7 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Util
 import FRP.Rhine.ResamplingBuffer
-import FRP.Rhine.SN
+import FRP.Rhine.Schedule (In, Out, SequentialClock)
 
 {- | Run a clocked signal function as an automaton,
    accepting the timestamps and tags as explicit inputs.
@@ -39,23 +41,23 @@ eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
   runReaderS clsf -< (timeInfo, a)
 {-# INLINE eraseClockClSF #-}
 
-{- | Run a signal network as an automaton.
+-- Andras' trick: Encode in the domain
+newtype SN m cl a b = SN {getSN :: Reader (Time cl) (Automaton m (Time cl, Tag cl, Maybe a) (Maybe b))}
 
-   Depending on the incoming clock,
-   input data may need to be provided,
-   and depending on the outgoing clock,
-   output data may be generated.
-   There are thus possible invalid inputs,
-   which 'eraseClockSN' does not gracefully handle.
--}
-eraseClockSN ::
-  (Monad m, Clock m cl, GetClockProxy cl) =>
-  Time cl ->
-  SN m cl a b ->
-  Automaton m (Time cl, Tag cl, Maybe a) (Maybe b)
+instance (GetClockProxy cl) => ToClockProxy (SN m cl a b) where
+  type Cl (SN m cl a b) = cl
+
+eraseClockSN :: Time cl -> SN m cl a b -> (Automaton m (Time cl, Tag cl, Maybe a) (Maybe b))
+eraseClockSN time = flip runReader time . getSN
+
 -- A synchronous signal network is run by erasing the clock from the clocked signal function.
-eraseClockSN initialTime sn@(Synchronous clsf) = proc (time, tag, Just a) -> do
-  b <- eraseClockClSF (toClockProxy sn) initialTime clsf -< (time, tag, a)
+synchronous ::
+  forall cl m a b.
+  (cl ~ In cl, cl ~ Out cl, Monad m, Clock m cl, GetClockProxy cl) =>
+  ClSF m cl a b ->
+  SN m cl a b
+synchronous clsf = SN $ reader $ \initialTime -> proc (time, tag, Just a) -> do
+  b <- eraseClockClSF (getClockProxy @cl) initialTime clsf -< (time, tag, a)
   returnA -< Just b
 
 -- A sequentially composed signal network may either be triggered in its first component,
@@ -63,7 +65,25 @@ eraseClockSN initialTime sn@(Synchronous clsf) = proc (time, tag, Just a) -> do
 -- the resampling buffer (which connects the two components) may be triggered,
 -- but only if the outgoing clock of the first component ticks,
 -- or the incoming clock of the second component ticks.
-eraseClockSN initialTime (Sequential sn1 resBuf sn2) =
+sequential ::
+  ( Clock m clab
+  , Clock m clcd
+  , Clock m (Out clab)
+  , Clock m (Out clcd)
+  , Clock m (In clab)
+  , Clock m (In clcd)
+  , GetClockProxy clab
+  , GetClockProxy clcd
+  , Time clab ~ Time clcd
+  , Time clab ~ Time (Out clab)
+  , Time clcd ~ Time (In clcd)
+  , Monad m
+  ) =>
+  SN m clab a b ->
+  ResamplingBuffer m (Out clab) (In clcd) b c ->
+  SN m clcd c d ->
+  SN m (SequentialClock clab clcd) a d
+sequential sn1 resBuf sn2 = SN $ reader $ \initialTime ->
   let
     proxy1 = toClockProxy sn1
     proxy2 = toClockProxy sn2
@@ -81,25 +101,29 @@ eraseClockSN initialTime (Sequential sn1 resBuf sn2) =
           returnA -< Nothing
         Right tagR -> do
           eraseClockSN initialTime sn2 -< (time, tagR, join maybeC)
-eraseClockSN initialTime (Parallel snL snR) = proc (time, tag, maybeA) -> do
+
+parallel snL snR = SN $ reader $ \initialTime -> proc (time, tag, maybeA) -> do
   case tag of
     Left tagL -> eraseClockSN initialTime snL -< (time, tagL, maybeA)
     Right tagR -> eraseClockSN initialTime snR -< (time, tagR, maybeA)
-eraseClockSN initialTime (Postcompose sn clsf) =
+
+postcompose sn clsf = SN $ reader $ \initialTime ->
   let
     proxy = toClockProxy sn
    in
     proc input@(time, tag, _) -> do
       bMaybe <- eraseClockSN initialTime sn -< input
       mapMaybeS $ eraseClockClSF (outProxy proxy) initialTime clsf -< (time,,) <$> outTag proxy tag <*> bMaybe
-eraseClockSN initialTime (Precompose clsf sn) =
+
+precompose clsf sn = SN $ reader $ \initialTime ->
   let
     proxy = toClockProxy sn
    in
     proc (time, tag, aMaybe) -> do
       bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
       eraseClockSN initialTime sn -< (time, tag, bMaybe)
-eraseClockSN initialTime (Feedback ResamplingBuffer {buffer, put, get} sn) =
+
+feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $ reader $ \initialTime ->
   let
     proxy = toClockProxy sn
    in
@@ -119,7 +143,7 @@ eraseClockSN initialTime (Feedback ResamplingBuffer {buffer, put, get} sn) =
           timeInfo <- genTimeInfo (outProxy proxy) initialTime -< (time, tagOut)
           buf'' <- arrM $ uncurry $ uncurry put -< ((timeInfo, d), buf')
           returnA -< (Just b, buf'')
-eraseClockSN initialTime (FirstResampling sn buf) =
+firstResampling sn buf = SN $ reader $ \initialTime ->
   let
     proxy = toClockProxy sn
    in
@@ -132,7 +156,7 @@ eraseClockSN initialTime (FirstResampling sn buf) =
           _ -> Nothing
       dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) initialTime buf -< resBufInput
       returnA -< (,) <$> bMaybe <*> join dMaybe
-{-# INLINE eraseClockSN #-}
+{-# INLINE firstResampling #-}
 
 {- | Translate a resampling buffer into an automaton.
 
