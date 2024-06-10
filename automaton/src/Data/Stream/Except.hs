@@ -35,11 +35,11 @@ data StreamExcept a m e
 
 -- | Apply a function to the output of the stream
 mapOutput :: (Functor m) => (a -> b) -> StreamExcept a m e -> StreamExcept b m e
-mapOutput f (RecursiveExcept final) = RecursiveExcept $ f <$> final
-mapOutput f (CoalgebraicExcept initial) = CoalgebraicExcept $ f <$> initial
+mapOutput f (RecursiveExcept recursive) = RecursiveExcept $ f <$> recursive
+mapOutput f (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ f <$> coalgebraic
 
 toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
-toRecursive (RecursiveExcept coalgebraic) = coalgebraic
+toRecursive (RecursiveExcept recursive) = recursive
 toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
 
 runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
