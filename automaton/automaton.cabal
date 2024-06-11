@@ -63,6 +63,7 @@ common opts
 library
   import: opts
   exposed-modules:
+    Control.Monad.Trans.List
     Data.Automaton
     Data.Automaton.Final
     Data.Automaton.Trans.Accum
