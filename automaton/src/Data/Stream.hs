@@ -35,6 +35,7 @@ import Data.Align
 
 -- automaton
 import Data.Stream.Internal
+import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Result
 
 -- * Creating streams
@@ -103,6 +104,26 @@ unfold_ state step = unfold state $ \s -> let s' = step s in Result s' s'
 constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
+
+{- | Translate a coalgebraically encoded stream into a recursive one.
+
+This is usually a performance penalty.
+-}
+toRecursive :: (Functor m) => StreamT m a -> Recursive m a
+toRecursive automaton = Recursive $ mapResultState toRecursive <$> stepStream automaton
+{-# INLINE toRecursive #-}
+
+{- | Translate a recursive stream into a coalgebraically encoded one.
+
+The internal state is the stream itself.
+-}
+fromRecursive :: Recursive m a -> StreamT m a
+fromRecursive coalgebraic =
+  StreamT
+    { state = coalgebraic
+    , step = getRecursive
+    }
+{-# INLINE fromRecursive #-}
 
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => m a -> StreamT m a
