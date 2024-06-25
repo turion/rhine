@@ -49,7 +49,7 @@ source-repository this
 common opts
   build-depends:
     automaton ^>=1.4,
-    base >=4.14 && <4.20,
+    base >=4.16 && <4.21,
     monad-schedule ^>=0.2,
     mtl >=2.2 && <2.4,
     selective ^>=0.7,
