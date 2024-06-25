@@ -113,6 +113,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          if [ "$(uname --kernel-name)" = "Linux" ]; then
+            sudo rm -rf /usr/local/* /usr/share/* /opt/*
+            docker rmi $(docker image ls -aq)
+          fi
       - uses: cachix/install-nix-action@V27
       - uses: DeterminateSystems/magic-nix-cache-action@v7
       - uses: cachix/cachix-action@v15
