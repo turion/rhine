@@ -110,6 +110,7 @@ test-suite automaton-test
     tasty >=1.4 && <1.6,
     tasty-hunit ^>=0.10,
     tasty-quickcheck >=0.10 && <0.12,
+    containers >=0.5,
 
 executable UserSawtooth
   import: opts
