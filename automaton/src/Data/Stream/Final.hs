@@ -7,34 +7,15 @@ import Control.Applicative (Alternative (..))
 import Control.Monad.Morph (MFunctor (..))
 
 -- automaton
-import Data.Stream (StreamT (..), stepStream)
 import Data.Stream.Result
+import Data.Function ((&))
+import Data.Functor ((<&>))
 
 {- | A stream transformer in final encoding.
 
 One step of the stream transformer performs a monadic action and results in an output and a new stream.
 -}
 newtype Final m a = Final {getFinal :: m (Result (Final m a) a)}
-
-{- | Translate an initially encoded stream into a finally encoded one.
-
-This is usually a performance penalty.
--}
-toFinal :: (Functor m) => StreamT m a -> Final m a
-toFinal automaton = Final $ mapResultState toFinal <$> stepStream automaton
-{-# INLINE toFinal #-}
-
-{- | Translate a finally encoded stream into an initially encoded one.
-
-The internal state is the stream itself.
--}
-fromFinal :: Final m a -> StreamT m a
-fromFinal final =
-  StreamT
-    { state = final
-    , step = getFinal
-    }
-{-# INLINE fromFinal #-}
 
 instance MFunctor Final where
   hoist morph = go

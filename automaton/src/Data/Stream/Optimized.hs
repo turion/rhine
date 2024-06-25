@@ -36,7 +36,6 @@ import Data.Semialign (Align (..), Semialign (..))
 import Data.Stream hiding (hoist')
 import Data.Stream qualified as StreamT
 import Data.Stream.Final (Final (..))
-import Data.Stream.Final qualified as Final (fromFinal, toFinal)
 import Data.Stream.Result
 
 {- | An optimized version of 'StreamT' which has an extra constructor for stateless streams.
@@ -189,7 +188,7 @@ stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 This will typically be a performance penalty.
 -}
 toFinal :: (Functor m) => OptimizedStreamT m a -> Final m a
-toFinal (Stateful stream) = Final.toFinal stream
+toFinal (Stateful stream) = StreamT.toFinal stream
 toFinal (Stateless f) = go
   where
     go = Final $ Result go <$> f
@@ -199,7 +198,7 @@ toFinal (Stateless f) = go
   The internal state is the stream itself.
 -}
 fromFinal :: Final m a -> OptimizedStreamT m a
-fromFinal = Stateful . Final.fromFinal
+fromFinal = Stateful . StreamT.fromFinal
 {-# INLINE fromFinal #-}
 
 -- | See 'Data.Stream.concatS'.
