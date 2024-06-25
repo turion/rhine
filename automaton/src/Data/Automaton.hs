@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -40,11 +39,17 @@ import Control.Selective (Selective)
 -- simple-affine-space
 import Data.VectorSpace (VectorSpace (..))
 
+-- these
+import Data.These (these)
+
+-- witherable
+import Witherable (Filterable (..), Witherable)
+
 -- align
 import Data.Semialign (Align (..), Semialign (..))
 
 -- automaton
-import Data.Stream (StreamT (..), fixStream)
+import Data.Stream (StreamT (..))
 import Data.Stream qualified as StreamT
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
@@ -80,8 +85,8 @@ automaton2 :: Automaton m b c
 sequentially :: Automaton m a c
 sequentially = automaton1 >>> automaton2
 
-parallely :: Automaton m (a, b) (b, c)
-parallely = automaton1 *** automaton2
+inParallel :: Automaton m (a, b) (b, c)
+inParallel = automaton1 *** automaton2
 @
 In sequential composition, the output of the first automaton is passed as input to the second one.
 In parallel composition, both automata receive input simulataneously and process it independently.
@@ -445,13 +450,39 @@ traverseS_ automaton = traverse' automaton >>> arr (const ())
 
 Caution: Uses memory of the order of the largest list that was ever input during runtime.
 -}
-parallely :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
+parallelyList :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
+parallelyList = parallely
+
+{- | Launch many copies of the automaton in parallel, depending on the input shape.
+
+* This generalises 'parallelyList' from lists to arbitrary 'Witherable's satisfying 'Align'
+  such as 'Map's, 'Seq'uences', and other data structures.
+* The copies of the automaton are launched on demand as the input shape changes in such a way that there are new positions.
+* The automaton copy on a particular position will always receive the input from that position.
+* Only those automaton copies on positions with a matching input will be stepped.
+
+For example, if the first input is a map with keys @k1@ and @k2@,
+two copies will be started, one for each key.
+If the next input map has keys @k1@ and @k3@,
+the first automaton at key @k1@ will be stepped,
+the copy at @k2@ will not be stepped and keeps its state,
+and a new copy will be launched at @k3@.
+
+Caution: Uses memory of the order of the largest input that was ever input during runtime.
+-}
+parallely :: (Applicative m, Witherable t, Align t) => Automaton m a b -> Automaton m (t a) (t b)
 parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
   where
-    parallely' :: (Applicative m) => StreamT (ReaderT a m) b -> StreamT (ReaderT [a] m) [b]
-    parallely' StreamT {state, step} = fixStream (JointState state) $ \fixstep jointState@(JointState s fixstate) -> ReaderT $ \case
-      [] -> pure $! Result jointState []
-      (a : as) -> apResult . fmap (:) <$> runReaderT (step s) a <*> runReaderT (fixstep fixstate) as
+    parallely' :: (Applicative m, Witherable t, Align t) => StreamT (ReaderT a m) b -> StreamT (ReaderT (t a) m) (t b)
+    parallely' StreamT {state, step} =
+      StreamT
+        { state = nil
+        , step = \s -> ReaderT $ \as ->
+            let aligned = align s as
+                traversed = traverse (these (\s -> pure $ Result s Nothing) (fmap (fmap Just) . runReaderT (step state)) (\s a -> fmap Just <$> runReaderT (step s) a)) aligned
+                tupleised = fmap (\(Result s aMaybe) -> (s, aMaybe)) <$> traversed
+             in tupleised <&> (\sas -> let output = Witherable.mapMaybe snd sas in Result (fst <$> sas) output)
+        }
 parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
 
 -- | Given a transformation of streams, apply it to an automaton, without changing the input.
