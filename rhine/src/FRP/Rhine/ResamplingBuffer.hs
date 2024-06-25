@@ -43,7 +43,8 @@ or specific to certain clocks.
 * 'a': The input type
 * 'b': The output type
 -}
-data ResamplingBuffer m cla clb a b = forall s.
+data ResamplingBuffer m cla clb a b
+  = forall s.
   ResamplingBuffer
   { buffer :: s
   -- ^ The internal state of the buffer.
