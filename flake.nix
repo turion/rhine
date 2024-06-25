@@ -28,7 +28,7 @@
       # To be kept in sync with the `tested-with:` section in rhine.cabal.
       # To do: Automated check whether this is the same as what get-tested returns.
       # Currently blocked on https://github.com/Kleidukos/get-tested/issues/39
-      supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" ];
+      supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" "ghc910" ];
 
       # All Haskell packages defined here that contain a library section
       libPnames = filter (pname: pname != "rhine-examples") pnames;
