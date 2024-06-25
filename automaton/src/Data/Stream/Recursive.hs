@@ -7,7 +7,6 @@ import Control.Applicative (Alternative (..))
 import Control.Monad.Morph (MFunctor (..))
 
 -- automaton
-import Data.Stream (StreamT (..), stepStream)
 import Data.Stream.Result
 
 {- | A stream transformer in recursive encoding.
@@ -15,26 +14,6 @@ import Data.Stream.Result
 One step of the stream transformer performs a monadic action and results in an output and a new stream.
 -}
 newtype Recursive m a = Recursive {getRecursive :: m (Result (Recursive m a) a)}
-
-{- | Translate a coalgebraically encoded stream into a recursive one.
-
-This is usually a performance penalty.
--}
-toRecursive :: (Functor m) => StreamT m a -> Recursive m a
-toRecursive automaton = Recursive $ mapResultState toRecursive <$> stepStream automaton
-{-# INLINE toRecursive #-}
-
-{- | Translate a recursive stream into a coalgebraically encoded one.
-
-The internal state is the stream itself.
--}
-fromRecursive :: Recursive m a -> StreamT m a
-fromRecursive coalgebraic =
-  StreamT
-    { state = coalgebraic
-    , step = getRecursive
-    }
-{-# INLINE fromRecursive #-}
 
 instance MFunctor Recursive where
   hoist morph = go
@@ -63,7 +42,7 @@ instance (Alternative m) => Alternative (Recursive m) where
   Recursive ma1 <|> Recursive ma2 = Recursive $ ma1 <|> ma2
 
 instance (Foldable m) => Foldable (Recursive m) where
-  foldMap f Recursive {getRecursive} = foldMap (\(Result Recursive a) -> f a <> foldMap f Recursive) getRecursive
+  foldMap f Recursive {getRecursive} = foldMap (\(Result recursive a) -> f a <> foldMap f recursive) getRecursive
 
 instance (Traversable m) => Traversable (Recursive m) where
   traverse f = go
