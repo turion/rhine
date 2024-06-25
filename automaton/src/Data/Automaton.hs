@@ -54,6 +54,9 @@ import Data.Stream.Optimized (
  )
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Result
+import Data.These (these)
+
+import Witherable (Filterable (..))
 
 -- * Constructing automata
 
@@ -435,14 +438,41 @@ traverseS_ automaton = traverse' automaton >>> arr (const ())
 Caution: Uses memory of the order of the largest list that was ever input during runtime.
 -}
 parallely :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
-parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
-  where
-    parallely' :: (Applicative m) => StreamT (ReaderT a m) b -> StreamT (ReaderT [a] m) [b]
-    parallely' StreamT {state, step} = fixStream (JointState state) $ \fixstep jointState@(JointState s fixstate) -> ReaderT $ \case
-      [] -> pure $! Result jointState []
-      (a : as) -> apResult . fmap (:) <$> runReaderT (step s) a <*> runReaderT (fixstep fixstate) as
-parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
+parallely = parallelyT
+-- parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
+--   where
+--     parallely' :: (Applicative m) => StreamT (ReaderT a m) b -> StreamT (ReaderT [a] m) [b]
+--     parallely' StreamT {state, step} = fixStream (JointState state) $ \fixstep jointState@(JointState s fixstate) -> ReaderT $ \case
+--       [] -> pure $! Result jointState []
+--       (a : as) -> apResult . fmap (:) <$> runReaderT (step s) a <*> runReaderT (fixstep fixstate) as
+-- parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
 
+parallelyT :: (Applicative m, Traversable t, Align t, Filterable t) => Automaton m a b -> Automaton m (t a) (t b)
+parallelyT Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
+  where
+    parallely' :: (Applicative m, Traversable t, Align t, Filterable t) => StreamT (ReaderT a m) b -> StreamT (ReaderT (t a) m) (t b)
+    parallely' StreamT {state, step} = StreamT
+      { state = nil
+      , step = \s -> ReaderT $ \as ->
+          let aligned = align s as
+              traversed = traverse (these (\s -> pure $ Result s Nothing) (fmap (fmap Just) . runReaderT (step state)) (\s a -> fmap Just <$> runReaderT (step s) a)) aligned
+              tupleised = fmap (\(Result s aMaybe) -> (s, aMaybe)) <$> traversed
+          in tupleised <&> (\sas -> let kitten = Witherable.mapMaybe snd sas in Result (fst <$> sas) kitten)
+      }
+      -- filterAlign :: t (Maybe a) -> t a
+parallelyT Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
+
+parallelyA :: (Applicative m, Traversable f, Applicative f) => Automaton m a b -> Automaton m (f a) (f b)
+parallelyA Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
+  where
+    parallely' :: (Applicative m, Traversable f, Applicative f) => StreamT (ReaderT a m) b -> StreamT (ReaderT (f a) m) (f b)
+    parallely' StreamT {state, step} = StreamT
+      { state = pure state
+      , step = \s -> ReaderT $ \as -> (runReaderT . step <$> s <*> as) & sequenceA
+              & fmap unzipResult
+      }
+      -- filterAlign :: t (Maybe a) -> t a
+parallelyA Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
 -- | Given a transformation of streams, apply it to an automaton, without changing the input.
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
