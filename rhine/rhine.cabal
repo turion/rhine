@@ -35,6 +35,7 @@ tested-with:
   ghc ==9.4.7
   ghc ==9.6.4
   ghc ==9.8.2
+  ghc ==9.10.1
 
 source-repository head
   type: git
