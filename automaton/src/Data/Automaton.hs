@@ -44,6 +44,12 @@ import Data.VectorSpace (VectorSpace (..))
 -- align
 import Data.Semialign (Align (..), Semialign (..))
 
+-- these
+import Data.These (these)
+
+-- witherable
+import Witherable (Filterable (..))
+
 -- automaton
 import Data.Stream (StreamT (..), fixStream)
 import Data.Stream.Internal (JointState (..))
@@ -80,8 +86,8 @@ automaton2 :: Automaton m b c
 sequentially :: Automaton m a c
 sequentially = automaton1 >>> automaton2
 
-parallely :: Automaton m (a, b) (b, c)
-parallely = automaton1 *** automaton2
+inParallel :: Automaton m (a, b) (b, c)
+inParallel = automaton1 *** automaton2
 @
 In sequential composition, the output of the first automaton is passed as input to the second one.
 In parallel composition, both automata receive input simulataneously and process it independently.
@@ -432,22 +438,88 @@ traverseS = traverse'
 traverseS_ :: (Monad m, Traversable f) => Automaton m a b -> Automaton m (f a) ()
 traverseS_ automaton = traverse' automaton >>> arr (const ())
 
-{- | Launch arbitrarily many copies of the automaton in parallel.
+-- TODO But should we use parallelism?
+-- https://hackage.haskell.org/package/parallel-3.1.0.1/docs/Control-Parallel-Strategies.html#v:parTraversable
 
-* The copies of the automaton are launched on demand as the input lists grow.
-* The n-th copy will always receive the n-th input.
-* If the input list has length n, the n+1-th automaton copy will not be stepped.
+{- | Launch arbitrarily many copies of the automaton in parallel, according to the shape of the input data.
 
-Caution: Uses memory of the order of the largest list that was ever input during runtime.
+* The copies of the automaton are launched on demand as the shape of the input grows.
+* The automaton copy at a certain position will always receive the input at that position (if it is supplied).
+* If the input data is smaller than the automaton copies, the uncovered automata will not be stepped.
+
+The behaviour for some typical example types:
+
+* Lists: The copies of the automaton are launched on demand as the input lists grow
+  The n-th copy will always receive the n-th input.
+  If the input list has length n, the n+1-th automaton copy will not be stepped.
+* 'Maybe': As soon as a 'Just' is received, an automaton is started. It is stepped only when more 'Just' values arrive.
+* 'Map': Whenever an input for a new key arrives, a new automaton is started.
+
+Caution: Uses memory of the order of the largest shape that was ever input during runtime.
+
+Note: "in parallel" refers purely the data model, it does not mean that multiple cores are used for the computations.
 -}
-parallely :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
+parallely :: (Applicative m, Traversable t, Align t, Filterable t) => Automaton m a b -> Automaton m (t a) (t b)
 parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
   where
-    parallely' :: (Applicative m) => StreamT (ReaderT a m) b -> StreamT (ReaderT [a] m) [b]
-    parallely' StreamT {state, step} = fixStream (JointState state) $ \fixstep jointState@(JointState s fixstate) -> ReaderT $ \case
-      [] -> pure $! Result jointState []
-      (a : as) -> apResult . fmap (:) <$> runReaderT (step s) a <*> runReaderT (fixstep fixstate) as
+    parallely' :: (Applicative m, Traversable t, Align t, Filterable t) => StreamT (ReaderT a m) b -> StreamT (ReaderT (t a) m) (t b)
+    parallely' StreamT {state, step} =
+      StreamT
+        { state = nil
+        , step = \s -> ReaderT $ \as ->
+            -- Analyse at which positions there is state or input
+            align s as
+              & traverse
+                ( these
+                    -- There is state at this position, but no input, don't do anything
+                    (\s -> pure $ Result s Nothing)
+                    -- There is no state yet at this position, but input. Perform the step, initialising with the original initial state
+                    (fmap (fmap Just) . runReaderT (step state))
+                    -- There is already state, and there is input. Perform the step normally
+                    (\s a -> fmap Just <$> runReaderT (step s) a)
+                )
+              <&> ( \sas ->
+                      Result
+                        -- Keep all the resulting states
+                        (resultState <$> sas)
+                        -- Wither the output shape by removing all positions where no step has been performed
+                        (Witherable.mapMaybe output sas)
+                  )
+        }
 parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
+{-# INLINE parallely #-}
+
+{- | Run multiple copies of the same 'Automaton', applying new input shapes to an accumulated one.
+
+* The state is initialized as 'pure'
+* As more input in an @f@ shape arrives, it is applied as an effect in the state using the 'Applicative' instance of @f@
+
+Caution: The state grows depending on how @'Applicative' f@ is implemented.
+For example, for lists the size of the state is proportional to the /product/ of all inputs that have arrived.
+I.e. it grows exponentially for constantly bigger-than-1 sized lists, and drops to 0 once an empty list is added.
+
+The behaviour for some typical example types:
+
+* Lists: The input lists are interpreted as nondeterministic choices, and for every possible combination of choices, one automaton is run, and all output lists concatenated.
+* 'Maybe': The automaton is stepped normally on 'Just' values, and stopped on 'Nothing', never outputting any other value than 'Nothing'.
+* 'Either': Like 'Maybe', but with an exception value.
+* 'ZipList': The output is the size of the /smallest/ list ever input, and the state is shrunk every time the input is smaller than before.
+-}
+
+-- FIXME unit test all of these
+applying :: (Applicative m, Traversable f, Applicative f) => Automaton m a b -> Automaton m (f a) (f b)
+applying = handleAutomaton applying'
+  where
+    applying' :: (Applicative m, Traversable f, Applicative f) => StreamT (ReaderT a m) b -> StreamT (ReaderT (f a) m) (f b)
+    applying' StreamT {state, step} =
+      StreamT
+        { state = pure state
+        , step = \s -> ReaderT $ \as ->
+            (runReaderT . step <$> s <*> as)
+              & sequenceA
+              & fmap unzipResult
+        }
+{-# INLINE applying #-}
 
 -- | Given a transformation of streams, apply it to an automaton, without changing the input.
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
