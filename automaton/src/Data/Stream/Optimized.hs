@@ -35,7 +35,6 @@ import Data.Semialign (Align (..), Semialign (..))
 import Data.Stream hiding (hoist')
 import Data.Stream qualified as StreamT
 import Data.Stream.Recursive (Recursive (..))
-import Data.Stream.Recursive qualified as Recursive (fromRecursive, toRecursive)
 import Data.Stream.Result
 
 {- | An optimized version of 'StreamT' which has an extra constructor for stateless streams.
@@ -188,7 +187,7 @@ stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 This will typically be a performance penalty.
 -}
 toRecursive :: (Functor m) => OptimizedStreamT m a -> Recursive m a
-toRecursive (Stateful stream) = Recursive.toRecursive stream
+toRecursive (Stateful stream) = StreamT.toRecursive stream
 toRecursive (Stateless f) = go
   where
     go = Recursive $ Result go <$> f
@@ -198,7 +197,7 @@ toRecursive (Stateless f) = go
   The internal state is the stream itself.
 -}
 fromRecursive :: Recursive m a -> OptimizedStreamT m a
-fromRecursive = Stateful . Recursive.fromRecursive
+fromRecursive = Stateful . StreamT.fromRecursive
 {-# INLINE fromRecursive #-}
 
 -- | See 'Data.Stream.concatS'.

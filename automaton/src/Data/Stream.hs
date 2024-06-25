@@ -35,6 +35,7 @@ import Data.Align
 
 -- automaton
 import Data.Stream.Internal
+import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Result
 
 -- * Creating streams
@@ -75,7 +76,8 @@ It is nevertheless possible to define streams recursively, but one needs to firs
 Then for the greatest generality, 'fixStream' and 'fixStream'' can be used, and some special cases are covered by functions
 such as 'fixA', 'Data.Automaton.parallely', 'many' and 'some'.
 -}
-data StreamT m a = forall s.
+data StreamT m a
+  = forall s.
   StreamT
   { state :: s
   -- ^ The internal state of the stream
@@ -102,6 +104,26 @@ unfold_ state step = unfold state $ \s -> let s' = step s in Result s' s'
 constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
+
+{- | Translate a coalgebraically encoded stream into a recursive one.
+
+This is usually a performance penalty.
+-}
+toRecursive :: (Functor m) => StreamT m a -> Recursive m a
+toRecursive automaton = Recursive $ mapResultState toRecursive <$> stepStream automaton
+{-# INLINE toRecursive #-}
+
+{- | Translate a recursive stream into a coalgebraically encoded one.
+
+The internal state is the stream itself.
+-}
+fromRecursive :: Recursive m a -> StreamT m a
+fromRecursive coalgebraic =
+  StreamT
+    { state = coalgebraic
+    , step = getRecursive
+    }
+{-# INLINE fromRecursive #-}
 
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => m a -> StreamT m a
@@ -253,7 +275,7 @@ concatS StreamT {state, step} =
     go (s, []) = do
       Result s' as <- step s
       go (s', as)
-    go (s, a : as) = return $ Result (s, as) a
+    go (s, a : as) = pure $ Result (s, as) a
 {-# INLINE concatS #-}
 
 -- ** Exception handling
@@ -274,7 +296,7 @@ applyExcept (StreamT state1 step1) (StreamT state2 step2) =
     step (Left s1) = do
       resultOrException <- lift $ runExceptT $ step1 s1
       case resultOrException of
-        Right result -> return $! mapResultState Left result
+        Right result -> pure $! mapResultState Left result
         Left f -> step (Right (state2, f))
     step (Right (s2, f)) = mapResultState (Right . (,f)) <$!> withExceptT f (step2 s2)
 {-# INLINE applyExcept #-}
@@ -295,7 +317,7 @@ foreverExcept StreamT {state, step} =
       resultOrException <- runExceptT $ step s
       case resultOrException of
         Left _ -> stepNew state
-        Right result -> return result
+        Right result -> pure result
 
 -- | Whenever an exception occurs, output it and retry on the next step.
 exceptS :: (Applicative m) => StreamT (ExceptT e m) b -> StreamT m (Either e b)
@@ -320,7 +342,7 @@ selectExcept (StreamT stateE0 stepE) (StreamT stateF0 stepF) =
     step (Left stateE) = do
       resultOrException <- lift $ runExceptT $ stepE stateE
       case resultOrException of
-        Right result -> return $ mapResultState Left result
+        Right result -> pure $ mapResultState Left result
         Left (Left e1) -> step (Right (e1, stateF0))
         Left (Right e2) -> throwE e2
     step (Right (e1, stateF)) = withExceptT ($ e1) $ mapResultState (Right . (e1,)) <$> stepF stateF
