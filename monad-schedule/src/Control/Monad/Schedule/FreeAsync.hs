@@ -90,7 +90,8 @@ runFreeAsync = runFreeAsyncT
 asyncMVar :: MVar a -> FreeAsyncT m a
 asyncMVar = FreeAsyncT . singleton
 
-data MVarCont m a = forall b.
+data MVarCont m a
+  = forall b.
   MVarCont
   { mvar :: MVar b
   , cont :: b -> ProgramT MVar m a
@@ -112,7 +113,7 @@ instance (MonadIO m) => MonadSchedule (FreeAsyncT m) where
         -- Have some of them finished?
         case partitionNonEmpty $ viewToEither <$> views of
           -- All have finished
-          Left (as, []) -> return (as, [])
+          Left (as, []) -> pure (as, [])
           -- Some have finished, some are waiting for MVars
           Left (as, cont : conts) -> do
             -- Peek at the MVars
@@ -126,11 +127,11 @@ instance (MonadIO m) => MonadSchedule (FreeAsyncT m) where
                 -- Have some of them returned now?
                 case partitionNonEmpty $ viewToEither <$> views of
                   -- Yes. Return those as well
-                  Left (as', conts') -> return (as <> as', embedMVarCont <$> (conts ++ conts'))
+                  Left (as', conts') -> pure (as <> as', embedMVarCont <$> (conts <> conts'))
                   -- No, they are blocked on other MVars now
-                  Right conts' -> return (as, embedMVarCont <$> toList conts' <> conts)
+                  Right conts' -> pure (as, embedMVarCont <$> toList conts' <> conts)
               -- All MVars are still blocked
-              Right conts -> return (as, embedMVarCont <$> toList conts)
+              Right conts -> pure (as, embedMVarCont <$> toList conts)
           -- All actions are waiting for MVars
           Right conts -> do
             -- Retry until some MVars get unblocked
@@ -151,25 +152,25 @@ instance (MonadIO m) => MonadSchedule (FreeAsyncT m) where
       tryProgress :: (MonadIO m) => MVarCont m a -> m (Either (ProgramT MVar m a) (MVarCont m a))
       tryProgress mvarcont@MVarCont {mvar, cont} = do
         result <- liftIO $ tryTakeMVar mvar
-        return $ maybe (Right mvarcont) (Left . cont) result
+        pure $ maybe (Right mvarcont) (Left . cont) result
 
       tryProgresses :: (MonadIO m) => NonEmpty (MVarCont m a) -> m (Either (NonEmpty (ProgramT MVar m a), [MVarCont m a]) (NonEmpty (MVarCont m a)))
       tryProgresses conts = do
         result <- partitionNonEmpty <$> mapM tryProgress conts
         case result of
-          Left (progressed, []) -> return $ Left (progressed, [])
+          Left (progressed, []) -> pure $ Left (progressed, [])
           Left (progressed, cont : conts) -> do
             inner <- tryProgresses $ cont :| conts
             case inner of
-              Left (progressed', finalConts) -> return $ Left (progressed <> progressed', finalConts)
-              Right finalConts -> return $ Left (progressed, toList finalConts)
-          Right conts -> return $ Right conts
+              Left (progressed', finalConts) -> pure $ Left (progressed <> progressed', finalConts)
+              Right finalConts -> pure $ Left (progressed, toList finalConts)
+          Right conts -> pure $ Right conts
 
       retryProgresses :: (MonadIO m) => NonEmpty (MVarCont m a) -> m (NonEmpty (ProgramT MVar m a), [MVarCont m a])
       retryProgresses conts = do
         result <- tryProgresses conts
         case result of
-          Left progress -> return progress
+          Left progress -> pure progress
           Right _ -> do
             liftIO $ yield >> threadDelay 100
             retryProgresses conts
@@ -231,5 +232,5 @@ instance (MonadIO m) => MonadSchedule (ConcurrentlyT m) where
   schedule =
     fmap getConcurrentlyT
       >>> schedule
-      >>> fmap (second (map ConcurrentlyT))
+      >>> fmap (second (fmap ConcurrentlyT))
       >>> ConcurrentlyT
