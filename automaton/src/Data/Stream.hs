@@ -37,6 +37,7 @@ import Data.Align
 -- automaton
 import Data.Stream.Internal
 import Data.Stream.Result
+import Data.Stream.Recursive (Recursive (..))
 
 -- * Creating streams
 
@@ -103,6 +104,26 @@ unfold_ state step = unfold state $ \s -> let s' = step s in Result s' s'
 constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
+
+{- | Translate a finally encoded stream into a recursively encoded one.
+
+This is usually a performance penalty.
+-}
+toRecursive :: (Functor m) => StreamT m a -> Recursive m a
+toRecursive automaton = Recursive $ mapResultState toRecursive <$> stepStream automaton
+{-# INLINE toRecursive #-}
+
+{- | Translate a recursively encoded stream into a finally encoded one.
+
+The internal state is the stream itself.
+-}
+fromRecursive :: Recursive m a -> StreamT m a
+fromRecursive Recursive =
+  StreamT
+    { state = Recursive
+    , step = getRecursive
+    }
+{-# INLINE fromRecursive #-}
 
 instance (Functor m) => Functor (StreamT m) where
   fmap f StreamT {state, step} = StreamT state $! fmap (fmap f) <$> step
