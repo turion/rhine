@@ -39,6 +39,7 @@ common opts
     simple-affine-space ^>=0.2,
     these >=1.1 && <=1.3,
     transformers >=0.5,
+    witherable ^>=0.5,
 
   if flag(dev)
     ghc-options: -Werror
