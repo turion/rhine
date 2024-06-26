@@ -65,6 +65,7 @@ library
   exposed-modules:
     Control.Monad.Trans.List
     Data.Automaton
+    Data.Automaton.Filter
     Data.Automaton.Final
     Data.Automaton.Trans.Accum
     Data.Automaton.Trans.Except
