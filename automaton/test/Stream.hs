@@ -27,5 +27,9 @@ tests =
             let automaton1 = unfold 0 (\n -> Result (n + 1) (if even n then Right n else Left n))
                 automaton2 = pure (* 10)
              in take 10 (runIdentity (streamToList (automaton1 <*? automaton2))) @?= [0, 10, 2, 30, 4, 50, 6, 70, 8, 90]
+        , testCase "Progresses state of second stream only when first stream returns Left" $
+            let automaton1 = unfold 0 (\n -> Result (n + 1) (if even n then Right n else Left n))
+                automaton2 = unfold 1 (\n -> Result (n + 2) (* n))
+             in take 10 (runIdentity (streamToList (automaton1 <*? automaton2))) @?= [0, 1, 2, 9, 4, 25, 6, 49, 8, 81]
         ]
     ]
