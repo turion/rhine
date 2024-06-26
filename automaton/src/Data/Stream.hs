@@ -443,3 +443,15 @@ loop at runtime due to the coalgebraic encoding of the state.
 fixA :: (Applicative m) => StreamT m (a -> a) -> StreamT m a
 fixA StreamT {state, step} = fixStream (JointState state) $
   \stepA (JointState s ss) -> apResult <$> step s <*> stepA ss
+
+-- | Similar to 'fmap', but the function is allowed to perform a side effect in a monad @m@.
+mmap :: (Monad m) => (a -> m b) -> StreamT m a -> StreamT m b
+mmap f StreamT {state, step} =
+  StreamT
+    { state
+    , step = \s -> do
+        Result s' a <- step s
+        b <- f a
+        return $ Result s' b
+    }
+{-# INLINE mmap #-}

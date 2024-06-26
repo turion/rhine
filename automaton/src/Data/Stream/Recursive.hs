@@ -69,3 +69,11 @@ instance (Traversable m) => Traversable (Recursive m) where
   traverse f = go
     where
       go Recursive {getRecursive} = (getRecursive & traverse (\(Result cont a) -> flip Result <$> f a <*> go cont)) <&> Recursive
+
+-- | Similar to 'fmap', but the function is allowed to perform a side effect in a monad @m@.
+mmap :: (Monad m) => (a -> m b) -> Recursive m a -> Recursive m b
+mmap f recursive = Recursive $ do
+  Result recursive' a <- getRecursive recursive
+  b <- f a
+  return $ Result (mmap f recursive') b
+{-# INLINE mmap #-}
