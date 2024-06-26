@@ -3,6 +3,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
 
 {- | An optimization layer on "Data.Stream".
 
@@ -51,7 +53,7 @@ data OptimizedStreamT m a
     Stateful (StreamT m a)
   | -- | A stateless stream is simply an action in a monad which is performed repetitively.
     Stateless (m a)
-  deriving (Functor)
+  deriving (Functor, Foldable, Traversable)
 
 {- | Remove the optimization layer.
 
