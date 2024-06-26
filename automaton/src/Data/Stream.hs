@@ -11,6 +11,7 @@ module Data.Stream where
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
 import Control.Monad ((<$!>))
 import Data.Bifunctor (bimap)
+import Data.Function ((&))
 import Data.Monoid (Ap (..))
 import Prelude hiding (Applicative (..))
 
@@ -148,6 +149,14 @@ instance (Applicative m) => Applicative (StreamT m) where
   StreamT stateF0 stepF <*> StreamT stateA0 stepA =
     StreamT (JointState stateF0 stateA0) (\(JointState stateF stateA) -> apResult <$> stepF stateF <*> stepA stateA)
   {-# INLINE (<*>) #-}
+
+instance (Foldable m) => Foldable (StreamT m) where
+  foldMap f StreamT {state, step} = go state
+    where
+      go s = step s & foldMap (\(Result s' a) -> f a <> go s')
+
+instance (Traversable m, Functor m) => Traversable (StreamT m) where
+  traverse f = fmap fromRecursive . traverse f . toRecursive
 
 deriving via Ap (StreamT m) a instance (Applicative m, Num a) => Num (StreamT m a)
 
