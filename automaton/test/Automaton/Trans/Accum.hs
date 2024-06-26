@@ -1,7 +1,7 @@
 module Automaton.Trans.Accum where
 
 -- base
-import Control.Monad.Identity (Identity (runIdentity))
+import Data.Functor.Identity (Identity (runIdentity))
 import Data.Monoid (Sum (..))
 
 -- transformers
