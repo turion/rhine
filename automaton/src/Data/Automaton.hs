@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -51,7 +50,7 @@ import Data.These (these)
 import Witherable (Filterable (..))
 
 -- automaton
-import Data.Stream (StreamT (..), fixStream)
+import Data.Stream (StreamT (..))
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
