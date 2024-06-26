@@ -21,6 +21,7 @@ import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Recursive as Recursive (hoist')
 import Data.Stream.Recursive.Except
+import Data.Stream.Result
 
 {- | A stream that can terminate with an exception.
 
@@ -47,6 +48,9 @@ toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalge
 runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
 runStreamExcept (RecursiveExcept recursive) = StreamOptimized.fromRecursive recursive
 runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
+
+stepInstant :: (Functor m) => StreamExcept a m e -> m (Either e (Result (StreamExcept a m e) a))
+stepInstant = runStreamExcept >>> StreamOptimized.stepOptimizedStream >>> runExceptT >>> fmap (fmap (mapResultState CoalgebraicExcept))
 
 instance (Functor m) => Functor (StreamExcept a m) where
   fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
