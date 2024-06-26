@@ -5,6 +5,7 @@ import Control.Arrow
 import Control.Exception
 import Control.Exception qualified as Exception
 import Control.Monad ((<=<))
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Functor ((<&>))
 import Data.Void
 
@@ -13,7 +14,6 @@ import Data.Time (UTCTime, getCurrentTime)
 
 -- mtl
 import Control.Monad.Error.Class
-import Control.Monad.IO.Class (MonadIO, liftIO)
 
 -- time-domain
 import Data.TimeDomain (TimeDomain)
