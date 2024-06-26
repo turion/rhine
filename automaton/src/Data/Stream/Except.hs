@@ -1,7 +1,11 @@
 module Data.Stream.Except where
 
 -- base
+import Control.Category ((>>>))
 import Control.Monad (ap)
+import Data.Bifunctor (bimap)
+import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Void
 
 -- transformers
@@ -51,6 +55,22 @@ runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
 
 stepInstant :: (Functor m) => StreamExcept a m e -> m (Either e (Result (StreamExcept a m e) a))
 stepInstant = runStreamExcept >>> StreamOptimized.stepOptimizedStream >>> runExceptT >>> fmap (fmap (mapResultState CoalgebraicExcept))
+
+-- | Run all steps of the stream, discarding all output, until the exception is reached.
+instance (Functor m, Foldable m) => Foldable (StreamExcept a m) where
+  foldMap f = stepInstant >>> foldMap (either f $ resultState >>> foldMap f)
+
+instance (Traversable m) => Traversable (StreamExcept a m) where
+  traverse f streamExcept = traverseRecursive (toRecursive streamExcept) & fmap (Recursive >>> RecursiveExcept)
+    where
+      traverseRecursive =
+        getRecursive
+          >>> runExceptT
+          >>> fmap (bimap f (mapResultState traverseRecursive >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
+          >>> sequenceA
+          >>> fmap (ExceptT >>> fmap (mapResultState Recursive))
+      bitraverseEither :: (Functor f) => Either (f a) (f b) -> f (Either a b)
+      bitraverseEither = either (fmap Left) (fmap Right)
 
 instance (Functor m) => Functor (StreamExcept a m) where
   fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
