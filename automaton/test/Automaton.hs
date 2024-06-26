@@ -12,7 +12,7 @@ import Data.List (uncons)
 import Data.Maybe (maybeToList)
 
 -- transformers
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.Trans.State.Strict (StateT (..))
 
 -- containers
 import Data.Map.Strict qualified as M

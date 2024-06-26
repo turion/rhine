@@ -1,7 +1,7 @@
 module Automaton.Except where
 
 -- base
-import Control.Monad.Identity (Identity (runIdentity))
+import Data.Functor.Identity (Identity (runIdentity))
 
 -- tasty
 import Test.Tasty (testGroup)
