@@ -61,3 +61,11 @@ instance (Alternative m) => Alternative (Recursive m) where
   empty = constM empty
 
   Recursive ma1 <|> Recursive ma2 = Recursive $ ma1 <|> ma2
+
+instance (Foldable m) => Foldable (Recursive m) where
+  foldMap f Recursive {getRecursive} = foldMap (\(Result Recursive a) -> f a <> foldMap f Recursive) getRecursive
+
+instance (Traversable m) => Traversable (Recursive m) where
+  traverse f = go
+    where
+      go Recursive {getRecursive} = (getRecursive & traverse (\(Result cont a) -> flip Result <$> f a <*> go cont)) <&> Recursive
