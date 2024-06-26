@@ -61,3 +61,11 @@ instance (Alternative m) => Alternative (Final m) where
   empty = constM empty
 
   Final ma1 <|> Final ma2 = Final $ ma1 <|> ma2
+
+instance Foldable m => Foldable (Final m) where
+  foldMap f Final {getFinal} = foldMap (\(Result final a) -> f a <> foldMap f final) getFinal
+
+instance (Traversable m) => Traversable (Final m) where
+  traverse f = go
+    where
+      go Final {getFinal} = (getFinal & traverse (\(Result cont a) -> flip Result <$> f a <*> go cont)) <&> Final

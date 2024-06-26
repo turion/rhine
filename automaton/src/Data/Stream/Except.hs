@@ -19,6 +19,8 @@ import Data.Stream.Final (Final (..))
 import Data.Stream.Final.Except
 import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
+import Data.Stream.Result
+import Control.Category ((>>>))
 
 {- | A stream that can terminate with an exception.
 
@@ -45,6 +47,20 @@ runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
 runStreamExcept (FinalExcept final) = StreamOptimized.fromFinal final
 runStreamExcept (InitialExcept initial) = initial
 
+stepInstant :: Functor m => StreamExcept a m e -> m (Either e (Result (StreamExcept a m e) a))
+-- FIXME optimized version?
+-- stepInstant = toFinal >>> getFinal >>> runExceptT >>> lift >>> fmap (fmap (mapResultState FinalExcept))
+-- Can I run in trouble for forcing an initial here? Should I handle initial & final separately?
+stepInstant = runStreamExcept >>> StreamOptimized.stepOptimizedStream >>> runExceptT >>> fmap (fmap (mapResultState InitialExcept))
+
+-- | Run all steps of the stream, discarding all output, until the exception is reached.
+instance (Functor m, Foldable m) => Foldable (StreamExcept a m) where
+  foldMap f = stepInstant >>> foldMap (either f $ resultState >>> foldMap f)
+
+instance (Traversable m) => Traversable (StreamExcept a m) where
+  traverse = _
+
+-- FIXME This should work with Functor m and custom hoists
 instance (Monad m) => Functor (StreamExcept a m) where
   fmap f (FinalExcept fe) = FinalExcept $ hoist (withExceptT f) fe
   fmap f (InitialExcept ae) = InitialExcept $ hoist (withExceptT f) ae
