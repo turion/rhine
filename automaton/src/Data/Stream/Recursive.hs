@@ -69,3 +69,11 @@ instance (Traversable m) => Traversable (Recursive m) where
   traverse f = go
     where
       go Recursive {getRecursive} = (getRecursive & traverse (\(Result cont a) -> flip Result <$> f a <*> go cont)) <&> Recursive
+
+-- FIXME define for automaton as well
+-- FIXME go trick
+mmap :: (Monad m) => (a -> m b) -> Recursive m a -> Recursive m b
+mmap f Recursive {getRecursive} = Recursive $ do
+  Result Recursive a <- getRecursive
+  b <- f a
+  return $ Result (mmap f Recursive) b

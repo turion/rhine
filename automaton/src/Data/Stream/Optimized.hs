@@ -222,3 +222,7 @@ applyExcept streamF streamA = Stateful $ StreamT.applyExcept (toStreamT streamF)
 selectExcept :: (Monad m) => OptimizedStreamT (ExceptT (Either e1 e2) m) a -> OptimizedStreamT (ExceptT (e1 -> e2) m) a -> OptimizedStreamT (ExceptT e2 m) a
 selectExcept streamE streamF = Stateful $ StreamT.selectExcept (toStreamT streamE) (toStreamT streamF)
 {-# INLINE selectExcept #-}
+
+mmap :: Monad m => (a -> m b) -> OptimizedStreamT m a -> OptimizedStreamT m b
+mmap f (Stateful stream) = Stateful $ StreamT.mmap f stream
+mmap f (Stateless g) = Stateless $ g >>= f
