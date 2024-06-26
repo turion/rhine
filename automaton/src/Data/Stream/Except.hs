@@ -1,6 +1,7 @@
 module Data.Stream.Except where
 
 -- base
+import Control.Category ((>>>))
 import Control.Monad (ap)
 import Data.Void
 
@@ -20,6 +21,7 @@ import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcep
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Recursive.Except
+import Data.Stream.Result
 
 {- | A stream that can terminate with an exception.
 
@@ -47,6 +49,20 @@ runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
 runStreamExcept (RecursiveExcept coalgebraic) = StreamOptimized.fromRecursive coalgebraic
 runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
 
+-- | Try to step the 'StreamExcept' for one value of the stream
+stepInstant :: (Functor m) => StreamExcept a m e -> m (Either e (Result (StreamExcept a m e) a))
+stepInstant (RecursiveExcept recursive) =
+  recursive
+    & getRecursive
+    & runExceptT
+    <&> fmap (mapResultState RecursiveExcept)
+stepInstant (CoalgebraicExcept coalgebraic) =
+  coalgebraic
+    & StreamOptimized.stepOptimizedStream
+    & runExceptT
+    <&> fmap (mapResultState InitialExcept)
+
+-- FIXME This should work with Functor m and custom hoists
 instance (Monad m) => Functor (StreamExcept a m) where
   fmap f (RecursiveExcept fe) = RecursiveExcept $ hoist (withExceptT f) fe
   fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ hoist (withExceptT f) ae
