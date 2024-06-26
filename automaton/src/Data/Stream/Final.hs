@@ -25,6 +25,14 @@ instance MFunctor Final where
 instance (Functor m) => Functor (Final m) where
   fmap f Final {getFinal} = Final $ fmap f . mapResultState (fmap f) <$> getFinal
 
+-- FIXME define for automaton as well
+-- FIXME go trick
+mmap :: Monad m => (a -> m b) -> Final m a -> Final m b
+mmap f Final {getFinal} = Final $ do
+  Result final a <- getFinal
+  b <- f a
+  return $ Result (mmap f final) b
+
 instance (Applicative m) => Applicative (Final m) where
   pure a = go
     where
