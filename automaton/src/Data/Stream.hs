@@ -107,6 +107,17 @@ constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
 
+-- | Like 'fmap' or 'rmap', but the postcomposed function may have an effect in @m@.
+mmap :: (Monad m) => (a -> m b) -> StreamT m a -> StreamT m b
+mmap f StreamT {state, step} =
+  StreamT
+    { state
+    , step = \s -> do
+        Result s' a <- step s
+        Result s' <$> f a
+    }
+{-# INLINE mmap #-}
+
 {- | Translate a coalgebraically encoded stream into a recursive one.
 
 This is usually a performance penalty.
