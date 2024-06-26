@@ -28,6 +28,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
 import Automaton.Except
+import Automaton.Filter
 import Automaton.Trans.Accum
 import Automaton.Trans.Changeset
 import Data.Automaton
@@ -76,6 +77,7 @@ tests =
         , testCase "Remembers the last of several Just values" $ runIdentity (embed (lastS 0) [Nothing, Nothing, Just 1, Nothing, Just 2, Just 10]) @?= [0, 0, 1, 1, 2, 10]
         ]
     , Automaton.Except.tests
+    , Automaton.Filter.tests
     , Automaton.Trans.Accum.tests
     , Automaton.Trans.Changeset.tests
     ]
