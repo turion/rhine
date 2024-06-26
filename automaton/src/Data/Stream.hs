@@ -204,6 +204,8 @@ instance (Alternative m) => Alternative (StreamT m) where
   some stream = (:) <$> stream <*> many stream
   {-# INLINE some #-}
 
+-- FIXME lift all standard mtl classes
+
 instance MFunctor StreamT where
   hoist = hoist'
   {-# INLINE hoist #-}
