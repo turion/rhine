@@ -16,9 +16,10 @@ import Control.Selective
 
 -- automaton
 import Data.Stream (foreverExcept)
-import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
+import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
+import Data.Stream.Recursive as Recursive (hoist')
 import Data.Stream.Recursive.Except
 
 {- | A stream that can terminate with an exception.
@@ -47,9 +48,9 @@ runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
 runStreamExcept (RecursiveExcept recursive) = StreamOptimized.fromRecursive recursive
 runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
 
-instance (Monad m) => Functor (StreamExcept a m) where
-  fmap f (RecursiveExcept fe) = RecursiveExcept $ hoist (withExceptT f) fe
-  fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ hoist (withExceptT f) ae
+instance (Functor m) => Functor (StreamExcept a m) where
+  fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
+  fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ OptimizedStreamT.hoist' (withExceptT f) ae
 
 instance (Monad m) => Applicative (StreamExcept a m) where
   pure = CoalgebraicExcept . constM . throwE
@@ -74,7 +75,6 @@ instance MFunctor (StreamExcept a) where
 
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept
-
 safe :: (Monad m) => OptimizedStreamT m a -> StreamExcept a m void
 safe = CoalgebraicExcept . hoist lift
 
