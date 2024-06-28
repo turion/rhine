@@ -3,6 +3,9 @@ module Data.Stream.Except where
 -- base
 import Control.Monad (ap)
 import Data.Void
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.Bifunctor (bimap)
 
 -- transformers
 import Control.Monad.Trans.Class
@@ -61,7 +64,16 @@ instance (Functor m, Foldable m) => Foldable (StreamExcept a m) where
   foldMap f = stepInstant >>> foldMap (either f $ resultState >>> foldMap f)
 
 instance (Traversable m) => Traversable (StreamExcept a m) where
-  traverse = _
+  traverse f streamExcept = traverseFinal (toFinal streamExcept) & fmap (Final >>> FinalExcept)
+    where
+      traverseFinal =
+        getFinal
+        >>> runExceptT
+        >>> fmap ((bimap f $ mapResultState traverseFinal >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
+        >>> traverse id
+        >>> fmap (ExceptT >>> fmap (mapResultState Final))
+      bitraverseEither :: Functor f => Either (f a) (f b) -> f (Either a b)
+      bitraverseEither = either (fmap Left) (fmap Right)
 
 instance (Functor m) => Functor (StreamExcept a m) where
   fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
