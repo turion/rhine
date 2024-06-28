@@ -15,9 +15,9 @@ import Control.Monad.Morph (MFunctor, hoist)
 import Control.Selective
 
 -- automaton
-import Data.Stream.Final (Final (..))
+import Data.Stream.Final as Final (Final (..), hoist')
 import Data.Stream.Final.Except
-import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
+import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, selectExcept, hoist')
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Result
 import Control.Category ((>>>))
@@ -60,10 +60,9 @@ instance (Functor m, Foldable m) => Foldable (StreamExcept a m) where
 instance (Traversable m) => Traversable (StreamExcept a m) where
   traverse = _
 
--- FIXME This should work with Functor m and custom hoists
-instance (Monad m) => Functor (StreamExcept a m) where
-  fmap f (FinalExcept fe) = FinalExcept $ hoist (withExceptT f) fe
-  fmap f (InitialExcept ae) = InitialExcept $ hoist (withExceptT f) ae
+instance (Functor m) => Functor (StreamExcept a m) where
+  fmap f (FinalExcept fe) = FinalExcept $ Final.hoist' (withExceptT f) fe
+  fmap f (InitialExcept ae) = InitialExcept $ OptimizedStreamT.hoist' (withExceptT f) ae
 
 instance (Monad m) => Applicative (StreamExcept a m) where
   pure = InitialExcept . constM . throwE

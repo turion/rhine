@@ -18,9 +18,11 @@ One step of the stream transformer performs a monadic action and results in an o
 newtype Final m a = Final {getFinal :: m (Result (Final m a) a)}
 
 instance MFunctor Final where
-  hoist morph = go
-    where
-      go Final {getFinal} = Final $ morph $ mapResultState go <$> getFinal
+  hoist = hoist'
+
+hoist' morph = go
+  where
+    go Final {getFinal} = Final $ morph $ mapResultState go <$> getFinal
 
 instance (Functor m) => Functor (Final m) where
   fmap f Final {getFinal} = Final $ fmap f . mapResultState (fmap f) <$> getFinal
