@@ -151,6 +151,7 @@ library
     profunctors ^>=5.6,
     random >=1.1,
     simple-affine-space ^>=0.2,
+    sop-core ^>=0.5,
     text >=1.2 && <2.2,
     time >=1.8,
     time-domain ^>=0.1.0.2,
