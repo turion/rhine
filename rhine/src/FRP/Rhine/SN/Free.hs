@@ -216,7 +216,7 @@ eraseClockSNComponent (Synchronous position clsf) = readerS $ proc (tick, a) -> 
     (Just ti, Present a) -> do
       b <- runReaderS clsf -< (ti, a)
       returnA -< Present b
-    (Just _ti, Absent) -> error "eraseClockSNComponent: Internal error (Synchronous)" -< ()
+    (Just _ti, Absent) -> returnA -< error "eraseClockSNComponent: Internal error (Synchronous)"
 eraseClockSNComponent (Resampling positions resbuf0) = readerS $ eraseClockResBuf (Proxy @cls) positions resbuf0
 eraseClockSNComponent (Feedback posA posB ResamplingBuffer {buffer = buffer0, get, put} sn) =
   let
@@ -233,7 +233,7 @@ eraseClockSNComponent (Feedback posA posB ResamplingBuffer {buffer = buffer0, ge
         (Nothing, _) -> returnA -< buffer'
         (Just ti, Present a) -> do
           arrM $ uncurry $ uncurry put -< ((ti, a), buffer')
-        _ -> error "eraseClockSNComponent: internal error (Feedback)" -< ()
+        _ -> returnA -< error "eraseClockSNComponent: internal error (Feedback)"
       returnA -< (b, buffer'')
 eraseClockSNComponent (Always msf) = liftS msf
 eraseClockSNComponent (With morph sn) = morph $ eraseClockFreeSN sn
@@ -255,7 +255,7 @@ eraseClockResBuf _ orderedPositions ResamplingBuffer {buffer = buffer0, put, get
         (Nothing, _) -> returnA -< buffer
         (Just ti, Present a) -> do
           arrM $ uncurry $ uncurry put -< ((ti, a), buffer)
-        _ -> error "eraseClockResBuf: internal error" -< ()
+        _ -> returnA -< error "eraseClockResBuf: internal error"
       case projectPosition posOut $ getTick tick of
         Nothing -> returnA -< (Absent, buffer')
         Just ti -> do
