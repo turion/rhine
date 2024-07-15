@@ -38,7 +38,7 @@ import Data.Automaton.Trans.Except
 
 -- rhine
 import FRP.Rhine hiding (Rhine, flow, sn, Result)
-import FRP.Rhine.Rhine.Free
+import FRP.Rhine.Rhine.Free hiding (feedback)
 import FRP.Rhine.SN.Free
 
 -- rhine-gloss
@@ -346,43 +346,54 @@ mainSingleRate =
 
 -- ** Multi-rate: Simulation, inference, display at different rates
 
-type ModelClock = (LiftClock IO GlossConcT (Millisecond 100))
+type ModelClock = IOClock App (Millisecond 100)
+
+modelClock :: ModelClock
+modelClock = ioClock waitClock
 
 {- | The part of the program which simulates latent position and sensor,
    running 10 times a second.
 -}
-model :: ClSF (GlossConcT IO) ModelClock Temperature (Sensor, Pos)
-model = hoistClSF sampleIOGloss genModelWithoutTemperature
+model :: ClSF App ModelClock Temperature (Sensor, Pos)
+model = genModelWithoutTemperature
+
+type TemperatureClock = GlossClockUTC SamplerIO GlossEventClockIO
+
+temperatureClock :: TemperatureClock
+temperatureClock = glossClockUTC GlossEventClockIO
 
 -- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF App (GlossClockUTC SamplerIO GlossEventClockIO) () Temperature
+userTemperature :: ClSF App TemperatureClock () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
     selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
     selector (EventKey (SpecialKey KeyDown) Down _ _) = Just (1 / 1.2)
     selector _ = Nothing
 
-type InferenceClock = LiftClock IO GlossConcT Busy
+type InferenceClock = LiftClock SamplerIO GlossConcT Busy
 
 {- | This part performs the inference (and passes along temperature, sensor and position simulations).
    It runs as fast as possible, so this will potentially drain the CPU.
 -}
-inference :: ClSF (GlossConcT IO) InferenceClock Sensor ([(Pos, Log Double)], [(Temperature, Log Double)])
-inference = hoistClSF sampleIOGloss $ proc measured -> do
+inference :: ClSF App InferenceClock Sensor ([(Pos, Log Double)], [(Temperature, Log Double)])
+inference = proc measured -> do
   positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
   let
     particlesPosition = first snd <$> positionsAndTemperatures
     particlesTemperature = first fst <$> positionsAndTemperatures
   returnA -< (particlesPosition, particlesTemperature)
 
-type VisualisationClock = GlossClockUTC GlossSimClockIO
+type VisualisationClock = GlossClockUTC SamplerIO GlossSimClockIO
 
-visualisationMultiRate :: ClSF (GlossConcT IO) VisualisationClock Result ()
-visualisationMultiRate = hoistClSF sampleIOGloss visualisation
+visualisationClock :: VisualisationClock
+visualisationClock = glossClockUTC GlossSimClockIO
+
+visualisationMultiRate :: ClSF App VisualisationClock Result ()
+visualisationMultiRate = visualisation
 
 -- | Compose all four asynchronous components to a single 'Rhine'.
 mainRhineMultiRate = Rhine
-  { clocks = glossClockUTC GlossEventClockIO .:. (liftClock waitClock :: ModelClock) .:. (liftClock Busy :: InferenceClock) .:. (glossClockUTC GlossSimClockIO) .:. cnil
+  { clocks = temperatureClock .:. modelClock .:. (liftClock Busy :: InferenceClock) .:. visualisationClock .:. cnil
   , sn = proc _ -> do
       temperature <- synchronous userTemperature -< Present ()
       measuredAndLatent <- synchronous model <<< resampling (keepLast initialTemperature) -< temperature

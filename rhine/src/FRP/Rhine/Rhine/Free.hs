@@ -5,7 +5,7 @@ module FRP.Rhine.Rhine.Free where
 
 import Control.Arrow.Free
 import Control.Monad.Schedule.Class
-import Control.Monad.Trans.MSF.Reader (runReaderS)
+import Data.Automaton.Trans.Reader (runReaderS)
 import Data.Profunctor
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
@@ -62,7 +62,7 @@ RhineAndResamplingBuffer positionB (Rhine cls1 sn1) rb --> Rhine cls2 sn2 =
               >>> prependClocksSN cls1 sn2
         }
 
-eraseClockRhine :: (Monad m, MonadSchedule m) => Rhine m td cls a b -> MSF m a b
+eraseClockRhine :: (Monad m, MonadSchedule m) => Rhine m td cls a b -> Automaton m a b
 eraseClockRhine Rhine {clocks, sn} = proc a -> do
   ti <- runClocks clocks -< ()
   runReaderS (eraseClockFreeSN sn) -< (ti, a)
