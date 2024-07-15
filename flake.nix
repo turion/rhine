@@ -118,11 +118,11 @@
           rhine-all = prev.symlinkJoin
             {
               name = "rhine-all";
-              paths = with final; [ rhine-bin rhine-lib ];
-              postBuild = ''
-                ln -s ${final.rhine-docs} $out/docs
-                ln -s ${final.rhine-sdist} $out/sdist
-              '';
+              paths = with final; [
+                rhine-bin
+                rhine-lib
+                (prev.linkFarm "docsAndSdist" { docs = final.rhine-docs; sdist = rhine-sdist; })
+              ];
             };
         };
 
