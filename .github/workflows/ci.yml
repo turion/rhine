@@ -125,6 +125,10 @@ jobs:
         with:
           name: rhine
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Check whether .nix files are formatted
+        run: |
+          nix fmt
+          git diff --exit-code
       - name: Build all packages
         run: nix build --accept-flake-config
       - name: Run tests
