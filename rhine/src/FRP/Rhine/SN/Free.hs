@@ -216,7 +216,7 @@ eraseClockSNComponent (Synchronous position clsf) = readerS $ proc (tick, a) -> 
     (Just ti, Present a) -> do
       b <- runReaderS clsf -< (ti, a)
       returnA -< Present b
-    _ -> error "eraseClockSNComponent: Internal error (Synchronous)" -< ()
+    (Just _ti, Absent) -> error "eraseClockSNComponent: Internal error (Synchronous)" -< ()
 eraseClockSNComponent (Resampling positions resbuf0) = readerS $ eraseClockResBuf (Proxy @cls) positions resbuf0
 eraseClockSNComponent (Feedback posA posB ResamplingBuffer {buffer = buffer0, get, put} sn) =
   let
