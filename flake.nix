@@ -19,14 +19,9 @@
     with builtins;
     let
       lib = inputs.nixpkgs.lib;
-      pnames = [
-        "automaton"
-        "rhine"
-        "rhine-bayes"
-        "rhine-examples"
-        "rhine-gloss"
-        "rhine-terminal"
-      ];
+
+      # The names of all Haskell packages in this repository, defined as all the directories with *.cabal files in them.
+      pnames = map (path: baseNameOf (dirOf path)) (lib.fileset.toList (lib.fileset.fileFilter (file: file.hasExt "cabal") ./.));
       supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" ];
       libPnames = filter (pname: pname != "rhine-examples") pnames;
       hpsFor = pkgs:
