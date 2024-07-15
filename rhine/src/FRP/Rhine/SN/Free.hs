@@ -56,6 +56,7 @@ import Control.Category (Category)
 import Control.Monad.Schedule.Class (MonadSchedule)
 import Data.Automaton.Trans.Except (performOnFirstSample)
 import Data.Automaton.Trans.Reader (readerS, runReaderS)
+import Data.Stream.Result (Result (..))
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Kind (Type)
 import Data.List.NonEmpty (fromList, toList)
@@ -163,13 +164,13 @@ data SNComponent m cls a b where
     FreeSN m cls (At clB b, c) (At clA a, d) ->
     SNComponent m cls c d
   Always ::
-    MSF m a b -> SNComponent m cls a b
+    Automaton m a b -> SNComponent m cls a b
   With ::
-    (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d) ->
+    (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d) ->
     FreeSN m cls a b ->
     SNComponent m cls c d
   Handle ::
-    (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d -> MSF (ReaderT r m) e f) ->
+    (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d -> Automaton (ReaderT r m) e f) ->
     FreeSN m cls a b ->
     FreeSN m cls c d ->
     SNComponent m cls e f
@@ -199,16 +200,16 @@ feedbackSN ::
   FreeSN m cls c d
 feedbackSN sn = FreeSN . liftFree2 . Feedback position position sn
 
-always :: MSF m a b -> FreeSN m cls a b
+always :: Automaton m a b -> FreeSN m cls a b
 always = FreeSN . liftFree2 . Always
 
-with :: (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d) -> FreeSN m cls a b -> FreeSN m cls c d
+with :: (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d) -> FreeSN m cls a b -> FreeSN m cls c d
 with morph = FreeSN . liftFree2 . With morph
 
-handle :: (forall r . MSF (ReaderT r m) a b -> MSF (ReaderT r m) c d -> MSF (ReaderT r m) e f) -> FreeSN m cls a b -> FreeSN m cls c d -> FreeSN m cls e f
+handle :: (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d -> Automaton (ReaderT r m) e f) -> FreeSN m cls a b -> FreeSN m cls c d -> FreeSN m cls e f
 handle handler sn1 sn2 = FreeSN $ liftFree2 $ Handle handler sn1 sn2
 
-eraseClockSNComponent :: forall m cls a b. (Monad m) => SNComponent m cls a b -> MSF (ReaderT (Tick cls) m) a b
+eraseClockSNComponent :: forall m cls a b. (Monad m) => SNComponent m cls a b -> Automaton (ReaderT (Tick cls) m) a b
 eraseClockSNComponent (Synchronous position clsf) = readerS $ proc (tick, a) -> do
   case (projectPosition position (getTick tick), a) of
     (Nothing, _) -> returnA -< Absent
@@ -217,24 +218,24 @@ eraseClockSNComponent (Synchronous position clsf) = readerS $ proc (tick, a) -> 
       returnA -< Present b
     _ -> error "eraseClockSNComponent: Internal error (Synchronous)" -< ()
 eraseClockSNComponent (Resampling positions resbuf0) = readerS $ eraseClockResBuf (Proxy @cls) positions resbuf0
-eraseClockSNComponent (Feedback posA posB resbuf0 sn) =
+eraseClockSNComponent (Feedback posA posB ResamplingBuffer {buffer = buffer0, get, put} sn) =
   let
     snErased = runReaderS $ eraseClockFreeSN sn
    in
-    readerS $ feedback resbuf0 $ proc ((tick, a), resbuf) -> do
-      (bAt, resbuf') <- case projectPosition posB $ getTick tick of
-        Nothing -> returnA -< (Absent, resbuf)
+    readerS $ feedback buffer0 $ proc ((tick, a), buffer) -> do
+      (bAt, buffer') <- case projectPosition posB $ getTick tick of
+        Nothing -> returnA -< (Absent, buffer)
         Just ti -> do
-          (b, resbuf') <- arrM $ uncurry get -< (resbuf, ti)
-          returnA -< (Present b, resbuf')
+          Result buffer' b <- arrM $ uncurry get -< (ti, buffer)
+          returnA -< (Present b, buffer')
       (aAt, b) <- snErased -< (tick, (bAt, a))
-      resbuf'' <- case (projectPosition posA $ getTick tick, aAt) of
-        (Nothing, _) -> returnA -< resbuf'
+      buffer'' <- case (projectPosition posA $ getTick tick, aAt) of
+        (Nothing, _) -> returnA -< buffer'
         (Just ti, Present a) -> do
-          arrM $ uncurry $ uncurry put -< ((resbuf', ti), a)
+          arrM $ uncurry $ uncurry put -< ((ti, a), buffer')
         _ -> error "eraseClockSNComponent: internal error (Feedback)" -< ()
-      returnA -< (b, resbuf'')
-eraseClockSNComponent (Always msf) = liftTransS msf
+      returnA -< (b, buffer'')
+eraseClockSNComponent (Always msf) = liftS msf
 eraseClockSNComponent (With morph sn) = morph $ eraseClockFreeSN sn
 eraseClockSNComponent (Handle handler sn1 sn2)= handler (eraseClockFreeSN sn1) (eraseClockFreeSN sn2)
 
@@ -243,23 +244,23 @@ eraseClockResBuf ::
   Proxy cls ->
   OrderedPositions clA clB cls ->
   ResamplingBuffer m clA clB a1 a2 ->
-  MSF m (Tick cls, At clA a1) (At clB a2)
-eraseClockResBuf _ orderedPositions resbuf0 =
+  Automaton m (Tick cls, At clA a1) (At clB a2)
+eraseClockResBuf _ orderedPositions ResamplingBuffer {buffer = buffer0, put, get} =
   let
     posIn = firstPosition orderedPositions
     posOut = secondPosition orderedPositions
    in
-    feedback resbuf0 $ proc ((tick, a), resbuf) -> do
-      resbuf' <- case (projectPosition posIn $ getTick tick, a) of
-        (Nothing, _) -> returnA -< resbuf
+    feedback buffer0 $ proc ((tick, a), buffer) -> do
+      buffer' <- case (projectPosition posIn $ getTick tick, a) of
+        (Nothing, _) -> returnA -< buffer
         (Just ti, Present a) -> do
-          arrM $ uncurry $ uncurry put -< ((resbuf, ti), a)
+          arrM $ uncurry $ uncurry put -< ((ti, a), buffer)
         _ -> error "eraseClockResBuf: internal error" -< ()
       case projectPosition posOut $ getTick tick of
-        Nothing -> returnA -< (Absent, resbuf')
+        Nothing -> returnA -< (Absent, buffer')
         Just ti -> do
-          (b, resbuf'') <- arrM $ uncurry get -< (resbuf', ti)
-          returnA -< (Present b, resbuf'')
+          Result buffer'' b <- arrM $ uncurry get -< (ti, buffer')
+          returnA -< (Present b, buffer'')
 
 proxyFromClSF :: ClSF m cl a b -> Proxy cl
 proxyFromClSF _ = Proxy
@@ -270,14 +271,14 @@ proxyInFromResBuf _ = Proxy
 proxyOutFromResBuf :: ResamplingBuffer m clA clB a b -> Proxy clB
 proxyOutFromResBuf _ = Proxy
 
-eraseClockFreeSN :: (Monad m) => FreeSN m cls a b -> MSF (ReaderT (Tick cls) m) a b
+eraseClockFreeSN :: (Monad m) => FreeSN m cls a b -> Automaton (ReaderT (Tick cls) m) a b
 eraseClockFreeSN FreeSN {getFreeSN} = runA getFreeSN eraseClockSNComponent
 
 -- eraseClockFreeSN' :: (Monad m) => FreeSN m cls a b -> ClSF m (Clocks m td cls) a b
 -- eraseClockFreeSN' = morphS (withReaderT _) . eraseClockFreeSN
 
 -- FIXME interesting idea: Erase only some clocks, e.g. the first one of the stack.
--- Then I need a concept between FreeSN and MSF.
+-- Then I need a concept between FreeSN and Automaton.
 -- The advantage would be higher flexibility, and I could maye also use MonadSchedule to make the data parts concurrent
 
 infixr 9 .:.
@@ -366,14 +367,14 @@ orderedPositionsInAppend Clocks {getClocks = _ :* getClocks} cls2 (S pos1) pos2 
 -- Revisit with GHC 9.6.
 orderedPositionsInAppend Clocks {getClocks = Nil} _ _ _ = error "orderedPositionsInAppend: Internal error. Please report as a rhine bug."
 
-runClocks :: (Monad m, MonadSchedule m) => Clocks m td cls -> MSF m () (Tick cls)
-runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks (getClocks cls)
+runClocks :: (Monad m, MonadSchedule m) => Clocks m td cls -> Automaton m () (Tick cls)
+runClocks cls = performOnFirstSample $ scheduleAutomatons <$> getRunningClocks (getClocks cls)
   where
-    getRunningClocks :: (Monad m) => NP (ClassyClock m td) cls -> m [MSF m () (Tick cls)]
+    getRunningClocks :: (Monad m) => NP (ClassyClock m td) cls -> m [Automaton m () (Tick cls)]
     getRunningClocks Nil = pure []
     getRunningClocks (cl :* cls) = (:) <$> startAndInjectClock cl <*> (map (>>> arr (Tick . S . getTick)) <$> getRunningClocks cls)
 
-    startAndInjectClock :: (Monad m, HasClock cl cls) => ClassyClock m td cl -> m (MSF m () (Tick cls))
+    startAndInjectClock :: (Monad m, HasClock cl cls) => ClassyClock m td cl -> m (Automaton m () (Tick cls))
     startAndInjectClock (ClassyClock cl) = do
       (runningClock, initTime) <- initClock cl
       return $ runningClock >>> genTimeInfo getClockProxy initTime >>> arr (inject (clockProxy cl))
@@ -381,8 +382,8 @@ runClocks cls = performOnFirstSample $ scheduleMSFs <$> getRunningClocks (getClo
     clockProxy :: cl -> Proxy cl
     clockProxy _ = Proxy
 
-    scheduleMSFs :: (Monad m, MonadSchedule m) => [MSF m () a] -> MSF m () a
-    scheduleMSFs msfs = concatS $ scheduleList (fromList msfs) >>> arr toList
+    scheduleAutomatons :: (Monad m, MonadSchedule m) => [Automaton m () a] -> Automaton m () a
+    scheduleAutomatons msfs = concatS $ scheduleList (fromList msfs) >>> arr toList
 
 infix 4 >>>^
 
