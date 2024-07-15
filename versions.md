@@ -19,7 +19,8 @@ Naming and module structure of Rhine have staid largely the same,
 a few changes are highlighted further below.
 
 You probably don't need to change anything if your code doesn't have a direct dependency on `dunai`.
-There is only one tiny special case you need to be aware of, recursive definitions.
+The only known special cases you need to be aware of are related to strictness:
+`automaton` definitions are strict, which has implications for recursive definitions and diverging behaviour like `error`.
 
 ### Direct `dunai` dependency in your code: Replace by `automaton`
 
@@ -87,6 +88,40 @@ In the most general case, you can follow this mechanical process to rewrite a re
 4. Use a fixpoint operator such as `fixStream` to define the recursion.
 
 For examples, see the definitions of `fixA`, `many`, or `parallely`.
+
+### Careful with `error`, `undefined`, ... in automaton definitions
+
+With `MSF`s, you could have errors in the _static_ part of the definition:
+```haskell
+foo :: Monad m => MSF m (Maybe a) a
+foo = proc aMaybe -> do
+  case aMaybe of
+    Just a -> returnA -< a
+    Nothing -> error "Oh no!" -< ()
+
+bar :: Monad m => MSF m a a
+bar = arr Just >>> foo
+```
+Without arrow notation, you could do e.g. ```arr Right >>> (error "Urk" ||| id)``` to achieve the same effect.
+
+In `automaton`, this is usually not possible because the whole automaton is evaluated before running.
+If you use diverging values like `error`, `undefined` and so on, you have to do so dynamically:
+```haskell
+foo :: Monad m => MSF m (Maybe a) a
+foo = proc aMaybe -> do
+  returnA -< case aMaybe of
+    Just a -> a
+    Nothing -> error "Oh no!"
+
+bar :: Monad m => MSF m a a
+bar = arr Just >>> foo
+```
+In arrow notation, everything between `<-` and `-<` is static.
+Dynamic values can only defined right of `-<`, and in `let`-clauses.
+
+Without arrow notation, simply remember to put the `error` inside a function: `arr Right >>> (either (error "Urk) id)`
+
+
 
 ## 0.9 -> 1.0: Removed explicit schedules
 
