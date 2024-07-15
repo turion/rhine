@@ -41,6 +41,11 @@
       rhinePackages = hfinal: hprev:
         lib.genAttrs pnames (pname: hfinal.callCabal2nix pname ./${pname} { });
 
+      get-tested-src = fetchTarball {
+        url = "https://github.com/Kleidukos/get-tested/archive/refs/tags/v0.1.7.0.tar.gz";
+        sha256 = "sha256:12iyh4a0bwsgnfgjv4yc63rqbh46whd1kgmpk9yd5k8fw93h44nb";
+      };
+
       # A nixpkgs overlay containing everything defined in this repo, for reuse in downstream projects
       overlay = final: prev:
         let
@@ -124,6 +129,9 @@
                 (prev.linkFarm "docsAndSdist" { docs = final.rhine-docs; sdist = rhine-sdist; })
               ];
             };
+
+          # Pending get-tested upload to Hackage: https://github.com/Kleidukos/get-tested
+          get-tested = with prev; haskell.lib.doJailbreak (haskellPackages.callCabal2nix "get-tested" get-tested-src { });
         };
 
       # Helper to build a flake output for all systems that are defined in nixpkgs
@@ -140,6 +148,7 @@
       # Usage: nix build # This builds all rhine packages on all GHCs
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
+        inherit (pkgs) get-tested;
       });
 
       legacyPackages = forAllPlatforms (system: pkgs: {
@@ -157,5 +166,13 @@
           ];
         })
         (hpsFor pkgs));
+
+      checks = forAllPlatforms (_: pkgs:
+        let
+          get-tested-ghc-versions = fromJSON (lib.debug.traceVal (readFile (pkgs.runCommand "get-tested-ghc-versions" { } "${get-tested}/bin/get-tested --ubuntu ${./rhine/rhine.cabal} > $out")));
+          # get-tested-ghc-versions-match = _;
+        in
+        { inherit get-tested-ghc-versions; }
+      );
     };
 }
