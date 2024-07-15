@@ -34,7 +34,7 @@
 
       # The Haskell packages set, for every supported GHC version
       hpsFor = pkgs:
-        lib.filterAttrs (name: _: elem name supportedGhcs) pkgs.haskell.packages
+        lib.genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
         // { default = pkgs.haskellPackages; };
 
       # A haskellPackages overlay containing everything defined in this repo
