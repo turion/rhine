@@ -21,6 +21,7 @@
       lib = inputs.nixpkgs.lib;
 
       # The names of all Haskell packages in this repository, defined as all the directories with *.cabal files in them.
+      # Contains e.g.: rhine, rhine-examples, rhine-bayes, ...
       pnames = map (path: baseNameOf (dirOf path)) (lib.fileset.toList (lib.fileset.fileFilter (file: file.hasExt "cabal") ./.));
 
       # All GHC versions that this project is tested with.
@@ -38,7 +39,7 @@
         // { default = pkgs.haskellPackages; };
 
       # A haskellPackages overlay containing everything defined in this repo
-      rhinePackages = hfinal: hprev:
+      rhinePackagesOverlay = hfinal: hprev:
         lib.genAttrs pnames (pname: hfinal.callCabal2nix pname ./${pname} { });
 
       # A nixpkgs overlay containing everything defined in this repo, for reuse in downstream projects
@@ -78,20 +79,22 @@
         {
           # The Haskell package set containing the packages defined in this repo
           haskell = prev.haskell // {
-            packageOverrides = with prev.haskell.lib.compose; lib.composeManyExtensions ([
+            packageOverrides = lib.composeManyExtensions ([
               prev.haskell.packageOverrides
-              rhinePackages
+              rhinePackagesOverlay
             ] ++ temporaryHaskellOverrides);
           };
 
           # Helper packages containing aspects of the whole rhine build:
           # All executables, built with the nixpkgs-default GHC
+          # We build these only with one GHC because otherwise the bin names would clash
           rhine-bin = prev.buildEnv
             {
               name = "rhine-bin";
               paths = map (pname: hps.default.${pname}) pnames;
               pathsToLink = [ "/bin" ];
             };
+
           # All libraries for all GHC versions
           rhine-lib = prev.buildEnv
             {
@@ -101,13 +104,15 @@
                 { hp = attrValues hps; pname = pnames; };
               pathsToLink = [ "/lib" ];
             };
-          # All haddocks
+
+          # Haddocks for all packages that can be uploaded to Hackage
           rhine-docs = prev.buildEnv
             {
               name = "rhine-docs";
               paths = map (pname: prev.haskell.lib.documentationTarball hps.default.${pname}) libPnames;
             };
-          # All sdist tarballs for Hackage publication
+
+          # Sdist tarballs for all packages that can be uploaded to Hackage
           rhine-sdist = prev.buildEnv
             {
               name = "rhine-sdist";
@@ -137,16 +142,21 @@
       # Usage: nix fmt
       formatter = forAllPlatforms (system: pkgs: pkgs.nixpkgs-fmt);
 
-      # Usage: nix build # This builds all rhine packages on all GHCs
+      # This builds all rhine packages on all GHCs, as well as docs and sdist
+      # Usage: nix build
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
       });
 
-      legacyPackages = forAllPlatforms (system: pkgs: {
-        inherit (pkgs) haskell haskellPackages rhine-all;
-      });
+      # We re-export the entire nixpkgs package set with our overlay.
+      # Usage examples:
+      # - nix build .#haskellPackages.rhine
+      # - nix build .#haskell.packages.ghc98.rhine
+      # - nix build .#rhine-sdist
+      legacyPackages = forAllPlatforms (system: pkgs: pkgs);
 
-      # Usage: nix develop .#ghc98
+      # Usage: nix develop (will use the default GHC)
+      # Alternatively, specify the GHC: nix develop .#ghc98
       devShells = forAllPlatforms (systems: pkgs: mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
