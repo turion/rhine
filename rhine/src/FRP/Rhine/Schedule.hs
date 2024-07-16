@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -36,13 +37,16 @@ import Data.Stream.Result
 
 -- rhine
 
+import Control.Monad.State (runState)
+import Control.Monad.State.Strict qualified as StateT
 import Data.Function ((&))
+import Data.Functor.Compose (Compose (..))
 import Data.Kind (Type)
-import Data.SOP (HSequence (htraverse'), I (..), NP (..), NS (..), SListI, unI)
+import Data.SOP (HAp, HPure (..), HSequence (htraverse'), I (..), NP (..), NS (..), Prod, SList (..), SListI, apInjs_NP, hliftA, hliftA2, hzipWith, sList, unI, type (-.->) (..))
+import Data.SOP.Classes (HAp (..))
 import Data.SOP.NP (liftA2_NP, liftA_NP)
 import FRP.Rhine.Clock
-import Control.Monad.State (runState)
-import qualified Control.Monad.State.Strict as StateT
+import Data.Maybe (catMaybes, mapMaybe)
 
 -- * Scheduling
 
@@ -51,7 +55,32 @@ newtype Step m b state = Step {getStep :: ResultStateT state m b}
 newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
 newtype RunningResultT m b state = RunningResultT {getRunningResultT :: m (RunningResult b state)}
 
-data StateOrRunning m b state = State state | Running (m (RunningResult b state))
+-- n-ary nonempty product
+data NNEP f ss where
+  ZNE :: f s -> NP (Compose Maybe f) ss -> NNEP f (s ': ss)
+  SNE :: NNEP f (s2 ': ss) -> NNEP f (s1 ': s2 ': ss)
+
+type instance Prod NNEP = NP
+
+instance HAp NNEP where
+  hap (s :* ss) (ZNE fs nnep) = ZNE (apFn s fs) $ hzipWith (\fn -> Compose . fmap (apFn fn) . getCompose) ss nnep
+  hap (_ :* ss) (SNE nnep) = SNE $ hap ss nnep
+  hap Nil x = case x of {}
+
+nnepToNP :: NNEP f states -> NP (Compose Maybe f) states
+nnepToNP (ZNE fs np) = Compose (Just fs) :* np
+nnepToNP (SNE nnep) = Compose Nothing :* nnepToNP nnep
+
+consNNEP :: f x -> NNEP f xs -> NNEP f (x ': xs)
+consNNEP fx nnep = ZNE fx $ nnepToNP nnep
+
+productToNNEP :: NP f (x ': xs) -> NNEP f (x ': xs)
+productToNNEP (x :* xs) = ZNE x $ hliftA (Compose . Just) xs
+
+nnepToNonEmpty :: NNEP f (state ': states) -> NonEmpty (NS f (state ': states))
+nnepToNonEmpty (ZNE state states) = Z state :| (S <$> mapMaybe (htraverse' getCompose) (apInjs_NP states))
+nnepToNonEmpty (SNE states) = S <$> nnepToNonEmpty states
+
 
 data Streams m b = forall state (states :: [Type]).
   (SListI states) =>
@@ -77,11 +106,12 @@ consStreams StreamT {state, step} Streams {states, steps} =
 scheduleStreams :: (MonadSchedule m, Functor m, Applicative m) => Streams m b -> StreamT m (NonEmpty b)
 scheduleStreams Streams {states, steps} =
   StreamT
-    { state = liftA_NP (State . unI) states
-    , step = \states ->
-        steps
-          & liftA2_NP ((RunningResultT .) . kick) states
-          & parts
+    { state = (productToNNEP states, [])
+    , step = \(restingStates, runningStates) ->
+        restingStates
+          & hliftA2 (\step -> RunningResultT . kick step . unI) steps
+          & nnepToNonEmpty
+          & flip appendList runningStates
           & fmap (htraverse' getRunningResultT)
           & schedule
           & fmap
@@ -92,22 +122,19 @@ scheduleStreams Streams {states, steps} =
             )
     }
   where
-    kick :: (Functor m) => StateOrRunning m b state -> Step m b state -> m (RunningResult b state)
-    kick (State state) Step {getStep} = RunningResult <$> getResultStateT getStep state
-    kick (Running runningResult) _step = runningResult
+    kick :: (Functor m) => Step m b state -> state -> m (RunningResult b state)
+    kick Step {getStep} state = RunningResult <$> getResultStateT getStep state
 
-    parts :: NP f (state ': states) -> NonEmpty (NS f (state ': states))
-    parts (state :* states) = Z state :| (S <$> parts' states)
-      where
-        parts' :: NP f states -> [NS f states]
-        parts' Nil = []
-        parts' (state :* states) = Z state : (S <$> parts' states)
+    updateFinished :: NS (RunningResult b) states -> NNEP I states -> (b, NNEP I states)
+    updateFinished (Z (RunningResult (Result state b))) (ZNE _ states) = (b, ZNE (I state) states)
+    updateFinished (Z (RunningResult (Result state b))) (SNE states) = (b, consNNEP (I state) states)
+    updateFinished (S running) (ZNE state states) = second (ZNE state) $ updateFinished' running states
+    updateFinished (S running) (SNE states) = second SNE $ updateFinished running states
 
-    updateFinished :: NS (RunningResult b) states -> NP (StateOrRunning m b) states -> (b, NP (StateOrRunning m b) states)
-    updateFinished (Z (RunningResult (Result state b))) (_ :* states) = (b, State state :* states)
-    updateFinished (S running) (state :* states) = second (state :*) $ updateFinished running states
+    updateFinished' :: NS (RunningResult b) xs -> NP (Compose Maybe I) xs -> (b, NP (Compose Maybe I) xs)
+    updateFinished' (Z (RunningResult (Result state b))) (_ :* states) = (b, Compose (Just (I state)) :* states)
+    updateFinished' (S running) (state :* states) = second (state :*) $ updateFinished' running states
 
-    -- updateRunning :: 
 
 {- | Run several automata concurrently.
 
