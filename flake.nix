@@ -161,6 +161,7 @@
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
           nativeBuildInputs = with hp; [
+            cabal-gild
             cabal-install
             fourmolu
             haskell-language-server
