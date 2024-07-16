@@ -113,12 +113,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          if [ "$(uname --kernel-name)" = "Linux" ]; then
+            sudo rm -rf /usr/local/* /usr/share/* /opt/*
+            docker rmi $(docker image ls -aq)
+          fi
       - uses: cachix/install-nix-action@V27
       - uses: DeterminateSystems/magic-nix-cache-action@v7
       - uses: cachix/cachix-action@v15
         with:
           name: rhine
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Check whether .nix files are formatted
+        run: |
+          nix fmt
+          git diff --exit-code
       - name: Build all packages
         run: nix build --accept-flake-config
       - name: Run tests
