@@ -20,22 +20,16 @@ module FRP.Rhine.Schedule where
 import Control.Arrow
 import Data.List.NonEmpty as N
 
--- transformers
-import Control.Monad.Trans.Reader
-
 -- monad-schedule
 import Control.Monad.Schedule.Class
 
 -- automaton
 import Data.Automaton
-import Data.Automaton.Recursive (getRecursive, toRecursive)
-import Data.Stream
 import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
-import Data.Stream.Recursive qualified as StreamRecursive
-import Data.Stream.Result
 
 -- rhine
 import FRP.Rhine.Clock
+import FRP.Rhine.Schedule.Internal
 
 -- * Scheduling
 
@@ -48,35 +42,15 @@ scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (Automaton m a b) -> Auto
 scheduleList automatons0 =
   Automaton $
     Stateful $
-      StreamT
-        { state = (getRecursive . toRecursive <$> automatons0, [])
-        , step = \(automatons, running) -> ReaderT $ \a -> do
-            let bsAndConts = flip (runReaderT . StreamRecursive.getRecursive) a <$> automatons
-            (done, running') <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
-            return $ Result (resultState <$> done, running') $ output <$> done
-        }
+      scheduleStreams' $
+        toStreamT . getAutomaton <$> automatons0
 
 {- | Run two automata concurrently.
 
 Whenever one automaton returns a value, it is returned.
-
-This is similar to 'scheduleList', but more efficient.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
-schedulePair (Automaton automatonL) (Automaton automatonR) = Automaton $! Stateful $! scheduleStreams (toStreamT automatonL) (toStreamT automatonR)
-  where
-    scheduleStreams :: (Monad m, MonadSchedule m) => StreamT m b -> StreamT m b -> StreamT m b
-    scheduleStreams (StreamT stateL0 stepL) (StreamT stateR0 stepR) =
-      StreamT
-        { state = (stepL stateL0, stepR stateR0)
-        , step
-        }
-      where
-        step (runningL, runningR) = do
-          result <- race runningL runningR
-          case result of
-            Left (Result stateL' b, runningR') -> return $ Result (stepL stateL', runningR') b
-            Right (runningL', Result stateR' b) -> return $ Result (runningL', stepR stateR') b
+schedulePair automatonL automatonR = concatS $ fmap toList $ scheduleList $ automatonL :| [automatonR]
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
