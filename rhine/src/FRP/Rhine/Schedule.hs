@@ -35,9 +35,79 @@ import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
 import Data.Stream.Result
 
 -- rhine
+
+import Data.Function ((&))
+import Data.Kind (Type)
+import Data.SOP (HSequence (htraverse'), I (..), NP (..), NS (..), SListI, unI)
+import Data.SOP.NP (liftA2_NP, liftA_NP)
 import FRP.Rhine.Clock
+import Control.Monad.State (runState)
+import qualified Control.Monad.State.Strict as StateT
 
 -- * Scheduling
+
+newtype Step m b state = Step {getStep :: ResultStateT state m b}
+
+newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
+newtype RunningResultT m b state = RunningResultT {getRunningResultT :: m (RunningResult b state)}
+
+data StateOrRunning m b state = State state | Running (m (RunningResult b state))
+
+data Streams m b = forall state (states :: [Type]).
+  (SListI states) =>
+  Streams
+  { states :: NP I (state ': states)
+  , steps :: NP (Step m b) (state ': states)
+  }
+
+buildStreams :: StreamT m b -> Streams m b
+buildStreams StreamT {state, step} =
+  Streams
+    { states = I state :* Nil
+    , steps = Step (ResultStateT step) :* Nil
+    }
+
+consStreams :: StreamT m b -> Streams m b -> Streams m b
+consStreams StreamT {state, step} Streams {states, steps} =
+  Streams
+    { states = I state :* states
+    , steps = Step (ResultStateT step) :* steps
+    }
+
+scheduleStreams :: (MonadSchedule m, Functor m, Applicative m) => Streams m b -> StreamT m (NonEmpty b)
+scheduleStreams Streams {states, steps} =
+  StreamT
+    { state = liftA_NP (State . unI) states
+    , step = \states ->
+        steps
+          & liftA2_NP ((RunningResultT .) . kick) states
+          & parts
+          & fmap (htraverse' getRunningResultT)
+          & schedule
+          & fmap
+            ( \(finished, running) ->
+                states
+                  & StateT.runState (mapM (StateT.state . updateFinished) finished)
+                  & _
+            )
+    }
+  where
+    kick :: (Functor m) => StateOrRunning m b state -> Step m b state -> m (RunningResult b state)
+    kick (State state) Step {getStep} = RunningResult <$> getResultStateT getStep state
+    kick (Running runningResult) _step = runningResult
+
+    parts :: NP f (state ': states) -> NonEmpty (NS f (state ': states))
+    parts (state :* states) = Z state :| (S <$> parts' states)
+      where
+        parts' :: NP f states -> [NS f states]
+        parts' Nil = []
+        parts' (state :* states) = Z state : (S <$> parts' states)
+
+    updateFinished :: NS (RunningResult b) states -> NP (StateOrRunning m b) states -> (b, NP (StateOrRunning m b) states)
+    updateFinished (Z (RunningResult (Result state b))) (_ :* states) = (b, State state :* states)
+    updateFinished (S running) (state :* states) = second (state :*) $ updateFinished running states
+
+    -- updateRunning :: 
 
 {- | Run several automata concurrently.
 
