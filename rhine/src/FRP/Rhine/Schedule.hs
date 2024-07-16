@@ -32,21 +32,23 @@ import Data.Automaton
 import Data.Automaton.Final (getFinal, toFinal)
 import Data.Stream
 import Data.Stream.Final qualified as StreamFinal
-import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
+import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT, concatS)
 import Data.Stream.Result
 
 -- rhine
 
 import Control.Monad.State (runState)
 import Control.Monad.State.Strict qualified as StateT
+import Data.Foldable1 (Foldable1 (foldrMap1))
 import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
 import Data.Kind (Type)
-import Data.SOP (HAp, HPure (..), HSequence (htraverse'), I (..), NP (..), NS (..), Prod, SList (..), SListI, apInjs_NP, hliftA, hliftA2, hzipWith, sList, unI, type (-.->) (..))
+import Data.Maybe (catMaybes, mapMaybe)
+import Data.SOP (HAp, HCollapse (hcollapse), HPure (..), HSequence (htraverse'), I (..), K (K), NP (..), NS (..), Prod, SList (..), SListI, apInjs_NP, hliftA, hliftA2, hzipWith, sList, unI, type (-.->) (..))
 import Data.SOP.Classes (HAp (..))
 import Data.SOP.NP (liftA2_NP, liftA_NP)
 import FRP.Rhine.Clock
-import Data.Maybe (catMaybes, mapMaybe)
 
 -- * Scheduling
 
@@ -55,6 +57,7 @@ newtype Step m b state = Step {getStep :: ResultStateT state m b}
 newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
 newtype RunningResultT m b state = RunningResultT {getRunningResultT :: m (RunningResult b state)}
 
+{-
 -- n-ary nonempty product
 data NNEP f ss where
   ZNE :: f s -> NP (Compose Maybe f) ss -> NNEP f (s ': ss)
@@ -80,7 +83,10 @@ productToNNEP (x :* xs) = ZNE x $ hliftA (Compose . Just) xs
 nnepToNonEmpty :: NNEP f (state ': states) -> NonEmpty (NS f (state ': states))
 nnepToNonEmpty (ZNE state states) = Z state :| (S <$> mapMaybe (htraverse' getCompose) (apInjs_NP states))
 nnepToNonEmpty (SNE states) = S <$> nnepToNonEmpty states
+-}
 
+apInjsNPNonEmpty :: (SListI xs) => NP f (x ': xs) -> NonEmpty (NS f (x ': xs))
+apInjsNPNonEmpty (fx :* fxs) = Z fx :| (S <$> apInjs_NP fxs)
 
 data Streams m b = forall state (states :: [Type]).
   (SListI states) =>
@@ -106,35 +112,26 @@ consStreams StreamT {state, step} Streams {states, steps} =
 scheduleStreams :: (MonadSchedule m, Functor m, Applicative m) => Streams m b -> StreamT m (NonEmpty b)
 scheduleStreams Streams {states, steps} =
   StreamT
-    { state = (productToNNEP states, [])
+    { state = (apInjsNPNonEmpty states, [])
     , step = \(restingStates, runningStates) ->
-        restingStates
-          & hliftA2 (\step -> RunningResultT . kick step . unI) steps
-          & nnepToNonEmpty
+        fmap (htraverse' getRunningResultT . hzipWith (\step -> RunningResultT . kick step . unI) steps) restingStates
           & flip appendList runningStates
-          & fmap (htraverse' getRunningResultT)
           & schedule
           & fmap
             ( \(finished, running) ->
-                states
-                  & StateT.runState (mapM (StateT.state . updateFinished) finished)
-                  & _
+                let finishedStates = fmap (hliftA (I . resultState . getRunningResult)) finished
+                    outputs =
+                      finished
+                        <&> (hliftA (getRunningResult >>> output >>> K) >>> hcollapse)
+                 in Result (finishedStates, running) outputs
             )
     }
   where
     kick :: (Functor m) => Step m b state -> state -> m (RunningResult b state)
     kick Step {getStep} state = RunningResult <$> getResultStateT getStep state
 
-    updateFinished :: NS (RunningResult b) states -> NNEP I states -> (b, NNEP I states)
-    updateFinished (Z (RunningResult (Result state b))) (ZNE _ states) = (b, ZNE (I state) states)
-    updateFinished (Z (RunningResult (Result state b))) (SNE states) = (b, consNNEP (I state) states)
-    updateFinished (S running) (ZNE state states) = second (ZNE state) $ updateFinished' running states
-    updateFinished (S running) (SNE states) = second SNE $ updateFinished running states
-
-    updateFinished' :: NS (RunningResult b) xs -> NP (Compose Maybe I) xs -> (b, NP (Compose Maybe I) xs)
-    updateFinished' (Z (RunningResult (Result state b))) (_ :* states) = (b, Compose (Just (I state)) :* states)
-    updateFinished' (S running) (state :* states) = second (state :*) $ updateFinished' running states
-
+scheduleStreams' :: (MonadSchedule m, Applicative m) => NonEmpty (StreamT m b) -> StreamT m (NonEmpty b)
+scheduleStreams' ne = scheduleStreams $ foldrMap1 buildStreams consStreams ne
 
 {- | Run several automata concurrently.
 
@@ -145,35 +142,15 @@ scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (Automaton m a b) -> Auto
 scheduleList automatons0 =
   Automaton $
     Stateful $
-      StreamT
-        { state = (getFinal . toFinal <$> automatons0, [])
-        , step = \(automatons, running) -> ReaderT $ \a -> do
-            let bsAndConts = flip (runReaderT . StreamFinal.getFinal) a <$> automatons
-            (done, running') <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
-            return $ Result (resultState <$> done, running') $ output <$> done
-        }
+      scheduleStreams' $
+        toStreamT . getAutomaton <$> automatons0
 
 {- | Run two automata concurrently.
 
 Whenever one automaton returns a value, it is returned.
-
-This is similar to 'scheduleList', but more efficient.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
-schedulePair (Automaton automatonL) (Automaton automatonR) = Automaton $! Stateful $! scheduleStreams (toStreamT automatonL) (toStreamT automatonR)
-  where
-    scheduleStreams :: (Monad m, MonadSchedule m) => StreamT m b -> StreamT m b -> StreamT m b
-    scheduleStreams (StreamT stateL0 stepL) (StreamT stateR0 stepR) =
-      StreamT
-        { state = (stepL stateL0, stepR stateR0)
-        , step
-        }
-      where
-        step (runningL, runningR) = do
-          result <- race runningL runningR
-          case result of
-            Left (Result stateL' b, runningR') -> return $ Result (stepL stateL', runningR') b
-            Right (runningL', Result stateR' b) -> return $ Result (runningL', stepR stateR') b
+schedulePair automatonL automatonR = Automaton $ Data.Stream.Optimized.concatS $ fmap toList $ Stateful $ scheduleStreams' $ fmap (toStreamT . getAutomaton) $ automatonL :| [automatonR]
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
