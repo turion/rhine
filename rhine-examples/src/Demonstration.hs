@@ -1,9 +1,13 @@
+{-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-import FRP.Rhine
+import FRP.Rhine hiding (Rhine, flow, sn, (-->), (>--), (@@), (^>>>))
+import FRP.Rhine.Rhine.Free
+import FRP.Rhine.SN.Free
 
 {- | Create a simple message containing the time stamp since initialisation,
    for each tick of the clock.
@@ -48,11 +52,14 @@ printEverySecond = arrMCl print
 -}
 main :: IO ()
 main =
-  flow $
-    (ms500 @@ waitClock)
-      |@| (ms1200 @@ waitClock)
-      >-- collect
-      --> (printEverySecond @@ waitClock)
+  flow
+    $ Rhine
+      { clocks = waitClock @500 .:. waitClock @1200 .:. waitClock @1000 .:. cnil
+      , sn = proc _ -> do
+          msg500 <- resampling collect <<< synchronous ms500 -< Present ()
+          msg1200 <- resampling collect <<< synchronous ms1200 -< Present ()
+          synchronous printEverySecond -< (++) <$> msg500 <*> msg1200
+      }
 
 {- | Rhine prevents the consumption of a signal at a different clock than it is created,
    if no explicit resampling strategy is given.
