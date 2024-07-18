@@ -1,12 +1,46 @@
 {
   "nodes": {
+    "monad-schedule": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1730099708,
+        "narHash": "sha256-Usw6nWADyK3LL9dQ98H3GAxwI+FgtbzA4Us3MngyF64=",
+        "owner": "turion",
+        "repo": "monad-schedule",
+        "rev": "a891aa90747bc01fa6f34794d748aa316d905ce2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "turion",
+        "repo": "monad-schedule",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1720801720,
-        "narHash": "sha256-PjXn2DUkwcN+58/C5XCOqsitGwN2u/WkYdC/ugP+3jQ=",
+        "lastModified": 1721258662,
+        "narHash": "sha256-EgRErDL4Xj0Mkz2ZqDJ1fIcebLJpvMKtF/lb+WJ8y+I=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "2d419e7e0024cb7448aace8faf64b2c6ff26a70d",
+        "rev": "ede8a2b8473fae013cfc0cca9400a8fcbd7cc021",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable-small",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1730858696,
+        "narHash": "sha256-us4xhqqW6OkjCihXYuFArhwx91cTzns8FEY8lE4v7JQ=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "8541b4db5adb9dd835ed5d0023dec229987b7391",
         "type": "github"
       },
       "original": {
@@ -18,7 +52,8 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "monad-schedule": "monad-schedule",
+        "nixpkgs": "nixpkgs_2"
       }
     }
   },
