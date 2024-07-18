@@ -32,7 +32,7 @@ genTimeInfo _ = proc (absolute, tag) -> do
   returnA
     -<
       TimeInfo
-        { sinceLast = absolute `diffTime` fromMaybe initialTime lastTime
+        { sinceLast = (absolute `diffTime`) <$> lastTime
         , sinceInit = absolute `diffTime` initialTime
         , ..
         }

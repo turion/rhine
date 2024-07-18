@@ -67,7 +67,7 @@ class (TimeDomain (Time cl)) => Clock m cl where
 
 -- | An annotated, rich time stamp.
 data TimeInfo cl = TimeInfo
-  { sinceLast :: Diff (Time cl)
+  { sinceLast :: Maybe (Diff (Time cl))
   -- ^ Time passed since the last tick
   , sinceInit :: Diff (Time cl)
   -- ^ Time passed since the initialisation of the clock
