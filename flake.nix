@@ -33,9 +33,23 @@
       # All Haskell packages defined here that contain a library section
       libPnames = filter (pname: pname != "rhine-examples") pnames;
 
+      specificHaskellOverrides = pkgs: {
+        ghc910 = hfinal: hprev: with pkgs.haskell.lib; {
+          # Doesn't allow base 4.20
+          indexed-traversable = doJailbreak hprev.indexed-traversable;
+          primitive = doJailbreak hprev.primitive;
+
+          # Test suite not GHC 9.10 compatible
+          call-stack = dontCheck hprev.call-stack;
+        };
+      };
+
       # The Haskell packages set, for every supported GHC version
       hpsFor = pkgs:
-        lib.genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
+        lib.genAttrs supportedGhcs
+          (ghc: (pkgs.haskell.packages.${ghc}.override ({
+            overrides = (specificHaskellOverrides pkgs).${ghc} or (_: _: { });
+          })))
         // { default = pkgs.haskellPackages; };
 
       # A haskellPackages overlay containing everything defined in this repo
@@ -50,12 +64,6 @@
           # Overrides that are necessary because of dependencies not being up to date or fixed yet in nixpkgs.
           # Check on nixpkgs bumps whether some of these can be removed.
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
-            (_: hprev: {
-              # Doesn't allow base 4.20
-              indexed-traversable = doJailbreak hprev.indexed-traversable;
-              # Test suite not GHC 9.10 compatible
-              call-stack = dontCheck hprev.call-stack;
-            })
             (hfinal: hprev: {
               monad-bayes = markUnbroken hprev.monad-bayes;
               monad-schedule = hprev.callHackageDirect
