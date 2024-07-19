@@ -82,9 +82,19 @@
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               indexed-traversable = doJailbreak hprev.indexed-traversable;
               primitive = doJailbreak hprev.primitive;
+              finite-typelits = doJailbreak hprev.finite-typelits;
+              ChasingBottoms = doJailbreak hprev.ChasingBottoms;
+
+              th-abstraction = hprev.th-abstraction_0_7_0_0;
 
               # Test suite not GHC 9.10 compatible
               call-stack = dontCheck hprev.call-stack;
+
+              # Really weird test error
+              doctest = dontCheck hprev.doctest;
+
+              # FIXME Why does the test suite depend on transformers 0.5 and why does this work on GHC 9.6??
+              lifted-base = dontCheck hprev.lifted-base;
             })
           ];
 
