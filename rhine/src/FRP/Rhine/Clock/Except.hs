@@ -33,6 +33,8 @@ import FRP.Rhine.Clock (
   retag,
  )
 import FRP.Rhine.Clock.Proxy (GetClockProxy)
+import Data.SOP (NS(Z))
+import FRP.Rhine.SN.Tick (Tick(..), retick)
 
 -- * 'ExceptClock'
 
@@ -90,6 +92,7 @@ instance (Time cl1 ~ Time cl2, Clock (ExceptT e m) cl1, Clock m cl2, Monad m) =>
 
 instance (GetClockProxy (CatchClock cl1 e cl2))
 
+-- FIXME can this be generalised to multiple clocks?
 -- | Combine two 'ClSF's under two different clocks.
 catchClSF ::
   (Time cl1 ~ Time cl2, Monad m) =>
@@ -98,10 +101,11 @@ catchClSF ::
   -- | Executed after @cl1@ threw an exception, when @cl2@ is started
   ClSF m cl2 a b ->
   ClSF m (CatchClock cl1 e cl2) a b
-catchClSF clsf1 clsf2 = readerS $ proc (timeInfo, a) -> do
+catchClSF clsf1 clsf2 = readerS $ proc (tick, a) -> do
+  let Tick (Z timeInfo) = tick
   case tag timeInfo of
-    Right tag1 -> runReaderS clsf1 -< (retag (const tag1) timeInfo, a)
-    Left tag2 -> runReaderS clsf2 -< (retag (const tag2) timeInfo, a)
+    Right tag1 -> runReaderS clsf1 -< (Tick $ Z $ retag (const tag1) timeInfo, a)
+    Left tag2 -> runReaderS clsf2 -< (Tick $ Z $ retag (const tag2) timeInfo, a)
 
 -- * 'SafeClock'
 

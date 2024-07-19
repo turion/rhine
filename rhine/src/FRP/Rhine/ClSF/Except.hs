@@ -114,14 +114,14 @@ type BehaviourFExcept time a b m e =
 type BehaviorFExcept time a b m e = BehaviourFExcept time a b m e
 
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
-runClSFExcept :: (Monad m) => ClSFExcept cl a b m e -> ClSF (ExceptT e m) cl a b
+runClSFExcept :: (Monad m) => ClSFExcept cl a b m e -> ClsSF (ExceptT e m) cl a b
 runClSFExcept = hoistS commuteExceptReader . runAutomatonExcept
 
 {- | Enter the monad context in the exception
    for 'ClSF's in the 'ExceptT' monad.
    The 'ClSF' will be run until it encounters an exception.
 -}
-try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept cl a b m e
+try :: (Monad m) => ClsSF (ExceptT e m) cl a b -> ClSFExcept cl a b m e
 try = AutomatonE.try . hoistS commuteReaderExcept
 
 {- | Within the same tick, perform a monadic action,

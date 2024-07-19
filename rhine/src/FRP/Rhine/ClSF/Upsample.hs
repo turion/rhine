@@ -37,12 +37,13 @@ upsampleAutomaton b automaton = right automaton >>> accumulateWith (<>) (Right b
 upsampleR ::
   (Monad m, HasClocks clsSub cls) =>
   b ->
-  ClSF m clsSub a b ->
-  ClSF m cls a b
-upsampleR b clsf = readerS $ arr (_) >>> upsampleAutomaton b (runReaderS clsf)
-  where
-    remap (TimeInfo {tag = Left tag}, _) = Left tag
-    remap (TimeInfo {tag = Right tag, ..}, a) = Right (TimeInfo {..}, a)
+  ClsSF m clsSub a b ->
+  ClsSF m cls a b
+upsampleR b clsf = readerS $ arr (_) >>> (runReaderS clsf)
+-- upsampleR b clsf = readerS $ arr (_) >>> upsampleAutomaton b (runReaderS clsf)
+--   where
+--     remap (TimeInfo {tag = Left tag}, _) = Left tag
+--     remap (TimeInfo {tag = Right tag, ..}, a) = Right (TimeInfo {..}, a)
 
 {- | Upsample a 'ClSF' to a parallel clock.
    The given 'ClSF' is only called when @clL@ ticks,
@@ -52,8 +53,8 @@ upsampleR b clsf = readerS $ arr (_) >>> upsampleAutomaton b (runReaderS clsf)
 upsampleL ::
   (Monad m, HasClocks clsSub cls) =>
   b ->
-  ClSF m clsSub a b ->
-  ClSF m cls a b
+  ClsSF m clsSub a b ->
+  ClsSF m cls a b
 upsampleL b clsf = readerS $ arr remap >>> upsampleAutomaton b (runReaderS clsf)
   where
     remap (TimeInfo {tag = Right tag}, _) = Left tag
