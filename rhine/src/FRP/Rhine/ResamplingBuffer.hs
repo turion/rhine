@@ -24,6 +24,8 @@ import Data.Stream.Result
 
 -- rhine
 import FRP.Rhine.Clock
+import Data.Kind (Type)
+import FRP.Rhine.SN.Tick (Tick)
 
 -- A quick note on naming conventions, to whoever cares:
 -- . Call a single clock @cl@.
@@ -43,19 +45,19 @@ or specific to certain clocks.
 * 'a': The input type
 * 'b': The output type
 -}
-data ResamplingBuffer m cla clb a b = forall s.
+data ResamplingBuffer m (clsa :: [Type]) (clsb :: [Type]) a b = forall s.
   ResamplingBuffer
   { buffer :: s
   -- ^ The internal state of the buffer.
   , put ::
-      TimeInfo cla ->
+      Tick clsa ->
       a ->
       s ->
       m s
   -- ^ Store one input value of type 'a' at a given time stamp,
   --   and return an updated state.
   , get ::
-      TimeInfo clb ->
+      Tick clsb ->
       s ->
       m (Result s b)
   -- ^ Retrieve one output value of type 'b' at a given time stamp,
