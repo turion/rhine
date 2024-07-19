@@ -28,7 +28,7 @@
       # To be kept in sync with the `tested-with:` section in rhine.cabal.
       # To do: Automated check whether this is the same as what get-tested returns.
       # Currently blocked on https://github.com/Kleidukos/get-tested/issues/39
-      supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" ];
+      supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" "ghc910" ];
 
       # All Haskell packages defined here that contain a library section
       libPnames = filter (pname: pname != "rhine-examples") pnames;
@@ -50,6 +50,12 @@
           # Overrides that are necessary because of dependencies not being up to date or fixed yet in nixpkgs.
           # Check on nixpkgs bumps whether some of these can be removed.
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
+            (_: hprev: {
+              # Doesn't allow base 4.20
+              indexed-traversable = doJailbreak hprev.indexed-traversable;
+              # Test suite not GHC 9.10 compatible
+              call-stack = dontCheck hprev.call-stack;
+            })
             (hfinal: hprev: {
               monad-bayes = markUnbroken hprev.monad-bayes;
               monad-schedule = hprev.callHackageDirect
@@ -72,6 +78,23 @@
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
+            })
+            (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
+              indexed-traversable = doJailbreak hprev.indexed-traversable;
+              primitive = doJailbreak hprev.primitive;
+              finite-typelits = doJailbreak hprev.finite-typelits;
+              ChasingBottoms = doJailbreak hprev.ChasingBottoms;
+
+              th-abstraction = hprev.th-abstraction_0_7_0_0;
+
+              # Test suite not GHC 9.10 compatible
+              call-stack = dontCheck hprev.call-stack;
+
+              # Really weird test error
+              doctest = dontCheck hprev.doctest;
+
+              # FIXME Why does the test suite depend on transformers 0.5 and why does this work on GHC 9.6??
+              lifted-base = dontCheck hprev.lifted-base;
             })
           ];
 
