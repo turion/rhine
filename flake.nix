@@ -87,6 +87,13 @@
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
             })
+            (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
+              indexed-traversable = doJailbreak hprev.indexed-traversable;
+              primitive = doJailbreak hprev.primitive;
+
+              # Test suite not GHC 9.10 compatible
+              call-stack = dontCheck hprev.call-stack;
+            })
           ];
 
         in
