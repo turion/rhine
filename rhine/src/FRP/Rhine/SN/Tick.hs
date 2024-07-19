@@ -6,11 +6,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module FRP.Rhine.SN.Tick where
 
 -- sop-core
-import Data.SOP (All, NP (..), NS (..), SListI, hmap, SList (SNil, SCons), sList, HCollapse (hcollapse), K (K))
+import Data.SOP (All, NP (..), NS (..), SListI, hmap, SList (SNil, SCons), sList, HCollapse (hcollapse), K (K), apInjs_NP, HSequence (htraverse'))
 
 -- rhine
 
@@ -18,11 +19,12 @@ import Data.Kind (Type)
 import Data.Proxy (Proxy)
 import Data.Type.Equality ((:~:) (..), (:~~:))
 import FRP.Rhine.Clock
-import Data.SOP.NP (liftA_NP, map_NP)
-import Data.Maybe (listToMaybe)
+import Data.SOP.NP (liftA_NP, map_NP, liftA2_NP)
+import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Function ((&))
 import Data.Foldable (Foldable(fold))
 import Data.Monoid (First(..))
+import Data.Functor.Compose (Compose(..))
 
 class HasTimeDomain td cl
 
@@ -140,7 +142,7 @@ secondPosition (OPThere positions) = S $ secondPosition positions
 newtype PositionIn cls cl = PositionIn {getPositionIn :: Position cl cls}
 
 -- | Whether 'clsSub' is a subsequence of 'cls'
-class HasClocks clsSub cls where
+class SListI clsSub => HasClocks clsSub cls where
   positions :: NP (PositionIn cls) clsSub
 
 instance HasClocks '[] cls where
@@ -167,17 +169,19 @@ injectPositions Nil x = case x of
 injectTick :: HasClocks clsSub cls => Tick clsSub -> Tick cls
 injectTick Tick {getTick} = Tick $ injectPositions positions getTick
 
-projectTick :: HasClocks clsSub cls => Tick cls -> Maybe (Tick clsSub)
+projectTick :: (HasClocks clsSub cls) => Tick cls -> [Tick clsSub]
 projectTick Tick {getTick} = Tick <$> projectPositions positions getTick
 
-projectPositions :: NP (PositionIn cls) clsSub -> NS f cls -> Maybe (NS f clsSub)
-projectPositions Nil _ = Nothing
-projectPositions (PositionIn (Z Refl) :* _) (Z x) = Just $ Z x
-projectPositions (PositionIn (S _) :* _) (Z _) = Nothing
-projectPositions (PositionIn (S pos) :* poss) (S x) = projectPositions (PositionIn pos :* poss) x
-projectPositions (_ :* poss) (S x) = _
--- projectPositions poss x = poss
---   & _ x
---   & hcollapse
---   & fold
---   & getFirst
+projectPositionIn :: PositionIn cls cl -> NS f cls -> Maybe (f cl)
+projectPositionIn (PositionIn (Z Refl)) (Z x) = Just x
+projectPositionIn (PositionIn (S _)) (Z _) = Nothing
+projectPositionIn (PositionIn (Z _)) (S _) = Nothing
+projectPositionIn (PositionIn (S pos)) (S x) = projectPositionIn (PositionIn pos) x
+
+-- FIXME Can't do better than a list because we don't know that the positions are ordered or unique
+projectPositions :: SListI clsSub => NP (PositionIn cls) clsSub -> NS f cls -> [NS f clsSub]
+projectPositions positions x =
+  positions
+  & liftA_NP (\position -> Compose $ projectPositionIn position x)
+  & apInjs_NP
+  & mapMaybe (htraverse' getCompose)

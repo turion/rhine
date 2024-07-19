@@ -72,8 +72,9 @@ import Data.Type.Equality ((:~:) (Refl))
 import Data.Profunctor (Profunctor (..), WrappedArrow (..))
 
 import Data.SOP.NP (liftA_NP)
+import Data.TimeDomain (TimeDomain)
 import FRP.Rhine.ClSF.Core
-import FRP.Rhine.Clock (Clock (..), TimeDomain, TimeInfo (..), tag)
+import FRP.Rhine.Clock (Clock (..), TimeInfo (..), tag)
 import FRP.Rhine.Clock.Proxy (GetClockProxy (getClockProxy))
 import FRP.Rhine.Clock.Util (genTimeInfo)
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer (..))
