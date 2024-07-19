@@ -169,9 +169,6 @@ feedbackSN sn = FreeSN . liftFree2 . Feedback position position sn
 fanIn2 :: (HasClock cl1 cls, HasClock cl2 cls) => FreeSN m cls (At cl1 a, At cl2 a) (At (Clocks m td '[cl1, cl2]) a)
 fanIn2 = FreeSN $ liftFree2 $ FanIn2 position position
 
-fanIn2 :: (HasClock cl1 cls, HasClock cl2 cls) => FreeSN m cls (At cl1 a, At cl2 a) (At (Clocks m td '[cl1, cl2]) a)
-fanIn2 = FreeSN $ liftFree2 $ FanIn2 position position
-
 always :: Automaton m a b -> FreeSN m cls a b
 always = FreeSN . liftFree2 . Always
 
