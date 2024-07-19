@@ -6,11 +6,11 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 -- FIXME consider using lenses instead
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE RankNTypes #-}
 
 module FRP.Rhine.SN.Free (
   At (
@@ -58,15 +58,15 @@ where
 import Control.Arrow.Free
 import Control.Category (Category)
 import Control.Monad.Schedule.Class (MonadSchedule)
+import Control.Monad.Trans.Reader (ReaderT (..), withReaderT)
+import Data.Automaton (concatS)
 import Data.Automaton.Trans.Except (performOnFirstSample)
 import Data.Automaton.Trans.Reader (readerS, runReaderS)
-import Data.Stream.Result (Result (..))
-import Control.Monad.Trans.Reader (ReaderT (..), withReaderT)
 import Data.Kind (Type)
 import Data.List.NonEmpty (fromList, toList)
-import Data.Automaton (concatS)
 import Data.Proxy (Proxy (..))
 import Data.SOP (All, NP (..), NS (..), SListI)
+import Data.Stream.Result (Result (..))
 import Data.Type.Equality ((:~:) (Refl))
 
 import Data.Profunctor (Profunctor (..), WrappedArrow (..))
@@ -78,8 +78,8 @@ import FRP.Rhine.Clock (Clock (..), TimeInfo (..), tag)
 import FRP.Rhine.Clock.Proxy (GetClockProxy (getClockProxy))
 import FRP.Rhine.Clock.Util (genTimeInfo)
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer (..))
-import FRP.Rhine.Schedule (scheduleList)
 import FRP.Rhine.SN.Tick
+import FRP.Rhine.Schedule (scheduleList)
 import GHC.Stack (HasCallStack)
 
 -- FIXME Don't export Absent, maybe by having an internal module?
@@ -126,17 +126,18 @@ data SNComponent m cls a b where
   Always ::
     Automaton m a b -> SNComponent m cls a b
   With ::
-    (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d) ->
+    (forall r. Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d) ->
     FreeSN m cls a b ->
     SNComponent m cls c d
   Handle ::
-    (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d -> Automaton (ReaderT r m) e f) ->
+    (forall r. Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d -> Automaton (ReaderT r m) e f) ->
     FreeSN m cls a b ->
     FreeSN m cls c d ->
     SNComponent m cls e f
-  -- FIXME generalise to a NP of arguments, but I don't know how I zip type level lists
-  -- FIXME generalise to `forall t . (MonadTrans t, MFunctor t) => ...` to allow e.g. for exception handling
-  --   or maybe even arbitrary monads
+
+-- FIXME generalise to a NP of arguments, but I don't know how I zip type level lists
+-- FIXME generalise to `forall t . (MonadTrans t, MFunctor t) => ...` to allow e.g. for exception handling
+--   or maybe even arbitrary monads
 
 -- -- Like clocks, but without the Clock dicts
 -- newtype JustClocks cls = JustClocks {getJustClocks :: NP I cls }
@@ -172,10 +173,10 @@ fanIn2 = FreeSN $ liftFree2 $ FanIn2 position position
 always :: Automaton m a b -> FreeSN m cls a b
 always = FreeSN . liftFree2 . Always
 
-with :: (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d) -> FreeSN m cls a b -> FreeSN m cls c d
+with :: (forall r. Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d) -> FreeSN m cls a b -> FreeSN m cls c d
 with morph = FreeSN . liftFree2 . With morph
 
-handle :: (forall r . Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d -> Automaton (ReaderT r m) e f) -> FreeSN m cls a b -> FreeSN m cls c d -> FreeSN m cls e f
+handle :: (forall r. Automaton (ReaderT r m) a b -> Automaton (ReaderT r m) c d -> Automaton (ReaderT r m) e f) -> FreeSN m cls a b -> FreeSN m cls c d -> FreeSN m cls e f
 handle handler sn1 sn2 = FreeSN $ liftFree2 $ Handle handler sn1 sn2
 
 eraseClockSNComponent :: forall m cls a b. (HasCallStack, Monad m) => SNComponent m cls a b -> Automaton (ReaderT (Tick cls) m) a b
@@ -206,7 +207,7 @@ eraseClockSNComponent (Feedback posA posB ResamplingBuffer {buffer = buffer0, ge
       returnA -< (b, resbuf'')
 eraseClockSNComponent (Always msf) = liftTransS msf
 
-ifTicks :: HasCallStack => Position cl cls -> Tick cls -> At cl a -> Maybe a
+ifTicks :: (HasCallStack) => Position cl cls -> Tick cls -> At cl a -> Maybe a
 ifTicks pos tick aAt = case (projectPosition pos $ getTick tick, aAt) of
   (Just _, Present a) -> Just a
   (Nothing, _) -> Nothing
@@ -271,7 +272,6 @@ data ClassyClock m td cl where
 -- FIXME This is
 newtype Clocks m td cls = Clocks {getClocks :: NP (ClassyClock m td) cls}
 
-
 instance (TimeDomain td) => Clock m (Clocks m td cls) where
   type Time (Clocks m td cls) = td
   type Tag (Clocks m td cls) = Tags td cls
@@ -283,7 +283,6 @@ clocksTimeInfoToTick TimeInfo {tag = S tag, ..} = Tick $ S $ getTick $ clocksTim
 data TheTag td cl = (Time cl ~ td) => TheTag {getTheTag :: Tag cl}
 
 type Tags td cls = NS (TheTag td) cls
-
 
 type family Append (cls1 :: [Type]) (cls2 :: [Type]) :: [Type] where
   Append '[] cls = cls
