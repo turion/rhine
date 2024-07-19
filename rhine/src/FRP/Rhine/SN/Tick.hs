@@ -167,12 +167,17 @@ injectPositions Nil x = case x of
 injectTick :: HasClocks clsSub cls => Tick clsSub -> Tick cls
 injectTick Tick {getTick} = Tick $ injectPositions positions getTick
 
+projectTick :: HasClocks clsSub cls => Tick cls -> Maybe (Tick clsSub)
+projectTick Tick {getTick} = Tick <$> projectPositions positions getTick
+
 projectPositions :: NP (PositionIn cls) clsSub -> NS f cls -> Maybe (NS f clsSub)
+projectPositions Nil _ = Nothing
 projectPositions (PositionIn (Z Refl) :* _) (Z x) = Just $ Z x
-projectPositions (PositionIn (S _) :* _) (Z x) = Nothing
+projectPositions (PositionIn (S _) :* _) (Z _) = Nothing
 projectPositions (PositionIn (S pos) :* poss) (S x) = projectPositions (PositionIn pos :* poss) x
-projectPositions poss x = poss
-  & _ x
-  & hcollapse
-  & fold
-  & getFirst
+projectPositions (_ :* poss) (S x) = _
+-- projectPositions poss x = poss
+--   & _ x
+--   & hcollapse
+--   & fold
+--   & getFirst
