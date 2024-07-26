@@ -82,7 +82,7 @@ common opts
 
 common test-deps
   build-depends:
-    QuickCheck ^>=2.14,
+    QuickCheck >=2.14 && <2.16,
     tasty >=1.4 && <1.6,
     tasty-hunit ^>=0.10,
     tasty-quickcheck ^>=0.10,
