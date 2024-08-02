@@ -14,5 +14,6 @@ instance (Monad m) => Clock m Trivial where
   type Time Trivial = ()
   type Tag Trivial = ()
   initClock _ = arr $ const ((), ())
+  {-# INLINE initClock #-}
 
 instance GetClockProxy Trivial
