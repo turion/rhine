@@ -14,6 +14,8 @@ import "base" Data.Void (absurd)
 
 import "criterion" Criterion.Main
 
+import "transformers" Control.Monad.Trans.Class (lift)
+
 import "automaton" Data.Stream as Stream (StreamT (..))
 import "automaton" Data.Stream.Optimized (OptimizedStreamT (Stateful))
 import "rhine" FRP.Rhine
@@ -25,9 +27,11 @@ benchmarks :: Benchmark
 benchmarks =
   bgroup
     "Sum"
-    [ bench "rhine" $ nf rhine nMax
+    [ bench "rhine embed" $ nf rhine nMax
     , bench "rhine flow" $ nf rhineFlow nMax
-    , bench "automaton" $ nf automaton nMax
+    , bench "automaton embed" $ nf automaton nMax
+    , bench "automatonNoEmbed" $ nf automatonNoEmbed nMax
+    , bench "automatonNoEmbedInlined" $ nf automatonNoEmbedInlined nMax
     , bench "direct" $ nf direct nMax
     , bench "direct monad" $ nf directM nMax
     ]
@@ -58,6 +62,24 @@ automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
             { state = 1
             , Stream.step = \s -> return $! Result (s + 1) s
             }
+
+automatonNoEmbed :: Int -> Int
+automatonNoEmbed n = either id absurd $ reactimate $ proc () -> do
+  k <- count -< ()
+  s <- sumN -< k
+  if k < n
+    then returnA -< ()
+    else arrM Left -< s
+
+automatonNoEmbedInlined :: Int -> Int
+automatonNoEmbedInlined k = either id absurd $ reactimate $ Automaton $ Stateful           StreamT
+            { state = (1, 0)
+            , Stream.step = \(n, s) ->
+              let n' = n + 1
+                  s' = s + n
+              in if n' > k then lift $ Left s' else return $! Result (n', s') ()
+            }
+
 
 direct :: Int -> Int
 direct n = sum [0 .. n]
