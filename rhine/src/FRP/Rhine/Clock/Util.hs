@@ -35,4 +35,3 @@ genTimeInfo _ initialTime = proc (absolute, tag) -> do
         , sinceInit = absolute `diffTime` initialTime
         , ..
         }
-{-# INLINE genTimeInfo #-}
