@@ -1,5 +1,6 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {- | Sums up natural numbers.
 
@@ -17,6 +18,7 @@ import "criterion" Criterion.Main
 import "automaton" Data.Stream as Stream (StreamT (..))
 import "automaton" Data.Stream.Optimized (OptimizedStreamT (Stateful))
 import "rhine" FRP.Rhine
+import "template-haskell" Language.Haskell.TH (runQ)
 
 nMax :: Int
 nMax = 1_000_000
@@ -28,6 +30,7 @@ benchmarks =
     [ bench "rhine" $ nf rhine nMax
     , bench "rhine flow" $ nf rhineFlow nMax
     , bench "automaton" $ nf automaton nMax
+    , env bench "automatonTH" $ nfIO automatonTH
     , bench "direct" $ nf direct nMax
     , bench "direct monad" $ nf directM nMax
     ]
@@ -58,6 +61,15 @@ automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
             { state = 1
             , Stream.step = \s -> return $! Result (s + 1) s
             }
+
+automatonTH :: IO (Automaton (Either Int ()) () ())
+automatonTH = runQ $ unTypeCode [|| proc () -> do
+    k <- count -< ()
+    s <- sumN -< k
+    if k < nMax
+      then returnA -< ()
+      else arrM Left -< s||]
+  -- return $ either id absurd $ reactimate code
 
 direct :: Int -> Int
 direct n = sum [0 .. n]

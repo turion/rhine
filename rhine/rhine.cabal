@@ -89,7 +89,8 @@ common test-deps
 
 common bench-deps
   build-depends:
-    criterion ^>=1.6
+    criterion ^>=1.6,
+    template-haskell ^>=2.20.0.0,
 
 library
   import: opts

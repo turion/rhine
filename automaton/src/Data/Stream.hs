@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Data.Stream where
@@ -36,6 +37,7 @@ import Data.Align
 -- automaton
 import Data.Stream.Internal
 import Data.Stream.Result
+import Language.Haskell.TH (Code, Q)
 
 -- * Creating streams
 
@@ -85,6 +87,37 @@ data StreamT m a = forall s.
   --   2. updating the internal state @s@
   --   3. outputting a value of type @a@
   }
+
+data StreamTH m a = forall s c.
+  StreamTH
+  { stateTH :: s
+  , context :: c
+  , stepTH :: Code Q c -> Code Q s -> Code Q (m (Result s a))
+  }
+
+instance (Functor m) => Functor (StreamTH m) where
+  fmap f StreamTH {stateTH, stepTH, context} =
+    StreamTH
+      { stateTH
+      , context = (context, f)
+      , stepTH = \context state -> [||let (c, f) = $$context in fmap f <$> $$(stepTH [||c||] state)||]
+      }
+
+{-
+unth :: StreamTH m a -> Code Q (StreamT m a)
+unth StreamTH {stateTH, context, stepTH} = [||StreamT {state = stateTH, step = \s -> $$(stepTH [||context||] [||s||])} ||]
+
+reactimateTH :: Monad m => StreamTH m () -> Code Q (m void)
+reactimateTH StreamTH {stateTH, context, stepTH} =
+  [||
+  do
+    Result s' () <- $$(stepTH [||context||] [||stateTH||])
+    $$(reactimateTH StreamTH {stateTH = _, context, stepTH})
+  ||]
+-}
+
+reactimateStage :: (Monad m) => Code Q (StreamT m ()) -> Code Q (m void)
+reactimateStage stream = [||reactimate $$stream||]
 
 -- | Initialise with an internal state, update the state and produce output without side effects.
 unfold :: (Applicative m) => s -> (s -> Result s a) -> StreamT m a

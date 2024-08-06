@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Data.Automaton where
 
@@ -54,6 +55,7 @@ import Data.Stream.Optimized (
  )
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Result
+import Language.Haskell.TH (Q, TExp, Code)
 
 -- * Constructing automata
 
@@ -91,6 +93,11 @@ and more generally use the arrow syntax extension to define automata.
 -}
 newtype Automaton m a b = Automaton {getAutomaton :: OptimizedStreamT (ReaderT a m) b}
   deriving newtype (Functor, Applicative, Alternative, Selective, Num, Fractional, Floating)
+
+newtype AutomatonTH m a b = AutomatonTH {getAutomatonTH :: Code Q (Automaton m a b)}
+
+instance Monad m => Category (AutomatonTH m) where
+  AutomatonTH a1 . AutomatonTH a2 = AutomatonTH [|| $$(a1) . $$(a2) ||]
 
 -- | Create an 'Automaton' from a state and a pure step function.
 unfold ::
