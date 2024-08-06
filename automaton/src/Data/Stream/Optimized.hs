@@ -27,10 +27,11 @@ import Data.VectorSpace
 -- mmorph
 import Control.Monad.Morph
 
--- automaton
-
+-- align
 import Data.Align (Align, Semialign)
 import Data.Semialign (Align (..), Semialign (..))
+
+-- automaton
 import Data.Stream hiding (hoist')
 import Data.Stream qualified as StreamT
 import Data.Stream.Recursive (Recursive (..))
