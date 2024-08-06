@@ -42,13 +42,13 @@ but there are a few cases where it doesn't, most prominently:
     (b, s') <- doSomething a s
     return (b, myMSF s')
   ```
-  You have to write this in "initial encoding", making the state explicit:
+  You have to write this in "coalgebraic encoding", making the state explicit:
   ```haskell
   automaton = unfoldM s $ \a s -> do
     (b, s') <- doSomething a s
     return $! Result s' b
   ```
-  In those rare cases where you really need the continuation style, have a look at `Data.Automaton.Final`.
+  In those rare cases where you really need the continuation style, have a look at `Data.Automaton.Recursive`.
 
 ### Avoid recursive definitions of `MSF`s
 
