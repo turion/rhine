@@ -9,14 +9,13 @@ Most of the implementations really benchmark 'embed', as the lazy list is create
 module Sum where
 
 import "base" Control.Monad (foldM)
+import "base" Data.Either (fromLeft)
 import "base" Data.Functor.Identity
 import "base" Data.Void (absurd)
-
 import "criterion" Criterion.Main
 
-import "transformers" Control.Monad.Trans.Class (lift)
-
 import "automaton" Data.Stream as Stream (StreamT (..))
+import qualified "automaton" Data.Stream as Stream (reactimate)
 import "automaton" Data.Stream.Optimized (OptimizedStreamT (Stateful))
 import "rhine" FRP.Rhine
 
@@ -31,6 +30,7 @@ benchmarks =
     , bench "rhine flow" $ nf rhineFlow nMax
     , bench "automaton embed" $ nf automaton nMax
     , bench "automatonNoEmbed" $ nf automatonNoEmbed nMax
+    , bench "automatonEmbed" $ nf automatonEmbed nMax
     , bench "automatonNoEmbedInlined" $ nf automatonNoEmbedInlined nMax
     , bench "direct" $ nf direct nMax
     , bench "direct monad" $ nf directM nMax
@@ -63,6 +63,14 @@ automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
             , Stream.step = \s -> return $! Result (s + 1) s
             }
 
+automatonEmbed :: Int -> Int
+automatonEmbed n = fromLeft (error "nope") $ flip embed (repeat ()) $ proc () -> do
+  k <- count -< ()
+  s <- sumN -< k
+  if k < n
+    then returnA -< ()
+    else arrM Left -< s
+
 automatonNoEmbed :: Int -> Int
 automatonNoEmbed n = either id absurd $ reactimate $ proc () -> do
   k <- count -< ()
@@ -72,12 +80,12 @@ automatonNoEmbed n = either id absurd $ reactimate $ proc () -> do
     else arrM Left -< s
 
 automatonNoEmbedInlined :: Int -> Int
-automatonNoEmbedInlined k = either id absurd $ reactimate $ Automaton $ Stateful           StreamT
+automatonNoEmbedInlined k = either id absurd $ Stream.reactimate StreamT
             { state = (1, 0)
             , Stream.step = \(n, s) ->
               let n' = n + 1
                   s' = s + n
-              in if n' > k then lift $ Left s' else return $! Result (n', s') ()
+              in if n' > k then Left s' else return $! Result (n', s') ()
             }
 
 
