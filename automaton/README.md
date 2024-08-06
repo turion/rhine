@@ -1,13 +1,13 @@
-# `automaton`: Effectful streams and automata in initial encoding
+# `automaton`: Effectful streams and automata as coalgebras
 
-This library defines effectful streams and automata, in initial encoding.
+This library defines effectful streams and automata, in coalgebraic encoding.
 They are useful to define effectful automata, or state machines, transducers, monadic stream functions and similar streaming abstractions.
 In comparison to most other libraries, they are implemented here with explicit state types,
 and thus are amenable to GHC optimizations, often resulting in dramatically better performance.
 
 ## What?
 
-The core concept is an effectful stream in initial encoding:
+The core concept is an effectful stream in coalgebraic encoding:
 ```haskell
 data StreamT m a = forall s.
   StreamT
@@ -19,14 +19,15 @@ This is an stream because you can repeatedly call `step` on the `state` and prod
 while mutating the internal state.
 It is effectful because each step performs a side effect in `m`, typically a monad.
 
-The definitions you will most often find in the wild is the "final encoding":
+The definitions you will most often find in the wild is a direct fixpoint, or recursive datatype:
 ```haskell
 data StreamT m a = StreamT (m (StreamT m a, a))
 ```
-Semantically, there is no big difference between them, and in nearly all cases you can map the initial encoding onto the final one and vice versa.
+Semantically, there is no big difference between them, and in nearly all cases you can map the coalgebraic encoding onto the recursive one and vice versa,
+by means of the final coalgebra.
 (For the single edge case, see [the section in `Data.Automaton` about recursive definitions](hackage.haskell.org/package/automaton/docs/Data.Automaton.html).)
 But when composing streams,
-the initial encoding will often be more performant that than the final encoding because GHC can optimise the joint state and step functions of the streams.
+the coalgebraic encoding will often be more performant that than the recursive one because GHC can optimise the joint state and step functions of the streams.
 
 ### How are these automata?
 
@@ -42,9 +43,9 @@ by composing a big program out of many automaton components.
 ## Why?
 
 Mostly, performance.
-When composing a big automaton out of small ones, the final encoding is not very performant, as mentioned above:
+When composing a big automaton out of small ones, the recursive definition is not very performant, as mentioned above:
 Each step of each component contains a closure, which is basically opaque for the compiler.
-In the initial encoding, the step functions of two composed automata are themselves composed, and the compiler can optimize them just like any regular function.
+In the coalgebraic encoding, the step functions of two composed automata are themselves composed, and the compiler can optimize them just like any regular function.
 This often results in massive speedups.
 
 ### But really, why?
@@ -61,9 +62,9 @@ Prominently, [`dunai`](https://hackage.haskell.org/package/dunai) implements mon
 (which are essentially effectful state machines)
 and has inspired the design and API of this package to a great extent.
 (Feel free to extend this list by other notable libraries.)
-But all of these are implemented in the final encoding.
+But all of these are implemented recursively.
 
-I am aware of only two fleshed-out implementations of effectful automata in the initial encoding,
+I am aware of only two fleshed-out implementations of effectful automata in the coalgebraic encoding,
 both of which have been a big inspiration for this package:
 
 * [`essence-of-live-coding`](https://hackage.haskell.org/package/essence-of-live-coding) restricts the state type to be serializable, gaining live coding capabilities, but sacrificing on expressivity.

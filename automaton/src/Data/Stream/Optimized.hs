@@ -33,8 +33,8 @@ import Data.Align (Align, Semialign)
 import Data.Semialign (Align (..), Semialign (..))
 import Data.Stream hiding (hoist')
 import Data.Stream qualified as StreamT
-import Data.Stream.Final (Final (..))
-import Data.Stream.Final qualified as Final (fromFinal, toFinal)
+import Data.Stream.Recursive (Recursive (..))
+import Data.Stream.Recursive qualified as Recursive (fromRecursive, toRecursive)
 import Data.Stream.Result
 
 {- | An optimized version of 'StreamT' which has an extra constructor for stateless streams.
@@ -182,23 +182,23 @@ stepOptimizedStream (Stateful stream) = mapResultState Stateful <$> stepStream s
 stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 {-# INLINE stepOptimizedStream #-}
 
-{- | Translate to the final encoding of streams.
+{- | Translate to the coalgebraic encoding of streams.
 
 This will typically be a performance penalty.
 -}
-toFinal :: (Functor m) => OptimizedStreamT m a -> Final m a
-toFinal (Stateful stream) = Final.toFinal stream
-toFinal (Stateless f) = go
+toRecursive :: (Functor m) => OptimizedStreamT m a -> Recursive m a
+toRecursive (Stateful stream) = Recursive.toRecursive stream
+toRecursive (Stateless f) = go
   where
-    go = Final $ Result go <$> f
-{-# INLINE toFinal #-}
+    go = Recursive $ Result go <$> f
+{-# INLINE toRecursive #-}
 
-{- | Translate a stream from final encoding to stateful, initial encoding.
+{- | Translate a stream from coalgebraic encoding to stateful, coalgebraic encoding.
   The internal state is the stream itself.
 -}
-fromFinal :: Final m a -> OptimizedStreamT m a
-fromFinal = Stateful . Final.fromFinal
-{-# INLINE fromFinal #-}
+fromRecursive :: Recursive m a -> OptimizedStreamT m a
+fromRecursive = Stateful . Recursive.fromRecursive
+{-# INLINE fromRecursive #-}
 
 -- | See 'Data.Stream.concatS'.
 concatS :: (Monad m) => OptimizedStreamT m [a] -> OptimizedStreamT m a

@@ -30,7 +30,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Automaton.Except
 import Automaton.Trans.Accum
 import Data.Automaton
-import Data.Automaton.Final
+import Data.Automaton.Recursive
 import Data.Automaton.Trans.Maybe
 
 tests =
@@ -40,10 +40,10 @@ tests =
         "Alternative"
         [ testGroup
             "<|>"
-            [ testProperty "has same semantics as final" $
+            [ testProperty "has same semantics as recursive" $
                 \(input :: [(Maybe Int, Maybe Int)]) ->
                   embed ((arr fst >>> inMaybe) <|> (arr snd >>> inMaybe)) input
-                    === embed (fromFinal $ (arr fst >>> toFinal inMaybe) <|> (arr snd >>> toFinal inMaybe)) input
+                    === embed (fromRecursive $ (arr fst >>> toRecursive inMaybe) <|> (arr snd >>> toRecursive inMaybe)) input
             ]
         , testGroup
             "some"

@@ -15,10 +15,11 @@ import Control.Monad.Morph (MFunctor, hoist)
 import Control.Selective
 
 -- automaton
-import Data.Stream.Final (Final (..))
-import Data.Stream.Final.Except
+
 import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
+import Data.Stream.Recursive (Recursive (..))
+import Data.Stream.Recursive.Except
 
 {- | A stream that can terminate with an exception.
 
@@ -29,42 +30,42 @@ In @automaton@, such streams mainly serve as a vehicle to bring control flow to 
 -}
 data StreamExcept a m e
   = -- | When using '>>=', this encoding will be used.
-    FinalExcept (Final (ExceptT e m) a)
+    RecursiveExcept (Recursive (ExceptT e m) a)
   | -- | This is usually the faster encoding, as it can be optimized by GHC.
-    InitialExcept (OptimizedStreamT (ExceptT e m) a)
+    CoalgebraicExcept (OptimizedStreamT (ExceptT e m) a)
 
-toFinal :: (Functor m) => StreamExcept a m e -> Final (ExceptT e m) a
-toFinal (FinalExcept final) = final
-toFinal (InitialExcept initial) = StreamOptimized.toFinal initial
+toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
+toRecursive (RecursiveExcept coalgebraic) = coalgebraic
+toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
 
 runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
-runStreamExcept (FinalExcept final) = StreamOptimized.fromFinal final
-runStreamExcept (InitialExcept initial) = initial
+runStreamExcept (RecursiveExcept coalgebraic) = StreamOptimized.fromRecursive coalgebraic
+runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
 
 instance (Monad m) => Functor (StreamExcept a m) where
-  fmap f (FinalExcept fe) = FinalExcept $ hoist (withExceptT f) fe
-  fmap f (InitialExcept ae) = InitialExcept $ hoist (withExceptT f) ae
+  fmap f (RecursiveExcept fe) = RecursiveExcept $ hoist (withExceptT f) fe
+  fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ hoist (withExceptT f) ae
 
 instance (Monad m) => Applicative (StreamExcept a m) where
-  pure = InitialExcept . constM . throwE
-  InitialExcept f <*> InitialExcept a = InitialExcept $ applyExcept f a
+  pure = CoalgebraicExcept . constM . throwE
+  CoalgebraicExcept f <*> CoalgebraicExcept a = CoalgebraicExcept $ applyExcept f a
   f <*> a = ap f a
 
 instance (Monad m) => Selective (StreamExcept a m) where
-  select (InitialExcept e) (InitialExcept f) = InitialExcept $ selectExcept e f
+  select (CoalgebraicExcept e) (CoalgebraicExcept f) = CoalgebraicExcept $ selectExcept e f
   select e f = selectM e f
 
 -- | 'return'/'pure' throw exceptions, '(>>=)' uses the last thrown exception as input for an exception handler.
 instance (Monad m) => Monad (StreamExcept a m) where
   (>>) = (*>)
-  ae >>= f = FinalExcept $ handleExceptT (toFinal ae) (toFinal . f)
+  ae >>= f = RecursiveExcept $ handleExceptT (toRecursive ae) (toRecursive . f)
 
 instance MonadTrans (StreamExcept a) where
-  lift = InitialExcept . constM . ExceptT . fmap Left
+  lift = CoalgebraicExcept . constM . ExceptT . fmap Left
 
 instance MFunctor (StreamExcept a) where
-  hoist morph (InitialExcept automaton) = InitialExcept $ hoist (mapExceptT morph) automaton
-  hoist morph (FinalExcept final) = FinalExcept $ hoist (mapExceptT morph) final
+  hoist morph (RecursiveExcept automaton) = RecursiveExcept $ hoist (mapExceptT morph) automaton
+  hoist morph (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist (mapExceptT morph) coalgebraic
 
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept

@@ -1,7 +1,7 @@
 cabal-version: 3.0
 name: automaton
 version: 1.4
-synopsis: Effectful streams and automata in initial encoding
+synopsis: Effectful streams and automata in coalgebraic encoding
 description:
   Effectful streams have an internal state and a step function.
   Varying the effect type, this gives many different useful concepts:
@@ -64,7 +64,7 @@ library
   import: opts
   exposed-modules:
     Data.Automaton
-    Data.Automaton.Final
+    Data.Automaton.Recursive
     Data.Automaton.Trans.Accum
     Data.Automaton.Trans.Except
     Data.Automaton.Trans.Maybe
@@ -75,14 +75,14 @@ library
     Data.Automaton.Trans.Writer
     Data.Stream
     Data.Stream.Except
-    Data.Stream.Final
     Data.Stream.Internal
     Data.Stream.Optimized
+    Data.Stream.Recursive
     Data.Stream.Result
 
   other-modules:
     Data.Automaton.Trans.Except.Internal
-    Data.Stream.Final.Except
+    Data.Stream.Recursive.Except
 
   hs-source-dirs: src
 

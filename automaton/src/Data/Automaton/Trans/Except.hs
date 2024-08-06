@@ -221,7 +221,7 @@ runAutomatonExcept = Automaton . hoist commuteReaderBack . runStreamExcept . get
 Typically used to enter the monad context of 'AutomatonExcept'.
 -}
 try :: (Monad m) => Automaton (ExceptT e m) a b -> AutomatonExcept a b m e
-try = AutomatonExcept . InitialExcept . hoist commuteReader . getAutomaton
+try = AutomatonExcept . CoalgebraicExcept . hoist commuteReader . getAutomaton
 
 {- | Immediately throw the current input as an exception.
 
@@ -259,7 +259,7 @@ safe = try . liftS
 This passes the last input value to the action, but doesn't advance a tick.
 -}
 once :: (Monad m) => (a -> m e) -> AutomatonExcept a b m e
-once f = AutomatonExcept $ InitialExcept $ StreamOptimized.constM $ ExceptT $ ReaderT $ fmap Left <$> f
+once f = AutomatonExcept $ CoalgebraicExcept $ StreamOptimized.constM $ ExceptT $ ReaderT $ fmap Left <$> f
 
 -- | Variant of 'once' without input.
 once_ :: (Monad m) => m e -> AutomatonExcept a b m e
