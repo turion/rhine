@@ -75,7 +75,7 @@ scheduleStreams Streams {states, steps} =
   StreamT
     { state = (apInjsNPNonEmpty states, [])
     , step = \(restingStates, runningStates) ->
-        fmap (htraverse' getRunningResultT . hzipWith (\step -> RunningResultT . kick step . unI) steps) restingStates
+        fmap (htraverse' getRunningResultT . hzipWith (\Step {getStep} -> RunningResultT . fmap RunningResult . getResultStateT getStep . unI) steps) restingStates
           & flip appendList runningStates
           & schedule
           & fmap
@@ -87,9 +87,6 @@ scheduleStreams Streams {states, steps} =
                  in Result (finishedStates, running) outputs
             )
     }
-  where
-    kick :: (Functor m) => Step m b state -> state -> m (RunningResult b state)
-    kick Step {getStep} state = RunningResult <$> getResultStateT getStep state
 
 scheduleStreams' :: (MonadSchedule m, Applicative m) => NonEmpty (StreamT m b) -> StreamT m (NonEmpty b)
 scheduleStreams' ne = scheduleStreams $ foldrMap1 buildStreams consStreams ne
