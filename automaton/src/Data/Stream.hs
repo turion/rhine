@@ -39,7 +39,7 @@ import Data.Stream.Result
 
 -- * Creating streams
 
-{- | Effectful streams in initial encoding.
+{- | Effectful streams in coalgebraic encoding.
 
 A stream consists of an internal state @s@, and a step function.
 This step can make use of an effect in @m@ (which is often a monad),
@@ -47,19 +47,19 @@ alter the state, and return a result value.
 Its semantics is continuously outputting values of type @b@,
 while performing side effects in @m@.
 
-An initial encoding was chosen instead of the final encoding known from e.g. @list-transformer@, @dunai@, @machines@, @streaming@, ...,
-because the initial encoding is much more amenable to compiler optimizations
-than the final encoding, which is:
+A coalgebraic encoding was chosen instead of the direct recursion known from e.g. @list-transformer@, @dunai@, @machines@, @streaming@, ...,
+because the coalgebraic encoding is much more amenable to compiler optimizations
+than the coalgebraic encoding, which is:
 
 @
-  data StreamFinalT m b = StreamFinalT (m (b, StreamFinalT m b))
+  data StreamRecursiveT m b = StreamRecursiveT (m (b, StreamRecursiveT m b))
 @
 
 When two streams are composed, GHC can often optimize the combined step function,
-resulting in a faster streams than what the final encoding can ever achieve,
-because the final encoding has to step through every continuation.
+resulting in a faster streams than what the coalgebraic encoding can ever achieve,
+because the coalgebraic encoding has to step through every continuation.
 Put differently, the compiler can perform static analysis on the state types of initially encoded state machines,
-while the final encoding knows its state only at runtime.
+while the coalgebraic encoding knows its state only at runtime.
 
 This performance gain comes at a peculiar cost:
 Recursive definitions /of/ streams are not possible, e.g. an equation like:
@@ -411,7 +411,7 @@ fixStream' transformState transformStep =
 {- | The solution to the equation @'fixA stream = stream <*> 'fixA' stream@.
 
 Such a fix point operator needs to be used instead of the above direct definition because recursive definitions of streams
-loop at runtime due to the initial encoding of the state.
+loop at runtime due to the coalgebraic encoding of the state.
 -}
 fixA :: (Applicative m) => StreamT m (a -> a) -> StreamT m a
 fixA StreamT {state, step} = fixStream (JointState state) $

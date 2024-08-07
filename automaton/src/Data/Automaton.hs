@@ -57,7 +57,7 @@ import Data.Stream.Result
 
 -- * Constructing automata
 
-{- | An effectful automaton in initial encoding.
+{- | An effectful automaton in coalgebraic encoding.
 
 * @m@: The monad in which the automaton performs side effects.
 * @a@: The type of inputs the automaton constantly consumes.

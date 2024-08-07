@@ -28,10 +28,10 @@ import Control.Monad.Schedule.Class
 
 -- automaton
 import Data.Automaton
-import Data.Automaton.Final (getFinal, toFinal)
+import Data.Automaton.Recursive (getRecursive, toRecursive)
 import Data.Stream
-import Data.Stream.Final qualified as StreamFinal
 import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
+import Data.Stream.Recursive qualified as StreamRecursive
 import Data.Stream.Result
 
 -- rhine
@@ -49,9 +49,9 @@ scheduleList automatons0 =
   Automaton $
     Stateful $
       StreamT
-        { state = (getFinal . toFinal <$> automatons0, [])
+        { state = (getRecursive . toRecursive <$> automatons0, [])
         , step = \(automatons, running) -> ReaderT $ \a -> do
-            let bsAndConts = flip (runReaderT . StreamFinal.getFinal) a <$> automatons
+            let bsAndConts = flip (runReaderT . StreamRecursive.getRecursive) a <$> automatons
             (done, running') <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
             return $ Result (resultState <$> done, running') $ output <$> done
         }
