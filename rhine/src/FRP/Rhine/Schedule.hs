@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -19,35 +18,25 @@ module FRP.Rhine.Schedule where
 
 -- base
 import Control.Arrow
+import Data.Foldable1 (Foldable1 (foldrMap1))
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.Kind (Type)
 import Data.List.NonEmpty as N
-
--- transformers
-import Control.Monad.Trans.Reader
 
 -- monad-schedule
 import Control.Monad.Schedule.Class
 
 -- automaton
 import Data.Automaton
-import Data.Automaton.Recursive (getRecursive, toRecursive)
 import Data.Stream
-import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT, concatS)
-import Data.Stream.Recursive qualified as StreamRecursive
+import Data.Stream.Optimized (OptimizedStreamT (..), concatS, toStreamT)
 import Data.Stream.Result
 
--- rhine
+-- sop-core
+import Data.SOP (HCollapse (hcollapse), HSequence (htraverse'), I (..), K (K), NP (..), NS (..), SListI, apInjs_NP, hliftA, hzipWith, unI, type (-.->) (..))
 
-import Control.Monad.State (runState)
-import Control.Monad.State.Strict qualified as StateT
-import Data.Foldable1 (Foldable1 (foldrMap1))
-import Data.Function ((&))
-import Data.Functor ((<&>))
-import Data.Functor.Compose (Compose (..))
-import Data.Kind (Type)
-import Data.Maybe (catMaybes, mapMaybe)
-import Data.SOP (HAp, HCollapse (hcollapse), HPure (..), HSequence (htraverse'), I (..), K (K), NP (..), NS (..), Prod, SList (..), SListI, apInjs_NP, hliftA, hliftA2, hzipWith, sList, unI, type (-.->) (..))
-import Data.SOP.Classes (HAp (..))
-import Data.SOP.NP (liftA2_NP, liftA_NP)
+-- rhine
 import FRP.Rhine.Clock
 
 -- * Scheduling
