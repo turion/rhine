@@ -29,12 +29,12 @@ import Control.Monad.Schedule.Class
 
 -- automaton
 import Data.Automaton
-import Data.Stream
-import Data.Stream.Optimized (OptimizedStreamT (..), concatS, toStreamT)
+import Data.Stream hiding (concatS)
+import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
 import Data.Stream.Result
 
 -- sop-core
-import Data.SOP (HCollapse (hcollapse), HSequence (htraverse'), I (..), K (K), NP (..), NS (..), SListI, apInjs_NP, hliftA, hzipWith, unI, type (-.->) (..))
+import Data.SOP (HCollapse (hcollapse), HSequence (htraverse'), I (..), K (K), NP (..), NS (..), SListI, apInjs_NP, hliftA, hzipWith, unI)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -139,7 +139,7 @@ scheduleList automatons0 =
 Whenever one automaton returns a value, it is returned.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
-schedulePair automatonL automatonR = Automaton $ Data.Stream.Optimized.concatS $ fmap toList $ Stateful $ scheduleStreams' $ fmap (toStreamT . getAutomaton) $ automatonL :| [automatonR]
+schedulePair automatonL automatonR = concatS $ fmap toList $ scheduleList $ automatonL :| [automatonR]
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
