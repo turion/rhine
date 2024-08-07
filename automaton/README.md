@@ -25,7 +25,7 @@ data StreamT m a = StreamT (m (StreamT m a, a))
 ```
 Semantically, there is no big difference between them, and in nearly all cases you can map the coalgebraic encoding onto the recursive one and vice versa,
 by means of the final coalgebra.
-(For the single edge case, see [the section in `Data.Automaton` about recursive definitions](hackage.haskell.org/package/automaton/docs/Data.Automaton.html).)
+(For the few edge cases, see [the section in `Data.Automaton` about recursive definitions](hackage.haskell.org/package/automaton/docs/Data.Automaton.html).)
 But when composing streams,
 the coalgebraic encoding will often be more performant that than the recursive one because GHC can optimise the joint state and step functions of the streams.
 
