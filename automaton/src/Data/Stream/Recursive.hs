@@ -16,7 +16,7 @@ One step of the stream transformer performs a monadic action and results in an o
 -}
 newtype Recursive m a = Recursive {getRecursive :: m (Result (Recursive m a) a)}
 
-{- | Translate a coalgebraicly encoded stream into a recursive one.
+{- | Translate a coalgebraically encoded stream into a recursive one.
 
 This is usually a performance penalty.
 -}
@@ -24,7 +24,7 @@ toRecursive :: (Functor m) => StreamT m a -> Recursive m a
 toRecursive automaton = Recursive $ mapResultState toRecursive <$> stepStream automaton
 {-# INLINE toRecursive #-}
 
-{- | Translate a recursive stream into a coalgebraicly encoded one.
+{- | Translate a recursive stream into a coalgebraically encoded one.
 
 The internal state is the stream itself.
 -}
