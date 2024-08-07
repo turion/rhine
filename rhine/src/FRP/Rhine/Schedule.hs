@@ -18,26 +18,78 @@ module FRP.Rhine.Schedule where
 
 -- base
 import Control.Arrow
+import Data.Foldable1 (Foldable1 (foldrMap1))
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.Kind (Type)
 import Data.List.NonEmpty as N
-
--- transformers
-import Control.Monad.Trans.Reader
 
 -- monad-schedule
 import Control.Monad.Schedule.Class
 
 -- automaton
 import Data.Automaton
-import Data.Automaton.Recursive (getRecursive, toRecursive)
-import Data.Stream
+import Data.Stream hiding (concatS)
 import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
-import Data.Stream.Recursive qualified as StreamRecursive
 import Data.Stream.Result
+
+-- sop-core
+import Data.SOP (HCollapse (hcollapse), HSequence (htraverse'), I (..), K (K), NP (..), NS (..), SListI, apInjs_NP, hliftA, hzipWith, unI)
 
 -- rhine
 import FRP.Rhine.Clock
 
 -- * Scheduling
+
+newtype Step m b state = Step {getStep :: ResultStateT state m b}
+
+newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
+newtype RunningResultT m b state = RunningResultT {getRunningResultT :: m (RunningResult b state)}
+
+apInjsNPNonEmpty :: (SListI xs) => NP f (x ': xs) -> NonEmpty (NS f (x ': xs))
+apInjsNPNonEmpty (fx :* fxs) = Z fx :| (S <$> apInjs_NP fxs)
+
+data Streams m b = forall state (states :: [Type]).
+  (SListI states) =>
+  Streams
+  { states :: NP I (state ': states)
+  , steps :: NP (Step m b) (state ': states)
+  }
+
+buildStreams :: StreamT m b -> Streams m b
+buildStreams StreamT {state, step} =
+  Streams
+    { states = I state :* Nil
+    , steps = Step (ResultStateT step) :* Nil
+    }
+
+consStreams :: StreamT m b -> Streams m b -> Streams m b
+consStreams StreamT {state, step} Streams {states, steps} =
+  Streams
+    { states = I state :* states
+    , steps = Step (ResultStateT step) :* steps
+    }
+
+scheduleStreams :: (MonadSchedule m, Functor m, Applicative m) => Streams m b -> StreamT m (NonEmpty b)
+scheduleStreams Streams {states, steps} =
+  StreamT
+    { state = (apInjsNPNonEmpty states, [])
+    , step = \(restingStates, runningStates) ->
+        fmap (htraverse' getRunningResultT . hzipWith (\Step {getStep} -> RunningResultT . fmap RunningResult . getResultStateT getStep . unI) steps) restingStates
+          & flip appendList runningStates
+          & schedule
+          & fmap
+            ( \(finished, running) ->
+                let finishedStates = fmap (hliftA (I . resultState . getRunningResult)) finished
+                    outputs =
+                      finished
+                        <&> (hliftA (getRunningResult >>> output >>> K) >>> hcollapse)
+                 in Result (finishedStates, running) outputs
+            )
+    }
+
+scheduleStreams' :: (MonadSchedule m, Applicative m) => NonEmpty (StreamT m b) -> StreamT m (NonEmpty b)
+scheduleStreams' ne = scheduleStreams $ foldrMap1 buildStreams consStreams ne
 
 {- | Run several automata concurrently.
 
@@ -48,35 +100,15 @@ scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (Automaton m a b) -> Auto
 scheduleList automatons0 =
   Automaton $
     Stateful $
-      StreamT
-        { state = (getRecursive . toRecursive <$> automatons0, [])
-        , step = \(automatons, running) -> ReaderT $ \a -> do
-            let bsAndConts = flip (runReaderT . StreamRecursive.getRecursive) a <$> automatons
-            (done, running') <- schedule (N.head bsAndConts :| N.tail bsAndConts ++ running)
-            return $ Result (resultState <$> done, running') $ output <$> done
-        }
+      scheduleStreams' $
+        toStreamT . getAutomaton <$> automatons0
 
 {- | Run two automata concurrently.
 
 Whenever one automaton returns a value, it is returned.
-
-This is similar to 'scheduleList', but more efficient.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
-schedulePair (Automaton automatonL) (Automaton automatonR) = Automaton $! Stateful $! scheduleStreams (toStreamT automatonL) (toStreamT automatonR)
-  where
-    scheduleStreams :: (Monad m, MonadSchedule m) => StreamT m b -> StreamT m b -> StreamT m b
-    scheduleStreams (StreamT stateL0 stepL) (StreamT stateR0 stepR) =
-      StreamT
-        { state = (stepL stateL0, stepR stateR0)
-        , step
-        }
-      where
-        step (runningL, runningR) = do
-          result <- race runningL runningR
-          case result of
-            Left (Result stateL' b, runningR') -> return $ Result (stepL stateL', runningR') b
-            Right (runningL', Result stateR' b) -> return $ Result (runningL', stepR stateR') b
+schedulePair automatonL automatonR = concatS $ fmap toList $ scheduleList $ automatonL :| [automatonR]
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
