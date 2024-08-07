@@ -19,7 +19,7 @@ This is a stream because you can repeatedly call `step` on the `state` and produ
 while mutating the internal state.
 It is effectful because each step performs a side effect in `m`, typically a monad.
 
-The definitions you will most often find in the wild is a direct fixpoint, or recursive datatype:
+The definition you will most often find in the wild is a direct fixpoint, or recursive datatype:
 ```haskell
 data StreamT m a = StreamT (m (StreamT m a, a))
 ```
@@ -27,7 +27,7 @@ Semantically, there is no big difference between them, and in nearly all cases y
 by means of the final coalgebra.
 (For the few edge cases, see [the section in `Data.Automaton` about recursive definitions](hackage.haskell.org/package/automaton/docs/Data.Automaton.html).)
 But when composing streams,
-the coalgebraic encoding will often be more performant that than the recursive one because GHC can optimise the joint state and step functions of the streams.
+the coalgebraic encoding will usually be more performant that than the recursive one because GHC can optimise the joint state and step functions of the streams.
 
 ### How are these automata?
 

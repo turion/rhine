@@ -183,7 +183,7 @@ stepOptimizedStream (Stateful stream) = mapResultState Stateful <$> stepStream s
 stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 {-# INLINE stepOptimizedStream #-}
 
-{- | Translate to the coalgebraic encoding of streams.
+{- | Translate to the recursive encoding of streams.
 
 This will typically be a performance penalty.
 -}
@@ -194,7 +194,7 @@ toRecursive (Stateless f) = go
     go = Recursive $ Result go <$> f
 {-# INLINE toRecursive #-}
 
-{- | Translate a stream from coalgebraic encoding to stateful, coalgebraic encoding.
+{- | Translate a stream from recursive encoding to stateful, coalgebraic encoding.
   The internal state is the stream itself.
 -}
 fromRecursive :: Recursive m a -> OptimizedStreamT m a
