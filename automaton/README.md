@@ -15,7 +15,7 @@ data StreamT m a = forall s.
   , step :: s -> m (s, a)
   }
 ```
-This is an stream because you can repeatedly call `step` on the `state` and produce output values `a`,
+This is a stream because you can repeatedly call `step` on the `state` and produce output values `a`,
 while mutating the internal state.
 It is effectful because each step performs a side effect in `m`, typically a monad.
 
