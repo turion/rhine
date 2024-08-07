@@ -46,34 +46,6 @@ newtype Step m b state = Step {getStep :: ResultStateT state m b}
 newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
 newtype RunningResultT m b state = RunningResultT {getRunningResultT :: m (RunningResult b state)}
 
-{-
--- n-ary nonempty product
-data NNEP f ss where
-  ZNE :: f s -> NP (Compose Maybe f) ss -> NNEP f (s ': ss)
-  SNE :: NNEP f (s2 ': ss) -> NNEP f (s1 ': s2 ': ss)
-
-type instance Prod NNEP = NP
-
-instance HAp NNEP where
-  hap (s :* ss) (ZNE fs nnep) = ZNE (apFn s fs) $ hzipWith (\fn -> Compose . fmap (apFn fn) . getCompose) ss nnep
-  hap (_ :* ss) (SNE nnep) = SNE $ hap ss nnep
-  hap Nil x = case x of {}
-
-nnepToNP :: NNEP f states -> NP (Compose Maybe f) states
-nnepToNP (ZNE fs np) = Compose (Just fs) :* np
-nnepToNP (SNE nnep) = Compose Nothing :* nnepToNP nnep
-
-consNNEP :: f x -> NNEP f xs -> NNEP f (x ': xs)
-consNNEP fx nnep = ZNE fx $ nnepToNP nnep
-
-productToNNEP :: NP f (x ': xs) -> NNEP f (x ': xs)
-productToNNEP (x :* xs) = ZNE x $ hliftA (Compose . Just) xs
-
-nnepToNonEmpty :: NNEP f (state ': states) -> NonEmpty (NS f (state ': states))
-nnepToNonEmpty (ZNE state states) = Z state :| (S <$> mapMaybe (htraverse' getCompose) (apInjs_NP states))
-nnepToNonEmpty (SNE states) = S <$> nnepToNonEmpty states
--}
-
 apInjsNPNonEmpty :: (SListI xs) => NP f (x ': xs) -> NonEmpty (NS f (x ': xs))
 apInjsNPNonEmpty (fx :* fxs) = Z fx :| (S <$> apInjs_NP fxs)
 
