@@ -92,3 +92,4 @@ waitUTC unscaledClockS =
             return (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
         return (runningClock, initTime)
     }
+{-# INLINE waitUTC #-}
