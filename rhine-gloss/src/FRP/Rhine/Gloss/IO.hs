@@ -126,7 +126,7 @@ data GlossEventClockIO = GlossEventClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
   type Time GlossEventClockIO = Float
   type Tag GlossEventClockIO = Event
-  initClock _ = return (constM getEvent, 0)
+  initClock _ = constM getEvent
     where
       getEvent = do
         GlossEnv {eventVar, timeRef} <- GlossConcT ask
@@ -148,7 +148,7 @@ data GlossSimClockIO = GlossSimClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
   type Time GlossSimClockIO = Float
   type Tag GlossSimClockIO = ()
-  initClock _ = return (constM getTime &&& arr (const ()), 0)
+  initClock _ = constM getTime &&& arr (const ())
     where
       getTime = GlossConcT $ do
         GlossEnv {timeVar} <- ask

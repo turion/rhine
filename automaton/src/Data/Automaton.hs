@@ -522,3 +522,15 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 -- | Remembers the last 'Just' value, defaulting to the given initialisation value.
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
+
+-- | Caches the first input value.
+cacheFirst :: Applicative m => Automaton m a a
+cacheFirst = unfold Nothing $ \aIn -> maybe (Result (Just aIn) aIn) $ \aCached -> Result (Just aCached) aCached
+
+-- | Perform the action on the first tick, caching the result and outputting it forever.
+onStart :: Monad m => (a -> m b) -> Automaton m a b
+onStart f = arrM f >>> cacheFirst
+
+-- | Like 'onStart', but not requiring input
+onStart_ :: Monad m => m b -> Automaton m arbitrary b
+onStart_ = onStart . const

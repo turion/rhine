@@ -102,15 +102,15 @@ instance
   type Time (AudioClock rate bufferSize) = UTCTime
   type Tag (AudioClock rate bufferSize) = Maybe Double
 
-  initClock audioClock = do
+  initClock audioClock =
     let
       step =
         picosecondsToDiffTime $
           round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double) -- The only sufficiently precise conversion function
       bufferSize = theBufferSize audioClock
 
-      runningClock :: (MonadIO m) => UTCTime -> Maybe Double -> Automaton m () (UTCTime, Maybe Double)
-      runningClock initialTime maybeWasLate = safely $ do
+      runningClock :: (MonadIO m) => UTCTime -> Maybe Double -> AutomatonExcept () (UTCTime, Maybe Double) m void
+      runningClock initialTime maybeWasLate = do
         bufferFullTime <- try $ proc () -> do
           n <- count -< ()
           let nextTime = (realToFrac step * fromIntegral (n :: Int)) `addUTCTime` initialTime
@@ -120,12 +120,12 @@ instance
         let
           lateDiff = currentTime `diffTime` bufferFullTime
           late = if lateDiff > 0 then Just lateDiff else Nothing
-        safe $ runningClock bufferFullTime late
-    initialTime <- liftIO getCurrentTime
-    return
-      ( runningClock initialTime Nothing
-      , initialTime
-      )
+        runningClock bufferFullTime late
+     in
+      safely $ do
+        -- FIXME this is of course a bit inefficient because now we have the full monad in AutomatonExcept. We'd really need something like eolc's >>>= here
+        initialTime <- once_ $ liftIO getCurrentTime
+        runningClock initialTime Nothing
 
 instance GetClockProxy (AudioClock rate bufferSize)
 
@@ -150,11 +150,7 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
   type Time (PureAudioClock rate) = Double
   type Tag (PureAudioClock rate) = ()
 
-  initClock audioClock =
-    return
-      ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
-      , 0
-      )
+  initClock audioClock = arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
 
 instance GetClockProxy (PureAudioClock rate)
 
