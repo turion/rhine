@@ -38,6 +38,7 @@ import Data.Align
 import Data.Stream.Internal
 import Data.Stream.Result
 import Language.Haskell.TH (Code, Q)
+import Language.Haskell.TH.Syntax (Lift)
 
 -- * Creating streams
 
@@ -116,8 +117,96 @@ reactimateTH StreamTH {stateTH, context, stepTH} =
   ||]
 -}
 
+-- reactimateTH :: (Monad m) => StreamTH m () -> Code Q (m void)
+-- reactimateTH StreamTH {stateTH, context, stepTH} =
+--   [||
+--   let go s = $$(_)
+--    in go stateTH
+--   ||]
+
 reactimateStage :: (Monad m) => Code Q (StreamT m ()) -> Code Q (m void)
 reactimateStage stream = [||reactimate $$stream||]
+
+data StreamTH2 m a = forall s.
+  StreamTH2
+  { stateTH2 :: Code Q s
+  , stepTH2 :: forall r. Code Q s -> (Result (Code Q s) (Code Q a) -> Code Q (m r)) -> Code Q (m r)
+  -- , stepTH2 :: forall r. Code Q s -> Code Q (Result s a)
+  -- , stepTH2 :: forall r. Code Q s -> (Result (Code Q s) (Code Q a))
+
+  -- , stepTH2 :: forall r. Code Q s -> Code Q (m (Result s a))
+  }
+
+repeatTH2 :: (Lift a) => a -> StreamTH2 m a
+repeatTH2 a = StreamTH2 {stateTH2 = [||()||], stepTH2 = \_ k -> k $ Result [||()||] [||a||]}
+
+-- hoistTH2 :: (forall x. Code Q (m x) -> Code Q (n x)) -> StreamTH2 m a -> StreamTH2 n a
+-- hoistTH2 morph StreamTH2 {stateTH2, stepTH2} = StreamTH2 {stateTH2, stepTH2 = \s k -> morph $ stepTH2 s $ \result -> _ $ k result}
+
+reactimateTH2 :: (Monad m) => StreamTH2 m () -> Code Q (m void)
+reactimateTH2 StreamTH2 {stateTH2, stepTH2} =
+  [||
+  let
+    go s' = $$(stepTH2 [||s'||] $ \(Result s'' x) -> [||(\() -> go $$s'') $$x||])
+   in
+    go $$stateTH2
+  ||]
+
+unfoldTH2 :: s -> (s -> Result s a) -> StreamTH2 m a
+unfoldTH2 state step =
+  StreamTH2
+    { stateTH2 = _
+    , stepTH2 = \s k -> let foo = step _ in k _
+    }
+
+fmapTH :: (Code Q a -> Code Q b) -> StreamTH2 m a -> StreamTH2 m b
+fmapTH f StreamTH2 {stateTH2, stepTH2} =
+  StreamTH2
+    { stateTH2
+    , stepTH2 = \s k -> _
+    }
+
+instance Functor (StreamTH2 m) where
+  fmap f StreamTH2 {stateTH2, stepTH2} =
+    StreamTH2
+      { stateTH2
+      , stepTH2 = \s k -> stepTH2 s $ \Result {output, resultState} -> k $! Result resultState $ [||f $$output||]
+      }
+
+data StreamTH3 m a = forall s.
+  StreamTH3
+  { stateTH3 :: Code Q s
+  , stepTH3 :: Code Q s -> Code Q (m (Result s a))
+  }
+
+reactimateTH3 :: (Monad m) => StreamTH3 m () -> Code Q (m void)
+reactimateTH3 StreamTH3 {stateTH3, stepTH3} = [|| let go s = $$stepTH3 s >>= _ in go $$stateTH3 ||]
+
+thing' :: (Code Q a -> Code Q b) -> Code Q (a -> b)
+thing' f = [|| \a -> _ ||]
+
+thing :: Code Q (a -> b) -> Code Q a -> Code Q b
+thing f a = [||$$f $$a||]
+
+data StreamTH4 m a = forall s .
+  StreamTH4
+  { stateTH4 :: s
+  , stepTH4 :: Code Q (s -> m (Result s a))
+  }
+
+repeat :: Monad m => a -> StreamTH4 m a
+repeat a = StreamTH4 a [||\a -> return $ Result a a ||]
+
+repeatTH4 :: StreamTH4 IO Int
+repeatTH4 = StreamTH4 () [||\() -> return $ Result () 1 ||]
+
+StreamTH4 repeatTH4state repeatTH4step =  repeatTH4
+
+reactimateTH4 :: (Monad m) => StreamTH4 m () -> Code Q (m void)
+reactimateTH4 StreamTH4 {stateTH4, stepTH4} = [|| let go s = $$stepTH4 s >>= (go . resultState) in go stateTH4 ||]
+
+unth4 :: StreamTH4 m a -> (forall s . (s, Code Q (s -> StreamT m a)))
+unth4 StreamTH4 {stateTH4, stepTH4} = [|| StreamT $$stateTH4 $$stepTH4 ||]
 
 -- | Initialise with an internal state, update the state and produce output without side effects.
 unfold :: (Applicative m) => s -> (s -> Result s a) -> StreamT m a

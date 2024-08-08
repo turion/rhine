@@ -46,7 +46,7 @@ import Data.VectorSpace (VectorSpace (..))
 import Data.Semialign (Align (..), Semialign (..))
 
 -- automaton
-import Data.Stream (StreamT (..), fixStream)
+import Data.Stream (StreamT (..), fixStream, StreamTH4 (..), repeatTH4, repeatTH4state)
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
@@ -56,6 +56,7 @@ import Data.Stream.Optimized (
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Result
 import Language.Haskell.TH (Q, TExp, Code)
+import Data.Stream (repeatTH4step)
 
 -- * Constructing automata
 
@@ -529,3 +530,6 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 -- | Remembers the last 'Just' value, defaulting to the given initialisation value.
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
+
+mystream :: StreamT IO Int
+mystream = StreamT repeatTH4state $$repeatTH4step
