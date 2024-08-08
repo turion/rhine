@@ -168,6 +168,8 @@ reactimate (Stateless f) = go
     go = f *> go
 {-# INLINE reactimate #-}
 
+-- reactimateTH 
+
 {- | A stateless stream.
 
 This function is typically preferable over 'Data.Stream.constM',

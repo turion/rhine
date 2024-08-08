@@ -129,6 +129,7 @@ instance
   type Time (RescaledClock cl time) = time
   type Tag (RescaledClock cl time) = Tag cl
   initClock (RescaledClock cl f) = initClock cl >>> first (arr f)
+  {-# INLINE initClock #-}
 
 {- | Instead of a mere function as morphism of time domains,
    we can transform one time domain into the other with an effectful morphism.
@@ -174,6 +175,7 @@ instance
   type Time (RescaledClockS m cl time tag) = time
   type Tag (RescaledClockS m cl time tag) = tag
   initClock RescaledClockS {..} = initClock unscaledClockS >>> rescaleS
+  {-# INLINE initClock #-}
 
 -- | A 'RescaledClockM' is trivially a 'RescaledClockS'.
 rescaledClockMToS ::
@@ -206,6 +208,7 @@ instance
   type Time (HoistClock m1 m2 cl) = Time cl
   type Tag (HoistClock m1 m2 cl) = Tag cl
   initClock HoistClock {..} = hoistS monadMorphism $ initClock unhoistedClock
+  {-# INLINE initClock #-}
 
 -- | Lift a clock type into a monad transformer.
 type LiftClock m t cl = HoistClock m (t m) cl

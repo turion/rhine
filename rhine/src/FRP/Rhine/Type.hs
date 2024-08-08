@@ -18,7 +18,6 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer)
-import FRP.Rhine.SN
 import FRP.Rhine.Schedule (In, Out)
 
 {- |
@@ -67,14 +66,14 @@ feedbackRhine ::
   ( Clock m (In cl)
   , Clock m (Out cl)
   , Time (In cl) ~ Time cl
-  , Time (Out cl) ~ Time cl
+  , Time (Out cl) ~ Time cl, GetClockProxy cl, Monad m
   ) =>
   ResamplingBuffer m (Out cl) (In cl) d c ->
   Rhine m cl (a, c) (b, d) ->
   Rhine m cl a b
 feedbackRhine buf Rhine {..} =
   Rhine
-    { sn = Feedback buf sn
+    { sn = feedbackSN buf sn
     , clock
     }
 {-# INLINE feedbackRhine #-}

@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {- | Translate clocked signal processing components to stream functions without explicit clock types.
 
@@ -23,7 +25,7 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Util
 import FRP.Rhine.ResamplingBuffer
-import FRP.Rhine.SN
+import FRP.Rhine.Schedule (In, Out, SequentialClock)
 
 {- | Run a clocked signal function as an automaton,
    accepting the timestamps and tags as explicit inputs.
@@ -38,30 +40,41 @@ eraseClockClSF proxy clsf = proc (time, tag, a) -> do
   runReaderS clsf -< (timeInfo, a)
 {-# INLINE eraseClockClSF #-}
 
-{- | Run a signal network as an automaton.
+-- Andras' trick: Encode in the domain
+newtype SN m cl a b = SN { getSN :: Automaton m (Time cl, Tag cl, Maybe a) (Maybe b) }
+eraseClockSN = getSN
 
-   Depending on the incoming clock,
-   input data may need to be provided,
-   and depending on the outgoing clock,
-   output data may be generated.
-   There are thus possible invalid inputs,
-   which 'eraseClockSN' does not gracefully handle.
--}
-eraseClockSN ::
-  (Monad m, Clock m cl, GetClockProxy cl) =>
-  SN m cl a b ->
-  Automaton m (Time cl, Tag cl, Maybe a) (Maybe b)
+instance GetClockProxy cl => ToClockProxy (SN m cl a b) where
+  type Cl (SN m cl a b) = cl
+
 -- A synchronous signal network is run by erasing the clock from the clocked signal function.
-eraseClockSN sn@(Synchronous clsf) = proc (time, tag, Just a) -> do
-  b <- eraseClockClSF (toClockProxy sn) clsf -< (time, tag, a)
+synchronous :: forall cl m a b .     ( cl ~ In cl, cl ~ Out cl, Monad m, Clock m cl, GetClockProxy cl) =>
+    ClSF m cl a b ->
+    SN   m cl a b
+
+synchronous clsf = SN $ proc (time, tag, Just a) -> do
+  b <- eraseClockClSF (getClockProxy @cl) clsf -< (time, tag, a)
   returnA -< Just b
+{-# INLINE synchronous #-}
 
 -- A sequentially composed signal network may either be triggered in its first component,
 -- or its second component. In either case,
 -- the resampling buffer (which connects the two components) may be triggered,
 -- but only if the outgoing clock of the first component ticks,
 -- or the incoming clock of the second component ticks.
-eraseClockSN (Sequential sn1 resBuf sn2) =
+sequential ::     ( Clock m clab, Clock m clcd
+    , Clock m (Out clab), Clock m (Out clcd)
+    , Clock m (In  clab), Clock m (In  clcd)
+    , GetClockProxy clab, GetClockProxy clcd
+    , Time clab ~ Time clcd
+    , Time clab ~ Time (Out clab)
+    , Time clcd ~ Time (In  clcd), Monad m
+    ) =>
+    SN               m      clab            a b     ->
+    ResamplingBuffer m (Out clab) (In clcd)   b c   ->
+    SN               m                clcd      c d ->
+    SN m (SequentialClock   clab      clcd) a     d
+sequential sn1 resBuf sn2  = SN $
   let
     proxy1 = toClockProxy sn1
     proxy2 = toClockProxy sn2
@@ -79,25 +92,33 @@ eraseClockSN (Sequential sn1 resBuf sn2) =
           returnA -< Nothing
         Right tagR -> do
           eraseClockSN sn2 -< (time, tagR, join maybeC)
-eraseClockSN (Parallel snL snR) = proc (time, tag, maybeA) -> do
+{-# INLINE sequential #-}
+
+parallel snL snR = SN $ proc (time, tag, maybeA) -> do
   case tag of
     Left tagL -> eraseClockSN snL -< (time, tagL, maybeA)
     Right tagR -> eraseClockSN snR -< (time, tagR, maybeA)
-eraseClockSN (Postcompose sn clsf) =
+{-# INLINE parallel #-}
+
+postcompose sn clsf = SN $
   let
     proxy = toClockProxy sn
    in
     proc input@(time, tag, _) -> do
       bMaybe <- eraseClockSN sn -< input
       mapMaybeS $ eraseClockClSF (outProxy proxy) clsf -< (time,,) <$> outTag proxy tag <*> bMaybe
-eraseClockSN (Precompose clsf sn) =
+{-# INLINE postcompose #-}
+
+precompose clsf sn = SN $
   let
     proxy = toClockProxy sn
    in
     proc (time, tag, aMaybe) -> do
       bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
       eraseClockSN sn -< (time, tag, bMaybe)
-eraseClockSN (Feedback ResamplingBuffer {buffer, put, get} sn) =
+{-# INLINE precompose #-}
+
+feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $
   let
     proxy = toClockProxy sn
    in
@@ -117,7 +138,9 @@ eraseClockSN (Feedback ResamplingBuffer {buffer, put, get} sn) =
           timeInfo <- genTimeInfo (outProxy proxy) -< (time, tagOut)
           buf'' <- arrM $ uncurry $ uncurry put -< ((timeInfo, d), buf')
           returnA -< (Just b, buf'')
-eraseClockSN (FirstResampling sn buf) =
+{-# INLINE feedbackSN #-}
+
+firstResampling sn buf = SN $
   let
     proxy = toClockProxy sn
    in
@@ -130,7 +153,7 @@ eraseClockSN (FirstResampling sn buf) =
           _ -> Nothing
       dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) buf -< resBufInput
       returnA -< (,) <$> bMaybe <*> join dMaybe
-{-# INLINE eraseClockSN #-}
+{-# INLINE firstResampling #-}
 
 {- | Translate a resampling buffer into an automaton.
 

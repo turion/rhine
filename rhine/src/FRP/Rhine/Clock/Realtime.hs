@@ -89,3 +89,4 @@ waitUTC unscaledClockS =
         now <- constM getCurrentTime -< ()
         returnA -< (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
     }
+{-# INLINE waitUTC #-}

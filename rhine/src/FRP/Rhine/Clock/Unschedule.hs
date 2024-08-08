@@ -42,3 +42,4 @@ instance (TimeDomain (Time cl), Clock (ScheduleT (Diff (Time cl)) m) cl, Monad m
     where
       run :: ScheduleT (Diff (Time cl)) m a -> m a
       run = runScheduleT scheduleWait
+  {-# INLINE initClock #-}
