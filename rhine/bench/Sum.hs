@@ -28,6 +28,7 @@ benchmarks =
     "Sum"
     [ bench "rhine embed" $ nf rhine nMax
     , bench "rhine flow" $ nf rhineFlow nMax
+    , bench "rhine flow IO" $ nfAppIO rhineMS nMax
     , bench "automaton embed" $ nf automaton nMax
     , bench "automatonNoEmbed" $ nf automatonNoEmbed nMax
     , bench "automatonEmbed" $ nf automatonEmbed nMax
@@ -50,6 +51,21 @@ rhineFlow n =
         if k < n
           then returnA -< ()
           else arrMCl Left -< s
+
+myclock :: IOClock (ExceptT Int IO) (Millisecond 0)
+myclock = ioClock waitClock
+
+rhineMS :: Int -> IO Int
+rhineMS n =
+  fmap (either id absurd) $
+  runExceptT $
+    flow $
+      (@@ myclock) $ proc () -> do
+        k <- count -< ()
+        s <- sumN -< k
+        if k < n
+          then returnA -< ()
+          else throwS -< s
 
 automaton :: Int -> Int
 automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
