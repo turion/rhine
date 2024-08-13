@@ -67,6 +67,7 @@ rhineMS n =
           then returnA -< ()
           else throwS -< s
 
+-- embed cannot be faster because it receives a list of boxed ints, whereas the flow version can unbox it.
 automaton :: Int -> Int
 automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
   where
