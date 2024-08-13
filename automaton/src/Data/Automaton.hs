@@ -13,7 +13,7 @@ module Data.Automaton where
 import Control.Applicative (Alternative (..))
 import Control.Arrow
 import Control.Category
-import Control.Monad ((<=<))
+import Control.Monad ((<=<), foldM)
 import Control.Monad.Fix (MonadFix (mfix))
 import Data.Coerce (coerce)
 import Data.Function ((&))
@@ -371,12 +371,7 @@ embed ::
   -- | The input values
   [a] ->
   m [b]
-embed (Automaton (Stateful StreamT {state, step})) = go state
-  where
-    go _s [] = return []
-    go s (a : as) = do
-      Result s' b <- runReaderT (step s) a
-      (b :) <$> go s' as
+embed (Automaton (Stateful StreamT {state, step})) = fmap (fmap output) $ foldM (\(Result s bs) a -> fmap (: bs) <$> runReaderT (step s) a) $ Result state []
 embed (Automaton (Stateless m)) = mapM $ runReaderT m
 
 -- * Modifying automata
