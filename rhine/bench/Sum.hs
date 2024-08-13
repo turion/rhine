@@ -28,7 +28,7 @@ benchmarks =
     "Sum"
     [ bench "rhine embed" $ nf rhine nMax
     , bench "rhine flow" $ nf rhineFlow nMax
-    , bench "rhine flow IO" $ nfAppIO rhineMS nMax
+    , bench "rhineMS" $ nfAppIO rhineMS nMax
     , bench "automaton embed" $ nf automaton nMax
     , bench "automatonNoEmbed" $ nf automatonNoEmbed nMax
     , bench "automatonEmbed" $ nf automatonEmbed nMax
