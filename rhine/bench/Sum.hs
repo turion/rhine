@@ -54,6 +54,7 @@ rhineFlow n =
 
 myclock :: IOClock (ExceptT Int IO) (Millisecond 0)
 myclock = ioClock waitClock
+{-# INLINE myclock #-}
 
 rhineMS :: Int -> IO Int
 rhineMS n =

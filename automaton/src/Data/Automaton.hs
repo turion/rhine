@@ -194,6 +194,12 @@ instance (Monad m) => Arrow (Automaton m) where
   first (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
   {-# INLINE first #-}
 
+  f &&& g = arr (\b -> (b,b)) >>> f *** g
+  {-# INLINE (&&&) #-} -- TODO inline second
+  f *** g = first f >>> arr swap >>> first g >>> arr swap
+      where swap ~(x,y) = (y,x)
+  {-# INLINE (***) #-}
+
 instance (Monad m) => ArrowChoice (Automaton m) where
   Automaton (Stateful (StreamT stateL0 stepL)) +++ Automaton (Stateful (StreamT stateR0 stepR)) =
     Automaton $!
@@ -509,6 +515,7 @@ prepend b0 automaton = proc a -> do
 -- | Like 'mappendFrom', initialised at 'mempty'.
 mappendS :: (Monoid w, Monad m) => Automaton m w w
 mappendS = mappendFrom mempty
+{-# INLINE mappendS #-}
 
 -- | Sum up all inputs so far, with an explicit initial value.
 sumFrom :: (VectorSpace v s, Monad m) => v -> Automaton m v v

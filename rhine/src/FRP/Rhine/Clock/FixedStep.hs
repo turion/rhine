@@ -54,6 +54,7 @@ instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n)
      in arr (const step)
           >>> accumulateWith (+) 0
           >>> arrM (\time -> wait step $> (time, ()))
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (FixedStep n)
 
