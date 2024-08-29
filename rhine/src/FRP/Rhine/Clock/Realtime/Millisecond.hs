@@ -9,8 +9,7 @@ Provides a clock that ticks at every multiple of a fixed number of milliseconds.
 module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
-import Control.Arrow (arr, first, second, (>>>))
-import Data.Functor ((<&>))
+import Control.Arrow (arr, second, (>>>))
 import GHC.TypeLits
 
 -- time
@@ -40,7 +39,7 @@ newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (Un
 instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
-  initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second snd))
+  initClock (Millisecond cl) = initClock cl >>> arr (second snd)
 
 instance GetClockProxy (Millisecond n)
 

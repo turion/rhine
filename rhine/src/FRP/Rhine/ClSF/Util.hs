@@ -33,9 +33,12 @@ import Data.VectorSpace
 import Data.TimeDomain
 
 -- rhine
+
+import Data.Functor ((<&>))
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except
 import FRP.Rhine.Clock
+import Data.Maybe (fromMaybe)
 
 -- * Read time information
 
@@ -54,7 +57,7 @@ timeInfoOf :: (Monad m) => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = constM $ asks f
 
 -- | Continuously return the time difference since the last tick.
-sinceLastS :: (Monad m) => ClSF m cl a (Diff (Time cl))
+sinceLastS :: (Monad m) => ClSF m cl a (Maybe (Diff (Time cl)))
 sinceLastS = timeInfoOf sinceLast
 
 -- | Continuously return the time difference since clock initialisation.
@@ -161,7 +164,7 @@ integralFrom ::
   BehaviorF m td v v
 integralFrom v0 = proc v -> do
   _sinceLast <- timeInfoOf sinceLast -< ()
-  sumFrom v0 -< _sinceLast *^ v
+  sumFrom v0 -< maybe zeroVector (*^ v) _sinceLast
 
 -- | Euler integration, with zero initial offset.
 integral ::
@@ -182,11 +185,11 @@ derivativeFrom ::
   , s ~ Diff td
   ) =>
   v ->
-  BehaviorF m td v v
+  BehaviorF m td v (Maybe v)
 derivativeFrom v0 = proc v -> do
   vLast <- delay v0 -< v
   TimeInfo {..} <- timeInfo -< ()
-  returnA -< (v ^-^ vLast) ^/ sinceLast
+  returnA -< ((v ^-^ vLast) ^/) <$> sinceLast
 
 -- | Numerical derivative with input initialised to zero.
 derivative ::
@@ -194,7 +197,7 @@ derivative ::
   , VectorSpace v s
   , s ~ Diff td
   ) =>
-  BehaviorF m td v v
+  BehaviorF m td v (Maybe v)
 derivative = derivativeFrom zeroVector
 
 {- | Like 'derivativeFrom', but uses three samples to compute the derivative.
@@ -208,11 +211,11 @@ threePointDerivativeFrom ::
   ) =>
   -- | The initial position
   v ->
-  BehaviorF m td v v
+  BehaviorF m td v (Maybe v)
 threePointDerivativeFrom v0 = proc v -> do
   dv <- derivativeFrom v0 -< v
-  dv' <- delay zeroVector -< dv
-  returnA -< (dv ^+^ dv') ^/ 2
+  dv' <- delay (Just zeroVector) -< dv -- FIXME think about this. Or just delay 2 samples?
+  returnA -< ((^+^) <$> dv <*> dv') <&> (^/ 2)
 
 {- | Like 'threePointDerivativeFrom',
    but with the initial position initialised to 'zeroVector'.
@@ -223,7 +226,7 @@ threePointDerivative ::
   , s ~ Diff td
   , Num s
   ) =>
-  BehaviorF m td v v
+  BehaviorF m td v (Maybe v)
 threePointDerivative = threePointDerivativeFrom zeroVector
 
 -- ** Averaging and filters
@@ -269,7 +272,7 @@ averageFrom ::
 averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = exp $ -(sinceLast / t)
+    weight = exp $ -(maybe 0 (/ t) sinceLast)
   weightedAverageFrom v0 -< (v, weight)
 
 -- | An average, or low pass, initialised to zero.
@@ -303,7 +306,7 @@ averageLinFrom ::
 averageLinFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = t / (sinceLast + t)
+    weight = t / (fromMaybe 0 sinceLast + t)
   weightedAverageFrom v0 -< (v, weight)
 
 -- | Linearised version of 'average'.

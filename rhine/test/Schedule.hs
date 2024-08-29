@@ -20,7 +20,7 @@ import Control.Monad.Schedule.Trans (Schedule, runScheduleT, wait)
 import Data.Automaton (accumulateWith, constM, embed)
 
 -- rhine
-import FRP.Rhine.Clock (Clock (initClock), RunningClockInit)
+import FRP.Rhine.Clock (Clock (initClock), RunningClock)
 import FRP.Rhine.Clock.FixedStep (FixedStep (FixedStep))
 import FRP.Rhine.Schedule
 import Util
@@ -42,8 +42,8 @@ tests =
         [ testCase "chronological ticks" $ do
             let clA = FixedStep @5
                 clB = FixedStep @3
-                (runningClockA, _) = runSchedule (initClock clA :: RunningClockInit (Schedule Integer) Integer ())
-                (runningClockB, _) = runSchedule (initClock clB :: RunningClockInit (Schedule Integer) Integer ())
+                runningClockA = initClock clA :: RunningClock (Schedule Integer) Integer ()
+                runningClockB = initClock clB :: RunningClock (Schedule Integer) Integer ()
                 output = runSchedule $ embed (runningSchedule clA clB runningClockA runningClockB) $ replicate 6 ()
             output
               @?= [ (3, Right ())
@@ -58,7 +58,7 @@ tests =
         "ParallelClock"
         [ testCase "chronological ticks" $ do
             let
-              (runningClock, _time) = runSchedule (initClock $ ParallelClock (FixedStep @5) (FixedStep @3) :: RunningClockInit (Schedule Integer) Integer (Either () ()))
+              runningClock = initClock $ ParallelClock (FixedStep @5) (FixedStep @3) :: RunningClock (Schedule Integer) Integer (Either () ())
               output = runSchedule $ embed runningClock $ replicate 6 ()
             output
               @?= [ (3, Right ())

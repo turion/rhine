@@ -51,13 +51,10 @@ the input 'a' has to be given at all times, even those when it doesn't tick.
 eraseClock ::
   (Monad m, Clock m cl, GetClockProxy cl) =>
   Rhine m cl a b ->
-  m (Automaton m a (Maybe b))
-eraseClock Rhine {..} = do
-  (runningClock, initTime) <- initClock clock
-  -- Run the main loop
-  return $ proc a -> do
-    (time, tag) <- runningClock -< ()
-    eraseClockSN initTime sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
+  Automaton m a (Maybe b)
+eraseClock Rhine {..} = proc a -> do
+  (time, tag) <- initClock clock -< ()
+  eraseClockSN sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
 {-# INLINE eraseClock #-}
 
 {- |
