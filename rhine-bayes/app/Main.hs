@@ -177,7 +177,7 @@ emptyResult =
 
 -- | The number of particles used in the filter. Change according to available computing power.
 nParticles :: Int
-nParticles = 200
+nParticles = 100
 
 -- * Visualization
 
