@@ -9,9 +9,10 @@ module Data.Stream where
 
 -- base
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
-import Control.Monad ((<$!>))
+import Control.Monad (forM, (<$!>))
 import Data.Bifunctor (bimap)
 import Data.Function ((&))
+import Data.Functor.Compose (Compose (..))
 import Data.Monoid (Ap (..))
 import Prelude hiding (Applicative (..))
 
@@ -486,3 +487,14 @@ loop at runtime due to the coalgebraic encoding of the state.
 fixA :: (Applicative m) => StreamT m (a -> a) -> StreamT m a
 fixA StreamT {state, step} = fixStream (JointState state) $
   \stepA (JointState s ss) -> apResult <$> step s <*> stepA ss
+
+-- FIXME Generalisation in []
+runListS :: (Monad m) => StreamT (Compose m []) a -> StreamT m [a]
+runListS StreamT {state, step} =
+  StreamT
+    { state = [state]
+    , step = \states -> do
+        results <- forM states $ getCompose . step
+        let flatResults = concat results
+        pure $ Result (resultState <$> flatResults) (output <$> flatResults)
+    }
