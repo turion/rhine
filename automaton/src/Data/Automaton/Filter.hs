@@ -41,7 +41,9 @@ import Data.Semialign (Semialign (..))
 
 -- automaton
 import Data.Automaton
-import Data.Stream.Filter (FilterStream (..))
+import Data.Stream (hoist')
+import Data.Stream.Filter (FilterStream (..), streamFilter)
+import Data.Stream.Optimized (OptimizedStreamT (Stateful))
 
 {- | An automaton that filters or traverses its output using a type operator @f@.
 
@@ -76,6 +78,18 @@ arrFilter = FilterAutomaton . arr
 -- | Filter the input according to a predicate.
 filterS :: (Monad m, Filterable f, Applicative f) => (a -> Bool) -> FilterAutomaton m f a a
 filterS f = filter f id'
+
+{- | Given an @f@-effect in the step, push it into the output type.
+
+This works by internally tracking the @f@ effects in the state, and at the same time joining them in the output.
+
+For example, if @f@ is lists, and @automaton :: Automaton (Compose m []) a b@ creates a 2-element list at some point,
+the internal state of @automatonFilter automaton@ will split into two, and there are two outputs.
+
+Likewise, if @f@ is 'Maybe', and a 'Nothing' occurs at some point, then this automaton is deactivated forever.
+-}
+automatonFilter :: (Monad f, Traversable f, Monad m) => Automaton (Compose m f) a b -> FilterAutomaton m f a b
+automatonFilter = FilterAutomaton . Automaton . Stateful . getFilterStream . streamFilter . hoist' (\ramf -> Compose $ ReaderT $ getCompose . runReaderT ramf) . toStreamT
 
 -- | Like 'Category.id', but only requiring @'Applicative' f@.
 id' :: (Monad m, Applicative f) => FilterAutomaton m f a a

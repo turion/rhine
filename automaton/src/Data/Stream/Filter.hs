@@ -6,6 +6,7 @@ module Data.Stream.Filter where
 -- base
 import Control.Applicative (Alternative (..))
 import Control.Category (Category (..))
+import Control.Monad (forM, join)
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
 import Prelude hiding (filter, id, (.))
@@ -17,7 +18,8 @@ import Witherable (Filterable (..), Witherable (..))
 import Data.Align (Align (..), Semialign (..))
 
 -- automaton
-import Data.Stream (StreamT, constM)
+import Data.Stream (StreamT (..), constM)
+import Data.Stream.Result (unzipResult)
 
 {- | A stream that filters or traverses its output using a type operator @f@.
 
@@ -47,6 +49,27 @@ filterM = FilterStream . constM
 -- | Filter a stream according to a predicate.
 filterS :: (Monad m, Witherable f, Applicative f) => (a -> Bool) -> FilterStream m f a -> FilterStream m f a
 filterS f = FilterStream . fmap (filter f) . getFilterStream
+
+{- | Given an @f@-effect in the step function of a stream, push it into the output type.
+
+This works by internally tracking the @f@ effects in the state, and at the same time joining them in the output.
+
+For example, if @f@ is lists, and @stream :: StreamT (Compose m []) a@ creates a 2-element list at some point,
+the internal state of @streamFilter stream@ will split into two, and there are two outputs.
+
+Likewise, if @f@ is 'Maybe', and a 'Nothing' occurs at some point, then this automaton is deactivated forever.
+-}
+streamFilter :: (Monad f, Traversable f, Monad m) => StreamT (Compose m f) a -> FilterStream m f a
+streamFilter StreamT {state, step} =
+  FilterStream $
+    StreamT
+      { state = pure state
+      , step = \states -> unzipResult . join <$> forM states (getCompose . step)
+      }
+
+-- | Given a branching stream, concatenate all branches at every step.
+runListS :: (Monad m) => StreamT (Compose m []) a -> StreamT m [a]
+runListS = getFilterStream . streamFilter
 
 -- | Lift a regular 'StreamT' (which doesn't filter) to a 'FilterStream'.
 liftFilter :: (Monad m, Applicative f) => StreamT m a -> FilterStream m f a
