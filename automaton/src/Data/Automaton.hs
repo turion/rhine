@@ -510,8 +510,12 @@ toStreamT = StreamOptimized.toStreamT . getAutomaton
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
 
+-- | Like 'handleAutomaton_', but with fewer constraints.
+handleAutomatonF_ :: (Functor m) => (forall m. (Functor m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
+handleAutomatonF_ f = Automaton . StreamOptimized.withOptimizedF f . getAutomaton
+
 -- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
-handleAutomaton :: (Monad m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
+handleAutomaton :: (Functor m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
 
 -- ** Buffering

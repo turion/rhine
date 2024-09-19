@@ -149,6 +149,10 @@ In contrast to 'handleOptimized', the stream morphism must be independent of the
 withOptimized :: (Monad n) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> OptimizedStreamT n a -> OptimizedStreamT n b
 withOptimized f stream = Stateful $ f $ toStreamT stream
 
+-- | Like 'withOptimized', but with fewer constraints.
+withOptimizedF :: (Functor n) => (forall m. (Functor m) => StreamT m a -> StreamT m b) -> OptimizedStreamT n a -> OptimizedStreamT n b
+withOptimizedF f stream = Stateful $ f $ toStreamT stream
+
 {- | Map a morphism of streams to optimized streams.
 
 In contrast to 'withOptimized', the monad type is allowed to change.
