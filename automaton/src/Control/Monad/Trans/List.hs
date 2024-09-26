@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 module Control.Monad.Trans.List where
 
-import Data.Stream.Except (StreamExcept (InitialExcept), mapOutput, stepInstant, runStreamExcept)
+import Data.Stream.Except (StreamExcept (CoalgebraicExcept), mapOutput, stepInstant, runStreamExcept)
 import Data.Coerce (coerce)
 import Data.Stream.Optimized (OptimizedStreamT(..))
 import Data.Stream (StreamT (..))
@@ -25,7 +25,7 @@ instance Functor m => Functor (ListT m) where
 -- Probably there are some important utilities missing elsewhere
 
 instance Monad m => Applicative (ListT m) where
-  pure a = ListT $ InitialExcept $ Stateful $ StreamT
+  pure a = ListT $ CoalgebraicExcept $ Stateful $ StreamT
     { state = False
     , step = \done -> if done then throwE () else pure $! Result True a
     }
@@ -33,7 +33,7 @@ instance Monad m => Applicative (ListT m) where
 
   ListT fs <*> ListT as = ap (runStreamExcept fs) (runStreamExcept as)
     where
-      ap (Stateful (StreamT fState0 fStep)) (Stateful (StreamT aState0 aStep)) =   ListT $ InitialExcept $ Stateful StreamT
+      ap (Stateful (StreamT fState0 fStep)) (Stateful (StreamT aState0 aStep)) =   ListT $ CoalgebraicExcept $ Stateful StreamT
         -- FIXME strict datatype
         { state = (fState0, aState0, Nothing)
         , step
@@ -48,20 +48,20 @@ instance Monad m => Applicative (ListT m) where
               case resultA of
                 Left () -> step (fState, aState0, Nothing)
                 Right (Result aState' a) -> return $! Result (fState, aState', justF) $ f a
-      ap (Stateless mf) (Stateful (StreamT aState0 aStep)) = ListT $ InitialExcept $ Stateful StreamT
+      ap (Stateless mf) (Stateful (StreamT aState0 aStep)) = ListT $ CoalgebraicExcept $ Stateful StreamT
         { state = aState0
         , step = \aState -> do
             f <- mf
             Result aState' a <- aStep aState
             return $ Result aState' $ f a
         }
-      ap (Stateful (StreamT fState0 fStep)) (Stateless ma) = ListT $ InitialExcept $ Stateful StreamT
+      ap (Stateful (StreamT fState0 fStep)) (Stateless ma) = ListT $ CoalgebraicExcept $ Stateful StreamT
         { state = fState0
         , step = \fState -> do
             Result fState' f <- fStep fState
             Result fState' . f <$> ma
             }
-      ap (Stateless f) (Stateless a) = ListT $ InitialExcept $ Stateless $ f <*> a
+      ap (Stateless f) (Stateless a) = ListT $ CoalgebraicExcept $ Stateless $ f <*> a
 
 instance Monad m => Monad (ListT m) where
   ListT startingCont >>= f = ListT $ go startingCont
@@ -83,7 +83,7 @@ instance Monad m => MonadPlus (ListT m)
 -- FIXME Unclear which Monoid instance I'd want. liftA2 (<>) or <|>?
 
 instance MonadTrans ListT where
-  lift ma = ListT $ InitialExcept $ Stateful $ StreamT
+  lift ma = ListT $ CoalgebraicExcept $ Stateful $ StreamT
     { state = False
     , step = \done -> if done then throwE () else Result True <$> lift ma
     }
@@ -97,4 +97,4 @@ instance Foldable m => Foldable (ListT m) where
   foldMap f ListT {getListT } = foldMap f $ runStreamExcept getListT
 
 instance Traversable m => Traversable (ListT m) where
-  traverse f ListT {getListT} = traverse f (runStreamExcept getListT) <&> ListT . InitialExcept
+  traverse f ListT {getListT} = traverse f (runStreamExcept getListT) <&> ListT . CoalgebraicExcept
