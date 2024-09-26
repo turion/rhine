@@ -106,7 +106,8 @@ constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
 
-{- | Translate a finally encoded stream into a recursively encoded one.
+
+{- | Translate a coalgebraically encoded stream into a recursive one.
 
 This is usually a performance penalty.
 -}
@@ -114,14 +115,14 @@ toRecursive :: (Functor m) => StreamT m a -> Recursive m a
 toRecursive automaton = Recursive $ mapResultState toRecursive <$> stepStream automaton
 {-# INLINE toRecursive #-}
 
-{- | Translate a recursively encoded stream into a finally encoded one.
+{- | Translate a recursive stream into a coalgebraically encoded one.
 
 The internal state is the stream itself.
 -}
 fromRecursive :: Recursive m a -> StreamT m a
-fromRecursive Recursive =
+fromRecursive coalgebraic =
   StreamT
-    { state = Recursive
+    { state = coalgebraic
     , step = getRecursive
     }
 {-# INLINE fromRecursive #-}
