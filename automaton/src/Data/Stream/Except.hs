@@ -27,6 +27,7 @@ import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Recursive as Recursive (Recursive (..), hoist')
 import Data.Stream.Recursive.Except
 import Data.Stream.Result
+import Control.Category ((>>>))
 
 {- | A stream that can terminate with an exception.
 
