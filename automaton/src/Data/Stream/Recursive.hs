@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Data.Stream.Recursive where
 
 -- base
@@ -16,9 +18,16 @@ One step of the stream transformer performs a monadic action and results in an o
 newtype Recursive m a = Recursive {getRecursive :: m (Result (Recursive m a) a)}
 
 instance MFunctor Recursive where
-  hoist morph = go
-    where
-      go Recursive {getRecursive} = Recursive $ morph $ mapResultState go <$> getRecursive
+  hoist = hoist'
+
+{- | Hoist a stream along a monad morphism, by applying said morphism to the step function.
+
+This is like @mmorph@'s 'hoist', but it doesn't require a 'Monad' constraint on @m2@.
+-}
+hoist' :: (Functor f) => (forall x. f x -> g x) -> Recursive f a -> Recursive g a
+hoist' morph = go
+  where
+    go Recursive {getRecursive} = Recursive $ morph $ mapResultState go <$> getRecursive
 
 instance (Functor m) => Functor (Recursive m) where
   fmap f Recursive {getRecursive} = Recursive $ fmap f . mapResultState (fmap f) <$> getRecursive
