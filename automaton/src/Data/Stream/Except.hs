@@ -24,8 +24,6 @@ import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept,
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Result
 import Control.Category ((>>>))
-import Data.Stream.Recursive (Recursive (..))
-import Data.Stream.Recursive.Except
 
 {- | A stream that can terminate with an exception.
 
