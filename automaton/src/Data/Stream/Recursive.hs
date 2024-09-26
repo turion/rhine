@@ -4,6 +4,8 @@ module Data.Stream.Recursive where
 
 -- base
 import Control.Applicative (Alternative (..))
+import Data.Function ((&))
+import Data.Functor ((<&>))
 
 -- mmorph
 import Control.Monad.Morph (MFunctor (..))
