@@ -57,21 +57,21 @@ stepInstant :: Functor m => StreamExcept a m e -> m (Either e (Result (StreamExc
 -- FIXME optimized version?
 -- stepInstant = toFinal >>> getFinal >>> runExceptT >>> lift >>> fmap (fmap (mapResultState FinalExcept))
 -- Can I run in trouble for forcing an initial here? Should I handle initial & final separately?
-stepInstant = runStreamExcept >>> StreamOptimized.stepOptimizedStream >>> runExceptT >>> fmap (fmap (mapResultState InitialExcept))
+stepInstant = runStreamExcept >>> StreamOptimized.stepOptimizedStream >>> runExceptT >>> fmap (fmap (mapResultState CoalgebraicExcept))
 
 -- | Run all steps of the stream, discarding all output, until the exception is reached.
 instance (Functor m, Foldable m) => Foldable (StreamExcept a m) where
   foldMap f = stepInstant >>> foldMap (either f $ resultState >>> foldMap f)
 
 instance (Traversable m) => Traversable (StreamExcept a m) where
-  traverse f streamExcept = traverseFinal (toFinal streamExcept) & fmap (Final >>> FinalExcept)
+  traverse f streamExcept = traverseRecursive (toRecursive streamExcept) & fmap (Recursive >>> RecursiveExcept)
     where
-      traverseFinal =
-        getFinal
+      traverseRecursive =
+        getRecursive
         >>> runExceptT
-        >>> fmap ((bimap f $ mapResultState traverseFinal >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
-        >>> traverse id
-        >>> fmap (ExceptT >>> fmap (mapResultState Final))
+        >>> fmap (bimap f (mapResultState traverseRecursive >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
+        >>> sequenceA
+        >>> fmap (ExceptT >>> fmap (mapResultState Recursive))
       bitraverseEither :: Functor f => Either (f a) (f b) -> f (Either a b)
       bitraverseEither = either (fmap Left) (fmap Right)
 
