@@ -120,7 +120,7 @@ jobs:
             docker rmi $(docker image ls -aq)
           fi
       - uses: cachix/install-nix-action@v29
-      - uses: DeterminateSystems/magic-nix-cache-action@v7
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
       - uses: cachix/cachix-action@v15
         with:
           name: rhine
