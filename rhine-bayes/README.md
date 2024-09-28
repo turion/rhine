@@ -8,5 +8,8 @@ It provides:
 
 This allows you to do interactive probabilistic (i.e. involving randomness) programs,
 and at the same time perform online inference, or realtime machine learning.
+
 An example for this is given in `rhine-bayes/app/Main.hs`,
 where inference is performed both on simulated values as well as external input given by the user.
+
+To read more, have a look at https://www.tweag.io/blog/2023-10-12-rhine-bayes/.
