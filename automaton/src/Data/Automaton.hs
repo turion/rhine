@@ -529,6 +529,36 @@ then the next 9 inputs will be ignored.
 concatS :: (Monad m) => Automaton m a [b] -> Automaton m a b
 concatS (Automaton automaton) = Automaton $ Data.Stream.Optimized.concatS automaton
 
+-- * Handling effects
+
+{- | Continuously interpret a first order effect.
+
+Several types are relevant here:
+
+* @sig@: An effect signature functor, that encodes one effect.
+  For example, @'Either' e@ for raising exceptions of type @e@, or @(w, )@ for a logging effect.
+* @eff@: A monad that carries the effect.
+  This can be a monad transformer stack including a transformer corresponding to @sig@, such as 'ExceptT' for 'Either'.
+  It can also be the @Eff@ monad of an effect library such as @polysemy@, @bluefin@, @effectful@ and so on.
+* @m@: The underlying monad in which the interpretation is performed, think "@eff@ without the effects from @sig@".
+
+This function takes two functions, one to create effects in @eff@ from the signature, and the other to fully interpret them in @m@,
+storing the complete effect information in @sig@ again.
+It then executes the given automaton, extracting the effect by interpretation, and sending it back in.
+The execution semantics is that of the monad @eff@, while the pure effect of the whole computation is returned in the output, encoded in @sig@.
+
+For examples, see 'Data.Stream.handleEffect'.
+-}
+handleEffect ::
+  (Monad m, Monad eff, Functor sig) =>
+  -- | Send a declarative effect in the signature to the effect carrier monad.
+  (forall x. sig x -> eff x) ->
+  -- | Interpret the effect in @m@, returning its result in the signature.
+  (forall x. eff x -> m (sig x)) ->
+  Automaton eff a b ->
+  Automaton m a (sig b)
+handleEffect send interpret = handleAutomaton $ StreamT.handleEffect (lift . send) (\raction -> ReaderT $ \a -> interpret $ runReaderT raction a)
+
 -- * Examples
 
 -- | Pass through a value unchanged, and perform a side effect depending on it

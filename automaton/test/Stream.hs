@@ -1,9 +1,11 @@
 module Stream where
 
 -- base
+import Control.Monad (when)
 import Control.Monad.Identity (Identity (..))
 
 -- transformers
+import Control.Monad.Trans.Except (throwE)
 import Control.Monad.Trans.Writer.Lazy (runWriter, tell)
 
 -- selective
@@ -17,7 +19,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
 import Automaton
-import Data.Stream (constM, snapshot, streamToList, unfold)
+import Data.Stream (StreamT, constM, handleExceptT, handleWriterT, mmap, snapshot, streamToList, unfold, unfold_)
 import Data.Stream.Result
 
 tests =
@@ -41,4 +43,22 @@ tests =
             let stream = snapshot $ constM $ tell [()]
              in take 3 (fmap runWriter $ fst $ runWriter $ streamToList stream) @?= [((), [()]), ((), [()]), ((), [()])]
         ]
+    , testGroup
+        "handleEffect"
+        [ testGroup
+            "handleExceptT"
+            [ testCase "Switches to constantly Left after exception has been triggered" $
+                let stream = mmap (\i -> when (i > 2) (throwE ())) nats
+                 in take 5 (runIdentity $ streamToList $ handleExceptT stream) @?= [Right (), Right (), Left (), Left (), Left ()]
+            ]
+        , testGroup
+            "handleWriterT"
+            [ testCase "Returns the current log on the output" $
+                let stream = mmap (tell . pure) nats
+                 in take 3 (fmap fst $ runIdentity $ streamToList $ handleWriterT stream) @?= [[1], [1, 2], [1, 2, 3]]
+            ]
+        ]
     ]
+
+nats :: (Applicative m) => StreamT m Int
+nats = unfold_ 0 (+ 1)
