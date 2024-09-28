@@ -3,6 +3,9 @@ module Stream where
 -- base
 import Control.Monad.Identity (Identity (..))
 
+-- transformers
+import Control.Monad.Trans.Writer.Lazy (runWriter, tell)
+
 -- selective
 import Control.Selective
 
@@ -14,7 +17,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
 import Automaton
-import Data.Stream (streamToList, unfold)
+import Data.Stream (constM, snapshot, streamToList, unfold)
 import Data.Stream.Result
 
 tests =
@@ -31,5 +34,11 @@ tests =
             let automaton1 = unfold 0 (\n -> Result (n + 1) (if even n then Right n else Left n))
                 automaton2 = unfold 1 (\n -> Result (n + 2) (* n))
              in take 10 (runIdentity (streamToList (automaton1 <*? automaton2))) @?= [0, 1, 2, 9, 4, 25, 6, 49, 8, 81]
+        ]
+    , testGroup
+        "snapshot"
+        [ testCase "Shows the current effect in the output" $
+            let stream = snapshot $ constM $ tell [()]
+             in take 3 (fmap runWriter $ fst $ runWriter $ streamToList stream) @?= [((), [()]), ((), [()]), ((), [()])]
         ]
     ]
