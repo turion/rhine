@@ -480,7 +480,7 @@ fixStream' transformState transformStep =
   where
     step fix@(Fix {getFix}) = mapResultState Fix <$> transformStep fix step getFix
 
-{- | The solution to the equation @'fixA stream = stream <*> 'fixA' stream@.
+{- | The solution to the equation @'fixA' stream = stream <*> 'fixA' stream@.
 
 Such a fix point operator needs to be used instead of the above direct definition because recursive definitions of streams
 loop at runtime due to the coalgebraic encoding of the state.
