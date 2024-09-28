@@ -299,6 +299,19 @@ concatS StreamT {state, step} =
     go (s, a : as) = pure $ Result (s, as) a
 {-# INLINE concatS #-}
 
+{- | At each step, duplicate the @m@ effect of the current step to the output.
+
+This is useful if @m@ has some means of static analysis, or if you want to re-perform the effects.
+-}
+snapshot :: (Functor m) => StreamT m a -> StreamT m (m a)
+snapshot StreamT {state, step} =
+  StreamT
+    { state
+    , step = \s ->
+        let result = step s
+         in flip Result (output <$> result) . resultState <$> result
+    }
+
 -- ** Exception handling
 
 {- | Streams with exceptions are 'Applicative' in the exception type.
