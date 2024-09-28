@@ -317,8 +317,8 @@ snapshot StreamT {state, step} =
 {- | Streams with exceptions are 'Applicative' in the exception type.
 
 Run the first stream until it throws a function as an exception,
-  then run the second one. If the second one ever throws an exception,
-  apply the function thrown by the first one to it.
+then run the second one. If the second one ever throws an exception,
+apply the function thrown by the first one to it.
 -}
 applyExcept :: (Monad m) => StreamT (ExceptT (e1 -> e2) m) a -> StreamT (ExceptT e1 m) a -> StreamT (ExceptT e2 m) a
 applyExcept (StreamT state1 step1) (StreamT state2 step2) =
