@@ -41,9 +41,11 @@ instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
   initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second snd))
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (Millisecond n)
 
 -- | Tries to achieve real time by using 'waitUTC', see its docs.
 waitClock :: (KnownNat n) => Millisecond n
 waitClock = Millisecond $ waitUTC $ RescaledClock (unyieldClock FixedStep) ((/ 1000) . fromInteger)
+{-# INLINE waitClock #-}
