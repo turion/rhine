@@ -33,7 +33,7 @@ import Control.Monad.Trans.Reader
 -- profunctors
 import Data.Profunctor (Choice (..), Profunctor (..), Strong)
 import Data.Profunctor.Strong (Strong (..))
-import Data.Profunctor.Traversing
+import Data.Profunctor.Traversing (Traversing (..))
 
 -- selective
 import Control.Selective (Selective)
@@ -400,25 +400,40 @@ instance (Monad m) => Strong (Automaton m) where
 
 -- | Step an automaton several steps at once, depending on how long the input is.
 instance (Monad m) => Traversing (Automaton m) where
-  wander f Automaton {getAutomaton = Stateful StreamT {state, step}} =
-    Automaton
-      { getAutomaton =
-          Stateful
-            StreamT
-              { state
-              , step =
-                  step
-                    & fmap runReaderT
-                    & flip
-                    & fmap ResultStateT
-                    & f
-                    & fmap getResultStateT
-                    & flip
-                    & fmap ReaderT
-              }
-      }
+  wander f automaton@Automaton {getAutomaton = Stateful _} = handleStatefully f automaton
+  -- I'm assuming that it's more efficient not to pass through an unnecessary state layer
   wander f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ f $ runReaderT m
   {-# INLINE wander #-}
+
+{- | Apply a morphism of stateful computations to an automaton.
+
+This keeps the state of the automaton unchanged, but modifies the step function.
+-}
+handleStatefully ::
+  (Functor m) =>
+  -- | An automaton can be seen as a function into the state monad transformer,
+  --   where @s@ is the internal state.
+  (forall s. (a -> ResultStateT s m b) -> c -> ResultStateT s m d) ->
+  Automaton m a b ->
+  Automaton m c d
+handleStatefully f Automaton {getAutomaton = Stateful StreamT {state, step}} =
+  Automaton
+    { getAutomaton =
+        Stateful
+          StreamT
+            { state
+            , step =
+                step
+                  & fmap runReaderT
+                  & flip
+                  & fmap ResultStateT
+                  & f
+                  & fmap getResultStateT
+                  & flip
+                  & fmap ReaderT
+            }
+    }
+handleStatefully f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ fmap (fmap output . ($ ()) . getResultStateT) $ f $ ResultStateT . (fmap (fmap (Result ())) . const <$> runReaderT m)
 
 -- | Only step the automaton if the input is 'Just'.
 mapMaybeS :: (Monad m) => Automaton m a b -> Automaton m (Maybe a) (Maybe b)
