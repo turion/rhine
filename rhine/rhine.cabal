@@ -138,6 +138,7 @@ library
   other-modules:
     FRP.Rhine.ClSF.Except.Util
     FRP.Rhine.ClSF.Random.Util
+    FRP.Rhine.Schedule.Internal
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -146,6 +147,7 @@ library
     MonadRandom >=0.5,
     containers >=0.5,
     deepseq >=1.4,
+    foldable1-classes-compat ^>=0.1,
     free >=5.1,
     mmorph ^>=1.2,
     profunctors ^>=5.6,
