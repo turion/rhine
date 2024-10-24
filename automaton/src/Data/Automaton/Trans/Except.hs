@@ -46,8 +46,8 @@ import Data.Automaton (
   reactimate,
  )
 import Data.Automaton.Trans.Except.Internal
-import Data.Stream.Except hiding (safely)
-import Data.Stream.Except qualified as StreamExcept
+import Data.Stream.Except hiding (safe, safely)
+import Data.Stream.Except qualified as StreamExcept hiding (safe)
 import Data.Stream.Optimized (mapOptimizedStreamT)
 import Data.Stream.Optimized qualified as StreamOptimized
 
@@ -254,6 +254,9 @@ See 'safely' for an example.
 -}
 safe :: (Monad m) => Automaton m a b -> AutomatonExcept a b m e
 safe = try . liftS
+
+forever :: (Monad m) => AutomatonExcept a b m e -> Automaton m a b
+forever = Automaton . StreamExcept.forever . getAutomatonExcept
 
 {- | Inside the 'AutomatonExcept' monad, execute an action of the wrapped monad.
 This passes the last input value to the action, but doesn't advance a tick.
