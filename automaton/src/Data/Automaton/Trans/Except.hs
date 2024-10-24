@@ -46,8 +46,8 @@ import Data.Automaton (
   reactimate,
  )
 import Data.Automaton.Trans.Except.Internal
-import Data.Stream.Except hiding (safely)
-import Data.Stream.Except qualified as StreamExcept
+import Data.Stream.Except hiding (safe, safely)
+import Data.Stream.Except qualified as StreamExcept hiding (safe)
 import Data.Stream.Optimized (mapOptimizedStreamT)
 import Data.Stream.Optimized qualified as StreamOptimized
 
@@ -81,6 +81,12 @@ throwOn' = proc (b, e) ->
   if b
     then throwS -< e
     else returnA -< ()
+
+-- | When the predicate evaluates to @Just e@, throw the exception @e@, otherwise forward the input.
+throwOnMaybe :: (Monad m) => (a -> Maybe e) -> Automaton (ExceptT e m) a a
+throwOnMaybe f = proc a -> do
+  throwMaybe -< f a
+  returnA -< a
 
 {- | When the input is @Just e@, throw the exception @e@.
 
@@ -189,6 +195,24 @@ Here, @automaton@ produces output values of type @b@ until an exception @e1@ occ
 The function @f@ is called on the exception value and produces a continuation automaton
 which is then executed (until it possibly throws an exception @e2@ itself).
 
+Note: By "exceptions", we mean an 'ExceptT' transformer layer, not 'IO' exceptions.
+
+= @do@-Notation
+
+Since the type has a 'Monad' instance, you can use @do@ notation to define exception handling:
+
+@
+example :: Monad m => Automaton m a Int
+example = safely $ do
+  try $ count >>> throwOnMaybe (\n -> guard (n < 10))
+  safe $ arr $ const 0
+@
+
+Here, a counter is incremented until it reaches 10.
+Once it does, an exception is thrown, and the automaton continues to output 0 forever.
+
+= Performance of 'Monad' vs. 'Applicative'
+
 The generality of the monad interface comes at a cost, though.
 In order to achieve higher performance, you should use the 'Monad' interface sparingly.
 Whenever you can express the same control flow using 'Functor', 'Applicative', 'Selective',
@@ -202,7 +226,45 @@ and thus GHC cannot optimize the automaton.
 But often the full expressiveness of '>>=' isn't necessary, and in these cases,
 a much faster automaton is produced by using 'Functor', 'Applicative' and 'Selective'.
 
-Note: By "exceptions", we mean an 'ExceptT' transformer layer, not 'IO' exceptions.
+== Recursive definitions when not using the full 'Monad' interface
+
+When the optimized interface is used (by avoiding '>>='),
+the same caveat as in "Data.Stream" regarding recursive definitions applies:
+They will loop at runtime.
+
+For example, one might expect that this automaton would repeatedly output numbers below or equal to 10:
+
+@
+bad :: Monad m => Automaton m a Int
+bad = safely $ do
+  try $ count >>> throwOnMaybe (\n -> guard (n > 10))
+  safe bad
+@
+
+But in fact it will loop, and never produce output.
+This is because the @do@ notation desugars to an expression involving @>>@, not @>>=@,
+which has higher performance in principle, but doesn't support recursion.
+
+Using the full monad interface misses out on some optimizations, but works:
+
+@
+userSawtooth :: Int -> Automaton IO a Int
+userSawtooth nMax = safely $ do
+  try $ count >>> throwOnMaybe (\n -> guard (n > nMax))
+  nMax' <- once_ $ do
+    putStrLn "Maximum reached, please enter next nMax:"
+    readLn
+  safe $ userSawtooth nMax'
+@
+
+The reason this do notation is desugared using @>>=@ is because the variable @nMax'@ is used later.
+
+To define a recursive, optimized, exception handling automaton, use 'forever':
+
+@
+sawtooth :: Automaton IO a Int
+sawtooth = forever $ try $ count >>> throwOnMaybe (\n -> guard (n > 10))
+@
 -}
 newtype AutomatonExcept a b m e = AutomatonExcept {getAutomatonExcept :: StreamExcept b (ReaderT a m) e}
   deriving newtype (Functor, Applicative, Selective, Monad)
@@ -254,6 +316,9 @@ See 'safely' for an example.
 -}
 safe :: (Monad m) => Automaton m a b -> AutomatonExcept a b m e
 safe = try . liftS
+
+forever :: (Monad m) => AutomatonExcept a b m e -> Automaton m a b
+forever = Automaton . StreamExcept.forever . getAutomatonExcept
 
 {- | Inside the 'AutomatonExcept' monad, execute an action of the wrapped monad.
 This passes the last input value to the action, but doesn't advance a tick.

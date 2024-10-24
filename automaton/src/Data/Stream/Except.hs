@@ -15,6 +15,7 @@ import Control.Monad.Morph (MFunctor, hoist)
 import Control.Selective
 
 -- automaton
+import Data.Stream (foreverExcept)
 import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
@@ -73,3 +74,15 @@ instance MFunctor (StreamExcept a) where
 
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept
+
+safe :: (Monad m) => OptimizedStreamT m a -> StreamExcept a m void
+safe = CoalgebraicExcept . hoist lift
+
+forever :: (Monad m) => StreamExcept a m e -> OptimizedStreamT m a
+forever recursive@(RecursiveExcept _) = safely go
+  where
+    go = recursive >> go
+forever (CoalgebraicExcept (StreamOptimized.Stateful stream)) = StreamOptimized.Stateful $ foreverExcept stream
+forever (CoalgebraicExcept (StreamOptimized.Stateless f)) = StreamOptimized.Stateless go
+  where
+    go = runExceptT f >>= either (const go) return

@@ -10,12 +10,12 @@ module Main where
 import FRP.Rhine
 
 sawtooth :: (Monad m) => Behaviour m UTCTime Double
-sawtooth = safely $ do
-  try $
-    sinceStart >>> proc time -> do
-      throwOn () -< time > 1
-      returnA -< time
-  safe sawtooth
+sawtooth =
+  forever $
+    try $
+      sinceStart >>> proc time -> do
+        throwOn () -< time > 1
+        returnA -< time
 
 main :: IO ()
 main = flow $ sawtooth >-> arrMCl print @@ (waitClock :: Millisecond 200)
