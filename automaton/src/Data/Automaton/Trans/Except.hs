@@ -82,6 +82,12 @@ throwOn' = proc (b, e) ->
     then throwS -< e
     else returnA -< ()
 
+-- | When the predicate evaluates to @Just e@, throw the exception @e@, otherwise forward the input.
+throwOnMaybe :: (Monad m) => (a -> Maybe e) -> Automaton (ExceptT e m) a a
+throwOnMaybe f = proc a -> do
+  throwMaybe -< f a
+  returnA -< a
+
 {- | When the input is @Just e@, throw the exception @e@.
 
 This does not output any data since it terminates on the first nontrivial input.
