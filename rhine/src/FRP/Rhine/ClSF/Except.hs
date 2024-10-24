@@ -16,6 +16,7 @@ module FRP.Rhine.ClSF.Except (
   exceptS,
   runAutomatonExcept,
   currentInput,
+  forever,
 )
 where
 

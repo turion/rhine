@@ -268,6 +268,24 @@ applyExcept (StreamT state1 step1) (StreamT state2 step2) =
     step (Right (s2, f)) = mapResultState (Right . (,f)) <$!> withExceptT f (step2 s2)
 {-# INLINE applyExcept #-}
 
+{- | Execute the stream until it throws an exception, then restart it.
+
+One might be tempted to define this function recursively with 'applyExcept',
+but this would result in a runtime error, trying to define an infinite state.
+-}
+foreverExcept :: (Functor m, Monad m) => StreamT (ExceptT e m) a -> StreamT m a
+foreverExcept StreamT {state, step} =
+  StreamT
+    { state
+    , step = stepNew
+    }
+  where
+    stepNew s = do
+      resultOrException <- runExceptT $ step s
+      case resultOrException of
+        Left _ -> stepNew state
+        Right result -> return result
+
 -- | Whenever an exception occurs, output it and retry on the next step.
 exceptS :: (Applicative m) => StreamT (ExceptT e m) b -> StreamT m (Either e b)
 exceptS StreamT {state, step} =
