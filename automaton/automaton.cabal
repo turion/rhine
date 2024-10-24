@@ -104,6 +104,20 @@ test-suite automaton-test
     tasty-hunit ^>=0.10,
     tasty-quickcheck >=0.10 && <0.12,
 
+executable UserSawtooth
+  import: opts
+  hs-source-dirs: examples
+  main-is: UserSawtooth.hs
+  build-depends:
+    automaton
+
+executable ForeverSawtooth
+  import: opts
+  hs-source-dirs: examples
+  main-is: ForeverSawtooth.hs
+  build-depends:
+    automaton
+
 flag dev
   description: Enable warnings as errors. Active on ci.
   default: False
