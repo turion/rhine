@@ -58,7 +58,7 @@ scheduleStreams Streams {states, steps} =
             -- Separate into finished streams and still running streams
             & fmap
               ( \(finished, running) ->
-                  let finishedStates = finished <&> (hliftA (getRunningResult >>> resultState >>> I))
+                  let finishedStates = finished <&> hliftA (getRunningResult >>> resultState >>> I)
                       outputs =
                         finished
                           <&> (hliftA (getRunningResult >>> output >>> K) >>> hcollapse)
