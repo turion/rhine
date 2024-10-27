@@ -18,7 +18,8 @@ module FRP.Rhine.Schedule where
 
 -- base
 import Control.Arrow
-import Data.List.NonEmpty as N
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty qualified as N
 
 -- transformers
 import Control.Monad.Trans.Reader
@@ -35,6 +36,10 @@ import Data.Stream.Recursive qualified as StreamRecursive
 import Data.Stream.Result
 
 -- rhine
+
+import Data.Either (partitionEithers)
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Stream qualified as Stream
 import FRP.Rhine.Clock
 
 -- * Scheduling
@@ -67,16 +72,21 @@ schedulePair (Automaton automatonL) (Automaton automatonR) = Automaton $! Statef
   where
     scheduleStreams :: (Monad m, MonadSchedule m) => StreamT m b -> StreamT m b -> StreamT m b
     scheduleStreams (StreamT stateL0 stepL) (StreamT stateR0 stepR) =
-      StreamT
-        { state = (stepL stateL0, stepR stateR0)
-        , step
-        }
+      Stream.concatS
+        StreamT
+          { state = [Left <$> stepL stateL0, Right <$> stepR stateR0]
+          , step
+          }
       where
-        step (runningL, runningR) = do
-          result <- race runningL runningR
-          case result of
-            Left (Result stateL' b, runningR') -> return $ Result (stepL stateL', runningR') b
-            Right (runningL', Result stateR' b) -> return $ Result (runningL', stepR stateR') b
+        step started = do
+          (results, running) <- schedule started
+          let (resultsL, resultsR) = partitionEithers $ NonEmpty.toList results
+          let outputsL = output <$> resultsL
+          let outputsR = output <$> resultsR
+          return
+            $ Result
+              (N.fromList $ (fmap Left . stepL . resultState <$> resultsL) ++ (fmap Right . stepR . resultState <$> resultsR) ++ running)
+            $ outputsL ++ outputsR
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
