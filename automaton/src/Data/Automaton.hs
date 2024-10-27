@@ -451,8 +451,13 @@ handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
 handleAutomaton :: (Monad m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
 
--- | Buffer the output of an automaton. See 'Data.Stream.concatS'.
-concatS :: (Monad m) => Automaton m () [b] -> Automaton m () b
+{- | Buffer the output of an automaton. See 'Data.Stream.concatS'.
+
+The input for the automaton is not buffered.
+For example, if @'concatS' automaton@ receives one input @a@ and @automaton@ produces 10 @b@s from it,
+then the next 9 inputs will be ignored.
+-}
+concatS :: (Monad m) => Automaton m a [b] -> Automaton m a b
 concatS (Automaton automaton) = Automaton $ Data.Stream.Optimized.concatS automaton
 
 -- * Examples
