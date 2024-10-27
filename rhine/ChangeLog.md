@@ -1,5 +1,10 @@
 # Revision history for rhine
 
+## 1.5
+
+* Added `forever` utility for recursion in `ClSFExcept`
+* Support GHC 9.10
+
 ## 1.4
 
 * Add `Profunctor` instance for `ResamplingBuffer`
