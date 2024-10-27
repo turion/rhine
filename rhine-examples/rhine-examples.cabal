@@ -1,5 +1,5 @@
 name: rhine-examples
-version: 1.4
+version: 1.5
 synopsis: Some simple example applications with rhine
 description:
   Diverse console example applications with rhine
@@ -26,7 +26,7 @@ executable HelloWorld
 
   build-depends:
     base >=4.16 && <4.21,
-    rhine ^>=1.4
+    rhine ^>=1.5
 
   default-language: Haskell2010
   default-extensions: TypeOperators
@@ -45,7 +45,7 @@ executable Demonstration
 
   build-depends:
     base >=4.16 && <4.21,
-    rhine ^>=1.4
+    rhine ^>=1.5
 
   default-language: Haskell2010
   default-extensions: TypeOperators
@@ -64,7 +64,7 @@ executable ADSR
 
   build-depends:
     base >=4.16 && <4.21,
-    rhine ^>=1.4
+    rhine ^>=1.5
 
   default-language: Haskell2010
   default-extensions: TypeOperators
@@ -84,7 +84,7 @@ executable Ball
   build-depends:
     base >=4.16 && <4.21,
     random >=1.1,
-    rhine ^>=1.4
+    rhine ^>=1.5
 
   default-language: Haskell2010
   default-extensions:
@@ -109,7 +109,7 @@ executable Periodic
   build-depends:
     base >=4.16 && <4.21,
     monad-schedule >=0.1,
-    rhine ^>=1.4,
+    rhine ^>=1.5,
     transformers >=0.5
 
   default-language: Haskell2010
@@ -130,7 +130,7 @@ executable EventClock
   build-depends:
     base >=4.16 && <4.21,
     random >=1.1,
-    rhine ^>=1.4
+    rhine ^>=1.5
 
   default-language: Haskell2010
   default-extensions: TypeOperators
@@ -149,7 +149,7 @@ executable Sawtooth
 
   build-depends:
     base >=4.16 && <4.21,
-    rhine ^>=1.4
+    rhine ^>=1.5
 
   default-language: Haskell2010
   default-extensions: TypeOperators
@@ -169,7 +169,7 @@ executable RandomWalk
   build-depends:
     base >=4.16 && <4.21,
     random >=1.1,
-    rhine ^>=1.4,
+    rhine ^>=1.5,
     simple-affine-space
 
   default-language: Haskell2010
