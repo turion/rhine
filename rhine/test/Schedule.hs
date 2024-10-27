@@ -6,6 +6,7 @@ module Schedule where
 import Control.Arrow ((>>>))
 import Data.Functor (($>))
 import Data.Functor.Identity
+import Data.List (sort)
 
 -- tasty
 import Test.Tasty
@@ -59,8 +60,8 @@ tests =
         [ testCase "chronological ticks" $ do
             let
               (runningClock, _time) = runSchedule (initClock $ ParallelClock (FixedStep @5) (FixedStep @3) :: RunningClockInit (Schedule Integer) Integer (Either () ()))
-              output = runSchedule $ embed runningClock $ replicate 6 ()
-            output
+              output = runSchedule $ embed runningClock $ replicate 1000 ()
+            take 6 output
               @?= [ (3, Right ())
                   , (5, Left ())
                   , (6, Right ())
@@ -68,5 +69,7 @@ tests =
                   , (10, Left ())
                   , (12, Right ())
                   ]
+            let timestamps = fst <$> output
+            timestamps @?= sort timestamps
         ]
     ]
