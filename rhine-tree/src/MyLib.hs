@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module MyLib where
 
 -- base-compat
@@ -19,7 +20,7 @@ import Data.Automaton.Trans.State (runStateS)
 import FRP.Rhine hiding (readerS, runReaderS)
 import Control.Monad (guard)
 import Data.Function ((&))
-import Control.Lens (Prism')
+import Control.Lens (Prism', IndexedTraversal', Indexable (..), makeLenses)
 
 data Fix f = Fix (f (Fix f))
 
@@ -30,6 +31,7 @@ data Node = Node
   , attrs :: [Attr]
   , children :: [Content]
   }
+
 
 data Content = ContentText Text | Child Node
 data Attr = Attr
@@ -44,6 +46,10 @@ data DOMPointer = DOMPointer
 
 -- FIXME this is morally [Int]
 data NodePointer = Here | There Int NodePointer
+
+makeLenses ''Attr
+makeLenses ''Node
+
 
 instance Semigroup NodePointer where
   Here <> p = p
@@ -132,3 +138,10 @@ pointing (There i p) = _ . pointing p
 -- Can I generalise to not having an explicit Pointer?
 inside :: NodePointer -> DOMSF td m a b -> DOMSF td m a b
 inside p DOMSF {focus, domSF} = DOMSF {focus = addPointer p focus, domSF}
+
+-- | Morally an affine traversal
+iPointing :: IndexedTraversal' NodePointer Node Node
+iPointing handler Node {name, attrs, children} = let f = indexed handler in _
+
+iPointingDOM :: IndexedTraversal' DOMPointer DOM Node
+iPointingDOM = _
