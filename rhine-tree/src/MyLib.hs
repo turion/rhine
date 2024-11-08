@@ -1,15 +1,15 @@
-{-# LANGUAGE TemplateHaskell #-}
 module MyLib where
 
 -- base-compat
 import Data.List.Compat ((!?))
 import Data.Proxy (Proxy (..))
+import Data.Functor.Compat (unzip)
 
 -- transformers
 import Control.Monad.Trans.State.Strict (StateT (..))
 
 -- text
-import Data.Text
+import Data.Text hiding (index)
 
 -- automaton
 
@@ -17,60 +17,26 @@ import Data.Automaton.Trans.Reader (readerS, runReaderS)
 import Data.Automaton.Trans.State (runStateS)
 
 -- rhine
-import FRP.Rhine hiding (readerS, runReaderS)
+import FRP.Rhine hiding (step, readerS, runReaderS)
 import Control.Monad (guard)
 import Data.Function ((&))
-import Control.Lens (Prism', IndexedTraversal', Indexable (..), makeLenses)
+import Control.Lens (Prism', IndexedTraversal', Indexable (..), itraversed, Lens', (^?), view, re, (%~), (<.), failing, selfIndex, reindexed, icompose, index, Ixed, IxValue, Index)
+import Data.Functor.Compose (Compose(..))
+import Data.Functor ((<&>))
 
-data Fix f = Fix (f (Fix f))
-
-newtype DOM = DOM [Node]
-
-data Node = Node
-  { name :: Text
-  , attrs :: [Attr]
-  , children :: [Content]
-  }
-
-
-data Content = ContentText Text | Child Node
-data Attr = Attr
-  { attrName :: Text
-  , value :: Text
-  }
-
-data DOMPointer = DOMPointer
-  { nodePosition :: Int -- FIXME no safety this index is in bounds
-  , nodePointer :: NodePointer
-  }
-
--- FIXME this is morally [Int]
-data NodePointer = Here | There Int NodePointer
-
-makeLenses ''Attr
-makeLenses ''Node
-
-
-instance Semigroup NodePointer where
-  Here <> p = p
-  There i p1 <> p2 = There i $ p1 <> p2
+import Types
+import Data.Maybe (fromMaybe)
+import Data.Stream (StreamT(..))
 
 -- FIXME use MonoidAction
 addPointer :: NodePointer -> DOMPointer -> DOMPointer
-addPointer p DOMPointer {nodePosition, nodePointer} = DOMPointer {nodePosition, nodePointer = nodePointer <> p}
-
-instance Monoid NodePointer where
-  mempty = Here
+addPointer p = nodePointer %~ (<> p)
 
 lookupDOM :: DOMPointer -> DOM -> Maybe Node
-lookupDOM DOMPointer {nodePosition, nodePointer} (DOM nodes) = nodes !? nodePosition >>= lookupNode nodePointer
+lookupDOM p d = d ^? iPointingDOM . index p
 
 lookupNode :: NodePointer -> Node -> Maybe Node
-lookupNode Here node = Just node
-lookupNode (There childIndex nodePointer) Node {children} = children !? childIndex >>= contentToNode >>= lookupNode nodePointer
-  where
-    contentToNode (Child node) = Just node
-    contentToNode _ = Nothing
+lookupNode p n = n ^? iPointing . index p
 
 data NodeEvent = NodeEvent
   { nodeEventPointer :: NodePointer
@@ -105,7 +71,7 @@ instance (MonadDOM td m, TimeDomain td, Monad m) => Clock m (DOMClock td) where
 
 data DOMSF td m a b = DOMSF
   { focus :: DOMPointer
-  , domSF :: ClSF (StateT Node m) (SelectClock (DOMClock td) NodeEvent) a b -- FIXME maybe I really want a SelectClock here? Or rather, the focus defines the select clock
+  , domSF :: ClSF (StateT Node m) (DOMClock td) a b -- FIXME maybe I really want a SelectClock here? Or rather, the focus defines the select clock
   -- It's a bit weird because I want the tag/type of the selectclock, but I'll never start it
   }
 
@@ -121,18 +87,24 @@ subtractNodePointer p Here = Just p
 subtractNodePointer Here _ = Nothing
 subtractNodePointer (There i1 p1) (There i2 p2) = guard (i1 == i2) >> subtractNodePointer p1 p2
 
+-- FIXME Wrong approach. The clock shouldn't move, the SF should filter
 -- FIXME this doesn't move the StateT
-runDOMSF :: (Monad m) => DOMSF td m a b -> ClSF m (DOMClock td) (DOM, a) (DOM, Maybe b)
-runDOMSF DOMSF {focus, domSF} = readerS $ (arr (\(ti, (dom, a)) -> (dom, (\tag -> (ti {tag}, a)) <$> filterFocus focus (tag ti))) >>>) $ runStateS $ mapMaybeS $ runReaderS domSF
+-- runDOMSF :: (Monad m) => DOMSF td m a b -> ClSF m (DOMClock td) (DOM, a) (DOM, Maybe b)
+-- runDOMSF DOMSF {focus, domSF} = readerS $ (arr (\(ti, (dom, a)) -> (dom, (\tag -> (ti {tag}, a)) <$> filterFocus focus (tag ti))) >>>) $ runStateS $ mapMaybeS $ runReaderS domSF
 
 -- FIXME Don't get riled up here. We really need a prism from NodePointer
 moveStateDeeper :: NodePointer -> StateT Node m a -> StateT Node m a
 moveStateDeeper p sma = StateT $ \s -> runStateT sma _ & _
 
-pointing :: NodePointer -> Prism' Node Node
-pointing Here = id
--- FIXME derive lenses and implement this
-pointing (There i p) = _ . pointing p
+focusState :: Functor m => Lens' s a -> StateT a m b -> StateT s m b
+focusState l = StateT . (getCompose .) . l . (Compose .) . runStateT
+
+prismState :: Applicative m => Prism' s a -> StateT a m b -> StateT s m (Maybe b)
+prismState p = StateT . (\action s -> (s ^? p & traverse action) <&> second (maybe s (view (re p))) . Data.Functor.Compat.unzip) . runStateT
+
+-- FIXME Can generalise from [b] to Traversable t => t b?
+traverseState :: IndexedTraversal' i s a -> StateT a m b -> StateT s m [b]
+traverseState = _
 
 -- FIXME is this actually some kind of lens?
 -- Can I generalise to not having an explicit Pointer?
@@ -140,8 +112,27 @@ inside :: NodePointer -> DOMSF td m a b -> DOMSF td m a b
 inside p DOMSF {focus, domSF} = DOMSF {focus = addPointer p focus, domSF}
 
 -- | Morally an affine traversal
+iPointing1 :: IndexedTraversal' Int Node Node
+iPointing1 = children . itraversed <. _Child
+
 iPointing :: IndexedTraversal' NodePointer Node Node
-iPointing handler Node {name, attrs, children} = let f = indexed handler in _
+iPointing = reindexed (const Here) selfIndex `failing` icompose There iPointing1 iPointing
+
+iPointingDOM1 :: IndexedTraversal' Int DOM Node
+iPointingDOM1 = dom . itraversed
 
 iPointingDOM :: IndexedTraversal' DOMPointer DOM Node
-iPointingDOM = _
+iPointingDOM = icompose DOMPointer iPointingDOM1 iPointing
+
+-- FIXME Maybe At is cleverer
+-- FIXME use free category
+data IndexList a b where
+  Id :: IndexList a a
+  Cons :: Ixed a => Index a -> IndexList (IxValue a) b -> IndexList a b
+
+-- FIXME can we use FilterAutomaton
+indexAutomaton1 :: (Ixed a, Monad m) => Automaton (StateT (IxValue a) m) input output -> Automaton (StateT a m) (input, Index a) [output]
+indexAutomaton1 = handleAutomaton $ \StreamT {state, step} -> StreamT
+  { state
+  , step = _
+  }
