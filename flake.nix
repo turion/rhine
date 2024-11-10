@@ -17,6 +17,7 @@
       url = "github:turion/monad-schedule";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    ghc-wasm-meta.url = "gitlab:ghc/ghc-wasm-meta?host=gitlab.haskell.org";
   };
 
   outputs = inputs:
@@ -163,6 +164,7 @@
       # Usage: nix build
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
+        rhine-tree-js = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree;
       });
 
       # We re-export the entire nixpkgs package set with our overlay.
@@ -174,7 +176,7 @@
 
       # Usage: nix develop (will use the default GHC)
       # Alternatively, specify the GHC: nix develop .#ghc98
-      devShells = forAllPlatforms (systems: pkgs: mapAttrs
+      devShells = forAllPlatforms (systems: pkgs: (mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
           nativeBuildInputs = with hp; [
@@ -186,6 +188,31 @@
             cabal-install
           ];
         })
-        (hpsFor pkgs));
+        (hpsFor pkgs)) //
+      {
+        wasm =
+          let pkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.${system};
+          in
+          pkgs.mkShell {
+            packages = [
+              inputs.ghc-wasm-meta.packages.${system}.all_9_10
+              # pkgs.dart-sass
+            ];
+          };
+        x86_64-linux.js =
+          let
+            pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux.pkgsCross.ghcjs.extend overlay;
+            hp = pkgs.haskell.packages.ghc910;
+          in
+          hp.shellFor {
+            packages = ps: map (pname: ps.${pname}) pnames;
+            nativeBuildInputs = with hp; [
+              cabal-gild
+              cabal-install
+              fourmolu
+              haskell-language-server
+            ];
+          };
+      });
     };
 }

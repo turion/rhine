@@ -18,8 +18,8 @@ common warnings
 library
     import:           warnings
     exposed-modules:
-        MyLib
-        Types
+        FRP.Rhine.Tree
+        FRP.Rhine.Tree.Types
     -- other-modules:
     -- other-extensions:
     build-depends:    base >=4.16 && < 4.21
@@ -30,6 +30,8 @@ library
         , text
         , automaton
         , rhine
+        , these
+        , semialign
     hs-source-dirs:   src
     default-language: GHC2021
     default-extensions:
@@ -37,6 +39,16 @@ library
         TypeFamilies
         Arrows
         ScopedTypeVariables
+        OverloadedStrings
+
+executable dommy
+    build-depends:
+        rhine-tree,
+        jsaddle
+    default-language: GHC2021
+    ghc-options: -threaded
+    hs-source-dirs: app
+    main-is: Dommy.hs
 
 test-suite rhine-tree-test
     import:           warnings
