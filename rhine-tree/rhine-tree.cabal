@@ -22,7 +22,7 @@ library
         Types
     -- other-modules:
     -- other-extensions:
-    build-depends:    base ^>=4.18.2.1
+    build-depends:    base >=4.16 && < 4.21
         , transformers
         , base-compat
         , sop-core
@@ -35,6 +35,8 @@ library
     default-extensions:
         GADTs
         TypeFamilies
+        Arrows
+        ScopedTypeVariables
 
 test-suite rhine-tree-test
     import:           warnings
