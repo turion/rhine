@@ -1,5 +1,12 @@
 # Revision history for automaton
 
+## 1.5
+
+* Fixed naming Final vs. Recursive vs. Coalgebraic
+* Added `forever` utility for recursion in `AutomatonExcept`
+* Generalised `concatS`, added `throwOnMaybe`, added `mapOutput`
+* Fixed some docs
+
 ## 1.4
 
 * Added `Data.Automaton.Trans.Accum`

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: automaton
-version: 1.4
+version: 1.5
 synopsis: Effectful streams and automata in coalgebraic encoding
 description:
   Effectful streams have an internal state and a step function.
@@ -24,7 +24,7 @@ source-repository head
 source-repository this
   type: git
   location: https://github.com/turion/rhine.git
-  tag: v1.4
+  tag: v1.5
 
 common opts
   build-depends:
