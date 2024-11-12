@@ -84,6 +84,9 @@
               microstache = doJailbreak hprev.microstache;
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
+
+              # For rhine-tree
+              websockets = doJailbreak hprev.websockets;
             })
           ];
 

@@ -10,34 +10,39 @@ import Control.Applicative (Alternative)
 -- text
 
 -- lens
-import Control.Lens (Index, IndexedTraversal', IxValue, Ixed (..), Lens', Prism', Traversal', failing, icompose, index, itraversed, re, reindexed, selfIndex, view, (%~), (<.), (^?), (^@..), to, Optic')
-import Control.Monad (guard)
-import Control.Monad.Trans.Reader (ReaderT (..))
-import Control.Monad.Trans.State.Strict (StateT (..))
--- automaton
 
--- rhine
+-- jsaddle
 
 -- rhine-tree
 
+import Control.Concurrent (MVar, newEmptyMVar, putMVar, takeMVar)
+import Control.Lens (Index, IndexedTraversal', IxValue, Ixed (..), Lens', Optic', Prism', Traversal', failing, icompose, index, itraversed, re, reindexed, selfIndex, to, view, (%~), (<.), (^.), (^?), (^@..))
+import Control.Monad (guard)
+import Control.Monad.Trans.Reader (ReaderT (..))
+import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Align (Semialign (..))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compat (unzip)
 import Data.Functor.Compose (Compose (..))
 import Data.Kind (Type)
-import Data.Maybe (fromMaybe, catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Alt (..))
 import Data.Proxy (Proxy (..))
+import Data.Semialign.Indexed (SemialignWithIndex)
 import Data.Stream (StreamT (..))
 import Data.Stream.Result (mapResultState, unzipResult)
 import Data.Text hiding (index)
 import Data.Text qualified as T
+import Data.These (These, these)
 import FRP.Rhine hiding (readerS, runReaderS, step)
-import Types
+import FRP.Rhine.Tree.Types
+import Language.Javascript.JSaddle (fun, js, jsg, jss, valToNumber, syncPoint, MonadJSM (..))
+import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
-import Data.These (these, These)
-import Data.Semialign.Indexed (SemialignWithIndex)
+import qualified Control.Monad.Trans.State.Strict as StateT
+
+default (Text)
 
 class MonadDOM td m where
   waitDOMEvent :: proxy td -> m DOMEvent
@@ -160,3 +165,55 @@ diff0 a1 a2
 -- FIXME Or use SemialignWithIndex
 diff :: (Semialign f, Eq a) => (forall x. IndexedTraversal' i (f x) x) -> f a -> f a -> [(i, Edit a)]
 diff t fa1 fa2 = align fa1 fa2 ^@.. t <. to (these (pure . const Delete) (pure . Add) diff0) <&> (\(i, me) -> (i,) <$> me) & catMaybes
+
+data JSMEvent = JSMEvent
+  { clientX :: Double,
+    clientY :: Double
+  }
+
+data JSMClock = JSMClock {events :: MVar JSMEvent}
+
+instance GetClockProxy JSMClock
+
+instance MonadJSM m => Clock m JSMClock where
+  type Time JSMClock = () -- FIXME Use nextAnimationFrame maybe for continuous things?
+  type Tag JSMClock = JSMEvent
+  initClock JSMClock {events} = return (constM $ ((),) <$> (liftIO (takeMVar events)), ())
+
+createJSMClock :: JSM JSMClock
+createJSMClock = do
+  events <- liftIO newEmptyMVar
+  doc <- jsg ("document" :: Text)
+  doc
+    ^. jss
+      ("onclick" :: Text)
+      ( fun $ \_ _ [e] -> do
+          clientX <- e ^. js ("clientX" :: Text) >>= valToNumber
+          clientY <- e ^. js ("clientY" :: Text) >>= valToNumber
+          liftIO $ print clientX
+          liftIO $ putMVar events JSMEvent {clientX, clientY}
+          syncPoint
+      )
+  return JSMClock {events}
+
+-- FIXME Next iteration: Cache DOM and only update diff
+runStateTDOM :: StateT DOM JSM a -> JSM a
+runStateTDOM action = do
+  (a, dom_) <- runStateT action mempty
+  doc <- jsg ("document" :: Text)
+  doc ^. js ("body" :: Text) ^. jss ("innerHTML" :: Text) (render dom_)
+  syncPoint -- FIXME needed?
+  return a
+
+type JSMSF a b = ClSF (StateT DOM JSM) JSMClock a b
+
+flowJSM :: ClSF (StateT DOM JSM) JSMClock () () -> JSMClock -> JSM ()
+flowJSM sf cl = runStateTDOM $ flow $ sf @@ cl
+
+stateS :: (Monad m) => (a -> s -> (b, s)) -> ClSF (StateT s m) cl a b
+stateS f = arrMCl $ StateT.state . f
+
+appendS :: (Monoid s, Monad m) => s -> ClSF (StateT s m) cl a ()
+appendS s = constMCl $ StateT.modify (<> s)
+
+-- FIXME Maybe try webkit thingy (https://github.com/ghcjs/jsaddle/issues/64)
