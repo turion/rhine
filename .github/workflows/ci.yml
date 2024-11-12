@@ -132,7 +132,9 @@ jobs:
       - name: Build all packages
         run: nix build --accept-flake-config
       - name: Run tests
-        run: nix develop --accept-flake-config -c cabal test all
+        run: |
+          nix develop --accept-flake-config -c cabal update
+          nix develop --accept-flake-config -c cabal test all
       # nix flake check breaks on IFD in multi-platform flake https://github.com/NixOS/nix/issues/4265
       # - run: nix flake check
 
