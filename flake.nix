@@ -13,6 +13,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
+    monad-schedule.url = "github:turion/monad-schedule";
   };
 
   outputs = inputs:
@@ -28,7 +29,7 @@
       # To be kept in sync with the `tested-with:` section in rhine.cabal.
       # To do: Automated check whether this is the same as what get-tested returns.
       # Currently blocked on https://github.com/Kleidukos/get-tested/issues/39
-      supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" ];
+      supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" "ghc910" ];
 
       # All Haskell packages defined here that contain a library section
       libPnames = filter (pname: pname != "rhine-examples") pnames;
@@ -43,7 +44,7 @@
         lib.genAttrs pnames (pname: hfinal.callCabal2nix pname ./${pname} { });
 
       # A nixpkgs overlay containing everything defined in this repo, for reuse in downstream projects
-      overlay = final: prev:
+      localOverlay = final: prev:
         let
           hps = hpsFor final;
 
@@ -52,13 +53,6 @@
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
             (hfinal: hprev: {
               monad-bayes = markUnbroken hprev.monad-bayes;
-              monad-schedule = hprev.callHackageDirect
-                {
-                  pkg = "monad-schedule";
-                  ver = "0.2";
-                  sha256 = "sha256-Z9lAxkvJDH9aQZd65bGOQI3EGH7oSAhK0nuBKULgiCE=";
-                }
-                { };
               time-domain = hprev.callHackageDirect
                 {
                   pkg = "time-domain";
@@ -72,6 +66,22 @@
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
+            })
+            (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
+              # Remove these as nixpkgs progresses!
+              finite-typelits = doJailbreak hprev.finite-typelits;
+
+              vector-sized = hprev.callHackageDirect
+                {
+                  pkg = "vector-sized";
+                  ver = "1.6.1";
+                  sha256 = "sha256-//EOAwpEEQkdYF88U/bp0uybKleYHRmTWaKsxIZvCeQ=";
+                }
+                { };
+
+              microstache = doJailbreak hprev.microstache;
+              gloss-rendering = doJailbreak hprev.gloss-rendering;
+              gloss = doJailbreak hprev.gloss;
             })
           ];
 
@@ -130,6 +140,12 @@
               ];
             };
         };
+
+      overlay = lib.composeManyExtensions
+        [
+          inputs.monad-schedule.overlays.default
+          localOverlay
+        ];
 
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
