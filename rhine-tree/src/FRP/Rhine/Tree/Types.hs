@@ -13,6 +13,12 @@ makeLenses ''Fix
 
 newtype DOM = DOM {_dom :: [Node]}
 
+instance Semigroup DOM where
+  DOM dom1 <> DOM dom2 = DOM $ dom1 <> dom2
+
+instance Monoid DOM where
+  mempty = DOM mempty
+
 data Node = Node
   { _name :: Text
   , _attrs :: [Attr]
