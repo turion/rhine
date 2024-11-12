@@ -81,6 +81,9 @@
               # Remove these after https://github.com/turion/rhine/issues/399
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
+
+              # For rhine-tree
+              websockets = doJailbreak hprev.websockets;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.12") {
               # Remove these after some nixpkgs bump
