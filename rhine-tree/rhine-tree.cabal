@@ -43,7 +43,6 @@ library
         , time
     hs-source-dirs:   src
 
-
 executable dommy
     import:           warnings
     build-depends:
@@ -51,11 +50,25 @@ executable dommy
         rhine,
         rhine-tree,
         jsaddle,
-        jsaddle-warp,
         lens
     ghc-options: -threaded
     hs-source-dirs: app
     main-is: Dommy.hs
+
+executable dommy-ghc
+    import:           warnings
+    build-depends:
+        base,
+        rhine,
+        rhine-tree,
+        jsaddle,
+        jsaddle-webkit2gtk,
+        lens
+    other-modules:
+        Dommy
+    ghc-options: -threaded
+    hs-source-dirs: app
+    main-is: DommyGHC.hs
 
 test-suite rhine-tree-test
     import:           warnings
