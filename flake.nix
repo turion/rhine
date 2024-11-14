@@ -13,7 +13,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
-    monad-schedule.url = "github:turion/monad-schedule";
+    monad-schedule = {
+      url = "github:turion/monad-schedule";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs:
