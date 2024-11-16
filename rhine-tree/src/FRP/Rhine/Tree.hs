@@ -105,19 +105,20 @@ indexAutomaton1 = handleAutomaton $ \StreamT {state, step} ->
 indexAutomaton ::
   forall a b m c t output input.
   (Ixed a, Monad m) =>
-  Automaton (StateT a m) (input, Event a) output ->
+  Automaton (StateT a m) (input, t a) output ->
   Automaton (StateT (IxValue a) m) (input, IndexList c t (IxValue a) b) output ->
   Automaton (StateT a m) (input, IndexList c t a b) (Maybe output)
 indexAutomaton eHere eThere = arr splitIndexList >>> (eHere >>> arr Just) ||| indexAutomaton1 eThere
   where
     -- Need this workaround because GADTs can't be matched in Arrow notation as of 9.10
-    splitIndexList :: (input, IndexList c t a b) -> Either (input, Event a) ((input, IndexList c t (IxValue a) b), Index a)
+    splitIndexList :: (input, IndexList c t a b) -> Either (input, t a) ((input, IndexList c t (IxValue a) b), Index a)
     splitIndexList (input, Here event) = Left (input, event)
     splitIndexList (input, There i eventList) = Right ((input, eventList), i)
 
-type NodeEvent = EventList Node
+data SomeEvent root = forall a . SomeEvent {_someEvent :: EventList root a }
 
-type DOMEvent = EventList DOM
+type NodeEvent = SomeEvent Node
+type DOMEvent = SomeEvent DOM
 
 class Render a where
   render :: a -> Text
@@ -228,7 +229,7 @@ class Ixed a => AppendChild a where
 
 instance AppendChild DOM where
   -- FIXME This is super inefficient, should use a vector or a Seq
-  appendChild node dom_ = (dom_ & dom %~ (++ [node]), _dom ^. dom . to length)
+  appendChild node dom_ = (dom_ & dom %~ (++ [node]), dom_ ^. dom . to length)
 
 instance AppendChild Node where
   -- FIXME This is super inefficient, should use a vector or a Seq
