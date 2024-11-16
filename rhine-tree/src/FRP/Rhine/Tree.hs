@@ -76,6 +76,9 @@ class HasEvent a where
   type Event a :: Type
   type Event a = ()
 
+instance HasEvent DOM where
+  type Event DOM = DOMEvent
+
 -- FIXME Maybe At is cleverer
 -- FIXME use free category
 data IndexList c t a b where
@@ -256,6 +259,6 @@ instance AppendChild Node where
 class Register m a where
   register :: IndexList c t root a -> a -> m ()
 
-permanent :: (Event node ~ JSMEvent, Ixed node, HasEvent node, AppendChild node) => IxValue node -> JSMSF node a ()
+permanent :: (AppendChild node) => IxValue node -> JSMSF node a ()
 -- permanent v = jsmSF (arr (const Nothing)) (constMCl (StateT.put v)) >>> arr (const ())
 permanent v = constMCl $ StateT.state (appendChild v) <&> const ()

@@ -34,5 +34,8 @@ main = do
   clock <- createJSMClock
   flowJSM mainClSF clock
 
-mainClSF :: JSMSF () ()
-mainClSF = appendS $ DOM [Node "p" [] [ContentText "Hi"]]
+mainClSF :: JSMSF DOM () ()
+mainClSF = mconcat
+  [ appendS $ DOM [Node "p" [] [ContentText "Hi"]]
+  , permanent $ Node "p" [] [ContentText "Foo"]
+  ]
