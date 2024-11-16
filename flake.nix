@@ -179,26 +179,7 @@
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
         mapAttrs (system: pkgs: f system (pkgs.extend overlay)) inputs.nixpkgs.legacyPackages;
-      rhine-tree-js' = pkgs:
-        import ./rhine-tree/nix {
-          inherit pkgs lib;
-          nixpkgsSrc = inputs.nixpkgs;
-          ghcWasmMeta = inputs.ghc-wasm-meta;
-        };
-      rhine-tree-js = pkgs: let
-          dommy = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree;
-        in pkgs.writeTextFile {
-          name = "index.html";
-          text = ''
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <script src="${dommy}/bin/dommy">
-              </script>
-            </head>
-          </html>
-          '';
-        };
+      rhine-tree-js = pkgs: import ./rhine-tree/nix { inherit pkgs overlay lib; };
     in
     {
       # Reexport the overlay so other downstream flakes can use it to develop rhine projects with low effort.
