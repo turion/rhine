@@ -1,3 +1,4 @@
+{-# LANGUAGE Arrows #-}
 module FRP.Rhine.Tree where
 
 -- base
@@ -17,6 +18,7 @@ import Control.Applicative (Alternative)
 
 import Control.Concurrent (MVar, newEmptyMVar, putMVar, takeMVar)
 import Control.Lens (Index, IndexedTraversal', IxValue, Ixed (..), Lens', Prism', Traversal', itraversed, re, to, view, (%~), (<.), (^.), (^?), (^@..))
+import Control.Monad (void)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Control.Monad.Trans.State.Strict qualified as StateT
@@ -37,9 +39,10 @@ import Data.Text qualified as T hiding (length)
 import Data.These (these)
 import FRP.Rhine hiding (readerS, runReaderS, step)
 import FRP.Rhine.Tree.Types
-import Language.Javascript.JSaddle (MonadJSM (..), fun, js, jsg, jss, syncPoint, valToNumber)
+import Language.Javascript.JSaddle (MonadJSM (..), fun, js, js1, jsg, jss, syncPoint, valToNumber)
 import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
+import Data.Automaton.Trans.State (runStateS)
 
 default (Text)
 
@@ -159,10 +162,11 @@ instance Render Node where
       ]
 
 instance Render DOM where
-  render DOM {_dom} =
-    T.unlines $
-      "<!doctype html>"
-        : (render <$> _dom)
+  render DOM {_dom} = T.unlines $ render <$> _dom
+
+-- T.unlines $
+--   "<!doctype html>"
+--     : (render <$> _dom)
 
 data Edit a = Add a | Delete | Put a
 
@@ -208,17 +212,26 @@ createJSMClock = do
 -- FIXME Next iteration: Cache DOM and only update diff
 runStateTDOM :: StateT DOM JSM a -> JSM a
 runStateTDOM action = do
+  logJS "starting runStateTDOM"
   (a, dom_) <- runStateT action mempty
+  logJS "Calculated:"
+  logJS $ render dom_
   doc <- jsg ("document" :: Text)
   doc ^. js ("body" :: Text) ^. jss ("innerHTML" :: Text) (render dom_)
+  logJS "done"
   syncPoint -- FIXME needed?
   return a
+
+runStateTDOMS :: JSMSF DOM a b -> ClSF JSM JSMClock a b
+runStateTDOMS sf = feedback mempty $ proc (a, dom_) -> do
+  ClSF.runStateS sf -< _
+  _ -< _
 
 -- FIXME generalise
 type JSMSF node a b = ClSF (StateT node JSM) JSMClock a b
 
 flowJSM :: JSMSF DOM () () -> JSMClock -> JSM ()
-flowJSM sf cl = runStateTDOM $ flow $ sf @@ cl
+flowJSM sf cl = flow $ runStateTDOMS sf @@ cl
 
 stateS :: (Monad m) => (a -> s -> (b, s)) -> ClSF (StateT s m) cl a b
 stateS f = arrMCl $ StateT.state . f
@@ -229,7 +242,7 @@ appendS s = constMCl $ StateT.modify (<> s)
 jsmSF ::
   forall a output input.
   ( Ixed a,
-  HasEvent a,
+    HasEvent a,
     Event a ~ JSMEvent -- FIXME get rid of that constraint
   ) =>
   JSMSF a input (Maybe output) ->
@@ -250,7 +263,7 @@ class (Ixed a) => AppendChild a where
 
 instance AppendChild DOM where
   -- FIXME This is super inefficient, should use a vector or a Seq
-  appendChild node dom_ = ( dom_ ^. dom . to length, dom_ & dom %~ (++ [node]))
+  appendChild node dom_ = (dom_ ^. dom . to length, dom_ & dom %~ (++ [node]))
 
 instance AppendChild Node where
   -- FIXME This is super inefficient, should use a vector or a Seq
@@ -262,3 +275,8 @@ class Register m a where
 permanent :: (AppendChild node) => IxValue node -> JSMSF node a ()
 -- permanent v = jsmSF (arr (const Nothing)) (constMCl (StateT.put v)) >>> arr (const ())
 permanent v = constMCl $ StateT.state (appendChild v) <&> const ()
+
+logJS :: Text -> JSM ()
+logJS msg = do
+  c <- jsg ("console" :: Text)
+  void $ c ^. js1 ("log" :: Text) msg

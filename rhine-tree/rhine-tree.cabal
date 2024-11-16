@@ -50,6 +50,7 @@ executable dommy
         rhine,
         rhine-tree,
         jsaddle,
+        text,
         lens
     ghc-options: -threaded
     hs-source-dirs: app
