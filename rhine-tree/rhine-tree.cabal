@@ -55,21 +55,6 @@ executable dommy
     hs-source-dirs: app
     main-is: Dommy.hs
 
-executable dommy-ghc
-    import:           warnings
-    build-depends:
-        base,
-        rhine,
-        rhine-tree,
-        jsaddle,
-        jsaddle-webkit2gtk,
-        lens
-    other-modules:
-        Dommy
-    ghc-options: -threaded
-    hs-source-dirs: app
-    main-is: DommyGHC.hs
-
 test-suite rhine-tree-test
     import:           warnings
     default-language: GHC2021

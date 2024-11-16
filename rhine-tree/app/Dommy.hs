@@ -1,5 +1,3 @@
-module Dommy where
-
 import FRP.Rhine.Tree
 
 import Control.Concurrent (forkIO)
@@ -28,6 +26,8 @@ import FRP.Rhine
 import FRP.Rhine.Tree
 import FRP.Rhine.Tree.Types (DOM(..))
 import FRP.Rhine.Tree.Types (Node(..), Content (ContentText))
+
+import Language.Javascript.JSaddle
 
 main :: JSM ()
 main = do
