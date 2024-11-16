@@ -64,9 +64,6 @@
                 }
                 { };
             })
-            (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
-              monad-schedule = dontCheck hprev.monad-schedule;
-            })
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
             })
@@ -142,6 +139,14 @@
                 (prev.linkFarm "docsAndSdist" { docs = final.rhine-docs; sdist = rhine-sdist; })
               ];
             };
+
+          # All monad-schedule libraries
+          monad-schedule-lib = prev.buildEnv
+            {
+              name = "monad-schedule-lib";
+              paths = map (hp: hp.monad-schedule) (attrValues hps);
+              pathsToLink = [ "/lib" ];
+            };
         };
 
       overlay = lib.composeManyExtensions
@@ -165,6 +170,7 @@
       # Usage: nix build
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
+        monad-schedule = pkgs.monad-schedule-lib;
       });
 
       # We re-export the entire nixpkgs package set with our overlay.
