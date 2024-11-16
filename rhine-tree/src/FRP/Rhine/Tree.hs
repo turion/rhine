@@ -238,5 +238,5 @@ instance AppendChild Node where
 class Register m a where
   register :: IndexList c t root a -> a -> m ()
 
-permanent :: JSMSF (IxValue node) a b -> JSMSF node a b
+permanent :: IxValue node -> JSMSF node a b
 permanent = _
