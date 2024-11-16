@@ -20,7 +20,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
 import Data.Maybe (fromMaybe)
-import Data.Monoid (Last (..), Sum (..))
+import Data.Monoid (Last (..), Sum (..), Ap (..))
 import Prelude hiding (id, (.))
 
 -- mmorph
@@ -280,6 +280,13 @@ instance (Monad m, Alternative m) => ArrowZero (Automaton m) where
 
 instance (Monad m, Alternative m) => ArrowPlus (Automaton m) where
   (<+>) = (<|>)
+
+-- instance Semigroup w => Semigroup (Automaton m a w) where
+-- instance Monoid w => Monoid (Automaton m a w) where
+
+deriving via Ap (Automaton m a) w instance (Applicative m, Semigroup w) => Semigroup (Automaton m a w)
+deriving via Ap (Automaton m a) w instance (Applicative m, Monoid w) => Monoid (Automaton m a w)
+
 
 -- | Consume an input and produce output effectfully, without keeping internal state
 arrM :: (Functor m) => (a -> m b) -> Automaton m a b
