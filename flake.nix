@@ -167,7 +167,7 @@
       # Usage: nix build
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
-        rhine-tree-js = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree-example;
+        rhine-tree-js = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree;
       });
 
       # We re-export the entire nixpkgs package set with our overlay.
