@@ -41,7 +41,7 @@ import Language.Javascript.JSaddle (fun, js, jsg, jss, valToNumber, syncPoint, M
 import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
 import qualified Control.Monad.Trans.State.Strict as StateT
-import Data.Automaton.Trans.Reader (readerS)
+import Data.Automaton.Trans.Reader (readerS, runReaderS)
 
 default (Text)
 
@@ -224,12 +224,12 @@ stateS f = arrMCl $ StateT.state . f
 appendS :: (Monoid s, Monad m) => s -> ClSF (StateT s m) cl a ()
 appendS s = constMCl $ StateT.modify (<> s)
 
-jsmSF ::   forall a b c t output input.
+jsmSF ::   forall a output input.
   (Ixed a) =>
   JSMSF a input (Maybe output) ->
   JSMSF (IxValue a) input output ->
   JSMSF a input (Maybe output)
-jsmSF here there = readerS $ arr (\(ti, (input, indexList)) -> _) >>> indexAutomaton (_ here) (_ there)
+jsmSF here there = readerS $ arr (\(ti, input) -> (input, Here $ tag ti)) >>> indexAutomaton (arr (\(input, _) -> (TimeInfo {}, input)) >>> runReaderS here) (_ >>> runReaderS there)
 
 class Ixed a => AppendChild a where
   -- | Law:
