@@ -101,6 +101,7 @@ library
     FRP.Rhine.ClSF.Except
     FRP.Rhine.ClSF.Random
     FRP.Rhine.ClSF.Reader
+    FRP.Rhine.ClSF.State
     FRP.Rhine.ClSF.Upsample
     FRP.Rhine.ClSF.Util
     FRP.Rhine.Clock
