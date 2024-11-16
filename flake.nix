@@ -179,11 +179,25 @@
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
         mapAttrs (system: pkgs: f system (pkgs.extend overlay)) inputs.nixpkgs.legacyPackages;
-      rhine-tree-js = pkgs:
+      rhine-tree-js' = pkgs:
         import ./rhine-tree/nix {
           inherit pkgs lib;
           nixpkgsSrc = inputs.nixpkgs;
           ghcWasmMeta = inputs.ghc-wasm-meta;
+        };
+      rhine-tree-js = pkgs: let
+          dommy = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree;
+        in pkgs.writeTextFile {
+          name = "index.html";
+          text = ''
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <script src="${dommy}/bin/dommy">
+              </script>
+            </head>
+          </html>
+          '';
         };
     in
     {
@@ -229,8 +243,7 @@
       #   # Then open: http://localhost:8080
       packages = forAllPlatforms (system: pkgs:                {
         default = pkgs.rhine-all;
-        rhine-tree-js = (rhine-tree-js pkgs).staticFiles;
-        rhine-tree-js-serve = (rhine-tree-js pkgs).serveScript;
+        rhine-tree-js = rhine-tree-js pkgs;
       } // lib.mapAttrs (ghcVersion: haskellPackages: pkgs.linkFarm "rhine-all-${ghcVersion}" (lib.genAttrs pnames (pname: haskellPackages.${pname}))) (hpsFor pkgs));
 
       # `nix run .#rhine-tree-app-wasm` — compile dommy.wasm and serve it.
