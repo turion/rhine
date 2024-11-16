@@ -43,6 +43,7 @@ import Language.Javascript.JSaddle (MonadJSM (..), fun, js, js1, jsg, jss, syncP
 import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
 import Data.Automaton.Trans.State (runStateS)
+import qualified FRP.Rhine.ClSF.State as ClSF
 
 default (Text)
 
@@ -224,8 +225,13 @@ runStateTDOM action = do
 
 runStateTDOMS :: JSMSF DOM a b -> ClSF JSM JSMClock a b
 runStateTDOMS sf = feedback mempty $ proc (a, dom_) -> do
-  ClSF.runStateS sf -< _
-  _ -< _
+  constMCl $ logJS "starting runStateTDOM" -< ()
+  (dom', b) <- ClSF.runStateS sf -< (dom_, a)
+  constMCl $ logJS "Calculated:" -< ()
+  arrMCl logJS -< render dom'
+  doc <- constMCl $ jsg ("document" :: Text) -< ()
+  arrMCl (\(t, doc) -> doc ^. js ("body" :: Text) ^. jss ("innerHTML" :: Text) t) -< (render dom_, doc)
+  returnA -< (b, dom')
 
 -- FIXME generalise
 type JSMSF node a b = ClSF (StateT node JSM) JSMClock a b
