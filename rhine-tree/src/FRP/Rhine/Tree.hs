@@ -79,9 +79,11 @@ class HasEvent a where
 
 -- FIXME Maybe At is cleverer
 -- FIXME use free category
-data EventList a where
-  Here :: (HasEvent a) => Event a -> EventList a
-  There :: (Ixed a) => Index a -> EventList (IxValue a) -> EventList a
+data IndexList c t a b where
+  Here :: c a => t a -> IndexList a a
+  There :: (Ixed a) => Index a -> IndexList (IxValue a) b -> IndexList a b
+
+type EventList = IndexList HasEvent Event
 
 -- FIXME If I had lenses into the inner structure I'd get away with output instead of Maybe output
 -- FIXME can we use FilterAutomaton
@@ -101,18 +103,18 @@ indexAutomaton ::
   forall a m output input.
   (Ixed a, Monad m) =>
   Automaton (StateT a m) (input, Event a) output ->
-  Automaton (StateT (IxValue a) m) (input, EventList (IxValue a)) output ->
-  Automaton (StateT a m) (input, EventList a) (Maybe output)
-indexAutomaton eHere eThere = arr splitEventList >>> (eHere >>> arr Just) ||| indexAutomaton1 eThere
+  Automaton (StateT (IxValue a) m) (input, IndexList c t (IxValue a) b) output ->
+  Automaton (StateT a m) (input, IndexList c t a b) (Maybe output)
+indexAutomaton eHere eThere = arr splitIndexList >>> (eHere >>> arr Just) ||| indexAutomaton1 eThere
   where
     -- Need this workaround because GADTs can't be matched in Arrow notation as of 9.10
-    splitEventList :: (input, EventList a) -> Either (input, Event a) ((input, EventList (IxValue a)), Index a)
-    splitEventList (input, Here event) = Left (input, event)
-    splitEventList (input, There i eventList) = Right ((input, eventList), i)
+    splitIndexList :: (input, IndexList c t a b) -> Either (input, Event a) ((input, IndexList c t (IxValue a) b), Index a)
+    splitIndexList (input, Here event) = Left (input, event)
+    splitIndexList (input, There i eventList) = Right ((input, eventList), i)
 
-type NodeEvent = EventList Node
+type NodeEvent = IndexList c t Node
 
-type DOMEvent = EventList DOM
+type DOMEvent = IndexList c t DOM
 
 class Render a where
   render :: a -> Text
@@ -205,9 +207,9 @@ runStateTDOM action = do
   syncPoint -- FIXME needed?
   return a
 
-type JSMSF a b = ClSF (StateT DOM JSM) JSMClock a b
+type JSMSF node a b = ClSF (StateT node JSM) JSMClock a b
 
-flowJSM :: ClSF (StateT DOM JSM) JSMClock () () -> JSMClock -> JSM ()
+flowJSM :: JSMSF DOM () () -> JSMClock -> JSM ()
 flowJSM sf cl = runStateTDOM $ flow $ sf @@ cl
 
 stateS :: (Monad m) => (a -> s -> (b, s)) -> ClSF (StateT s m) cl a b
@@ -216,4 +218,20 @@ stateS f = arrMCl $ StateT.state . f
 appendS :: (Monoid s, Monad m) => s -> ClSF (StateT s m) cl a ()
 appendS s = constMCl $ StateT.modify (<> s)
 
--- FIXME Maybe try webkit thingy (https://github.com/ghcjs/jsaddle/issues/64)
+class Ixed a => AppendChild a where
+  -- | Law:
+  -- let (a', i) = appendChild v a in a' ^@? ix i == Just v
+  appendChild :: IxValue a -> a -> (a, Index a)
+
+instance AppendChild DOM where
+  -- FIXME This is super inefficient, should use a vector or a Seq
+  appendChild node dom_ = (dom_ & dom %~ (++ [node]), _dom ^. dom . to length)
+
+instance AppendChild Node where
+  -- FIXME This is super inefficient, should use a vector or a Seq
+  appendChild child parent = (parent & children %~ (++ [Child child]), parent ^. children . to length)
+
+class Register m a where
+  register :: IndexList c t root a -> a -> m ()
+
+permanent ::

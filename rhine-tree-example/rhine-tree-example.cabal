@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               rhine-tree
+name:               rhine-tree-example
 version:            0.1.0.0
 -- synopsis:
 -- description:
@@ -22,14 +22,17 @@ common warnings
         ScopedTypeVariables
         OverloadedStrings
 
-executable dommy
+executable dommy-ghc
     import:           warnings
     build-depends:
         base,
         rhine,
         rhine-tree,
         jsaddle,
+        jsaddle-webkit2gtk,
         lens
+    other-modules:
+        Dommy
     ghc-options: -threaded
     hs-source-dirs: app
-    main-is: Dommy.hs
+    main-is: DommyGHC.hs
