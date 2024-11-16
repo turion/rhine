@@ -155,6 +155,8 @@ jobs:
         run: |
           nix fmt
           git diff --exit-code
+      - name: Build Javascript thingy
+        run: nix build .#rhine-tree-js --accept-flake-config
 
   cabal-check:
     name: Check and format all cabal files
