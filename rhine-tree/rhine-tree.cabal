@@ -57,6 +57,7 @@ executable dommy
     build-depends:
         base,
         rhine-tree,
+        text,
         jsaddle-wasm
     -- For the GHC WASM backend:
     --   -no-hs-main            : don't emit a C main(); we export hs_start instead

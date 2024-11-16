@@ -7,6 +7,7 @@ import Control.Monad (forever)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Monoid ((<>))
 import Language.Javascript.JSaddle (
+  JSM,
   askJSM,
   fun,
   global,
@@ -22,20 +23,22 @@ import Language.Javascript.JSaddle (
   valToJSON
  )
 
-import FRP.Rhine
+import FRP.Rhine hiding (forever)
 import FRP.Rhine.Tree
 import FRP.Rhine.Tree.Types (DOM(..))
 import FRP.Rhine.Tree.Types (Node(..), Content (ContentText))
 
-import Language.Javascript.JSaddle
+import Data.Text (Text)
+default (Text)
 
 main :: JSM ()
 main = do
   clock <- createJSMClock
+  logJS "created"
   flowJSM mainClSF clock
 
 mainClSF :: JSMSF DOM () ()
 mainClSF = mconcat
-  [ appendS $ DOM [Node "p" [] [ContentText "Hi"]]
-  , permanent $ Node "p" [] [ContentText "Foo"]
+  [ appendS $ DOM [Node ("p" :: Text) [] [ContentText ("Hi" :: Text)]]
+  , permanent $ Node ("p" :: Text) [] [ContentText ("Foo" :: Text)]
   ]
