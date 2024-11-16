@@ -70,6 +70,10 @@
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
             })
+            (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.6") {
+              cabal-gild = doJailbreak hprev.cabal-gild;
+              fourmolu = doJailbreak hprev.fourmolu;
+            })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               # Remove these as nixpkgs progresses!
               finite-typelits = doJailbreak hprev.finite-typelits;
@@ -180,10 +184,12 @@
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
           nativeBuildInputs = with hp; [
-            cabal-gild
-            cabal-install
-            fourmolu
             haskell-language-server
+          ] ++ lib.optional (lib.versionAtLeast hp.ghc.version "9.4") [
+            fourmolu
+            cabal-gild
+          ] ++ lib.optional (lib.versionAtLeast hp.ghc.version "9.6") [
+            cabal-install
           ];
         })
         (hpsFor pkgs));
