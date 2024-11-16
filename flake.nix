@@ -155,6 +155,20 @@
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
         mapAttrs (system: pkgs: f system (pkgs.extend overlay)) inputs.nixpkgs.legacyPackages;
+      rhine-tree-js = pkgs: let
+          dommy = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree;
+        in pkgs.writeTextFile {
+          name = "index.html";
+          text = ''
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <script src="${dommy}/bin/dommy">
+              </script>
+            </head>
+          </html>
+          '';
+        };
     in
     {
       # Reexport the overlay so other downstream flakes can use it to develop rhine projects with low effort.
@@ -167,7 +181,7 @@
       # Usage: nix build
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
-        rhine-tree-js = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree;
+        rhine-tree-js = rhine-tree-js pkgs;
       });
 
       # We re-export the entire nixpkgs package set with our overlay.
