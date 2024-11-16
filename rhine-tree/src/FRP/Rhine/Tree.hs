@@ -41,6 +41,7 @@ import Language.Javascript.JSaddle (fun, js, jsg, jss, valToNumber, syncPoint, M
 import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
 import qualified Control.Monad.Trans.State.Strict as StateT
+import Data.Automaton.Trans.Reader (readerS)
 
 default (Text)
 
@@ -105,10 +106,10 @@ indexAutomaton1 = handleAutomaton $ \StreamT {state, step} ->
 indexAutomaton ::
   forall a b m c t output input.
   (Ixed a, Monad m) =>
-  Automaton (StateT a m) (input, t a) output ->
+  Automaton (StateT a m) (input, t a) (Maybe output) ->
   Automaton (StateT (IxValue a) m) (input, IndexList c t (IxValue a) b) output ->
   Automaton (StateT a m) (input, IndexList c t a b) (Maybe output)
-indexAutomaton eHere eThere = arr splitIndexList >>> (eHere >>> arr Just) ||| indexAutomaton1 eThere
+indexAutomaton eHere eThere = arr splitIndexList >>> eHere ||| indexAutomaton1 eThere
   where
     -- Need this workaround because GADTs can't be matched in Arrow notation as of 9.10
     splitIndexList :: (input, IndexList c t a b) -> Either (input, t a) ((input, IndexList c t (IxValue a) b), Index a)
@@ -211,6 +212,7 @@ runStateTDOM action = do
   syncPoint -- FIXME needed?
   return a
 
+-- FIXME generalise
 type JSMSF node a b = ClSF (StateT node JSM) JSMClock a b
 
 flowJSM :: JSMSF DOM () () -> JSMClock -> JSM ()
@@ -221,6 +223,13 @@ stateS f = arrMCl $ StateT.state . f
 
 appendS :: (Monoid s, Monad m) => s -> ClSF (StateT s m) cl a ()
 appendS s = constMCl $ StateT.modify (<> s)
+
+jsmSF ::   forall a b c t output input.
+  (Ixed a) =>
+  JSMSF a input (Maybe output) ->
+  JSMSF (IxValue a) input output ->
+  JSMSF a input (Maybe output)
+jsmSF here there = readerS $ arr (\(ti, (input, indexList)) -> _) >>> indexAutomaton (_ here) (_ there)
 
 class Ixed a => AppendChild a where
   -- | Law:
