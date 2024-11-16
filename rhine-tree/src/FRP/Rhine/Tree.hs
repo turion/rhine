@@ -32,8 +32,8 @@ import Data.Proxy (Proxy (..))
 import Data.Semialign.Indexed (SemialignWithIndex)
 import Data.Stream (StreamT (..))
 import Data.Stream.Result (mapResultState, unzipResult)
-import Data.Text hiding (index)
-import Data.Text qualified as T
+import Data.Text hiding (length, index)
+import Data.Text qualified as T hiding (length)
 import Data.These (These, these)
 import FRP.Rhine hiding (readerS, runReaderS, step)
 import FRP.Rhine.Tree.Types
@@ -80,10 +80,13 @@ class HasEvent a where
 -- FIXME Maybe At is cleverer
 -- FIXME use free category
 data IndexList c t a b where
-  Here :: c a => t a -> IndexList a a
-  There :: (Ixed a) => Index a -> IndexList (IxValue a) b -> IndexList a b
+  Here :: c a => t a -> IndexList c t a a
+  There :: (Ixed a) => Index a -> IndexList c t (IxValue a) b -> IndexList c t a b
 
-type EventList = IndexList HasEvent Event
+-- FIXME Stupid workaround because of type families. Maybe we can have an associated data family?
+data AnEvent a = AnEvent (Event a)
+
+type EventList = IndexList HasEvent AnEvent
 
 -- FIXME If I had lenses into the inner structure I'd get away with output instead of Maybe output
 -- FIXME can we use FilterAutomaton
@@ -100,7 +103,7 @@ indexAutomaton1 = handleAutomaton $ \StreamT {state, step} ->
 
 -- FIXME test for nested indices
 indexAutomaton ::
-  forall a m output input.
+  forall a b m c t output input.
   (Ixed a, Monad m) =>
   Automaton (StateT a m) (input, Event a) output ->
   Automaton (StateT (IxValue a) m) (input, IndexList c t (IxValue a) b) output ->
@@ -112,9 +115,9 @@ indexAutomaton eHere eThere = arr splitIndexList >>> (eHere >>> arr Just) ||| in
     splitIndexList (input, Here event) = Left (input, event)
     splitIndexList (input, There i eventList) = Right ((input, eventList), i)
 
-type NodeEvent = IndexList c t Node
+type NodeEvent = EventList Node
 
-type DOMEvent = IndexList c t DOM
+type DOMEvent = EventList DOM
 
 class Render a where
   render :: a -> Text
@@ -234,4 +237,5 @@ instance AppendChild Node where
 class Register m a where
   register :: IndexList c t root a -> a -> m ()
 
-permanent ::
+permanent :: JSMSF (IxValue node) a b -> JSMSF node a b
+permanent = _
