@@ -133,10 +133,28 @@ jobs:
         run: nix flake check
       - name: Build all packages
         run: nix build --accept-flake-config
+
+  build-devshell:
+    name: Nix Flake Develop
+    needs:
+      - generateMatrix
+      - build-flake
+    strategy:
+      matrix: ${{ fromJSON(needs.generateMatrix.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+      - uses: cachix/cachix-action@v15
+        with:
+          name: rhine
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Run tests
         run: |
-          nix develop --accept-flake-config -c cabal update
-          nix develop --accept-flake-config -c cabal test all
+          ghc="ghc$(echo ${{ matrix.ghc }} | tr -d '.')" # Removes the dot from the ghc version and prepends "ghc"
+          nix develop .#${ghc} --accept-flake-config -c cabal update
+          nix develop .#${ghc} --accept-flake-config -c cabal test all
 
   cabal-check:
     name: Check and format all cabal files
@@ -154,6 +172,7 @@ jobs:
     needs:
       - build-cabal
       - build-flake
+      - build-devshell
     runs-on:
       - ubuntu-latest
     steps:
