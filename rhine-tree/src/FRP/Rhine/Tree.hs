@@ -16,11 +16,12 @@ import Control.Applicative (Alternative)
 -- rhine-tree
 
 import Control.Concurrent (MVar, newEmptyMVar, putMVar, takeMVar)
-import Control.Lens (Index, IndexedTraversal', IxValue, Ixed (..), Lens', Optic', Prism', Traversal', failing, icompose, index, itraversed, re, reindexed, selfIndex, to, view, (%~), (<.), (^.), (^?), (^@..))
-import Control.Monad (guard)
+import Control.Lens (Index, IndexedTraversal', IxValue, Ixed (..), Lens', Prism', Traversal', itraversed, re, to, view, (%~), (<.), (^.), (^?), (^@..))
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
+import Control.Monad.Trans.State.Strict qualified as StateT
 import Data.Align (Semialign (..))
+import Data.Automaton.Trans.Reader (readerS, runReaderS)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compat (unzip)
@@ -29,19 +30,16 @@ import Data.Kind (Type)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Alt (..))
 import Data.Proxy (Proxy (..))
-import Data.Semialign.Indexed (SemialignWithIndex)
 import Data.Stream (StreamT (..))
 import Data.Stream.Result (mapResultState, unzipResult)
-import Data.Text hiding (length, index)
+import Data.Text hiding (index, length)
 import Data.Text qualified as T hiding (length)
-import Data.These (These, these)
+import Data.These (these)
 import FRP.Rhine hiding (readerS, runReaderS, step)
 import FRP.Rhine.Tree.Types
-import Language.Javascript.JSaddle (fun, js, jsg, jss, valToNumber, syncPoint, MonadJSM (..))
+import Language.Javascript.JSaddle (MonadJSM (..), fun, js, jsg, jss, syncPoint, valToNumber)
 import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
-import qualified Control.Monad.Trans.State.Strict as StateT
-import Data.Automaton.Trans.Reader (readerS, runReaderS)
 
 default (Text)
 
@@ -81,7 +79,7 @@ class HasEvent a where
 -- FIXME Maybe At is cleverer
 -- FIXME use free category
 data IndexList c t a b where
-  Here :: c a => t a -> IndexList c t a a
+  Here :: (c a) => t a -> IndexList c t a a
   There :: (Ixed a) => Index a -> IndexList c t (IxValue a) b -> IndexList c t a b
 
 -- FIXME Stupid workaround because of type families. Maybe we can have an associated data family?
@@ -104,21 +102,22 @@ indexAutomaton1 = handleAutomaton $ \StreamT {state, step} ->
 
 -- FIXME test for nested indices
 indexAutomaton ::
-  forall a b m c t output input.
+  forall a b m output input.
   (Ixed a, Monad m) =>
-  Automaton (StateT a m) (input, t a) (Maybe output) ->
-  Automaton (StateT (IxValue a) m) (input, IndexList c t (IxValue a) b) output ->
-  Automaton (StateT a m) (input, IndexList c t a b) (Maybe output)
+  Automaton (StateT a m) (input, AnEvent a) (Maybe output) ->
+  Automaton (StateT (IxValue a) m) (input, EventList (IxValue a) b) output ->
+  Automaton (StateT a m) (input, EventList a b) (Maybe output)
 indexAutomaton eHere eThere = arr splitIndexList >>> eHere ||| indexAutomaton1 eThere
   where
     -- Need this workaround because GADTs can't be matched in Arrow notation as of 9.10
-    splitIndexList :: (input, IndexList c t a b) -> Either (input, t a) ((input, IndexList c t (IxValue a) b), Index a)
+    splitIndexList :: (input, EventList a b) -> Either (input, AnEvent a) ((input, EventList (IxValue a) b), Index a)
     splitIndexList (input, Here event) = Left (input, event)
     splitIndexList (input, There i eventList) = Right ((input, eventList), i)
 
-data SomeEvent root = forall a . SomeEvent {_someEvent :: EventList root a }
+data SomeEvent root = forall a. SomeEvent {_someEvent :: EventList root a}
 
 type NodeEvent = SomeEvent Node
+
 type DOMEvent = SomeEvent DOM
 
 class Render a where
@@ -182,7 +181,7 @@ data JSMClock = JSMClock {events :: MVar JSMEvent}
 
 instance GetClockProxy JSMClock
 
-instance MonadJSM m => Clock m JSMClock where
+instance (MonadJSM m) => Clock m JSMClock where
   type Time JSMClock = () -- FIXME Use nextAnimationFrame maybe for continuous things?
   type Tag JSMClock = JSMEvent
   initClock JSMClock {events} = return (constM $ ((),) <$> (liftIO (takeMVar events)), ())
@@ -224,28 +223,39 @@ stateS f = arrMCl $ StateT.state . f
 appendS :: (Monoid s, Monad m) => s -> ClSF (StateT s m) cl a ()
 appendS s = constMCl $ StateT.modify (<> s)
 
-jsmSF ::   forall a output input.
-  (Ixed a) =>
+jsmSF ::
+  forall a output input.
+  ( Ixed a,
+  HasEvent a,
+    Event a ~ JSMEvent -- FIXME get rid of that constraint
+  ) =>
   JSMSF a input (Maybe output) ->
   JSMSF (IxValue a) input output ->
   JSMSF a input (Maybe output)
-jsmSF here there = readerS $ arr (\(ti, input) -> (input, Here $ tag ti)) >>> indexAutomaton (arr (\(input, _) -> (TimeInfo {}, input)) >>> runReaderS here) (_ >>> runReaderS there)
+jsmSF here there =
+  readerS $
+    -- FIXME More general routing by getting the evnt structure from the tick
+    arr (\(ti, input) -> ((ti, input), Here $ AnEvent $ tag ti))
+      >>> indexAutomaton
+        (arr (\((ti, input), _) -> (ti, input)) >>> runReaderS here)
+        (arr (\((ti, input), _) -> (ti, input)) >>> runReaderS there)
 
-class Ixed a => AppendChild a where
+class (Ixed a) => AppendChild a where
   -- | Law:
   -- let (a', i) = appendChild v a in a' ^@? ix i == Just v
-  appendChild :: IxValue a -> a -> (a, Index a)
+  appendChild :: IxValue a -> a -> (Index a, a)
 
 instance AppendChild DOM where
   -- FIXME This is super inefficient, should use a vector or a Seq
-  appendChild node dom_ = (dom_ & dom %~ (++ [node]), dom_ ^. dom . to length)
+  appendChild node dom_ = ( dom_ ^. dom . to length, dom_ & dom %~ (++ [node]))
 
 instance AppendChild Node where
   -- FIXME This is super inefficient, should use a vector or a Seq
-  appendChild child parent = (parent & children %~ (++ [Child child]), parent ^. children . to length)
+  appendChild child parent = (parent ^. children . to length, parent & children %~ (++ [Child child]))
 
 class Register m a where
   register :: IndexList c t root a -> a -> m ()
 
-permanent :: IxValue node -> JSMSF node a b
-permanent = _
+permanent :: (Event node ~ JSMEvent, Ixed node, HasEvent node, AppendChild node) => IxValue node -> JSMSF node a ()
+-- permanent v = jsmSF (arr (const Nothing)) (constMCl (StateT.put v)) >>> arr (const ())
+permanent v = constMCl $ StateT.state (appendChild v) <&> const ()
