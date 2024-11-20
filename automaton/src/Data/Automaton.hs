@@ -13,7 +13,7 @@ module Data.Automaton where
 import Control.Applicative (Alternative (..))
 import Control.Arrow
 import Control.Category
-import Control.Monad ((<=<))
+import Control.Monad ((<=<), foldM)
 import Control.Monad.Fix (MonadFix (mfix))
 import Data.Coerce (coerce)
 import Data.Function ((&))
@@ -257,6 +257,13 @@ instance (Monad m) => ArrowChoice (Automaton m) where
   right (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (pure . Left) (fmap Right . runReaderT ma)
   {-# INLINE right #-}
 
+  f ||| g = f +++ g >>> arr untag
+    where
+      untag (Left x) = x
+      untag (Right y) = y
+
+  {-# INLINE (|||) #-}
+
 -- | Caution, this can make your program hang. Try to use 'feedback' or 'unfold' where possible, or combine 'loop' with 'delay'.
 instance (MonadFix m) => ArrowLoop (Automaton m) where
   loop (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT (\b -> fst <$> mfix ((. snd) $ ($ b) $ curry $ runReaderT ma))
@@ -364,12 +371,7 @@ embed ::
   -- | The input values
   [a] ->
   m [b]
-embed (Automaton (Stateful StreamT {state, step})) = go state
-  where
-    go _s [] = return []
-    go s (a : as) = do
-      Result s' b <- runReaderT (step s) a
-      (b :) <$> go s' as
+embed (Automaton (Stateful StreamT {state, step})) = fmap (fmap output) $ foldM (\(Result s bs) a -> fmap (: bs) <$> runReaderT (step s) a) $ Result state []
 embed (Automaton (Stateless m)) = mapM $ runReaderT m
 
 -- * Modifying automata
@@ -519,10 +521,12 @@ sumS = sumFrom zeroVector
 -- | Sum up all inputs so far, initialised at 0.
 sumN :: (Monad m, Num a) => Automaton m a a
 sumN = arr Sum >>> mappendS >>> arr getSum
+{-# INLINE sumN #-}
 
 -- | Count the natural numbers, beginning at 1.
 count :: (Num n, Monad m) => Automaton m a n
 count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
+{-# INLINE count #-}
 
 -- | Remembers the last 'Just' value, defaulting to the given initialisation value.
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
