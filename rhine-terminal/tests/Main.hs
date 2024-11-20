@@ -56,7 +56,7 @@ charEvent eventQueue _ char = do
 main :: IO ()
 main = hspec $ do
   describe "rhine-terminal with VirtualTerminal" $ do
-    it "reaplces virtual inputs by dots" $ do
+    it "replaces virtual inputs by dots" $ do
       eventQueue <- newTQueueIO
       withVirtualTerminal (defaultSettings eventQueue) $ \t -> do
         void $ liftIO $ forkIO $ flowTerminal t testRhine

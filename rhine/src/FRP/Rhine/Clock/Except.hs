@@ -5,7 +5,6 @@ import Control.Arrow
 import Control.Exception
 import Control.Exception qualified as Exception
 import Control.Monad ((<=<))
-import Data.Functor ((<&>))
 import Data.Void
 
 -- time
@@ -50,11 +49,7 @@ instance (Exception e, Clock IO cl, MonadIO eio, MonadError e eio) => Clock eio 
   type Time (ExceptClock cl e) = Time cl
   type Tag (ExceptClock cl e) = Tag cl
 
-  initClock ExceptClock {getExceptClock} = do
-    ioerror $
-      Exception.try $
-        initClock getExceptClock
-          <&> first (hoistS (ioerror . Exception.try))
+  initClock ExceptClock {getExceptClock} = hoistS (ioerror . Exception.try) $ initClock getExceptClock
     where
       ioerror :: (MonadError e eio, MonadIO eio) => IO (Either e a) -> eio a
       ioerror = liftEither <=< liftIO
@@ -76,17 +71,10 @@ data CatchClock cl1 e cl2 = CatchClock cl1 (e -> cl2)
 instance (Time cl1 ~ Time cl2, Clock (ExceptT e m) cl1, Clock m cl2, Monad m) => Clock m (CatchClock cl1 e cl2) where
   type Time (CatchClock cl1 e cl2) = Time cl1
   type Tag (CatchClock cl1 e cl2) = Either (Tag cl2) (Tag cl1)
-  initClock (CatchClock cl1 handler) = do
-    tryToInit <- runExceptT $ first (>>> arr (second Right)) <$> initClock cl1
-    case tryToInit of
-      Right (runningClock, initTime) -> do
-        let catchingClock = safely $ do
-              e <- AutomatonExcept.try runningClock
-              let cl2 = handler e
-              (runningClock', _) <- once_ $ initClock cl2
-              safe $ runningClock' >>> arr (second Left)
-        return (catchingClock, initTime)
-      Left e -> (fmap (first (>>> arr (second Left))) . initClock) $ handler e
+  initClock (CatchClock cl1 handler) = safely $ do
+    e <- AutomatonExcept.try $ initClock cl1 >>> arr (second Right)
+    let cl2 = handler e
+    safe $ initClock cl2 >>> arr (second Left)
 
 instance (GetClockProxy (CatchClock cl1 e cl2))
 
@@ -134,14 +122,13 @@ data Single m time tag e = Single
 instance (TimeDomain time, MonadError e m) => Clock m (Single m time tag e) where
   type Time (Single m time tag e) = time
   type Tag (Single m time tag e) = tag
-  initClock Single {singleTag, getTime, exception} = do
-    initTime <- getTime
-    let runningClock = hoistS (errorT . runExceptT) $ runAutomatonExcept $ do
-          step_ (initTime, singleTag)
-          return exception
-        errorT :: (MonadError e m) => m (Either e a) -> m a
-        errorT = (>>= liftEither)
-    return (runningClock, initTime)
+  initClock Single {singleTag, getTime, exception} = hoistS (errorT . runExceptT) $ runAutomatonExcept $ do
+    initTime <- once_ getTime
+    step_ (initTime, singleTag)
+    return exception
+    where
+      errorT :: (MonadError e m) => m (Either e a) -> m a
+      errorT = (>>= liftEither)
 
 -- * 'DelayException'
 

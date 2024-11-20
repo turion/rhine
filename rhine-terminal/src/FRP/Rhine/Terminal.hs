@@ -44,15 +44,10 @@ instance (MonadInput m, MonadIO m) => Clock m TerminalEventClock where
   type Time TerminalEventClock = UTCTime
   type Tag TerminalEventClock = Either Interrupt Event
 
-  initClock TerminalEventClock = do
-    initialTime <- liftIO getCurrentTime
-    return
-      ( constM $ do
-          event <- awaitEvent
-          time <- liftIO getCurrentTime
-          return (time, event)
-      , initialTime
-      )
+  initClock TerminalEventClock = constM $ do
+    event <- awaitEvent
+    time <- liftIO getCurrentTime
+    return (time, event)
 
 instance GetClockProxy TerminalEventClock
 

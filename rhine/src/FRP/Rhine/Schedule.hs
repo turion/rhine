@@ -80,14 +80,11 @@ initSchedule ::
   ) =>
   cl1 ->
   cl2 ->
-  RunningClockInit m (Time cl1) (Either (Tag cl1) (Tag cl2))
-initSchedule cl1 cl2 = do
-  (runningClock1, initTime) <- initClock cl1
-  (runningClock2, _) <- initClock cl2
-  return
-    ( runningSchedule cl1 cl2 runningClock1 runningClock2
-    , initTime
-    )
+  RunningClock m (Time cl1) (Either (Tag cl1) (Tag cl2))
+initSchedule cl1 cl2 = let
+  runningClock1 = initClock cl1
+  runningClock2 = initClock cl2
+  in runningSchedule cl1 cl2 runningClock1 runningClock2
 
 -- * Composite clocks
 
