@@ -36,15 +36,10 @@ instance (MonadIO m) => Clock m StdinClock where
   type Time StdinClock = UTCTime
   type Tag StdinClock = Text.Text
 
-  initClock _ = do
-    initialTime <- liftIO getCurrentTime
-    return
-      ( constM $ liftIO $ do
+  initClock _ = constM $ liftIO $ do
           line <- Text.getLine
           time <- getCurrentTime
           return (time, line)
-      , initialTime
-      )
 
 instance GetClockProxy StdinClock
 
