@@ -76,15 +76,9 @@
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               # Remove these as nixpkgs progresses!
-              finite-typelits = doJailbreak hprev.finite-typelits;
+              finite-typelits = hprev.finite-typelits_0_2_1_0;
 
-              vector-sized = hprev.callHackageDirect
-                {
-                  pkg = "vector-sized";
-                  ver = "1.6.1";
-                  sha256 = "sha256-//EOAwpEEQkdYF88U/bp0uybKleYHRmTWaKsxIZvCeQ=";
-                }
-                { };
+              vector-sized = hprev.vector-sized_1_6_1;
 
               microstache = doJailbreak hprev.microstache;
               gloss-rendering = doJailbreak hprev.gloss-rendering;
