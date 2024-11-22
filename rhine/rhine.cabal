@@ -31,11 +31,11 @@ data-files:
   test/assets/*.txt
 
 tested-with:
-  ghc ==9.2.8
-  ghc ==9.4.7
-  ghc ==9.6.4
-  ghc ==9.8.2
-  ghc ==9.10.1
+  ghc ==9.2
+  ghc ==9.4
+  ghc ==9.6
+  ghc ==9.8
+  ghc ==9.10
 
 source-repository head
   type: git

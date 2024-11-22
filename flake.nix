@@ -70,17 +70,15 @@
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
             })
+            (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.6") {
+              cabal-gild = doJailbreak hprev.cabal-gild;
+              fourmolu = doJailbreak hprev.fourmolu;
+            })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               # Remove these as nixpkgs progresses!
-              finite-typelits = doJailbreak hprev.finite-typelits;
+              finite-typelits = hprev.finite-typelits_0_2_1_0;
 
-              vector-sized = hprev.callHackageDirect
-                {
-                  pkg = "vector-sized";
-                  ver = "1.6.1";
-                  sha256 = "sha256-//EOAwpEEQkdYF88U/bp0uybKleYHRmTWaKsxIZvCeQ=";
-                }
-                { };
+              vector-sized = hprev.vector-sized_1_6_1;
 
               microstache = doJailbreak hprev.microstache;
               gloss-rendering = doJailbreak hprev.gloss-rendering;
@@ -180,10 +178,12 @@
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
           nativeBuildInputs = with hp; [
-            cabal-gild
-            cabal-install
-            fourmolu
             haskell-language-server
+          ] ++ lib.optional (lib.versionAtLeast hp.ghc.version "9.4") [
+            fourmolu
+            cabal-gild
+          ] ++ lib.optional (lib.versionAtLeast hp.ghc.version "9.6") [
+            cabal-install
           ];
         })
         (hpsFor pkgs));
