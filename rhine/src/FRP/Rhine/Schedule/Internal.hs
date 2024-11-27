@@ -29,6 +29,8 @@ newtype Step m b state = Step {getStep :: ResultStateT state m b}
 -- | The result of a stream, with the type arguments swapped, so it's usable with sop-core
 newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
 
+{- HLINT ignore apInjs_NPNonEmpty "Use camelCase" -}
+
 -- | Transform an n-ary product of at least one type into a nonempty list of all its content.
 apInjs_NPNonEmpty :: (SListI xs) => NP f (x ': xs) -> NonEmpty (NS f (x ': xs))
 apInjs_NPNonEmpty (fx :* fxs) = Z fx :| (S <$> apInjs_NP fxs)
@@ -58,7 +60,7 @@ scheduleStreams Streams {states, steps} =
             -- Separate into finished streams and still running streams
             & fmap
               ( \(finished, running) ->
-                  let finishedStates = finished <&> (hliftA (getRunningResult >>> resultState >>> I))
+                  let finishedStates = finished <&> hliftA (getRunningResult >>> resultState >>> I)
                       outputs =
                         finished
                           <&> (hliftA (getRunningResult >>> output >>> K) >>> hcollapse)
