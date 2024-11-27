@@ -31,10 +31,9 @@ import System.Terminal.Internal (Terminal)
 -- transformers
 import Control.Monad.Trans.Reader
 
--- monad-schedule
-import Control.Monad.Schedule.Class
-
 -- rhine
+
+import Data.Automaton.Schedule (MonadSchedule (..))
 import FRP.Rhine
 
 -- | A clock that ticks whenever events or interrupts on the terminal arrive.
@@ -46,11 +45,11 @@ instance (MonadInput m, MonadIO m) => Clock m TerminalEventClock where
 
   initClock TerminalEventClock = do
     initialTime <- liftIO getCurrentTime
-    return
+    pure
       ( constM $ do
           event <- awaitEvent
           time <- liftIO getCurrentTime
-          return (time, event)
+          pure (time, event)
       , initialTime
       )
   {-# INLINE initClock #-}
@@ -115,4 +114,4 @@ unTerminalT :: TerminalT t m a -> ReaderT t m a
 unTerminalT = unsafeCoerce
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (TerminalT t m) where
-  schedule = terminalT . fmap (fmap (fmap terminalT)) . schedule . fmap unTerminalT
+  schedule = hoistS terminalT . schedule . fmap (hoistS unTerminalT)

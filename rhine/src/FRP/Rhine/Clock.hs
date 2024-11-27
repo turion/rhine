@@ -130,7 +130,7 @@ rescaleMToSInit rescaling time1 = (arrM rescaling *** Category.id,) <$> rescalin
 
 -- ** Applying rescalings to clocks
 
--- | Applying a morphism of time domains yields a new clock.
+-- | Applying a morphism of time domains skips a new clock.
 data RescaledClock cl time = RescaledClock
   { unscaledClock :: cl
   , rescale :: Rescaling cl time
@@ -144,7 +144,7 @@ instance
   type Tag (RescaledClock cl time) = Tag cl
   initClock (RescaledClock cl f) = do
     (runningClock, initTime) <- initClock cl
-    return
+    pure
       ( runningClock >>> first (arr f)
       , f initTime
       )
@@ -169,7 +169,7 @@ instance
   initClock RescaledClockM {..} = do
     (runningClock, initTime) <- initClock unscaledClockM
     rescaledInitTime <- rescaleM initTime
-    return
+    pure
       ( runningClock >>> first (arrM rescaleM)
       , rescaledInitTime
       )
@@ -180,7 +180,7 @@ rescaledClockToM :: (Monad m) => RescaledClock cl time -> RescaledClockM m cl ti
 rescaledClockToM RescaledClock {..} =
   RescaledClockM
     { unscaledClockM = unscaledClock
-    , rescaleM = return . rescale
+    , rescaleM = pure . rescale
     }
 
 {- | Instead of a mere function as morphism of time domains,
@@ -203,7 +203,7 @@ instance
   initClock RescaledClockS {..} = do
     (runningClock, initTime) <- initClock unscaledClockS
     (rescaling, rescaledInitTime) <- rescaleS initTime
-    return
+    pure
       ( runningClock >>> rescaling
       , rescaledInitTime
       )
@@ -227,7 +227,7 @@ rescaledClockToS ::
   RescaledClockS m cl time (Tag cl)
 rescaledClockToS = rescaledClockMToS . rescaledClockToM
 
--- | Applying a monad morphism yields a new clock.
+-- | Applying a monad morphism skips a new clock.
 data HoistClock m1 m2 cl = HoistClock
   { unhoistedClock :: cl
   , monadMorphism :: forall a. m1 a -> m2 a
@@ -241,7 +241,7 @@ instance
   type Tag (HoistClock m1 m2 cl) = Tag cl
   initClock HoistClock {..} = do
     (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
-    return
+    pure
       ( hoistS monadMorphism runningClock
       , initialTime
       )

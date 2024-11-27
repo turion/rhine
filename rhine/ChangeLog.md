@@ -2,6 +2,9 @@
 
 ## Upcoming
 
+* Remove dependency on `monad-schedule` because of performance problems.
+  See https://github.com/turion/rhine/issues/377.
+* Added scheduling for automata in `Data.Automaton.Schedule`.
 * Removed `SN` GADT in favour of semantic functions, for a > 100x speedup in some benchmarks
   (https://github.com/turion/rhine/pull/348)
 

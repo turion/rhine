@@ -656,7 +656,7 @@ initialised :: (Monad m) => (a -> m b) -> Automaton m a b
 initialised = Automaton . Stateful . StreamT.initialised . ReaderT
 {-# INLINE initialised #-}
 
--- | Like 'initialised', but ignores the input.
+-- | Like 'initialised_', but ignores the input.
 initialised_ :: (Monad m) => m b -> Automaton m a b
 initialised_ = initialised . const
 {-# INLINE initialised_ #-}

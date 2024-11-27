@@ -4,10 +4,12 @@
 -- transformers
 import Control.Monad.IO.Class
 
--- monad-schedule
-import Control.Monad.Schedule.Trans
+-- automaton
+import Data.Automaton.Schedule (SkipT, runSkipTWith)
 
 -- rhine
+
+import Control.Concurrent (threadDelay)
 import FRP.Rhine
 
 type MyClock = Periodic '[500, 1000]
@@ -17,8 +19,8 @@ everyNowAndThen =
   sinceInitS >>> proc time ->
     returnA -< unwords ["It's now", show time, "o'clock."]
 
-mainRhine :: (MonadIO m) => Rhine (ScheduleT Integer m) MyClock () ()
+mainRhine :: (MonadIO m) => Rhine (SkipT m) MyClock () ()
 mainRhine = everyNowAndThen >-> arrMCl (liftIO . putStrLn) @@ Periodic
 
 main :: IO ()
-main = runScheduleIO $ flow mainRhine
+main = runSkipTWith (threadDelay 1000) $ flow mainRhine

@@ -16,14 +16,18 @@ module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
 import Control.Arrow
+import Control.Monad (replicateM_)
 import Data.List.NonEmpty hiding (unfold)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 
--- monad-schedule
-import Control.Monad.Schedule.Trans
-
 -- automaton
-import Data.Automaton (Automaton (..), accumulateWith, concatS, withSideEffect)
+import Data.Automaton (
+  Automaton (..),
+  accumulateWith,
+  arrM,
+  concatS,
+ )
+import Data.Automaton.Schedule (SkipT (..), skip)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -41,15 +45,17 @@ import FRP.Rhine.Clock.Proxy
 data Periodic (v :: [Nat]) where
   Periodic :: Periodic (n : ns)
 
+-- FIXME need to extend SkipT in order to make this work again correctly (using the step sizes)
+
 instance
   (Monad m, NonemptyNatList v) =>
-  Clock (ScheduleT Integer m) (Periodic v)
+  Clock (SkipT m) (Periodic v)
   where
   type Time (Periodic v) = Integer
   type Tag (Periodic v) = ()
   initClock cl =
-    return
-      ( cycleS (theList cl) >>> withSideEffect wait >>> accumulateWith (+) 0 &&& arr (const ())
+    pure
+      ( cycleS (theList cl) >>> accumulateWith (+) 0 &&& arrM (\i -> replicateM_ (fromIntegral i) skip)
       , 0
       )
   {-# INLINE initClock #-}

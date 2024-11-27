@@ -47,9 +47,8 @@ import Control.Monad.Trans.Reader
 -- gloss
 import Graphics.Gloss.Interface.IO.Game
 
--- monad-schedule
-import Control.Monad.Schedule.Class
-import Control.Monad.Schedule.FreeAsync
+-- automaton
+import Data.Automaton.Schedule
 
 -- rhine
 import FRP.Rhine
@@ -68,30 +67,32 @@ data GlossEnv = GlossEnv
   , timeRef :: IORef Float
   }
 
-{- | Effects in the gloss backend
+{- | Effects in the gloss backend.
 
-* Wraps the concurrent variables needed for communication with the @gloss@ backend.
-* Adds the 'FreeAsyncT' concurrency layer for fairer scheduling
+Wraps the concurrent variables needed for communication with the @gloss@ backend.
 -}
 newtype GlossConcT m a = GlossConcT
-  {unGlossConcT :: ReaderT GlossEnv (FreeAsyncT m) a}
+  {unGlossConcT :: ReaderT GlossEnv m a}
   deriving (Functor, Applicative, Monad, MonadIO)
 
 -- | When @gloss@ is the only effect you are using, use this monad to simplify your type signatures.
 type GlossConc = GlossConcT IO
 
 instance MonadTrans GlossConcT where
-  lift = GlossConcT . lift . lift
+  lift = GlossConcT . lift
 
 -- FIXME MFunctor & MMonad instances pending https://github.com/HeinrichApfelmus/operational/pull/28/
 
 -- | Remove the 'GlossConcT' transformer by explicitly providing an environment.
 runGlossConcT :: (MonadIO m) => GlossConcT m a -> GlossEnv -> m a
-runGlossConcT ma env = runFreeAsyncT $ runReaderT (unGlossConcT ma) env
+runGlossConcT ma = runReaderT (unGlossConcT ma)
 
 -- | Disregards scheduling capabilities of @m@, as it uses 'FreeAsync'.
-instance (MonadIO m) => MonadSchedule (GlossConcT m) where
-  schedule actions = GlossConcT $ fmap (second $ map GlossConcT) $ schedule $ unGlossConcT <$> actions
+instance (MonadIO m, MonadSchedule m) => MonadSchedule (GlossConcT m) where
+  schedule =
+    fmap (hoistS unGlossConcT)
+      >>> schedule
+      >>> hoistS GlossConcT
 
 withPicRef ::
   (MonadIO m) =>
@@ -126,14 +127,14 @@ data GlossEventClockIO = GlossEventClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
   type Time GlossEventClockIO = Float
   type Tag GlossEventClockIO = Event
-  initClock _ = return (constM getEvent, 0)
+  initClock _ = pure (constM getEvent, 0)
     where
       getEvent = do
         GlossEnv {eventVar, timeRef} <- GlossConcT ask
-        event <- GlossConcT $ lift $ asyncMVar eventVar
         liftIO $ do
+          event <- takeMVar eventVar
           time <- readIORef timeRef
-          return (time, event)
+          pure (time, event)
   {-# INLINE initClock #-}
 
 instance GetClockProxy GlossEventClockIO
@@ -149,11 +150,11 @@ data GlossSimClockIO = GlossSimClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
   type Time GlossSimClockIO = Float
   type Tag GlossSimClockIO = ()
-  initClock _ = return (constM getTime &&& arr (const ()), 0)
+  initClock _ = pure (constM getTime &&& arr (const ()), 0)
     where
       getTime = GlossConcT $ do
         GlossEnv {timeVar} <- ask
-        lift $ asyncMVar timeVar
+        liftIO $ takeMVar timeVar
   {-# INLINE initClock #-}
 
 instance GetClockProxy GlossSimClockIO
@@ -183,11 +184,12 @@ launchGlossThread GlossSettings {..} = do
     getPic GlossEnv {picRef} = readIORef picRef
     handleEvent event vars@GlossEnv {eventVar} = do
       void $
-        forkIO $ -- Perform non-blocking so other actions are not delayed
+        forkIO $ -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed
+           -- Perform non-blocking so other actions are not delayed
           void $
-            timeout 100000 $ -- timeout in case noone is listening for events
+            timeout 100000 $ -- timeout in case noone is listening for events -- timeout in case noone is listening for events -- timeout in case noone is listening for events -- timeout in case noone is listening for events
               putMVar eventVar event
-      return vars
+      pure vars
     simStep diffTime vars@GlossEnv {timeVar, timeRef} = do
       time <- readIORef timeRef
       let !time' = time + diffTime
@@ -195,9 +197,9 @@ launchGlossThread GlossSettings {..} = do
       -- which can lead to non-monotonous time updates.
       tryPutMVar timeVar time'
       writeIORef timeRef time'
-      return vars
+      pure vars
   void $ liftIO $ forkIO $ playIO display backgroundColor stepsPerSecond vars getPic handleEvent simStep
-  return vars
+  pure vars
 
 {- | Apply this to supply the 'GlossConcT' effect.
    Creates a new thread in which @gloss@ is run,
@@ -266,7 +268,7 @@ glossConcTClock :: (MonadIO m) => cl -> GlossConcTClock m cl
 glossConcTClock unhoistedClock =
   HoistClock
     { unhoistedClock
-    , monadMorphism = GlossConcT . lift . freeAsync
+    , monadMorphism = GlossConcT . liftIO
     }
 
 {- | Lift an 'IO' clock to 'GlossConc'.
