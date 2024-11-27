@@ -52,29 +52,34 @@
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
             (hfinal: hprev: {
               # Remove once nixpkgs has caught up
-              monad-bayes = hprev.callHackageDirect {
-                pkg = "monad-bayes";
-                ver = "1.3.0.5";
-                sha256 = "sha256-JK2Xya+xtPFIjJ6I+bb7dCU+JBJdhxGUMxB9jEZxZ78=";
-              } { };
+              monad-bayes = hprev.callHackageDirect
+                {
+                  pkg = "monad-bayes";
+                  ver = "1.3.0.5";
+                  sha256 = "sha256-JK2Xya+xtPFIjJ6I+bb7dCU+JBJdhxGUMxB9jEZxZ78=";
+                }
+                { };
               # Transitive dependencies of monad-bayes
               vty = hprev.vty_6_5;
-              brick = hprev.callHackageDirect {
-                pkg = "brick";
-                ver = "2.10";
-                sha256 = "sha256-m1PvPySOuTZbcnCm4j7M7AihK0w8OGKumyRR3jU5nfw=";
-              } { };
+              brick = hprev.callHackageDirect
+                {
+                  pkg = "brick";
+                  ver = "2.10";
+                  sha256 = "sha256-m1PvPySOuTZbcnCm4j7M7AihK0w8OGKumyRR3jU5nfw=";
+                }
+                { };
 
-              changeset = hprev.callHackageDirect {
-                pkg = "changeset";
-                ver = "0.2.1";
-                sha256 = "sha256-vg31JEOtvslkOcn6ivSkD84sg93KFKnTBIUXZbd06H8=";
-              } { };
+              changeset = hprev.callHackageDirect
+                {
+                  pkg = "changeset";
+                  ver = "0.2.1";
+                  sha256 = "sha256-vg31JEOtvslkOcn6ivSkD84sg93KFKnTBIUXZbd06H8=";
+                }
+                { };
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               # For custom version: Don't test because tests don't work on Mac (https://github.com/tweag/monad-bayes/issues/368)
               monad-bayes = dontCheck hprev.monad-bayes;
-              monad-schedule = dontCheck hprev.monad-schedule;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               # Remove these after https://github.com/turion/rhine/issues/399

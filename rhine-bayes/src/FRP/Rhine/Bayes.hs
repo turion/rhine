@@ -1,16 +1,17 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module FRP.Rhine.Bayes where
 
 -- transformers
 import Control.Monad.Trans.Reader (ReaderT (..))
 
--- log-domain
-import Numeric.Log hiding (sum)
-
 -- monad-bayes
 import Control.Monad.Bayes.Class
 import Control.Monad.Bayes.Population
+import Control.Monad.Bayes.Sampler.Strict (SamplerT (..))
 
 -- automaton
+import Data.Automaton.Schedule (MonadSchedule (..))
 import qualified Data.Automaton.Trans.Reader as AutomatonReader
 
 -- rhine-bayes
@@ -18,6 +19,10 @@ import qualified Data.Automaton.Bayes as AutomatonBayes
 
 -- rhine
 import FRP.Rhine
+
+-- | 'SamplerT' is a newtype over 'ReaderT', so it inherits 'MonadSchedule' via 'hoistS'.
+instance (Monad m, MonadSchedule m) => MonadSchedule (SamplerT g m) where
+  schedule = fmap (hoistS runSamplerT) >>> schedule >>> hoistS SamplerT
 
 -- * Inference methods
 
@@ -102,11 +107,11 @@ wienerVaryingLogDomain ::
 wienerVaryingLogDomain = wienerVarying >>> arr Exp
 
 {- | Inhomogeneous Poisson point process, as described in:
-  https://en.wikipedia.org/wiki/Poisson_point_process#Inhomogeneous_Poisson_point_process
+ https://en.wikipedia.org/wiki/Poisson_point_process#Inhomogeneous_Poisson_point_process
 
-  * The input is the inverse of the current rate or intensity.
-    It corresponds to the average duration between two events.
-  * The output is the number of events since the last tick.
+ * The input is the inverse of the current rate or intensity.
+   It corresponds to the average duration between two events.
+ * The output is the number of events since the last tick.
 -}
 poissonInhomogeneous ::
   (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
@@ -123,7 +128,7 @@ poissonHomogeneous rate = arr (const rate) >>> poissonInhomogeneous
 
 {- | The Gamma process, https://en.wikipedia.org/wiki/Gamma_process.
 
-  The live input corresponds to inverse shape parameter, which is variance over mean.
+ The live input corresponds to inverse shape parameter, which is variance over mean.
 -}
 gammaInhomogeneous ::
   (MonadDistribution m, Real (Diff td), Fractional (Diff td), Floating (Diff td)) =>
@@ -136,8 +141,8 @@ gammaInhomogeneous gamma = proc rate -> do
 
 {- | The inhomogeneous Bernoulli process, https://en.wikipedia.org/wiki/Bernoulli_process
 
-  Throws a coin to a given probability at each tick.
-  The live input is the probability.
+ Throws a coin to a given probability at each tick.
+ The live input is the probability.
 -}
 bernoulliInhomogeneous :: (MonadDistribution m) => BehaviourF m td Double Bool
 bernoulliInhomogeneous = arrMCl bernoulli

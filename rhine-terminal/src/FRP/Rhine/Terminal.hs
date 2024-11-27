@@ -11,31 +11,30 @@ module FRP.Rhine.Terminal (
   flowTerminal,
   RunTerminalClock,
   runTerminalClock,
-) where
+)
+where
 
 -- base
-
-import Unsafe.Coerce (unsafeCoerce)
-import Prelude hiding (putChar)
 
 -- exceptions
 import Control.Monad.Catch (MonadMask)
 
 -- time
-import Data.Time.Clock (getCurrentTime)
 
 -- terminal
-import System.Terminal (Event, Interrupt, MonadInput, TerminalT, awaitEvent, runTerminalT)
-import System.Terminal.Internal (Terminal)
 
 -- transformers
 import Control.Monad.Trans.Reader
 
--- monad-schedule
-import Control.Monad.Schedule.Class
-
 -- rhine
+
+import Data.Automaton.Schedule (MonadSchedule (..))
+import Data.Time.Clock (getCurrentTime)
 import FRP.Rhine
+import System.Terminal (Event, Interrupt, MonadInput, TerminalT, awaitEvent, runTerminalT)
+import System.Terminal.Internal (Terminal)
+import Unsafe.Coerce (unsafeCoerce)
+import Prelude hiding (putChar)
 
 -- | A clock that ticks whenever events or interrupts on the terminal arrive.
 data TerminalEventClock = TerminalEventClock
@@ -46,11 +45,11 @@ instance (MonadInput m, MonadIO m) => Clock m TerminalEventClock where
 
   initClock TerminalEventClock = do
     initialTime <- liftIO getCurrentTime
-    return
+    pure
       ( constM $ do
           event <- awaitEvent
           time <- liftIO getCurrentTime
-          return (time, event)
+          pure (time, event)
       , initialTime
       )
   {-# INLINE initClock #-}
@@ -61,17 +60,17 @@ instance Semigroup TerminalEventClock where
   t <> _ = t
 
 {- | A function wrapping `flow` to use at the top level
- in order to run a `Rhine (TerminalT t m) cl ()`
+in order to run a `Rhine (TerminalT t m) cl ()`
 
- Example:
+Example:
 
- @
- mainRhine :: MonadIO m => Rhine (TerminalT LocalTerminal m) TerminalEventClock () ()
- mainRhine = tagS >-> arrMCl (liftIO . print) @@ TerminalEventClock
+@
+mainRhine :: MonadIO m => Rhine (TerminalT LocalTerminal m) TerminalEventClock () ()
+mainRhine = tagS >-> arrMCl (liftIO . print) @@ TerminalEventClock
 
- main :: IO ()
- main = withTerminal $ \term -> `flowTerminal` term mainRhine
- @
+main :: IO ()
+main = withTerminal $ \term -> `flowTerminal` term mainRhine
+@
 -}
 flowTerminal ::
   ( MonadIO m
@@ -88,9 +87,9 @@ flowTerminal ::
 flowTerminal term clsf = flip runTerminalT term $ flow clsf
 
 {- | To escape the 'TerminalT' transformer,
-  you can apply this operator to your clock type,
-  where @cl@ is a clock in 'TerminalT'.
-  The resulting clock is then in @m@.
+ you can apply this operator to your clock type,
+ where @cl@ is a clock in 'TerminalT'.
+ The resulting clock is then in @m@.
 -}
 type RunTerminalClock m t cl = HoistClock (TerminalT t m) m cl
 
@@ -115,4 +114,4 @@ unTerminalT :: TerminalT t m a -> ReaderT t m a
 unTerminalT = unsafeCoerce
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (TerminalT t m) where
-  schedule = terminalT . fmap (fmap (fmap terminalT)) . schedule . fmap unTerminalT
+  schedule = hoistS terminalT . schedule . fmap (hoistS unTerminalT)

@@ -50,6 +50,7 @@ common opts
     RankNTypes
     ScopedTypeVariables
     TupleSections
+    TypeApplications
     TypeFamilies
     TypeOperators
 

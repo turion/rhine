@@ -26,7 +26,6 @@ common opts
   build-depends:
     base >=4.16 && <4.22,
     changeset ^>=0.2,
-    monad-schedule ^>=1.7,
     random >=1.1,
     rhine ^>=1.7,
     simple-affine-space >=0.2,

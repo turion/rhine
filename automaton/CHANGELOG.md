@@ -1,5 +1,15 @@
 # Revision history for automaton
 
+## Upcoming
+
+* Added `Data.Automaton.Schedule` module with a new `MonadSchedule` class that
+  works natively on `Automaton` values instead of monadic actions.
+  Instances are provided for common monad transformers.
+* Added `Data.Automaton.Schedule.Trans` module with `ScheduleT` and related transformers
+  providing free waiting and scheduling effects
+  (previously in `monad-schedule`).
+* Removed the `monad-schedule` package dependency from `automaton`
+
 ## 1.7
 
 * Add `safely`, `forever` and `foreverE` exception handling functions for streams
