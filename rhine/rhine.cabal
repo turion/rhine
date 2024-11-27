@@ -51,7 +51,6 @@ common opts
   build-depends:
     automaton ^>=1.6,
     base >=4.16 && <4.22,
-    monad-schedule ^>=1.6,
     mtl >=2.2 && <2.4,
     selective ^>=0.7,
     text >=1.2 && <2.2,
@@ -117,8 +116,8 @@ library
     FRP.Rhine.Clock.Realtime.Never
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
+    FRP.Rhine.Clock.Skip
     FRP.Rhine.Clock.Trivial
-    FRP.Rhine.Clock.Unschedule
     FRP.Rhine.Clock.Util
     FRP.Rhine.Reactimation
     FRP.Rhine.Reactimation.ClockErasure
@@ -141,7 +140,6 @@ library
   other-modules:
     FRP.Rhine.ClSF.Except.Util
     FRP.Rhine.ClSF.Random.Util
-    FRP.Rhine.Schedule.Internal
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -156,7 +154,6 @@ library
     profunctors ^>=5.6,
     random >=1.1,
     simple-affine-space ^>=0.2,
-    sop-core ^>=0.5,
     text >=1.2 && <2.2,
     time >=1.8,
     time-domain ^>=1.6,
