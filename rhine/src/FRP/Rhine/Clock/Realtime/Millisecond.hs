@@ -18,7 +18,6 @@ import Data.Time.Clock
 
 -- rhine
 import FRP.Rhine.Clock
-import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Realtime (WaitUTCClock, waitUTC)
 import Data.Automaton (count)
