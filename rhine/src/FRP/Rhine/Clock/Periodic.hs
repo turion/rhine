@@ -20,7 +20,7 @@ import Data.List.NonEmpty hiding (unfold)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 
 -- automaton
-import Data.Automaton (Automaton (..), accumulateWith, concatS, arrM, constM)
+import Data.Automaton (Automaton (..), accumulateWith, concatS, constM)
 import Data.Automaton.Schedule (YieldT (..), yield)
 
 -- rhine

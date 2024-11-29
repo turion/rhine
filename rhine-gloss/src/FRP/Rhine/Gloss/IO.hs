@@ -184,10 +184,9 @@ launchGlossThread GlossSettings {..} = do
     getPic GlossEnv {picRef} = readIORef picRef
     handleEvent event vars@GlossEnv {eventVar} = do
       void $
-        forkIO $ -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed -- Perform non-blocking so other actions are not delayed
-        -- Perform non-blocking so other actions are not delayed
+        forkIO $ -- Perform non-blocking so other actions are not delayed
           void $
-            timeout 100000 $ -- timeout in case noone is listening for events -- timeout in case noone is listening for events -- timeout in case noone is listening for events -- timeout in case noone is listening for events
+            timeout 100000 $ -- timeout in case noone is listening for events
               putMVar eventVar event
       return vars
     simStep diffTime vars@GlossEnv {timeVar, timeRef} = do
