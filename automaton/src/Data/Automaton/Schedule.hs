@@ -8,40 +8,42 @@ module Data.Automaton.Schedule where
 
 -- base
 import Control.Arrow
-import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar, newChan, writeChan, readChan, readMVar, swapMVar, myThreadId, tryTakeMVar)
-import Control.Monad (forM_, void)
+import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar, tryTakeMVar)
+import Control.Monad (forM_)
 import Data.List.NonEmpty as N
+import Control.Monad.Identity (Identity (..))
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.Functor.Compose (Compose (..))
+import Data.Kind (Type)
+import Control.Monad.IO.Class (MonadIO)
+import Data.Maybe (maybeToList, fromMaybe)
+
+
+import Data.Foldable1 (Foldable1(foldrMap1))
 
 -- transformers
 import Control.Monad.Trans.Accum (AccumT (..), runAccumT)
 import Control.Monad.Trans.Except (ExceptT (..))
 import Control.Monad.Trans.Reader (ReaderT (..))
-import Control.Monad.Trans.Writer.CPS (runWriterT, writerT)
-
--- automaton
-
-import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Writer.CPS qualified as CPS
 import Control.Monad.Trans.Writer.Strict qualified as Strict
+import Control.Monad.Trans.Class (MonadTrans (..))
+
+-- sop-core
+import Data.SOP (I (..), NP (..), SListI, hzipWith, HSequence (htraverse'), hmap, K (..), HCollapse (hcollapse))
+
+-- free
+import Control.Monad.Trans.Free (FreeT (..), FreeF (..), liftF, iterT)
+
+-- automaton
 import Data.Automaton (Automaton (..), arrM, constM, initialised_, reactimate, withAutomaton_, handleAutomaton, liftS, feedback)
 import Data.Automaton.Trans.Except (exceptS)
 import Data.Automaton.Trans.Reader (readerS, runReaderS)
-import Data.Function ((&))
-import Data.Functor ((<&>))
-import Data.Functor.Compose (Compose (..))
-import Data.Kind (Type)
-import Data.SOP (I (..), NP (..), SListI, hzipWith, HSequence (htraverse'), hmap, K (..), HCollapse (hcollapse))
 import Data.Stream ( StreamT(..), concatS )
 import Data.Stream.Result
 import Data.Stream.Optimized (toStreamT, OptimizedStreamT (Stateful))
-import Data.Foldable1 (Foldable1(foldrMap1))
-import Debug.Trace (trace, traceShowWith)
-import Control.Monad.Trans.Free (FreeT (..), FreeF (..), liftF, iterT)
-import Control.Monad.Trans.Class (MonadTrans (..))
-import Control.Monad.IO.Class (MonadIO)
-import Data.Maybe (maybeToList, fromMaybe)
 import qualified Data.Automaton as Automaton
-import Data.IORef (writeIORef)
 
 class MonadSchedule m where
   -- | Run a nonempty list of automata concurrently.
@@ -56,7 +58,7 @@ instance MonadSchedule IO where
       startStreams = do
         output <- newEmptyMVar
         input <- newEmptyMVar
-        forM_ automata $ \automaton -> forkIO $ reactimate $ constM (myThreadId >>= print >> putStrLn "taking") >>> lastMVarValue input >>> arrM (\i -> myThreadId >>= print >> putStrLn "Received input" >> return i) >>> automaton >>> arrM (\o -> myThreadId >>= print >> putStrLn "putting" >> putMVar output o >> myThreadId >>= print >> putStrLn "putted")
+        forM_ automata $ \automaton -> forkIO $ reactimate $ lastMVarValue input >>> automaton >>> arrM (putMVar output)
         return (output, input)
       lastMVarValue var = feedback Nothing $ proc ((), aMaybe) -> do
         case aMaybe of
@@ -95,27 +97,25 @@ instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (Strict.WriterT w
 -- FIXME this needs a unit test
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (AccumT w m) where
   schedule =
-    fmap (withAutomaton_ (runAccumT >>> ReaderT >>> writerT))
+    fmap (withAutomaton_ (runAccumT >>> ReaderT >>> CPS.writerT))
       >>> schedule
-      >>> withAutomaton_ (runWriterT >>> runReaderT >>> AccumT)
+      >>> withAutomaton_ (CPS.runWriterT >>> runReaderT >>> AccumT)
 
 
 -- FIXME MaybeT, andere WriterT
 instance MonadSchedule Identity where
   schedule = fmap (getAutomaton >>> toStreamT)
      >>> foldrMap1 buildStreams consStreams
-    >>> roundRobinStreams >>> fmap N.toList >>> fmap (traceShowWith (("list in",) . Prelude.length)) >>> concatS >>> Stateful >>> Automaton
+    >>> roundRobinStreams >>> fmap N.toList >>> concatS >>> Stateful >>> Automaton
     where
       buildStreams :: StreamT m b -> Streams m b
-      buildStreams StreamT {state, step} = trace "buildStreams"
-        Streams
+      buildStreams StreamT {state, step} = Streams
           { states = I state :* Nil
           , steps = Step (ResultStateT step) :* Nil
           }
 
       consStreams :: StreamT m b -> Streams m b -> Streams m b
-      consStreams StreamT {state, step} Streams {states, steps} = trace "consStreams"
-        Streams
+      consStreams StreamT {state, step} Streams {states, steps} =Streams
           { states = I state :* states
           , steps = Step (ResultStateT step) :* steps
           }
@@ -131,8 +131,8 @@ roundRobinStreams Streams {states, steps} =
           & hzipWith (\Step {getStep} (I s) -> getResultStateT getStep s <&> RunningResult & Compose) steps
           & htraverse' getCompose
           <&> (\results -> Result
-            (results & hmap (getRunningResult >>> resultState >>> trace "rss" >>> I))
-            (results & hmap (getRunningResult >>> output >>> trace "rrs" >>> K) & hnonemptycollapse))
+            (results & hmap (getRunningResult >>> resultState >>> I))
+            (results & hmap (getRunningResult >>> output >>> K) & hnonemptycollapse))
     }
 
 hnonemptycollapse :: SListI as => NP (K b) (a ': as) -> NonEmpty b
