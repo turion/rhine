@@ -15,3 +15,4 @@ instance (TimeDomain (Time cl), Clock (YieldT m) cl, Monad m)  => Clock m (Unyie
     (runningClock, initialTime) <- runYieldT $ initClock getUnyieldClock
     return (hoistS runYieldT runningClock
       , initialTime)
+  {-# INLINE initClock #-}
