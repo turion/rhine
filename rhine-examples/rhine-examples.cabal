@@ -85,6 +85,13 @@ executable RandomWalk
     random >=1.1,
     simple-affine-space,
 
+executable Accum
+  import: opts
+  main-is: Accum.hs
+  build-depends:
+    text,
+    transformers,
+
 flag dev
   description: Enable warnings as errors. Active on ci.
   default: False
