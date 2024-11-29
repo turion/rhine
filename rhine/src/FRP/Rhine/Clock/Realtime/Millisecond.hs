@@ -37,6 +37,7 @@ and @'Just' lag@ a lag (in seconds).
 -}
 newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (UnyieldClock (FixedStep n)) Double))
 
+-- FIXME Annoying we're using UnyieldClock only to satisfy this instance. Maybe drop it and add here as well?
 instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double

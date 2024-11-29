@@ -8,8 +8,8 @@ module Data.Automaton.Schedule where
 
 -- base
 import Control.Arrow
-import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar)
-import Control.Monad (forM_)
+import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar, newChan, writeChan, readChan, readMVar, swapMVar, myThreadId, tryTakeMVar)
+import Control.Monad (forM_, void)
 import Data.List.NonEmpty as N
 
 -- transformers
@@ -23,7 +23,7 @@ import Control.Monad.Trans.Writer.CPS (runWriterT, writerT)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Writer.CPS qualified as CPS
 import Control.Monad.Trans.Writer.Strict qualified as Strict
-import Data.Automaton (Automaton (..), arrM, constM, initialised_, reactimate, withAutomaton_, handleAutomaton, liftS)
+import Data.Automaton (Automaton (..), arrM, constM, initialised_, reactimate, withAutomaton_, handleAutomaton, liftS, feedback)
 import Data.Automaton.Trans.Except (exceptS)
 import Data.Automaton.Trans.Reader (readerS, runReaderS)
 import Data.Function ((&))
@@ -39,8 +39,9 @@ import Debug.Trace (trace, traceShowWith)
 import Control.Monad.Trans.Free (FreeT (..), FreeF (..), liftF, iterT)
 import Control.Monad.Trans.Class (MonadTrans (..))
 import Control.Monad.IO.Class (MonadIO)
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, fromMaybe)
 import qualified Data.Automaton as Automaton
+import Data.IORef (writeIORef)
 
 class MonadSchedule m where
   -- | Run a nonempty list of automata concurrently.
@@ -55,8 +56,17 @@ instance MonadSchedule IO where
       startStreams = do
         output <- newEmptyMVar
         input <- newEmptyMVar
-        forM_ automata $ \automaton -> forkIO $ reactimate $ constM (takeMVar input) >>> automaton >>> arrM (putMVar output)
+        forM_ automata $ \automaton -> forkIO $ reactimate $ constM (myThreadId >>= print >> putStrLn "taking") >>> lastMVarValue input >>> arrM (\i -> myThreadId >>= print >> putStrLn "Received input" >> return i) >>> automaton >>> arrM (\o -> myThreadId >>= print >> putStrLn "putting" >> putMVar output o >> myThreadId >>= print >> putStrLn "putted")
         return (output, input)
+      lastMVarValue var = feedback Nothing $ proc ((), aMaybe) -> do
+        case aMaybe of
+          Nothing -> do
+            a <- constM $ takeMVar var -< ()
+            returnA -< (a, Just a)
+          Just a -> do
+            aNewMaybe <- constM $ tryTakeMVar var -< ()
+            let aNew = fromMaybe a aNewMaybe
+            returnA -< (aNew, aNewMaybe)
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (ReaderT r m) where
   schedule =
