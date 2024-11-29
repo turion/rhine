@@ -22,7 +22,7 @@ import Control.Monad (replicateM_)
 
 -- automaton
 import Data.Automaton
-    ( Automaton(..), accumulateWith, concatS, constM, arrM )
+    ( Automaton(..), accumulateWith, concatS, arrM )
 import Data.Automaton.Schedule (YieldT (..), yield)
 
 -- rhine
