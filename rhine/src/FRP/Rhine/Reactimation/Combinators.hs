@@ -21,8 +21,8 @@ module FRP.Rhine.Reactimation.Combinators where
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.ResamplingBuffer
+import FRP.Rhine.SN
 import FRP.Rhine.SN.Combinators
 import FRP.Rhine.Schedule
 import FRP.Rhine.Type

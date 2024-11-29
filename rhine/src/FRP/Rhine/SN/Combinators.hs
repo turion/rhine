@@ -6,12 +6,14 @@ Combinators for composing signal networks sequentially and parallely.
 -}
 module FRP.Rhine.SN.Combinators where
 
--- rhine
+-- base
 import Data.Functor ((<&>))
+
+-- rhine
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
-import FRP.Rhine.Reactimation.ClockErasure
+import FRP.Rhine.SN
 import FRP.Rhine.Schedule
 
 {- FOURMOLU_DISABLE -}
