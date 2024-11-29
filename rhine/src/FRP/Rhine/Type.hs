@@ -18,6 +18,7 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer)
+import FRP.Rhine.SN
 import FRP.Rhine.Schedule (In, Out)
 
 {- |

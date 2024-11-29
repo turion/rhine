@@ -133,6 +133,7 @@ library
     FRP.Rhine.ResamplingBuffer.Util
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
+    FRP.Rhine.SN.Type
     FRP.Rhine.Schedule
     FRP.Rhine.Type
 
