@@ -134,6 +134,7 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
         liftIO $ do
           time <- readIORef timeRef
           return (time, event)
+  {-# INLINE initClock #-}
 
 instance GetClockProxy GlossEventClockIO
 
@@ -153,6 +154,7 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
       getTime = GlossConcT $ do
         GlossEnv {timeVar} <- ask
         lift $ asyncMVar timeVar
+  {-# INLINE initClock #-}
 
 instance GetClockProxy GlossSimClockIO
 

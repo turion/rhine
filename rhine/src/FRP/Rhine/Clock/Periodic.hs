@@ -52,6 +52,7 @@ instance
       ( cycleS (theList cl) >>> withSideEffect wait >>> accumulateWith (+) 0 &&& arr (const ())
       , 0
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (Periodic v)
 

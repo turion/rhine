@@ -45,6 +45,7 @@ instance (MonadIO m) => Clock m StdinClock where
           return (time, line)
       , initialTime
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy StdinClock
 

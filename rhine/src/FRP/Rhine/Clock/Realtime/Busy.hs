@@ -36,5 +36,6 @@ instance (MonadIO m) => Clock m Busy where
           &&& arr (const ())
       , initialTime
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy Busy

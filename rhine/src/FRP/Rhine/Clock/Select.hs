@@ -64,6 +64,7 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
         (time, tag) <- runningClock -< ()
         returnA -< (time,) <$> select tag
     return (runningSelectClock, initialTime)
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (SelectClock cl a)
 

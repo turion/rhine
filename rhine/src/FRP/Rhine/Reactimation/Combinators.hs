@@ -39,11 +39,14 @@ infix 5 @@
 (@@) ::
   ( cl ~ In cl
   , cl ~ Out cl
+  , Monad m
+  , Clock m cl
+  , GetClockProxy cl
   ) =>
   ClSF  m cl a b ->
           cl     ->
   Rhine m cl a b
-(@@) = Rhine . Synchronous
+(@@) = Rhine . synchronous
 {-# INLINE (@@) #-}
 
 {- | A purely syntactical convenience construction
@@ -82,6 +85,7 @@ infixr 1 -->
 (-->) ::
   ( Clock m cl1
   , Clock m cl2
+  , Monad m
   , Time cl1 ~ Time cl2
   , Time (Out cl1) ~ Time cl1
   , Time (In  cl2) ~ Time cl2
@@ -94,7 +98,7 @@ infixr 1 -->
   Rhine m cl2 b c ->
   Rhine m (SequentialClock cl1 cl2) a c
 RhineAndResamplingBuffer (Rhine sn1 cl1) rb --> (Rhine sn2 cl2) =
-  Rhine (Sequential sn1 rb sn2) (SequentialClock cl1 cl2)
+  Rhine (sequential sn1 rb sn2) (SequentialClock cl1 cl2)
 
 {- | The combinators for parallel composition allow for the following syntax:
 
@@ -177,7 +181,7 @@ f ^>>@ Rhine sn cl = Rhine (f ^>>> sn) cl
 
 -- | Postcompose a 'Rhine' with a 'ClSF'.
 (@>-^) ::
-  ( Clock m (Out cl)
+  ( Clock m (Out cl), GetClockProxy cl, Monad m
   , Time cl ~ Time (Out cl)
   ) =>
   Rhine m      cl  a b   ->
@@ -187,7 +191,7 @@ Rhine sn cl @>-^ clsf = Rhine (sn >--^ clsf) cl
 
 -- | Precompose a 'Rhine' with a 'ClSF'.
 (^->@) ::
-  ( Clock m (In cl)
+  ( Clock m (In cl), GetClockProxy cl, Monad m
   , Time cl ~ Time (In cl)
   ) =>
   ClSF  m (In cl) a b   ->

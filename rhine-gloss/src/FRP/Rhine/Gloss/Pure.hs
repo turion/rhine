@@ -83,6 +83,7 @@ instance Clock GlossM GlossClock where
   type Time GlossClock = Float
   type Tag GlossClock = Maybe Event
   initClock _ = return (constM (GlossM $ yield >> lift ask) >>> (sumS *** Category.id), 0)
+  {-# INLINE initClock #-}
 
 instance GetClockProxy GlossClock
 

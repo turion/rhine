@@ -33,5 +33,6 @@ instance (MonadIO m) => Clock m Never where
       ( constM (liftIO . forever . threadDelay $ 10 ^ 9)
       , initialTime
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy Never

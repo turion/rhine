@@ -71,13 +71,15 @@ feedbackRhine ::
   , Clock m (Out cl)
   , Time (In cl) ~ Time cl
   , Time (Out cl) ~ Time cl
+  , GetClockProxy cl
+  , Monad m
   ) =>
   ResamplingBuffer m (Out cl) (In cl) d c ->
   Rhine m cl (a, c) (b, d) ->
   Rhine m cl a b
 feedbackRhine buf Rhine {..} =
   Rhine
-    { sn = Feedback buf sn
+    { sn = feedbackSN buf sn
     , clock
     }
 {-# INLINE feedbackRhine #-}
