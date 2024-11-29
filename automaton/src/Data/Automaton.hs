@@ -535,3 +535,4 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 -- | Remembers the last 'Just' value, defaulting to the given initialisation value.
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
+{-# INLINE lastS #-}
