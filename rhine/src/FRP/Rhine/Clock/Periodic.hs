@@ -19,11 +19,9 @@ import Control.Arrow
 import Data.List.NonEmpty hiding (unfold)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 
--- monad-schedule
-import Control.Monad.Schedule.Trans
-
 -- automaton
-import Data.Automaton (Automaton (..), accumulateWith, concatS, withSideEffect)
+import Data.Automaton (Automaton (..), accumulateWith, concatS, arrM, constM)
+import Data.Automaton.Schedule (YieldT (..), yield)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -41,15 +39,17 @@ import FRP.Rhine.Clock.Proxy
 data Periodic (v :: [Nat]) where
   Periodic :: Periodic (n : ns)
 
+-- FIXME need to extend YieldT in order to make this work again correctly (using the step sizes)
+
 instance
   (Monad m, NonemptyNatList v) =>
-  Clock (ScheduleT Integer m) (Periodic v)
+  Clock (YieldT m) (Periodic v)
   where
   type Time (Periodic v) = Integer
   type Tag (Periodic v) = ()
   initClock cl =
     return
-      ( cycleS (theList cl) >>> withSideEffect wait >>> accumulateWith (+) 0 &&& arr (const ())
+      ( cycleS (theList cl) >>> accumulateWith (+) 0 &&& constM yield
       , 0
       )
   {-# INLINE initClock #-}
