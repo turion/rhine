@@ -36,6 +36,7 @@ import Data.Align
 -- automaton
 import Data.Stream.Internal
 import Data.Stream.Result
+import Debug.Trace (trace)
 
 -- * Creating streams
 
@@ -102,6 +103,17 @@ unfold_ state step = unfold state $ \s -> let s' = step s in Result s' s'
 constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
+
+-- | Call the monadic action once on the first tick and provide its result indefinitely.
+initialised :: (Monad m) => m a -> StreamT m a
+initialised action =
+  let step mr@(Just r) = pure $! Result mr r
+      step Nothing = (step . Just =<< action)
+   in StreamT
+        { state = Nothing
+        , step
+        }
+{-# INLINE initialised #-}
 
 instance (Functor m) => Functor (StreamT m) where
   fmap f StreamT {state, step} = StreamT state $! fmap (fmap f) <$> step
@@ -232,6 +244,8 @@ withStreamT f StreamT {state, step} = StreamT state $ fmap f step
 This function lets a stream control the speed at which it produces data,
 since it can decide to produce any amount of output at every step.
 -}
+-- FIXME this reverses? doc?
+-- FIXME generalise to traversable?
 concatS :: (Monad m) => StreamT m [a] -> StreamT m a
 concatS StreamT {state, step} =
   StreamT
@@ -240,9 +254,9 @@ concatS StreamT {state, step} =
     }
   where
     go (s, []) = do
-      Result s' as <- step s
+      Result s' as <- trace "step concat" $ step s
       go (s', as)
-    go (s, a : as) = return $ Result (s, as) a
+    go (s, a : as) = trace "return concat" $ return $ Result (s, as) a
 {-# INLINE concatS #-}
 
 -- ** Exception handling

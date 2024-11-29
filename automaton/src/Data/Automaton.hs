@@ -46,6 +46,7 @@ import Data.Semialign (Align (..), Semialign (..))
 
 -- automaton
 import Data.Stream (StreamT (..), fixStream)
+import Data.Stream qualified as StreamT
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
@@ -380,10 +381,15 @@ embed (Automaton (Stateless m)) = mapM $ runReaderT m
 
 -- * Modifying automata
 
--- | Change the output type and effect of an automaton without changing its state type.
+-- | Change the input and output type and effect of an automaton without changing its state type.
 withAutomaton :: (Functor m1, Functor m2) => (forall s. (a1 -> m1 (Result s b1)) -> (a2 -> m2 (Result s b2))) -> Automaton m1 a1 b1 -> Automaton m2 a2 b2
 withAutomaton f = Automaton . StreamOptimized.mapOptimizedStreamT (ReaderT . f . runReaderT) . getAutomaton
 {-# INLINE withAutomaton #-}
+
+-- | Change the output type and effect of an automaton without changing its state type.
+withAutomaton_ :: (Functor m1, Functor m2) => (forall s. m1 (Result s b1) -> m2 (Result s b2)) -> Automaton m1 a b1 -> Automaton m2 a b2
+withAutomaton_ f = Automaton . StreamOptimized.mapOptimizedStreamT (mapReaderT f) . getAutomaton
+{-# INLINE withAutomaton_ #-}
 
 instance (Monad m) => Profunctor (Automaton m) where
   dimap f g Automaton {getAutomaton} = Automaton $ g <$> hoist (withReaderT f) getAutomaton
@@ -536,3 +542,13 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
+
+-- | Call the monadic action once on the first tick and provide its result indefinitely.
+initialised :: (Monad m) => (a -> m b) -> Automaton m a b
+initialised = Automaton . Stateful . StreamT.initialised . ReaderT
+{-# INLINE initialised #-}
+
+-- | Like 'initialised_', but ignores the input.
+initialised_ :: (Monad m) => m b -> Automaton m a b
+initialised_ = initialised . const
+{-# INLINE initialised_ #-}

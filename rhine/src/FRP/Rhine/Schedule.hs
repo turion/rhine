@@ -20,37 +20,21 @@ module FRP.Rhine.Schedule where
 import Control.Arrow
 import Data.List.NonEmpty as N
 
--- monad-schedule
-import Control.Monad.Schedule.Class
-
 -- automaton
 import Data.Automaton
-import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
+import Data.Automaton.Schedule
 
 -- rhine
 import FRP.Rhine.Clock
-import FRP.Rhine.Schedule.Internal
 
 -- * Scheduling
-
-{- | Run several automata concurrently.
-
-Whenever one automaton outputs a value,
-it is returned together with all other values that happen to be output at the same time.
--}
-scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (Automaton m a b) -> Automaton m a (NonEmpty b)
-scheduleList automatons0 =
-  Automaton $
-    Stateful $
-      scheduleStreams' $
-        toStreamT . getAutomaton <$> automatons0
 
 {- | Run two automata concurrently.
 
 Whenever one automaton returns a value, it is returned.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
-schedulePair automatonL automatonR = concatS $ fmap toList $ scheduleList $ automatonL :| [automatonR]
+schedulePair automatonL automatonR = schedule $ automatonL :| [automatonR]
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
