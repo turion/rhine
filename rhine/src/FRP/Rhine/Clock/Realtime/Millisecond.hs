@@ -21,7 +21,7 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Realtime (WaitUTCClock, waitUTC)
-import FRP.Rhine.Clock.Unyield (UnyieldClock (UnyieldClock))
+import Data.Automaton (count)
 
 {- | A clock ticking every 'n' milliseconds, in real time.
 
@@ -35,10 +35,10 @@ The tag of this clock is 'Maybe Double',
 where 'Nothing' represents successful realtime,
 and @'Just' lag@ a lag (in seconds).
 -}
-newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (UnyieldClock (FixedStep n)) Double))
+newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (CountClock n) Double))
 
 -- FIXME Annoying we're using UnyieldClock only to satisfy this instance. Maybe drop it and add here as well?
-instance Clock IO (Millisecond n) where
+instance KnownNat n => Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
   initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second snd))
@@ -48,4 +48,11 @@ instance GetClockProxy (Millisecond n)
 
 -- | Tries to achieve real time by using 'waitUTC', see its docs.
 waitClock :: (KnownNat n) => Millisecond n
-waitClock = Millisecond $ waitUTC $ RescaledClock (UnyieldClock FixedStep) ((/ 1000) . fromInteger)
+waitClock = Millisecond $ waitUTC $ RescaledClock CountClock ((/ 1000) . fromInteger)
+
+data CountClock (n :: Nat) = CountClock
+
+instance (Monad m, KnownNat n) => Clock m (CountClock n) where
+  type Time (CountClock n) = Integer
+  type Tag (CountClock n) = ()
+  initClock cl = return (count >>> arr ((* natVal cl) >>> (, ())), 0)
