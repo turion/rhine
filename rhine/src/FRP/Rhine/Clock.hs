@@ -148,6 +148,7 @@ instance
       ( runningClock >>> first (arr f)
       , f initTime
       )
+  {-# INLINE initClock #-}
 
 {- | Instead of a mere function as morphism of time domains,
    we can transform one time domain into the other with an effectful morphism.
@@ -172,6 +173,7 @@ instance
       ( runningClock >>> first (arrM rescaleM)
       , rescaledInitTime
       )
+  {-# INLINE initClock #-}
 
 -- | A 'RescaledClock' is trivially a 'RescaledClockM'.
 rescaledClockToM :: (Monad m) => RescaledClock cl time -> RescaledClockM m cl time
@@ -205,6 +207,7 @@ instance
       ( runningClock >>> rescaling
       , rescaledInitTime
       )
+  {-# INLINE initClock #-}
 
 -- | A 'RescaledClockM' is trivially a 'RescaledClockS'.
 rescaledClockMToS ::
@@ -242,6 +245,7 @@ instance
       ( hoistS monadMorphism runningClock
       , initialTime
       )
+  {-# INLINE initClock #-}
 
 -- | Lift a clock type into a monad transformer.
 type LiftClock m t cl = HoistClock m (t m) cl

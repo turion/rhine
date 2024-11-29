@@ -160,6 +160,7 @@ instance (MonadIO m) => Clock (EventChanT event m) (EventClock event) where
           return (time, event)
       , initialTime
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (EventClock event)
 
