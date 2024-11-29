@@ -8,8 +8,8 @@ module Data.Automaton.Schedule where
 
 -- base
 import Control.Arrow
-import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar, tryTakeMVar)
-import Control.Monad (forM_)
+import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar, tryTakeMVar, readMVar)
+import Control.Monad (forM_, void)
 import Data.List.NonEmpty as N
 import Control.Monad.Identity (Identity (..))
 import Data.Function ((&))
@@ -52,6 +52,7 @@ class MonadSchedule m where
 instance MonadSchedule IO where
   schedule automata = proc a -> do
     (output, input) <- initialised_ startStreams -< ()
+    arrM $ void . tryTakeMVar -< input
     arrM $ uncurry putMVar -< (input, a)
     arrM takeMVar -< output
     where
@@ -63,7 +64,7 @@ instance MonadSchedule IO where
       lastMVarValue var = feedback Nothing $ proc ((), aMaybe) -> do
         case aMaybe of
           Nothing -> do
-            a <- constM $ takeMVar var -< ()
+            a <- constM $ readMVar var -< ()
             returnA -< (a, Just a)
           Just a -> do
             aNewMaybe <- constM $ tryTakeMVar var -< ()
@@ -102,7 +103,7 @@ instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (AccumT w m) wher
       >>> withAutomaton_ (CPS.runWriterT >>> runReaderT >>> AccumT)
 
 
--- FIXME MaybeT, andere WriterT
+-- FIXME MaybeT, other WriterT
 instance MonadSchedule Identity where
   schedule = fmap (getAutomaton >>> toStreamT)
      >>> foldrMap1 buildStreams consStreams
@@ -152,8 +153,12 @@ newtype Step m b state = Step {getStep :: ResultStateT state m b}
 -- | The result of a stream, with the type arguments swapped, so it's usable with sop-core
 newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
 
+-- * Symbolic yielding/suspension operation
+
 newtype YieldT m a = YieldT {getYieldT :: FreeT Identity m a}
   deriving newtype (Functor, Applicative, Monad, MonadTrans, MonadIO)
+
+type Yield = YieldT Identity
 
 yieldAutomaton :: (Functor m, Monad m) => Automaton (YieldT m) a b -> Automaton m a (Maybe b)
 yieldAutomaton = handleAutomaton $ \StreamT {state, step} -> StreamT
@@ -163,7 +168,7 @@ yieldAutomaton = handleAutomaton $ \StreamT {state, step} -> StreamT
       return $ case oneTick of
         Pure (Result s' b) -> Result (step s') (Just b)
         Free (Identity cont) -> Result (lift $ YieldT cont) Nothing
-  }
+  }-- FIXME Could do without do. Or maybe just use applicative do?
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (YieldT m) where
   schedule = fmap yieldAutomaton >>> schedule >>> fmap maybeToList >>> Automaton.concatS >>> liftS
@@ -173,3 +178,9 @@ yield = YieldT $ liftF $ pure ()
 
 runYieldT :: Monad m => YieldT m a -> m a
 runYieldT = iterT runIdentity . getYieldT
+
+runYieldTWith :: Monad m => m () -> YieldT m a -> m a
+runYieldTWith action = iterT (\ima -> action >> runIdentity ima) . getYieldT
+
+runYield :: Yield a -> a
+runYield = runIdentity . runYieldT

@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 {- |
-The 'MonadSchedule' class from the @monad-schedule@ package is the compatibility mechanism between two different clocks.
+The 'MonadSchedule' class is the compatibility mechanism between two different clocks.
 It implements a concurrency abstraction that allows the clocks to run at the same time, independently.
 Several such clocks running together form composite clocks, such as 'ParallelClock' and 'SequentialClock'.
 This module defines these composite clocks,

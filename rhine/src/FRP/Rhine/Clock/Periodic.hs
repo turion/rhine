@@ -18,9 +18,11 @@ module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 import Control.Arrow
 import Data.List.NonEmpty hiding (unfold)
 import GHC.TypeLits (KnownNat, Nat, natVal)
+import Control.Monad (replicateM_)
 
 -- automaton
-import Data.Automaton (Automaton (..), accumulateWith, concatS, constM)
+import Data.Automaton
+    ( Automaton(..), accumulateWith, concatS, constM, arrM )
 import Data.Automaton.Schedule (YieldT (..), yield)
 
 -- rhine
@@ -49,7 +51,7 @@ instance
   type Tag (Periodic v) = ()
   initClock cl =
     return
-      ( cycleS (theList cl) >>> accumulateWith (+) 0 &&& constM yield
+      ( cycleS (theList cl) >>> accumulateWith (+) 0 &&& arrM (\i -> replicateM_ (fromIntegral i) yield)
       , 0
       )
   {-# INLINE initClock #-}

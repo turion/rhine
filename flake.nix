@@ -13,10 +13,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
-    monad-schedule = {
-      url = "github:turion/monad-schedule";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs:
@@ -65,9 +61,6 @@
                 }
                 { };
             })
-            (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
-              monad-schedule = dontCheck hprev.monad-schedule;
-            })
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
             })
@@ -94,7 +87,6 @@
 
       # A nixpkgs overlay containing necessary overrides on all dependencies, for reuse in downstream projects
       dependenciesOverlay = lib.composeManyExtensions [
-        inputs.monad-schedule.overlays.default
         localDependenciesOverlay
       ];
 

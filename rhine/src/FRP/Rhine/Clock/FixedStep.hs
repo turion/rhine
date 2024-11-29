@@ -14,6 +14,7 @@ module FRP.Rhine.Clock.FixedStep where
 -- base
 import Control.Arrow
 import Data.Maybe (fromMaybe)
+import Control.Monad (replicateM_)
 import GHC.TypeLits
 
 -- vector-sized
@@ -21,6 +22,7 @@ import Data.Vector.Sized (Vector, fromList)
 
 -- automaton
 import Data.Automaton (accumulateWith, constM)
+import Data.Automaton.Schedule (yield, YieldT)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -28,7 +30,6 @@ import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
-import Data.Automaton.Schedule (yield, YieldT)
 
 {- | A pure (side effect free) clock with fixed step size,
    i.e. ticking at multiples of 'n'.
@@ -48,7 +49,7 @@ instance (Monad m) => Clock (YieldT m) (FixedStep n) where
   initClock cl =
     let step = stepsize cl
      in return
-          ( constM yield >>> arr (const step)
+          ( constM (replicateM_ (fromIntegral step) yield) >>> arr (const step)
               >>> accumulateWith (+) 0
               >>> arr (,())
           , 0

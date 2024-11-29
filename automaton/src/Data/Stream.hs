@@ -36,7 +36,6 @@ import Data.Align
 -- automaton
 import Data.Stream.Internal
 import Data.Stream.Result
-import Debug.Trace (trace)
 
 -- * Creating streams
 
@@ -254,9 +253,9 @@ concatS StreamT {state, step} =
     }
   where
     go (s, []) = do
-      Result s' as <- trace "step concat" $ step s
+      Result s' as <- step s
       go (s', as)
-    go (s, a : as) = trace "return concat" $ return $ Result (s, as) a
+    go (s, a : as) = return $ Result (s, as) a
 {-# INLINE concatS #-}
 
 -- ** Exception handling
