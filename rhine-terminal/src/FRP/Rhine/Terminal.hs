@@ -31,11 +31,9 @@ import System.Terminal.Internal (Terminal)
 -- transformers
 import Control.Monad.Trans.Reader
 
--- monad-schedule
-import Control.Monad.Schedule.Class
-
 -- rhine
 import FRP.Rhine
+import Data.Automaton.Schedule (MonadSchedule)
 
 -- | A clock that ticks whenever events or interrupts on the terminal arrive.
 data TerminalEventClock = TerminalEventClock

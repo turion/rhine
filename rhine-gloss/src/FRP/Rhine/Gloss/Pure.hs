@@ -43,8 +43,6 @@ import FRP.Rhine
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
 
-import Debug.Trace (trace)
-
 -- * @gloss@ effects
 
 -- | A pure monad in which all effects caused by the @gloss@ backend take place.
@@ -128,7 +126,7 @@ flowGloss GlossSettings {..} rhine =
     worldAutomaton :: WorldAutomaton
     worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
     stepWith :: (Float, Maybe Event) -> (WorldAutomaton, Picture) -> (WorldAutomaton, Picture)
-    stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = trace "stepWith" $ runIdentity $ stepAutomaton automaton ((diff, eventMaybe), ()) in (automaton', picture)
+    stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = runIdentity $ stepAutomaton automaton ((diff, eventMaybe), ()) in (automaton', picture)
     getPic (_, pic) = pic
     handleEvent event = stepWith (0, Just event)
     simStep diff = stepWith (diff, Nothing)
