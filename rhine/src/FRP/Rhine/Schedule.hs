@@ -113,6 +113,7 @@ instance
   type Tag (SequentialClock cl1 cl2) = Either (Tag cl1) (Tag cl2)
   initClock SequentialClock {..} =
     initSchedule sequentialCl1 sequentialCl2
+  {-# INLINE initClock #-}
 
 -- ** Parallelly combined clocks
 
@@ -136,6 +137,7 @@ instance
   type Tag (ParallelClock cl1 cl2) = Either (Tag cl1) (Tag cl2)
   initClock ParallelClock {..} =
     initSchedule parallelCl1 parallelCl2
+  {-# INLINE initClock #-}
 
 -- * Navigating the clock tree
 

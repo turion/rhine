@@ -41,6 +41,7 @@ instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
   initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second snd))
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (Millisecond n)
 

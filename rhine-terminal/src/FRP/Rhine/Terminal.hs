@@ -53,6 +53,7 @@ instance (MonadInput m, MonadIO m) => Clock m TerminalEventClock where
           return (time, event)
       , initialTime
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy TerminalEventClock
 

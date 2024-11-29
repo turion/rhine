@@ -57,6 +57,7 @@ instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n)
               >>> arrM (\time -> wait step $> (time, ()))
           , 0
           )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (FixedStep n)
 

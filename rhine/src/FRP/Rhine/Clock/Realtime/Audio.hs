@@ -126,6 +126,7 @@ instance
       ( runningClock initialTime Nothing
       , initialTime
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (AudioClock rate bufferSize)
 
@@ -155,6 +156,7 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
       ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
       , 0
       )
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (PureAudioClock rate)
 

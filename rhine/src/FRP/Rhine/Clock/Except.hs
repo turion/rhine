@@ -58,6 +58,7 @@ instance (Exception e, Clock IO cl, MonadIO eio, MonadError e eio) => Clock eio 
     where
       ioerror :: (MonadError e eio, MonadIO eio) => IO (Either e a) -> eio a
       ioerror = liftEither <=< liftIO
+  {-# INLINE initClock #-}
 
 instance GetClockProxy (ExceptClock cl e)
 
@@ -87,6 +88,7 @@ instance (Time cl1 ~ Time cl2, Clock (ExceptT e m) cl1, Clock m cl2, Monad m) =>
               safe $ runningClock' >>> arr (second Left)
         return (catchingClock, initTime)
       Left e -> (fmap (first (>>> arr (second Left))) . initClock) $ handler e
+  {-# INLINE initClock #-}
 
 instance (GetClockProxy (CatchClock cl1 e cl2))
 
@@ -142,6 +144,7 @@ instance (TimeDomain time, MonadError e m) => Clock m (Single m time tag e) wher
         errorT :: (MonadError e m) => m (Either e a) -> m a
         errorT = (>>= liftEither)
     return (runningClock, initTime)
+  {-# INLINE initClock #-}
 
 -- * 'DelayException'
 
