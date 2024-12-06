@@ -13,19 +13,16 @@ module FRP.Rhine.Clock.FixedStep where
 
 -- base
 import Control.Arrow
-import Data.Functor (($>))
 import Data.Maybe (fromMaybe)
+import Control.Monad (replicateM_)
 import GHC.TypeLits
 
 -- vector-sized
 import Data.Vector.Sized (Vector, fromList)
 
--- monad-schedule
-import Control.Monad.Schedule.Class
-import Control.Monad.Schedule.Trans (ScheduleT, wait)
-
 -- automaton
-import Data.Automaton (accumulateWith, arrM)
+import Data.Automaton (accumulateWith, constM)
+import Data.Automaton.Schedule (yield, YieldT)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -46,15 +43,15 @@ data FixedStep (n :: Nat) where
 stepsize :: FixedStep n -> Integer
 stepsize fixedStep@FixedStep = natVal fixedStep
 
-instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n) where
+instance (Monad m) => Clock (YieldT m) (FixedStep n) where
   type Time (FixedStep n) = Integer
   type Tag (FixedStep n) = ()
   initClock cl =
     let step = stepsize cl
      in return
-          ( arr (const step)
+          ( constM (replicateM_ (fromIntegral step) yield) >>> arr (const step)
               >>> accumulateWith (+) 0
-              >>> arrM (\time -> wait step $> (time, ()))
+              >>> arr (,())
           , 0
           )
   {-# INLINE initClock #-}

@@ -13,10 +13,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
-    monad-schedule = {
-      url = "github:turion/monad-schedule";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs:
@@ -63,9 +59,6 @@
                   sha256 = "sha256-llDBQuU5ez/0MiOIMH97P4BQhFDyPfTMWinq1wJrDGI=";
                 }
                 { };
-            })
-            (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
-              monad-schedule = dontCheck hprev.monad-schedule;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
@@ -144,7 +137,6 @@
 
       overlay = lib.composeManyExtensions
         [
-          inputs.monad-schedule.overlays.default
           localOverlay
         ];
 
