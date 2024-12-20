@@ -20,6 +20,7 @@ common warnings
         TypeFamilies
         Arrows
         ScopedTypeVariables
+        OverloadedLists
         OverloadedStrings
 
 library
@@ -41,6 +42,9 @@ library
         , semialign
         , jsaddle
         , time
+        , vector-sized
+        , vector
+        , finite-typelits
     hs-source-dirs:   src
 
 executable dommy
