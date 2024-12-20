@@ -1,34 +1,14 @@
-import FRP.Rhine.Tree
-
-import Control.Concurrent (forkIO)
-import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
-import Control.Lens ((^.))
-import Control.Monad (forever)
-import Control.Monad.IO.Class (MonadIO (..))
-import Data.Monoid ((<>))
-import Language.Javascript.JSaddle (
-  JSM,
-  askJSM,
-  fun,
-  global,
-  js,
-  js1,
-  jsg,
-  jsg3,
-  jss,
-  nextAnimationFrame,
-  runJSM,
-  syncPoint,
-  valToNumber,
-  valToJSON
- )
-
-import FRP.Rhine hiding (forever)
-import FRP.Rhine.Tree
-import FRP.Rhine.Tree.Types (DOM(..))
-import FRP.Rhine.Tree.Types (Node(..), Content (ContentText))
-
+{-# LANGUAGE ApplicativeDo #-}
+import Data.Functor (void)
 import Data.Text (Text)
+import FRP.Rhine.Tree
+import FRP.Rhine.Tree.Types (Content (ContentText), DOM (..), Node (..))
+import Language.Javascript.JSaddle
+  ( JSM,
+  )
+import qualified Data.Text as T
+import FRP.Rhine (count)
+
 default (Text)
 
 main :: JSM ()
@@ -38,7 +18,13 @@ main = do
   flowJSM mainClSF clock
 
 mainClSF :: JSMSF DOM () ()
-mainClSF = mconcat
-  [ appendS $ DOM [Node ("p" :: Text) [] [ContentText ("Hi" :: Text)]]
-  , permanent $ Node ("p" :: Text) [] [ContentText ("Foo" :: Text)]
-  ]
+-- mainClSF = do
+--   void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims" :: Text)]
+--   void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims hier" :: Text)]
+-- mainClSF = (void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims" :: Text)]) *>
+--   (void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims hier" :: Text)]) -- FIXME y do notaton no work?
+mainClSF = void $ proc () -> do
+  permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims" :: Text)] -< ()
+  (_, i) <- permanent'' $ Node ("div" :: Text) [] [ContentText ("I bims hier" :: Text)] -< ()
+  n <- count -< ()
+  dynamic (Node "div" [] []) (varying $ Node "p" [] . pure . ContentText) -< T.pack $ show (i, n :: Integer)
