@@ -1,8 +1,3 @@
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Data.Stream where
@@ -117,6 +112,8 @@ instance (Applicative m) => Applicative (StreamT m) where
   {-# INLINE (<*>) #-}
 
 deriving via Ap (StreamT m) a instance (Applicative m, Num a) => Num (StreamT m a)
+deriving via Ap (StreamT m) a instance (Applicative m, Semigroup a) => Semigroup (StreamT m a)
+deriving via Ap (StreamT m) a instance (Applicative m, Monoid a) => Monoid (StreamT m a)
 
 instance (Applicative m, Fractional a) => Fractional (StreamT m a) where
   fromRational = pure . fromRational

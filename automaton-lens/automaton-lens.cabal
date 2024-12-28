@@ -1,0 +1,45 @@
+cabal-version:      3.0
+name:               automaton-lens
+version:            1.4
+-- synopsis:
+-- description:
+license:            AGPL-3.0-or-later
+license-file:       LICENSE
+author:             Manuel Bärenz
+maintainer:         programming@manuelbaerenz.de
+-- copyright:
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common opts
+  if flag(dev)
+    ghc-options: -Werror
+  ghc-options:
+    -W
+
+library
+    import:           opts
+    exposed-modules:  Data.Automaton.Lens
+    build-depends:
+        base >=4.16 && <4.21,
+        lens,
+        profunctors,
+        automaton
+
+    hs-source-dirs:   src
+    default-language: GHC2021
+
+test-suite automaton-lens-test
+    import:           opts
+    default-language: GHC2021
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:
+        automaton-lens
+
+flag dev
+  description: Enable warnings as errors. Active on ci.
+  default: False
+  manual: True

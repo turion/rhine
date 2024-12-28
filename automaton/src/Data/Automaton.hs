@@ -20,7 +20,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
 import Data.Maybe (fromMaybe)
-import Data.Monoid (Last (..), Sum (..))
+import Data.Monoid (Last (..), Sum (..), Ap (..))
 import Prelude hiding (id, (.))
 
 -- mmorph
@@ -33,7 +33,7 @@ import Control.Monad.Trans.Reader
 -- profunctors
 import Data.Profunctor (Choice (..), Profunctor (..), Strong)
 import Data.Profunctor.Strong (Strong (..))
-import Data.Profunctor.Traversing
+import Data.Profunctor.Traversing (Traversing (..))
 
 -- selective
 import Control.Selective (Selective)
@@ -281,6 +281,13 @@ instance (Monad m, Alternative m) => ArrowZero (Automaton m) where
 instance (Monad m, Alternative m) => ArrowPlus (Automaton m) where
   (<+>) = (<|>)
 
+-- instance Semigroup w => Semigroup (Automaton m a w) where
+-- instance Monoid w => Monoid (Automaton m a w) where
+
+deriving via Ap (Automaton m a) w instance (Applicative m, Semigroup w) => Semigroup (Automaton m a w)
+deriving via Ap (Automaton m a) w instance (Applicative m, Monoid w) => Monoid (Automaton m a w)
+
+
 -- | Consume an input and produce output effectfully, without keeping internal state
 arrM :: (Functor m) => (a -> m b) -> Automaton m a b
 arrM f = Automaton $! StreamOptimized.constM $! ReaderT f
@@ -400,25 +407,40 @@ instance (Monad m) => Strong (Automaton m) where
 
 -- | Step an automaton several steps at once, depending on how long the input is.
 instance (Monad m) => Traversing (Automaton m) where
-  wander f Automaton {getAutomaton = Stateful StreamT {state, step}} =
-    Automaton
-      { getAutomaton =
-          Stateful
-            StreamT
-              { state
-              , step =
-                  step
-                    & fmap runReaderT
-                    & flip
-                    & fmap ResultStateT
-                    & f
-                    & fmap getResultStateT
-                    & flip
-                    & fmap ReaderT
-              }
-      }
+  wander f automaton@Automaton {getAutomaton = Stateful _} = handleStatefully f automaton
+  -- I'm assuming that it's more efficient not to pass through an unnecessary state layer
   wander f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ f $ runReaderT m
   {-# INLINE wander #-}
+
+{- | Apply a morphism of stateful computations to an automaton.
+
+This keeps the state of the automaton unchanged, but modifies the step function.
+-}
+handleStatefully ::
+  (Functor m) =>
+  -- | An automaton can be seen as a function into the state monad transformer,
+  --   where @s@ is the internal state.
+  (forall s. (a -> ResultStateT s m b) -> c -> ResultStateT s m d) ->
+  Automaton m a b ->
+  Automaton m c d
+handleStatefully f Automaton {getAutomaton = Stateful StreamT {state, step}} =
+  Automaton
+    { getAutomaton =
+        Stateful
+          StreamT
+            { state
+            , step =
+                step
+                  & fmap runReaderT
+                  & flip
+                  & fmap ResultStateT
+                  & f
+                  & fmap getResultStateT
+                  & flip
+                  & fmap ReaderT
+            }
+    }
+handleStatefully f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ fmap (fmap output . ($ ()) . getResultStateT) $ f $ ResultStateT . (fmap (fmap (Result ())) . const <$> runReaderT m)
 
 -- | Only step the automaton if the input is 'Just'.
 mapMaybeS :: (Monad m) => Automaton m a b -> Automaton m (Maybe a) (Maybe b)
