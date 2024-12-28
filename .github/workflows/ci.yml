@@ -110,6 +110,7 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
+      fail-fast: false # So the cache is still filled
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
