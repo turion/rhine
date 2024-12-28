@@ -20,9 +20,10 @@ import Control.Selective
 
 -- automaton
 import Data.Stream (foreverExcept)
-import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
+import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
+import Data.Stream.Recursive as Recursive (Recursive (..), hoist')
 import Data.Stream.Recursive.Except
 import Data.Stream.Result
 
@@ -81,10 +82,9 @@ instance (Traversable m) => Traversable (StreamExcept a m) where
       bitraverseEither :: (Functor f) => Either (f a) (f b) -> f (Either a b)
       bitraverseEither = either (fmap Left) (fmap Right)
 
--- FIXME This should work with Functor m and custom hoists
-instance (Monad m) => Functor (StreamExcept a m) where
-  fmap f (RecursiveExcept fe) = RecursiveExcept $ hoist (withExceptT f) fe
-  fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ hoist (withExceptT f) ae
+instance (Functor m) => Functor (StreamExcept a m) where
+  fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
+  fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ OptimizedStreamT.hoist' (withExceptT f) ae
 
 instance (Monad m) => Applicative (StreamExcept a m) where
   pure = CoalgebraicExcept . constM . throwE
