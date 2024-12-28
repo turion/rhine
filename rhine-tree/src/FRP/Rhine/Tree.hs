@@ -19,9 +19,10 @@ import Control.Applicative (Alternative)
 
 -- rhine-tree
 
-import Control.Concurrent (Chan, writeChan, newChan, readChan)
+import Control.Concurrent (Chan, newChan, readChan, writeChan)
 import Control.Lens (ALens', Index, IndexedTraversal', IxValue, Ixed (..), Lens', Prism', Traversal', itraversed, re, to, view, (%~), (<.), (^.), (^?), (^@..))
 import Control.Monad (join, void)
+import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Control.Monad.Trans.State.Strict qualified as StateT
@@ -45,10 +46,9 @@ import Data.Vector qualified as V
 import FRP.Rhine hiding (readerS, runReaderS, step)
 import FRP.Rhine.ClSF.State qualified as ClSF
 import FRP.Rhine.Tree.Types
-import Language.Javascript.JSaddle (MonadJSM (..), fun, js, js1, jsg, jss, syncPoint, valToNumber)
+import Language.Javascript.JSaddle (MonadJSM (..), fun, js, js1, js2, jsg, jss, syncPoint, valToNumber)
 import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
-import Control.Monad.Trans.Class (lift)
 
 default (Text)
 
@@ -205,10 +205,11 @@ diff0 a1 a2
 diff :: (Semialign f, Eq a) => (forall x. IndexedTraversal' i (f x) x) -> f a -> f a -> [(i, Edit a)]
 diff t fa1 fa2 = align fa1 fa2 ^@.. t <. to (these (pure . const Delete) (pure . Add) diff0) <&> (\(i, me) -> (i,) <$> me) & catMaybes
 
-data JSMEvent = OnClick
-  { clientX :: Double,
-    clientY :: Double
-  }
+data JSMEvent
+  = OnClick
+      { clientX :: Double,
+        clientY :: Double
+      }
   | DOMContentLoaded
   | RhineStarted
 
@@ -256,7 +257,21 @@ runStateTDOM action = do
   logJS $ render dom_
   doc <- jsg ("document" :: Text)
   doc ^. (js ("body" :: Text) . jss ("innerHTML" :: Text) (render dom_))
-  doc ^. js "body" . js "children" .
+  doc
+    ^. js ("body" :: Text)
+      . js1 ("querySelectorAll" :: Text) ("*" :: Text)
+      . js1
+        ("forEach" :: Text)
+        ( fun $ \_ _ [el] -> do
+            el
+              ^. js2
+                ("addEventListener" :: Text)
+                ("click" :: Text)
+                ( fun $ \_ _ e -> do
+                    logJS "something happened"
+                )
+            liftIO $ putStrLn "could have"
+        )
   logJS "done"
   syncPoint -- FIXME needed?
   return a
@@ -400,7 +415,7 @@ dynamic v sf = proc a -> do
   (_, i) <- permanent'' v -< ()
   constMCl (lift $ logJS "dyńamic") -< ()
   dynamicAt sf -< (i, a) -- FIXME But this doesn't start because there is no event going to it.
-    -- It's time to do dom diffing and attaching events
+  -- It's time to do dom diffing and attaching events
 
 dynamicAt :: (AppendChild node, Eq (Index node)) => JSMSF (IxValue node) a b -> JSMSF node (Index node, a) (Maybe b)
 dynamicAt sf = arr join <<< pushTreeSF' sf'
@@ -413,8 +428,6 @@ dynamicAt sf = arr join <<< pushTreeSF' sf'
         else do
           constMCl (lift $ logJS "different") -< ()
           returnA -< Nothing
-
-
 
 -- modal :: TreeSF' m cl (IxValue node) (i, a) o -> TreeSF' m cl node (i, Maybe a) o
 -- modal sf = _
