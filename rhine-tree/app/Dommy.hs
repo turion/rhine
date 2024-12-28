@@ -11,8 +11,12 @@ import FRP.Rhine (count)
 
 default (Text)
 
-main :: JSM ()
-main = do
+main :: IO ()
+main = mainJSM
+-- main = run 8080 mainJSM -- using JSaddle Warp, needs an extra file
+
+mainJSM :: JSM ()
+mainJSM = do
   clock <- createJSMClock
   logJS "created"
   flowJSM mainClSF clock
