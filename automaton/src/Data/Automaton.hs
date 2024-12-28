@@ -537,3 +537,11 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 -- | Remembers the last 'Just' value, defaulting to the given initialisation value.
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
+
+data PrismAutomaton m tag focus a b = PrismAutomaton
+  { innerAutomaton :: Automaton m (a, focus) b
+  , prism :: Prism tag focus
+  }
+
+automatonOn :: PrismAutomaton m tag focus a b -> Automaton m (a, tag) (Maybe b)
+automatonOn = _
