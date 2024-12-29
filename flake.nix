@@ -58,9 +58,6 @@
                 }
                 { };
             })
-            (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
-              monad-schedule = dontCheck hprev.monad-schedule;
-            })
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
             })
