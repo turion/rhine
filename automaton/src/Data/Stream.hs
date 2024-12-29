@@ -227,6 +227,43 @@ stepStream :: (Functor m) => StreamT m a -> m (Result (StreamT m a) a)
 stepStream StreamT {state, step} = mapResultState (`StreamT` step) <$> step state
 {-# INLINE stepStream #-}
 
+{- | Build an infinite, lazy structure from the values of the stream.
+
+Since potentially infinitely many values are created by the stream,
+it is not necessary to provide a starting accumulator.
+
+Also, the accumulation cannot be terminated from the accumulation function itself,
+this has to be done by the stream's effect in @m@.
+See 'foldStreamM' for a more general accumulation function which can break depending on the current value.
+
+Example usage:
+@
+streamToList = foldStream (:)
+@
+-}
+foldStream ::
+  (Monad m) =>
+  -- | The accumulation function which prepends a value of the stream to the lazy accumulator.
+  (a -> b -> b) ->
+  StreamT m a ->
+  m b
+foldStream accum StreamT {state, step} = go state
+  where
+    go s = do
+      Result s' a <- step s
+      accum a <$> go s'
+{-# INLINE foldStream #-}
+
+-- | Like 'foldStream', but add an effect in @m@ at every step.
+foldStreamM :: (Monad m) => (a -> b -> m b) -> StreamT m a -> m b
+foldStreamM accum StreamT {state, step} = go state
+  where
+    go s = do
+      Result s' a <- step s
+      b <- go s'
+      accum a b
+{-# INLINE foldStreamM #-}
+
 {- | Run a stream with trivial output.
 
 If the output of a stream does not contain information,
@@ -238,20 +275,12 @@ e.g. 'Maybe' or 'Either' could terminate with a 'Nothing' or 'Left' value,
 or 'IO' can raise an exception.
 -}
 reactimate :: (Monad m) => StreamT m () -> m void
-reactimate StreamT {state, step} = go state
-  where
-    go s = do
-      Result s' () <- step s
-      go s'
+reactimate = foldStream $ const id
 {-# INLINE reactimate #-}
 
 -- | Run a stream, collecting the outputs in a lazy, infinite list.
 streamToList :: (Monad m) => StreamT m a -> m [a]
-streamToList StreamT {state, step} = go state
-  where
-    go s = do
-      Result s' a <- step s
-      (a :) <$> go s'
+streamToList = foldStream (:)
 {-# INLINE streamToList #-}
 
 -- * Modifying streams
