@@ -1,17 +1,16 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Control.Monad.Trans.List where
 
 import Control.Applicative (Alternative (..))
 import Control.Monad (MonadPlus)
 import Control.Monad.Morph (MFunctor (..))
 import Control.Monad.Trans.Class (MonadTrans, lift)
-import Control.Monad.Trans.Except (runExceptT, throwE)
+import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import Data.Coerce (coerce)
 import Data.Functor ((<&>))
 import Data.Stream (StreamT (..))
-import Data.Stream.Except (StreamExcept (CoalgebraicExcept, InitialExcept), mapOutput, runStreamExcept, stepInstant)
+import Data.Stream.Except (StreamExcept (CoalgebraicExcept), mapOutput, runStreamExcept, stepInstant)
 import Data.Stream.Optimized (OptimizedStreamT (..))
+import Data.Stream.Optimized qualified as Optimized
 import Data.Stream.Result (Result (..))
 
 newtype ListT m a = ListT {getListT :: StreamExcept a m ()}
@@ -78,7 +77,9 @@ instance (Monad m) => Applicative (ListT m) where
                 }
       ap (Stateless f) (Stateless a) = ListT $ CoalgebraicExcept $ Stateless $ f <*> a
 
+-- FIXME document performance
 instance (Monad m) => Monad (ListT m) where
+  -- FIXME Can't I pattern match on startingCont here to extract the state?
   ListT startingCont >>= f = ListT $ go startingCont
     where
       go current = do
@@ -117,3 +118,25 @@ instance (Foldable m) => Foldable (ListT m) where
 
 instance (Traversable m) => Traversable (ListT m) where
   traverse f ListT {getListT} = traverse f (runStreamExcept getListT) <&> ListT . CoalgebraicExcept
+
+-- iterListT :: (m [a] -> n a) -> ListT m a  -> n a
+-- iterListT morph = _
+
+stepListT :: (Monad m) => ListT m a -> m (Maybe (a, ListT m a))
+stepListT ListT {getListT} = do
+  result <- stepInstant getListT
+  return $ case result of
+    Left () -> Nothing
+    Right (Result cont a) -> Just (a, ListT cont)
+
+runListT :: (Monad m) => ListT m a -> m [a]
+runListT = runListT' . Optimized.toStreamT . runStreamExcept . getListT
+  where
+    runListT' :: (Monad m) => StreamT (ExceptT () m) a -> m [a]
+    runListT' StreamT {state, step} = go state
+      where
+        go s = do
+          result <- runExceptT $ step s
+          case result of
+            Left () -> return []
+            Right (Result s' a) -> (a :) <$> go s'

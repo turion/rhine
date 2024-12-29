@@ -98,6 +98,7 @@ test-suite automaton-test
     Automaton.Except
     Automaton.Trans.Accum
     Stream
+    Test.Control.Monad.Trans.List
 
   build-depends:
     QuickCheck >=2.14 && <2.16,
