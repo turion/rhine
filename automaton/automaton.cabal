@@ -47,6 +47,7 @@ common opts
   default-extensions:
     Arrows
     DataKinds
+    DerivingStrategies
     FlexibleContexts
     FlexibleInstances
     ImportQualifiedPost
