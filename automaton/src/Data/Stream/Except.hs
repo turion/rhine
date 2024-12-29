@@ -23,7 +23,6 @@ import Control.Category ((>>>))
 import Data.Stream (foreverExcept)
 import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
-import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Recursive as Recursive (Recursive (..), hoist')
 import Data.Stream.Recursive.Except
 import Data.Stream.Result
