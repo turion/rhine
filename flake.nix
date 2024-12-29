@@ -42,15 +42,9 @@
         lib.genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
         // { default = pkgs.haskellPackages; };
 
-      # A haskellPackages overlay containing everything defined in this repo
-      rhinePackagesOverlay = hfinal: hprev:
-        lib.genAttrs pnames (pname: hfinal.callCabal2nix pname ./${pname} { });
-
-      # A nixpkgs overlay containing everything defined in this repo, for reuse in downstream projects
-      localOverlay = final: prev:
+      # A nixpkgs overlay containing necessary overrides on dependencies added in rhine
+      localDependenciesOverlay = final: prev:
         let
-          hps = hpsFor final;
-
           # Overrides that are necessary because of dependencies not being up to date or fixed yet in nixpkgs.
           # Check on nixpkgs bumps whether some of these can be removed.
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
@@ -85,15 +79,38 @@
               gloss = doJailbreak hprev.gloss;
             })
           ];
-
         in
         {
           # The Haskell package set containing the packages defined in this repo
           haskell = prev.haskell // {
             packageOverrides = lib.composeManyExtensions ([
               prev.haskell.packageOverrides
-              rhinePackagesOverlay
             ] ++ temporaryHaskellOverrides);
+          };
+        };
+
+      # A nixpkgs overlay containing necessary overrides on all dependencies, for reuse in downstream projects
+      dependenciesOverlay = lib.composeManyExtensions [
+        inputs.monad-schedule.overlays.default
+        localDependenciesOverlay
+      ];
+
+      # A haskellPackages overlay containing everything defined in this repo
+      rhinePackagesOverlay = hfinal: hprev:
+        lib.genAttrs pnames (pname: hfinal.callCabal2nix pname ./${pname} { });
+
+      # A nixpkgs overlay containing everything defined in this repo
+      localOverlay = final: prev:
+        let
+          hps = hpsFor final;
+        in
+        {
+          # The Haskell package set containing the packages defined in this repo
+          haskell = prev.haskell // {
+            packageOverrides = lib.composeManyExtensions [
+              prev.haskell.packageOverrides
+              rhinePackagesOverlay
+            ];
           };
 
           # Helper packages containing aspects of the whole rhine build:
@@ -144,7 +161,7 @@
 
       overlay = lib.composeManyExtensions
         [
-          inputs.monad-schedule.overlays.default
+          dependenciesOverlay
           localOverlay
         ];
 
@@ -154,7 +171,10 @@
     in
     {
       # Reexport the overlay so other downstream flakes can use it to develop rhine projects with low effort.
-      overlays.default = overlay;
+      overlays = {
+        inherit dependenciesOverlay localOverlay;
+        default = overlay;
+      };
 
       # Usage: nix fmt
       formatter = forAllPlatforms (system: pkgs: pkgs.nixpkgs-fmt);
