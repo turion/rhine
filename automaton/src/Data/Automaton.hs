@@ -54,6 +54,7 @@ import Data.Stream qualified as StreamT
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
+  catMaybeS,
   concatS,
   stepOptimizedStream,
  )
@@ -598,6 +599,16 @@ handleAutomatonF_ f = Automaton . StreamOptimized.withOptimizedF f . getAutomato
 -- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
 handleAutomaton :: (Functor m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
+
+
+{- | Drop 'Nothing' values from the output, retrying an input value until the automaton outputs a 'Just'.
+
+See 'Data.Stream.catMaybeS'.
+
+Caution: If @automaton@ outputs 'Nothing' forever, then @'catMaybeS' automaton@ will loop and never produce output.
+-}
+catMaybeS :: (Monad m) => Automaton m a (Maybe b) -> Automaton m a b
+catMaybeS = Automaton . Data.Stream.Optimized.catMaybeS . getAutomaton
 
 -- ** Buffering
 
