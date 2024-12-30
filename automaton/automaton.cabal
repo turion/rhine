@@ -50,12 +50,16 @@ common opts
     Arrows
     DataKinds
     DeriveFunctor
+    DerivingVia
     FlexibleContexts
     FlexibleInstances
+    GADTs
     ImportQualifiedPost
+    LambdaCase
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType
+    RankNTypes
     StandaloneDeriving
     TupleSections
     TypeApplications
