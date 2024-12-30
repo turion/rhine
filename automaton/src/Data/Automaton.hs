@@ -269,6 +269,10 @@ instance (Monad m) => ArrowChoice (Automaton m) where
       untag (Right y) = y
   {-# INLINE (|||) #-}
 
+-- | Like 'arr', but requires only 'Applicative'
+arr' :: (Applicative m) => (a -> b) -> Automaton m a b
+arr' f = Automaton $! Stateless $! ReaderT $ pure . f
+
 -- | Caution, this can make your program hang. Try to use 'feedback' or 'unfold' where possible, or combine 'loop' with 'delay'.
 instance (MonadFix m) => ArrowLoop (Automaton m) where
   loop (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT (\b -> fst <$> mfix ((. snd) $ ($ b) $ curry $ runReaderT ma))
