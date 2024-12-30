@@ -314,6 +314,9 @@ catMaybeS = catMaybes
 
 This function lets a stream control the speed at which it produces data,
 since it can decide to produce any amount of output at every step.
+
+If the original stream outputs an empty list and the buffer is empty,
+it is retried until it produces data.
 -}
 concatS :: (Monad m) => StreamT m [a] -> StreamT m a
 concatS StreamT {state, step} =
