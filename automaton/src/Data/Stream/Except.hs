@@ -59,13 +59,15 @@ mapException :: (Monad m1) => (forall x. ExceptT e1 m1 x -> ExceptT e2 m2 x) -> 
 mapException f (RecursiveExcept recursive) = RecursiveExcept $ hoist f recursive
 mapException f (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist f coalgebraic
 
-toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
-toRecursive (RecursiveExcept recursive) = recursive
-toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
-
+-- | Run a 'StreamExcept' by turning it into a stream that can throw an exception
 runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
 runStreamExcept (RecursiveExcept recursive) = StreamOptimized.fromRecursive recursive
 runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
+
+-- | Like 'runStreamExcept', but force the (usually less efficient, but more versatile) recursive stream implementation
+toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
+toRecursive (RecursiveExcept recursive) = recursive
+toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
 
 -- | Try to step the 'StreamExcept' for one value of the stream
 stepInstant :: (Functor m) => StreamExcept a m e -> m (Either e (Result (StreamExcept a m e) a))
