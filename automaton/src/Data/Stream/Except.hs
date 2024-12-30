@@ -44,6 +44,11 @@ mapOutput :: (Functor m) => (a -> b) -> StreamExcept a m e -> StreamExcept b m e
 mapOutput f (RecursiveExcept recursive) = RecursiveExcept $ f <$> recursive
 mapOutput f (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ f <$> coalgebraic
 
+-- | Apply a monad morphism to the exception and effect, not changing the output
+mapException :: (Monad m1) => (forall x. ExceptT e1 m1 x -> ExceptT e2 m2 x) -> StreamExcept a m1 e1 -> StreamExcept a m2 e2
+mapException f (RecursiveExcept recursive) = RecursiveExcept $ hoist f recursive
+mapException f (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist f coalgebraic
+
 toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
 toRecursive (RecursiveExcept recursive) = recursive
 toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
@@ -103,8 +108,7 @@ instance MonadTrans (StreamExcept a) where
   lift = CoalgebraicExcept . constM . ExceptT . fmap Left
 
 instance MFunctor (StreamExcept a) where
-  hoist morph (RecursiveExcept recursive) = RecursiveExcept $ hoist (mapExceptT morph) recursive
-  hoist morph (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist (mapExceptT morph) coalgebraic
+  hoist morph = mapException (hoist morph)
 
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept
