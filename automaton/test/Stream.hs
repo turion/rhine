@@ -1,7 +1,7 @@
 module Stream where
 
 -- base
-import Control.Monad.Identity (Identity (..))
+import Data.Functor.Identity (Identity (..))
 
 -- selective
 import Control.Selective

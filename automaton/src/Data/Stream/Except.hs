@@ -1,12 +1,26 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Data.Stream.Except where
 
 -- base
+import Control.Category ((>>>))
 import Control.Monad (ap)
+import Data.Bifunctor (Bifunctor (first), bimap)
+import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Void
 
 -- transformers
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except
+
+-- mtl
+import Control.Monad.Accum (MonadAccum (..))
+import Control.Monad.RWS.Class (MonadRWS)
+import Control.Monad.Reader.Class (MonadReader (..))
+import Control.Monad.State.Class
+import Control.Monad.Writer.Class
 
 -- mmorph
 import Control.Monad.Morph (MFunctor, hoist)
@@ -16,10 +30,11 @@ import Control.Selective
 
 -- automaton
 import Data.Stream (foreverExcept)
-import Data.Stream.Optimized (OptimizedStreamT, applyExcept, constM, selectExcept)
+import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
-import Data.Stream.Recursive (Recursive (..))
+import Data.Stream.Recursive as Recursive (Recursive (..), hoist')
 import Data.Stream.Recursive.Except
+import Data.Stream.Result
 
 {- | A stream that can terminate with an exception.
 
@@ -36,20 +51,56 @@ data StreamExcept a m e
 
 -- | Apply a function to the output of the stream
 mapOutput :: (Functor m) => (a -> b) -> StreamExcept a m e -> StreamExcept b m e
-mapOutput f (RecursiveExcept final) = RecursiveExcept $ f <$> final
-mapOutput f (CoalgebraicExcept initial) = CoalgebraicExcept $ f <$> initial
+mapOutput f (RecursiveExcept recursive) = RecursiveExcept $ f <$> recursive
+mapOutput f (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ f <$> coalgebraic
 
-toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
-toRecursive (RecursiveExcept coalgebraic) = coalgebraic
-toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
+-- | Apply a monad morphism to the exception and effect, not changing the output
+mapException :: (Monad m1) => (forall x. ExceptT e1 m1 x -> ExceptT e2 m2 x) -> StreamExcept a m1 e1 -> StreamExcept a m2 e2
+mapException f (RecursiveExcept recursive) = RecursiveExcept $ hoist f recursive
+mapException f (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist f coalgebraic
 
+-- | Run a 'StreamExcept' by turning it into a stream that can throw an exception
 runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
-runStreamExcept (RecursiveExcept coalgebraic) = StreamOptimized.fromRecursive coalgebraic
+runStreamExcept (RecursiveExcept recursive) = StreamOptimized.fromRecursive recursive
 runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
 
-instance (Monad m) => Functor (StreamExcept a m) where
-  fmap f (RecursiveExcept fe) = RecursiveExcept $ hoist (withExceptT f) fe
-  fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ hoist (withExceptT f) ae
+-- | Like 'runStreamExcept', but force the (usually less efficient, but more versatile) recursive stream implementation
+toRecursive :: (Functor m) => StreamExcept a m e -> Recursive (ExceptT e m) a
+toRecursive (RecursiveExcept recursive) = recursive
+toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
+
+-- | Try to step the 'StreamExcept' for one value of the stream
+stepInstant :: (Functor m) => StreamExcept a m e -> m (Either e (Result (StreamExcept a m e) a))
+stepInstant (RecursiveExcept recursive) =
+  recursive
+    & getRecursive
+    & runExceptT
+    <&> fmap (mapResultState RecursiveExcept)
+stepInstant (CoalgebraicExcept coalgebraic) =
+  coalgebraic
+    & StreamOptimized.stepOptimizedStream
+    & runExceptT
+    <&> fmap (mapResultState CoalgebraicExcept)
+
+-- | Run all steps of the stream, discarding all output, until the exception is reached.
+instance (Functor m, Foldable m) => Foldable (StreamExcept a m) where
+  foldMap f = stepInstant >>> foldMap (either f $ resultState >>> foldMap f)
+
+instance (Traversable m) => Traversable (StreamExcept a m) where
+  traverse f streamExcept = traverseRecursive (toRecursive streamExcept) & fmap (Recursive >>> RecursiveExcept)
+    where
+      traverseRecursive =
+        getRecursive
+          >>> runExceptT
+          >>> fmap (bimap f (mapResultState traverseRecursive >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
+          >>> sequenceA
+          >>> fmap (ExceptT >>> fmap (mapResultState Recursive))
+      bitraverseEither :: (Functor f) => Either (f a) (f b) -> f (Either a b)
+      bitraverseEither = either (fmap Left) (fmap Right)
+
+instance (Functor m) => Functor (StreamExcept a m) where
+  fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
+  fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ OptimizedStreamT.hoist' (withExceptT f) ae
 
 instance (Monad m) => Applicative (StreamExcept a m) where
   pure = CoalgebraicExcept . constM . throwE
@@ -69,8 +120,27 @@ instance MonadTrans (StreamExcept a) where
   lift = CoalgebraicExcept . constM . ExceptT . fmap Left
 
 instance MFunctor (StreamExcept a) where
-  hoist morph (RecursiveExcept recursive) = RecursiveExcept $ hoist (mapExceptT morph) recursive
-  hoist morph (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist (mapExceptT morph) coalgebraic
+  hoist morph = mapException (hoist morph)
+
+instance (MonadAccum w m) => MonadAccum w (StreamExcept a m) where
+  accum = lift . accum
+
+instance (MonadReader r m) => MonadReader r (StreamExcept a m) where
+  reader = lift . reader
+  local f = hoist $ local f
+
+-- | 'pass' only acts when there is an exception
+instance (MonadWriter w m) => MonadWriter w (StreamExcept a m) where
+  writer = lift . writer
+
+  listen = mapException $ ExceptT . fmap (\(ea, w) -> first (,w) ea) . listen . runExceptT
+
+  pass = mapException $ ExceptT . pass . fmap (either (first Left) (\x -> (Right x, id))) . runExceptT
+
+instance (MonadState s m) => MonadState s (StreamExcept a m) where
+  state = lift . state
+
+instance (MonadRWS r w s m) => MonadRWS r w s (StreamExcept a m)
 
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept

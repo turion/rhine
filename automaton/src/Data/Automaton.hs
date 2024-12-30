@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -20,7 +19,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
 import Data.Maybe (fromMaybe)
-import Data.Monoid (Last (..), Sum (..))
+import Data.Monoid (Ap (..), Last (..), Sum (..))
 import Prelude hiding (id, (.))
 
 -- mmorph
@@ -44,12 +43,20 @@ import Data.VectorSpace (VectorSpace (..))
 -- align
 import Data.Semialign (Align (..), Semialign (..))
 
+-- these
+import Data.These (these)
+
+-- witherable
+import Witherable (Filterable (..))
+
 -- automaton
-import Data.Stream (StreamT (..), fixStream)
+import Data.Stream (StreamT (..))
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
+  catMaybeS,
   concatS,
+  hoist',
   stepOptimizedStream,
  )
 import Data.Stream.Optimized qualified as StreamOptimized
@@ -80,8 +87,8 @@ automaton2 :: Automaton m b c
 sequentially :: Automaton m a c
 sequentially = automaton1 >>> automaton2
 
-parallely :: Automaton m (a, b) (b, c)
-parallely = automaton1 *** automaton2
+inParallel :: Automaton m (a, b) (b, c)
+inParallel = automaton1 *** automaton2
 @
 In sequential composition, the output of the first automaton is passed as input to the second one.
 In parallel composition, both automata receive input simulataneously and process it independently.
@@ -179,19 +186,7 @@ instance (Monad m) => Arrow (Automaton m) where
   arr f = Automaton $! Stateless $! asks f
   {-# INLINE arr #-}
 
-  first (Automaton (Stateful StreamT {state, step})) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s ->
-              ReaderT
-                ( \(b, d) ->
-                    fmap (,d)
-                      <$> runReaderT (step s) b
-                )
-          }
-  first (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
+  first = first'
   {-# INLINE first #-}
 
 instance (Monad m) => ArrowChoice (Automaton m) where
@@ -237,24 +232,10 @@ instance (Monad m) => ArrowChoice (Automaton m) where
             (runReaderT . fmap Right $ mR)
   {-# INLINE (+++) #-}
 
-  left (Automaton (Stateful (StreamT {state, step}))) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s -> ReaderT $ either (fmap (fmap Left) . runReaderT (step s)) (pure . Result s . Right)
-          }
-  left (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (fmap Left . runReaderT ma) (pure . Right)
+  left = left'
   {-# INLINE left #-}
 
-  right (Automaton (Stateful (StreamT {state, step}))) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s -> ReaderT $ either (pure . Result s . Left) (fmap (fmap Right) . runReaderT (step s))
-          }
-  right (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (pure . Left) (fmap Right . runReaderT ma)
+  right = right'
   {-# INLINE right #-}
 
   f ||| g = f +++ g >>> arr untag
@@ -262,6 +243,10 @@ instance (Monad m) => ArrowChoice (Automaton m) where
       untag (Left x) = x
       untag (Right y) = y
   {-# INLINE (|||) #-}
+
+-- | Like 'arr', but requires only 'Applicative'
+arr' :: (Applicative m) => (a -> b) -> Automaton m a b
+arr' f = Automaton $! Stateless $! ReaderT $ pure . f
 
 -- | Caution, this can make your program hang. Try to use 'feedback' or 'unfold' where possible, or combine 'loop' with 'delay'.
 instance (MonadFix m) => ArrowLoop (Automaton m) where
@@ -280,6 +265,12 @@ instance (Monad m, Alternative m) => ArrowZero (Automaton m) where
 
 instance (Monad m, Alternative m) => ArrowPlus (Automaton m) where
   (<+>) = (<|>)
+
+-- instance Semigroup w => Semigroup (Automaton m a w) where
+-- instance Monoid w => Monoid (Automaton m a w) where
+
+deriving via Ap (Automaton m a) w instance (Applicative m, Semigroup w) => Semigroup (Automaton m a w)
+deriving via Ap (Automaton m a) w instance (Applicative m, Monoid w) => Monoid (Automaton m a w)
 
 -- | Consume an input and produce output effectfully, without keeping internal state
 arrM :: (Functor m) => (a -> m b) -> Automaton m a b
@@ -385,18 +376,47 @@ withAutomaton :: (Functor m1, Functor m2) => (forall s. (a1 -> m1 (Result s b1))
 withAutomaton f = Automaton . StreamOptimized.mapOptimizedStreamT (ReaderT . f . runReaderT) . getAutomaton
 {-# INLINE withAutomaton #-}
 
-instance (Monad m) => Profunctor (Automaton m) where
-  dimap f g Automaton {getAutomaton} = Automaton $ g <$> hoist (withReaderT f) getAutomaton
-  lmap f Automaton {getAutomaton} = Automaton $ hoist (withReaderT f) getAutomaton
+instance (Functor m) => Profunctor (Automaton m) where
+  dimap f g Automaton {getAutomaton} = Automaton $ g <$> hoist' (withReaderT f) getAutomaton
+  lmap f Automaton {getAutomaton} = Automaton $ hoist' (withReaderT f) getAutomaton
   rmap = fmap
 
-instance (Monad m) => Choice (Automaton m) where
-  right' = right
-  left' = left
+instance (Applicative m) => Choice (Automaton m) where
+  right' (Automaton (Stateful (StreamT {state, step}))) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s -> ReaderT $ either (pure . Result s . Left) (fmap (fmap Right) . runReaderT (step s))
+          }
+  right' (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (pure . Left) (fmap Right . runReaderT ma)
+  {-# INLINE right' #-}
 
-instance (Monad m) => Strong (Automaton m) where
-  second' = second
-  first' = first
+  left' (Automaton (Stateful (StreamT {state, step}))) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s -> ReaderT $ either (fmap (fmap Left) . runReaderT (step s)) (pure . Result s . Right)
+          }
+  left' (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (fmap Left . runReaderT ma) (pure . Right)
+  {-# INLINE left' #-}
+
+instance (Applicative m) => Strong (Automaton m) where
+  first' (Automaton (Stateful StreamT {state, step})) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s ->
+              ReaderT
+                ( \(b, d) ->
+                    fmap (,d)
+                      <$> runReaderT (step s) b
+                )
+          }
+  first' (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
+  {-# INLINE first' #-}
 
 -- | Step an automaton several steps at once, depending on how long the input is.
 instance (Monad m) => Traversing (Automaton m) where
@@ -432,30 +452,108 @@ traverseS = traverse'
 traverseS_ :: (Monad m, Traversable f) => Automaton m a b -> Automaton m (f a) ()
 traverseS_ automaton = traverse' automaton >>> arr (const ())
 
-{- | Launch arbitrarily many copies of the automaton in parallel.
+-- TODO But should we use parallelism?
+-- https://hackage.haskell.org/package/parallel-3.1.0.1/docs/Control-Parallel-Strategies.html#v:parTraversable
 
-* The copies of the automaton are launched on demand as the input lists grow.
-* The n-th copy will always receive the n-th input.
-* If the input list has length n, the n+1-th automaton copy will not be stepped.
+{- | Launch arbitrarily many copies of the automaton in parallel, according to the shape of the input data.
 
-Caution: Uses memory of the order of the largest list that was ever input during runtime.
+* The copies of the automaton are launched on demand as the shape of the input grows.
+* The automaton copy at a certain position will always receive the input at that position (if it is supplied).
+* If the input data is smaller than the automaton copies, the uncovered automata will not be stepped.
+
+The behaviour for some typical example types:
+
+* Lists: The copies of the automaton are launched on demand as the input lists grow
+  The n-th copy will always receive the n-th input.
+  If the input list has length n, the n+1-th automaton copy will not be stepped.
+* 'Maybe': As soon as a 'Just' is received, an automaton is started. It is stepped only when more 'Just' values arrive.
+* 'Map': Whenever an input for a new key arrives, a new automaton is started.
+
+Caution: Uses memory of the order of the largest shape that was ever input during runtime.
+
+Note: "in parallel" refers purely the data model, it does not mean that multiple cores are used for the computations.
 -}
-parallely :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
+parallely :: (Applicative m, Traversable t, Align t, Filterable t) => Automaton m a b -> Automaton m (t a) (t b)
 parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
   where
-    parallely' :: (Applicative m) => StreamT (ReaderT a m) b -> StreamT (ReaderT [a] m) [b]
-    parallely' StreamT {state, step} = fixStream (JointState state) $ \fixstep jointState@(JointState s fixstate) -> ReaderT $ \case
-      [] -> pure $! Result jointState []
-      (a : as) -> apResult . fmap (:) <$> runReaderT (step s) a <*> runReaderT (fixstep fixstate) as
+    parallely' :: (Applicative m, Traversable t, Align t, Filterable t) => StreamT (ReaderT a m) b -> StreamT (ReaderT (t a) m) (t b)
+    parallely' StreamT {state, step} =
+      StreamT
+        { state = nil
+        , step = \s -> ReaderT $ \as ->
+            -- Analyse at which positions there is state or input
+            align s as
+              & traverse
+                ( these
+                    -- There is state at this position, but no input, don't do anything
+                    (\s -> pure $ Result s Nothing)
+                    -- There is no state yet at this position, but input. Perform the step, initialising with the original initial state
+                    (fmap (fmap Just) . runReaderT (step state))
+                    -- There is already state, and there is input. Perform the step normally
+                    (\s a -> fmap Just <$> runReaderT (step s) a)
+                )
+              <&> ( \sas ->
+                      Result
+                        -- Keep all the resulting states
+                        (resultState <$> sas)
+                        -- Wither the output shape by removing all positions where no step has been performed
+                        (Witherable.mapMaybe output sas)
+                  )
+        }
 parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
+{-# INLINE parallely #-}
+
+{- | Run multiple copies of the same 'Automaton', applying new input shapes to an accumulated one.
+
+* The state is initialized as 'pure'
+* As more input in an @f@ shape arrives, it is applied as an effect in the state using the 'Applicative' instance of @f@
+
+Caution: The state grows depending on how @'Applicative' f@ is implemented.
+For example, for lists the size of the state is proportional to the /product/ of all inputs that have arrived.
+I.e. it grows exponentially for constantly bigger-than-1 sized lists, and drops to 0 once an empty list is added.
+
+The behaviour for some typical example types:
+
+* Lists: The input lists are interpreted as nondeterministic choices, and for every possible combination of choices, one automaton is run, and all output lists concatenated.
+* 'Maybe': The automaton is stepped normally on 'Just' values, and stopped on 'Nothing', never outputting any other value than 'Nothing'.
+* 'Either': Like 'Maybe', but with an exception value.
+* 'ZipList': The output is the size of the /smallest/ list ever input, and the state is shrunk every time the input is smaller than before.
+-}
+
+-- FIXME unit test all of these
+applying :: (Applicative m, Traversable f, Applicative f) => Automaton m a b -> Automaton m (f a) (f b)
+applying = handleAutomaton applying'
+  where
+    applying' :: (Applicative m, Traversable f, Applicative f) => StreamT (ReaderT a m) b -> StreamT (ReaderT (f a) m) (f b)
+    applying' StreamT {state, step} =
+      StreamT
+        { state = pure state
+        , step = \s -> ReaderT $ \as ->
+            (runReaderT . step <$> s <*> as)
+              & sequenceA
+              & fmap unzipResult
+        }
+{-# INLINE applying #-}
 
 -- | Given a transformation of streams, apply it to an automaton, without changing the input.
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
 
--- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
-handleAutomaton :: (Monad m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
+{- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
+
+In contrast to 'handleAutomaton_', the functor type can change.
+-}
+handleAutomaton :: (Functor m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
+
+{- | Drop 'Nothing' values from the output, retrying an input value until the automaton outputs a 'Just'.
+
+See 'Data.Stream.catMaybeS'.
+
+Caution: If @automaton@ outputs 'Nothing' forever, then @'catMaybeS' automaton@ will loop and never produce output.
+-}
+catMaybeS :: (Monad m) => Automaton m a (Maybe b) -> Automaton m a b
+catMaybeS = Automaton . Data.Stream.Optimized.catMaybeS . getAutomaton
 
 {- | Buffer the output of an automaton. See 'Data.Stream.concatS'.
 
