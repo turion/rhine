@@ -56,6 +56,7 @@ import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
   concatS,
+  hoist',
   stepOptimizedStream,
  )
 import Data.Stream.Optimized qualified as StreamOptimized
@@ -185,19 +186,7 @@ instance (Monad m) => Arrow (Automaton m) where
   arr f = Automaton $! Stateless $! asks f
   {-# INLINE arr #-}
 
-  first (Automaton (Stateful StreamT {state, step})) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s ->
-              ReaderT
-                ( \(b, d) ->
-                    fmap (,d)
-                      <$> runReaderT (step s) b
-                )
-          }
-  first (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
+  first = first'
   {-# INLINE first #-}
 
 instance (Monad m) => ArrowChoice (Automaton m) where
@@ -243,24 +232,10 @@ instance (Monad m) => ArrowChoice (Automaton m) where
             (runReaderT . fmap Right $ mR)
   {-# INLINE (+++) #-}
 
-  left (Automaton (Stateful (StreamT {state, step}))) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s -> ReaderT $ either (fmap (fmap Left) . runReaderT (step s)) (pure . Result s . Right)
-          }
-  left (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (fmap Left . runReaderT ma) (pure . Right)
+  left = left'
   {-# INLINE left #-}
 
-  right (Automaton (Stateful (StreamT {state, step}))) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s -> ReaderT $ either (pure . Result s . Left) (fmap (fmap Right) . runReaderT (step s))
-          }
-  right (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (pure . Left) (fmap Right . runReaderT ma)
+  right = right'
   {-# INLINE right #-}
 
   f ||| g = f +++ g >>> arr untag
@@ -395,18 +370,47 @@ withAutomaton :: (Functor m1, Functor m2) => (forall s. (a1 -> m1 (Result s b1))
 withAutomaton f = Automaton . StreamOptimized.mapOptimizedStreamT (ReaderT . f . runReaderT) . getAutomaton
 {-# INLINE withAutomaton #-}
 
-instance (Monad m) => Profunctor (Automaton m) where
-  dimap f g Automaton {getAutomaton} = Automaton $ g <$> hoist (withReaderT f) getAutomaton
-  lmap f Automaton {getAutomaton} = Automaton $ hoist (withReaderT f) getAutomaton
+instance (Functor m) => Profunctor (Automaton m) where
+  dimap f g Automaton {getAutomaton} = Automaton $ g <$> hoist' (withReaderT f) getAutomaton
+  lmap f Automaton {getAutomaton} = Automaton $ hoist' (withReaderT f) getAutomaton
   rmap = fmap
 
-instance (Monad m) => Choice (Automaton m) where
-  right' = right
-  left' = left
+instance (Applicative m) => Choice (Automaton m) where
+  right' (Automaton (Stateful (StreamT {state, step}))) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s -> ReaderT $ either (pure . Result s . Left) (fmap (fmap Right) . runReaderT (step s))
+          }
+  right' (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (pure . Left) (fmap Right . runReaderT ma)
+  {-# INLINE right' #-}
 
-instance (Monad m) => Strong (Automaton m) where
-  second' = second
-  first' = first
+  left' (Automaton (Stateful (StreamT {state, step}))) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s -> ReaderT $ either (fmap (fmap Left) . runReaderT (step s)) (pure . Result s . Right)
+          }
+  left' (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (fmap Left . runReaderT ma) (pure . Right)
+  {-# INLINE left' #-}
+
+instance (Applicative m) => Strong (Automaton m) where
+  first' (Automaton (Stateful StreamT {state, step})) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s ->
+              ReaderT
+                ( \(b, d) ->
+                    fmap (,d)
+                      <$> runReaderT (step s) b
+                )
+          }
+  first' (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
+  {-# INLINE first' #-}
 
 -- | Step an automaton several steps at once, depending on how long the input is.
 instance (Monad m) => Traversing (Automaton m) where
