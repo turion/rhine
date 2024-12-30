@@ -450,7 +450,10 @@ instance (Selective m) => Selective (StreamT m) where
       eitherResult (Result s eab) = bimap (Result s) (Result s) eab
 
 {- | Run both streams in parallel and use @'Semialign' m@ to decide which stream produces output.
-  If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.
+
+If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.
+
+Note: This doesn't need @'Monad' m@ or even @'Applicative' m@.
 -}
 instance (Semialign m) => Semialign (StreamT m) where
   align (StreamT s10 step1) (StreamT s20 step2) =
