@@ -48,6 +48,7 @@ common opts
   default-extensions:
     Arrows
     DataKinds
+    DeriveFunctor
     FlexibleContexts
     FlexibleInstances
     ImportQualifiedPost
@@ -65,6 +66,7 @@ library
   import: opts
   exposed-modules:
     Data.Automaton
+    Data.Automaton.Filter
     Data.Automaton.Recursive
     Data.Automaton.Trans.Accum
     Data.Automaton.Trans.Except
@@ -74,6 +76,7 @@ library
     Data.Automaton.Trans.Reader
     Data.Automaton.Trans.State
     Data.Automaton.Trans.Writer
+    Data.Automaton.Traversing
     Data.Stream
     Data.Stream.Except
     Data.Stream.Internal
@@ -96,6 +99,7 @@ test-suite automaton-test
     Automaton
     Automaton.Except
     Automaton.Trans.Accum
+    Automaton.Traversing
     Stream
 
   build-depends:
