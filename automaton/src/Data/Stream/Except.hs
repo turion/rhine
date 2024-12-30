@@ -46,7 +46,7 @@ toRecursive (RecursiveExcept recursive) = recursive
 toRecursive (CoalgebraicExcept coalgebraic) = StreamOptimized.toRecursive coalgebraic
 
 runStreamExcept :: StreamExcept a m e -> OptimizedStreamT (ExceptT e m) a
-runStreamExcept (RecursiveExcept coalgebraic) = StreamOptimized.fromRecursive coalgebraic
+runStreamExcept (RecursiveExcept recursive) = StreamOptimized.fromRecursive recursive
 runStreamExcept (CoalgebraicExcept coalgebraic) = coalgebraic
 
 -- | Try to step the 'StreamExcept' for one value of the stream
