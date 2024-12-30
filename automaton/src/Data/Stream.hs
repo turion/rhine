@@ -100,7 +100,7 @@ unfold state step =
     , step = pure . step
     }
 
--- | Like 'unfold', but output the current state.
+-- | Like 'unfold', but output the current (updated) state.
 unfold_ :: (Applicative m) => s -> (s -> s) -> StreamT m s
 unfold_ state step = unfold state $ \s -> let s' = step s in Result s' s'
 
