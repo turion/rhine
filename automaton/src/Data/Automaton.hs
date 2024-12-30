@@ -453,8 +453,11 @@ parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ Reade
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
 
--- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
-handleAutomaton :: (Monad m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
+{- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
+
+In contrast to 'handleAutomaton_', the functor type can change.
+-}
+handleAutomaton :: (Functor m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
 
 {- | Buffer the output of an automaton. See 'Data.Stream.concatS'.

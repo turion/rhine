@@ -153,7 +153,7 @@ withOptimized f stream = Stateful $ f $ toStreamT stream
 
 {- | Map a morphism of streams to optimized streams.
 
-In contrast to 'withOptimized', the monad type is allowed to change.
+In contrast to 'withOptimized', the functor type is allowed to change.
 -}
 handleOptimized :: (Functor m) => (StreamT m a -> StreamT n b) -> OptimizedStreamT m a -> OptimizedStreamT n b
 handleOptimized f stream = Stateful $ f $ toStreamT stream
