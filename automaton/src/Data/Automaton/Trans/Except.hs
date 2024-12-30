@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- | An 'Automaton' in the 'ExceptT' monad can throw an exception to terminate.
 
@@ -22,10 +23,17 @@ import Control.Arrow (arr, returnA, (<<<), (>>>))
 import Control.Category qualified as Category
 import Data.Void (Void, absurd)
 
+-- mtl
+import Control.Monad.Accum (MonadAccum)
+import Control.Monad.RWS.Class (MonadRWS)
+import Control.Monad.Reader.Class
+import Control.Monad.State.Class
+import Control.Monad.Writer.Class
+
 -- transformers
 import Control.Monad.Trans.Except (ExceptT (..), runExceptT, throwE)
 import Control.Monad.Trans.Maybe (MaybeT, runMaybeT)
-import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Reader (ReaderT (ReaderT), mapReaderT)
 
 -- selective
 import Control.Selective (Selective)
@@ -268,6 +276,15 @@ sawtooth = forever $ try $ count >>> throwOnMaybe (\n -> guard (n > 10))
 -}
 newtype AutomatonExcept a b m e = AutomatonExcept {getAutomatonExcept :: StreamExcept b (ReaderT a m) e}
   deriving newtype (Functor, Applicative, Selective, Monad)
+
+deriving newtype instance (MonadAccum w m) => MonadAccum w (AutomatonExcept a b m)
+deriving newtype instance (MonadWriter w m) => MonadWriter w (AutomatonExcept a b m)
+deriving newtype instance (MonadState s m) => MonadState s (AutomatonExcept a b m)
+deriving newtype instance (MonadRWS r w s m) => MonadRWS r w s (AutomatonExcept a b m)
+
+instance (MonadReader r m) => MonadReader r (AutomatonExcept a b m) where
+  reader f = AutomatonExcept $ lift $ lift $ reader f
+  local f = hoist $ local f
 
 instance MonadTrans (AutomatonExcept a b) where
   lift = AutomatonExcept . lift . lift
