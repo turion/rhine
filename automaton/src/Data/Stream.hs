@@ -9,15 +9,16 @@ module Data.Stream where
 
 -- base
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
-import Control.Monad ((<$!>))
+import Control.Monad (forM, (<$!>))
 import Data.Bifunctor (bimap)
 import Data.Function ((&))
+import Data.Functor.Compose (Compose (..))
 import Data.Monoid (Ap (..))
 import Prelude hiding (Applicative (..))
 
 -- transformers
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE, withExceptT)
+import Control.Monad.Trans.Except (ExceptT (..), runExceptT, throwE, withExceptT)
 
 -- mmorph
 import Control.Monad.Morph (MFunctor (hoist))
@@ -490,6 +491,44 @@ loop at runtime due to the coalgebraic encoding of the state.
 fixA :: (Applicative m) => StreamT m (a -> a) -> StreamT m a
 fixA StreamT {state, step} = fixStream (JointState state) $
   \stepA (JointState s ss) -> apResult <$> step s <*> stepA ss
+
+-- FIXME Generalisation in []
+runListS :: (Monad m) => StreamT (Compose m []) a -> StreamT m [a]
+runListS StreamT {state, step} =
+  StreamT
+    { state = [state]
+    , step = \states -> do
+        results <- forM states $ getCompose . step
+        let flatResults = concat results
+        return $ Result (resultState <$> flatResults) (output <$> flatResults)
+    }
+
+-- FIXME maybe rewrite with Iso somehow?
+handleCompose :: (Functor f, Monad m, Monad composed) => (forall s. s -> f s) -> (forall x. composed x -> m (f x)) -> (forall x. m (f x) -> composed x) -> StreamT composed a -> StreamT m (f a)
+handleCompose pure_ uncompose compose StreamT {state, step} =
+  StreamT
+    { state = pure_ state
+    , step = \s -> do
+        results <- uncompose $ do
+          states <- compose $ pure s
+          step states
+        return $! Result (fmap resultState results) (fmap output results)
+    }
+
+-- FIXME all these should go to a separate module
+handleExceptT :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
+handleExceptT = handleCompose pure runExceptT ExceptT
+
+-- FIXME handleMaybeT
+
+snapshot :: (Functor m) => StreamT m a -> StreamT m (m a)
+snapshot StreamT {state, step} =
+  StreamT
+    { state
+    , step = \s ->
+        let result = step s
+         in flip Result (output <$> result) . resultState <$> result
+    }
 
 -- | Similar to 'fmap', but the function is allowed to perform a side effect in a monad @m@.
 mmap :: (Monad m) => (a -> m b) -> StreamT m a -> StreamT m b
