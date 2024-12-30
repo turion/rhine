@@ -1,9 +1,12 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Data.Stream.Except where
 
 -- base
 import Control.Category ((>>>))
 import Control.Monad (ap)
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (Bifunctor (first), bimap)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Void
@@ -11,6 +14,13 @@ import Data.Void
 -- transformers
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except
+
+-- mtl
+import Control.Monad.Accum (MonadAccum (..))
+import Control.Monad.RWS.Class (MonadRWS)
+import Control.Monad.Reader.Class (MonadReader (..))
+import Control.Monad.State.Class
+import Control.Monad.Writer.Class
 
 -- mmorph
 import Control.Monad.Morph (MFunctor, hoist)
@@ -109,6 +119,26 @@ instance MonadTrans (StreamExcept a) where
 
 instance MFunctor (StreamExcept a) where
   hoist morph = mapException (hoist morph)
+
+instance (MonadAccum w m) => MonadAccum w (StreamExcept a m) where
+  accum = lift . accum
+
+instance (MonadReader r m) => MonadReader r (StreamExcept a m) where
+  reader = lift . reader
+  local f = hoist $ local f
+
+-- | 'pass' only acts when there is an exception
+instance (MonadWriter w m) => MonadWriter w (StreamExcept a m) where
+  writer = lift . writer
+
+  listen = mapException $ ExceptT . fmap (\(ea, w) -> first (,w) ea) . listen . runExceptT
+
+  pass = mapException $ ExceptT . pass . fmap (either (first Left) (\x -> (Right x, id))) . runExceptT
+
+instance (MonadState s m) => MonadState s (StreamExcept a m) where
+  state = lift . state
+
+instance (MonadRWS r w s m) => MonadRWS r w s (StreamExcept a m)
 
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept
