@@ -409,6 +409,7 @@ instance (Selective m) => Selective (StreamT m) where
       eitherResult :: Result s (Either a b) -> Either (Result s a) (Result s b)
       eitherResult (Result s eab) = bimap (Result s) (Result s) eab
 
+-- | Run two streams together without needing @'Applicative' m@ or even @'Monad' m@
 instance (Semialign m) => Semialign (StreamT m) where
   align (StreamT s10 step1) (StreamT s20 step2) =
     StreamT
