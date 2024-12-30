@@ -34,6 +34,9 @@ import Data.These (These (..))
 -- semialign
 import Data.Align
 
+-- witherable
+import Witherable (Filterable (..), Witherable)
+
 -- automaton
 import Data.Stream.Internal
 import Data.Stream.Recursive (Recursive (..))
@@ -256,6 +259,29 @@ streamToList StreamT {state, step} = go state
 withStreamT :: (Functor m, Functor n) => (forall s. m (Result s a) -> n (Result s b)) -> StreamT m a -> StreamT n b
 withStreamT f StreamT {state, step} = StreamT state $ fmap f step
 {-# INLINE withStreamT #-}
+
+instance (Monad m) => Filterable (StreamT m) where
+  mapMaybe f StreamT {state, step} = StreamT {state, step = go}
+    where
+      go s = do
+        Result s' a <- step s
+        case f a of
+          Nothing -> go s'
+          Just b -> return $ Result s' b
+
+instance (Traversable m, Monad m) => Witherable (StreamT m)
+
+{- | Drop all 'Nothing' values from the output.
+
+Results in a stream that doesn't tick as often as the original stream.
+
+If the original stream outputs 'Nothing',
+it is retried until it produces data.
+
+Also see 'Filterable' and 'Witherable'.
+-}
+catMaybeS :: (Monad m) => StreamT m (Maybe a) -> StreamT m a
+catMaybeS = catMaybes
 
 {- | Buffer the output of a stream, returning one value at a time.
 

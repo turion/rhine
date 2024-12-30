@@ -202,6 +202,15 @@ fromRecursive :: Recursive m a -> OptimizedStreamT m a
 fromRecursive = Stateful . StreamT.fromRecursive
 {-# INLINE fromRecursive #-}
 
+-- | See 'Data.Stream.catMaybeS'.
+catMaybeS :: Monad m => OptimizedStreamT m (Maybe a) -> OptimizedStreamT m a
+catMaybeS (Stateful stream) = Stateful $ StreamT.catMaybeS stream
+catMaybeS (Stateless f) = Stateless g
+  where
+    g = do
+      aMaybe <- f
+      maybe g return aMaybe
+
 -- | See 'Data.Stream.concatS'.
 concatS :: (Monad m) => OptimizedStreamT m [a] -> OptimizedStreamT m a
 concatS stream = Stateful $ StreamT.concatS $ toStreamT stream

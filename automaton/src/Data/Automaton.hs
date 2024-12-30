@@ -55,6 +55,7 @@ import Data.Stream (StreamT (..), fixStream)
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
+  catMaybeS,
   concatS,
   hoist',
   stepOptimizedStream,
@@ -539,6 +540,15 @@ In contrast to 'handleAutomaton_', the functor type can change.
 -}
 handleAutomaton :: (Functor m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
+
+{- | Drop 'Nothing' values from the output, retrying an input value until the automaton outputs a 'Just'.
+
+See 'Data.Stream.catMaybeS'.
+
+Caution: If @automaton@ outputs 'Nothing' forever, then @'catMaybeS' automaton@ will loop and never produce output.
+-}
+catMaybeS :: (Monad m) => Automaton m a (Maybe b) -> Automaton m a b
+catMaybeS = Automaton . Data.Stream.Optimized.catMaybeS . getAutomaton
 
 {- | Buffer the output of an automaton. See 'Data.Stream.concatS'.
 
