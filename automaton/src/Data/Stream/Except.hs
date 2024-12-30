@@ -3,6 +3,9 @@ module Data.Stream.Except where
 -- base
 import Control.Category ((>>>))
 import Control.Monad (ap)
+import Data.Bifunctor (bimap)
+import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Void
 
 -- transformers
@@ -61,6 +64,22 @@ stepInstant (CoalgebraicExcept coalgebraic) =
     & StreamOptimized.stepOptimizedStream
     & runExceptT
     <&> fmap (mapResultState InitialExcept)
+
+-- | Run all steps of the stream, discarding all output, until the exception is reached.
+instance (Functor m, Foldable m) => Foldable (StreamExcept a m) where
+  foldMap f = stepInstant >>> foldMap (either f $ resultState >>> foldMap f)
+
+instance (Traversable m) => Traversable (StreamExcept a m) where
+  traverse f streamExcept = traverseFinal (toFinal streamExcept) & fmap (Final >>> FinalExcept)
+    where
+      traverseFinal =
+        getFinal
+          >>> runExceptT
+          >>> fmap ((bimap f $ mapResultState traverseFinal >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
+          >>> traverse id
+          >>> fmap (ExceptT >>> fmap (mapResultState Final))
+      bitraverseEither :: (Functor f) => Either (f a) (f b) -> f (Either a b)
+      bitraverseEither = either (fmap Left) (fmap Right)
 
 -- FIXME This should work with Functor m and custom hoists
 instance (Monad m) => Functor (StreamExcept a m) where
