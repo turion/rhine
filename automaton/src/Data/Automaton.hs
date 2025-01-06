@@ -49,8 +49,8 @@ import Witherable (Filterable (..), Witherable)
 import Data.Semialign (Align (..), Semialign (..))
 
 -- automaton
-import Data.Stream (StreamT (..))
 import Data.Stream qualified as StreamT
+import Data.Stream (StreamT (..), hoist', runTraversableS, snapshotCompose)
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
@@ -475,6 +475,7 @@ traverseS = traverse'
 traverseS_ :: (Monad m, Traversable f) => Automaton m a b -> Automaton m (f a) ()
 traverseS_ automaton = traverse' automaton >>> arr (const ())
 
+-- FIXME It's also conceivable to have Automaton (Compose m t) a b -> Automaton m a (t b)
 -- TODO But should we use parallelism?
 -- https://hackage.haskell.org/package/parallel-3.1.0.1/docs/Control-Parallel-Strategies.html#v:parTraversable
 
@@ -656,6 +657,12 @@ handleEffect ::
   Automaton eff a b ->
   Automaton m a (sig b)
 handleEffect send interpret = handleAutomaton $ StreamT.handleEffect (lift . send) (\raction -> ReaderT $ \a -> interpret $ runReaderT raction a)
+
+runTraversableS :: (Monad m, Traversable t, Monad t) => Automaton (Compose m t) a b -> Automaton m a (t b)
+runTraversableS = handleAutomaton $ Data.Stream.runTraversableS . Data.Stream.hoist' (Compose . ReaderT . fmap getCompose . runReaderT)
+
+snapshot :: Functor m => Automaton m a b -> Automaton m a (m b)
+snapshot = handleAutomaton $ hoist' (ReaderT . getCompose) . Data.Stream.snapshotCompose . hoist' (Compose . runReaderT)
 
 -- * Examples
 

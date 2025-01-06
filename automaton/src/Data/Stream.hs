@@ -4,7 +4,7 @@ module Data.Stream where
 
 -- base
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
-import Control.Monad (forM, (<$!>))
+import Control.Monad (join, (<$!>))
 import Data.Bifunctor (bimap)
 import Data.Function ((&))
 import Data.Functor ((<&>))
@@ -38,6 +38,9 @@ import Data.Align
 import Witherable (Filterable (..), Witherable)
 
 -- automaton
+
+import Control.Arrow ((>>>))
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Stream.Internal
 import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Result
@@ -618,33 +621,62 @@ handleMaybeT = handleEffect (MaybeT . pure) runMaybeT
 
 -- FIXME Generalisation in []
 runListS :: (Monad m) => StreamT (Compose m []) a -> StreamT m [a]
-runListS StreamT {state, step} =
+runListS = runTraversableS
+
+runTraversableS :: (Monad m, Traversable t, Monad t) => StreamT (Compose m t) a -> StreamT m (t a)
+runTraversableS StreamT {state, step} =
   StreamT
-    { state = [state]
+    { state = pure state
     , step = \states -> do
-        results <- forM states $ getCompose . step
-        let flatResults = concat results
-        return $ Result (resultState <$> flatResults) (output <$> flatResults)
+        results <- traverse (getCompose . step) states
+        return $ unzipResult $ join results
     }
 
 -- FIXME maybe rewrite with Iso somehow?
-handleCompose :: (Functor f, Monad m, Monad composed) => (forall s. s -> f s) -> (forall x. composed x -> m (f x)) -> (forall x. m (f x) -> composed x) -> StreamT composed a -> StreamT m (f a)
+handleCompose :: (Functor f, Applicative m, Monad composed) => (forall s. s -> f s) -> (forall x. composed x -> m (f x)) -> (forall x. m (f x) -> composed x) -> StreamT composed a -> StreamT m (f a)
 handleCompose pure_ uncompose compose StreamT {state, step} =
   StreamT
     { state = pure_ state
-    , step = \s -> do
-        results <- uncompose $ do
-          states <- compose $ pure s
-          step states
-        return $! Result (fmap resultState results) (fmap output results)
+    , step = \s ->
+        uncompose (compose (pure s) >>= step) <&>
+        (\results -> Result (fmap resultState results) (fmap output results))
     }
 
 -- FIXME all these should go to a separate module
 handleExceptT :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
 handleExceptT = handleCompose pure runExceptT ExceptT
 
--- FIXME handleMaybeT
+-- handleExceptT' :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
+-- handleExceptT' = hoist' _ . snapshotCompose . hoist (Compose . runExceptT)
 
+handleMaybeT :: (Monad m) => StreamT (MaybeT m) a -> StreamT m (Maybe a)
+handleMaybeT = handleCompose pure runMaybeT MaybeT
+
+{- | Snapshot part of the side effect that was performed at this step.
+-}
+snapshotCompose :: (Functor m, Functor f) => StreamT (Compose m f) a -> StreamT (Compose m f) (f a)
+snapshotCompose StreamT {state, step} =
+  StreamT
+    { state
+    , step =
+        step
+          >>> getCompose
+          >>> fmap (\result -> flip Result (output <$> result) . resultState <$> result)
+          >>> Compose
+    }
+
+-- snapshotCompose' :: (Monad m, Functor f) => StreamT (Compose m f) a -> StreamT m (f a)
+-- snapshotCompose' StreamT {state, step} =
+--   StreamT
+--     { state = pure state
+--     , step = pure
+--           >>> Compose
+--           >>> _
+--     }
+
+
+{- | Snapshot the side effect that was performed at this step.
+-}
 snapshot :: (Functor m) => StreamT m a -> StreamT m (m a)
 snapshot StreamT {state, step} =
   StreamT

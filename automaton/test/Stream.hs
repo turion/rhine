@@ -21,6 +21,11 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Automaton
 import Data.Stream (StreamT, constM, handleExceptT, handleWriterT, mmap, snapshot, streamToList, unfold, unfold_)
 import Data.Stream.Result
+import Control.Monad.Trans.Except (throwE)
+import Control.Monad (when)
+import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NonEmpty
+import Data.Functor.Compose (Compose(..))
 
 tests =
   testGroup
@@ -58,6 +63,12 @@ tests =
                  in take 3 (fmap fst $ runIdentity $ streamToList $ handleWriterT stream) @?= [[1], [1, 2], [1, 2, 3]]
             ]
         ]
+    , testCase
+        "handleExceptT" $ let exceptionAfter2 = mmap (\n -> when (n == 2) $ throwE ()) $ unfold_ 0 (+1)
+            in take 5 (runIdentity (streamToList (handleExceptT exceptionAfter2))) @?= [Right (),Left (),Left (),Left (),Left ()]
+    , testCase
+        "snapshotCompose" $ let asManyAsN = hoist' (Compose . Identity) $ mmap (\n -> NonEmpty.fromList [0..n]) $ unfold_ 0 (+1)
+            in take 5 (runIdentity (streamToList (hoist' (fmap NonEmpty.head  . getCompose) (snapshotCompose asManyAsN)))) @?= [0 :| [1],0 :| [1,2],0 :| [1,2,3],0 :| [1,2,3,4],0 :| [1,2,3,4,5]]
     ]
 
 nats :: (Applicative m) => StreamT m Int
