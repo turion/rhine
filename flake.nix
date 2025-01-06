@@ -195,15 +195,15 @@
         (hpsFor pkgs)) //
       {
         wasm =
-          let pkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.${system};
+          let pkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.x86_64-linux;
           in
           pkgs.mkShell {
             packages = [
-              inputs.ghc-wasm-meta.packages.${system}.all_9_10
+              inputs.ghc-wasm-meta.packages.x86_64-linux.all_9_10
               # pkgs.dart-sass
             ];
           };
-        x86_64-linux.js =
+        js =
           let
             pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux.pkgsCross.ghcjs.extend overlay;
             hp = pkgs.haskell.packages.ghc910;
