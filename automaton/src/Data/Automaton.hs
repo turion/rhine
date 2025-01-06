@@ -50,13 +50,12 @@ import Data.These (these)
 import Witherable (Filterable (..))
 
 -- automaton
-import Data.Stream (StreamT (..))
+import Data.Stream (StreamT (..), hoist', runTraversableS, snapshotCompose)
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
   catMaybeS,
   concatS,
-  hoist',
   stepOptimizedStream,
  )
 import Data.Stream.Optimized qualified as StreamOptimized
@@ -377,8 +376,8 @@ withAutomaton f = Automaton . StreamOptimized.mapOptimizedStreamT (ReaderT . f .
 {-# INLINE withAutomaton #-}
 
 instance (Functor m) => Profunctor (Automaton m) where
-  dimap f g Automaton {getAutomaton} = Automaton $ g <$> hoist' (withReaderT f) getAutomaton
-  lmap f Automaton {getAutomaton} = Automaton $ hoist' (withReaderT f) getAutomaton
+  dimap f g Automaton {getAutomaton} = Automaton $ g <$> StreamOptimized.hoist' (withReaderT f) getAutomaton
+  lmap f Automaton {getAutomaton} = Automaton $ StreamOptimized.hoist' (withReaderT f) getAutomaton
   rmap = fmap
 
 instance (Applicative m) => Choice (Automaton m) where
@@ -452,6 +451,7 @@ traverseS = traverse'
 traverseS_ :: (Monad m, Traversable f) => Automaton m a b -> Automaton m (f a) ()
 traverseS_ automaton = traverse' automaton >>> arr (const ())
 
+-- FIXME It's also conceivable to have Automaton (Compose m t) a b -> Automaton m a (t b)
 -- TODO But should we use parallelism?
 -- https://hackage.haskell.org/package/parallel-3.1.0.1/docs/Control-Parallel-Strategies.html#v:parTraversable
 
@@ -563,6 +563,12 @@ then the next 9 inputs will be ignored.
 -}
 concatS :: (Monad m) => Automaton m a [b] -> Automaton m a b
 concatS (Automaton automaton) = Automaton $ Data.Stream.Optimized.concatS automaton
+
+runTraversableS :: (Monad m, Traversable t, Monad t) => Automaton (Compose m t) a b -> Automaton m a (t b)
+runTraversableS = handleAutomaton $ Data.Stream.runTraversableS . Data.Stream.hoist' (Compose . ReaderT . fmap getCompose . runReaderT)
+
+snapshot :: Functor m => Automaton m a b -> Automaton m a (m b)
+snapshot = handleAutomaton $ hoist' (ReaderT . getCompose) . Data.Stream.snapshotCompose . hoist' (Compose . runReaderT)
 
 -- * Examples
 
