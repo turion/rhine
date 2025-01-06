@@ -289,7 +289,8 @@ runStateTDOMS sf = feedback mempty $ proc (a, dom_) -> do
   returnA -< (b, dom')
 
 -- type TreeSF m cl root node i o = Tag cl ~ SomeEvent root => ClSF (StateT node m) cl i o
-type TreeSF' m cl node i o = ClSF (StateT node m) (cl node) i o
+type TreeSF' m cl node i o = TreeChildSF m cl node node i o
+type TreeChildSF m cl node child i o = ClSF (StateT child m) (cl node) i o
 
 {-
 pushTreeSF :: forall a m cl root i o . (Ixed a, Monad m) => TreeSF m cl root (IxValue a) i o -> TreeSF m cl root a i (Maybe o)
