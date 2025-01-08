@@ -197,14 +197,13 @@
       devShells = forAllPlatforms (systems: pkgs: mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
-          nativeBuildInputs = with hp; [
+          nativeBuildInputs = (with hp; [
             haskell-language-server
-          ] ++ lib.optional (lib.versionAtLeast hp.ghc.version "9.4") [
-            fourmolu
-            cabal-gild
-          ] ++ lib.optional (lib.versionAtLeast hp.ghc.version "9.6") [
+          ]) ++ (with pkgs; [
+            haskellPackages.fourmolu
+            haskellPackages.cabal-gild
             cabal-install
-          ];
+          ]);
         })
         (hpsFor pkgs));
     };
