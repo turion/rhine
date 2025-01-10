@@ -17,6 +17,7 @@
       url = "github:turion/monad-schedule";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    ghc-wasm-meta.url = "gitlab:ghc/ghc-wasm-meta?host=gitlab.haskell.org";
   };
 
   outputs = inputs:
@@ -77,6 +78,9 @@
               microstache = doJailbreak hprev.microstache;
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
+
+              # For rhine-tree
+              websockets = doJailbreak hprev.websockets;
             })
           ];
         in
@@ -168,6 +172,7 @@
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
         mapAttrs (system: pkgs: f system (pkgs.extend overlay)) inputs.nixpkgs.legacyPackages;
+      rhine-tree-js = pkgs: import ./rhine-tree/nix { inherit pkgs overlay lib; };
     in
     {
       # Reexport the overlay so other downstream flakes can use it to develop rhine projects with low effort.
@@ -183,6 +188,7 @@
       # Usage: nix build
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
+        rhine-tree-js = rhine-tree-js pkgs;
       });
 
       # We re-export the entire nixpkgs package set with our overlay.
@@ -194,7 +200,7 @@
 
       # Usage: nix develop (will use the default GHC)
       # Alternatively, specify the GHC: nix develop .#ghc98
-      devShells = forAllPlatforms (systems: pkgs: mapAttrs
+      devShells = forAllPlatforms (systems: pkgs: (mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
           nativeBuildInputs = (with hp; [
@@ -205,6 +211,31 @@
             cabal-install
           ]);
         })
-        (hpsFor pkgs));
+        (hpsFor pkgs)) //
+      {
+        wasm =
+          let pkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.x86_64-linux;
+          in
+          pkgs.mkShell {
+            packages = [
+              inputs.ghc-wasm-meta.packages.x86_64-linux.all_9_10
+              # pkgs.dart-sass
+            ];
+          };
+        js =
+          let
+            pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux.pkgsCross.ghcjs.extend overlay;
+            hp = pkgs.haskell.packages.ghc910;
+          in
+          hp.shellFor {
+            packages = ps: map (pname: ps.${pname}) pnames;
+            nativeBuildInputs = with hp; [
+              cabal-gild
+              cabal-install
+              fourmolu
+              haskell-language-server
+            ];
+          };
+      });
     };
 }

@@ -110,6 +110,7 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
+      fail-fast: false # So the cache is still filled
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -133,6 +134,8 @@ jobs:
         run: nix flake check
       - name: Build all packages
         run: nix build --accept-flake-config
+      - name: Build Javascript thingy
+        run: nix build .#rhine-tree-js --accept-flake-config
 
   build-devshell:
     name: Nix Flake Develop

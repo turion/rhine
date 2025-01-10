@@ -1,0 +1,38 @@
+cabal-version:      3.0
+name:               rhine-tree-example
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            MIT
+license-file:       LICENSE
+author:             Manuel Bärenz
+maintainer:         programming@manuelbaerenz.de
+-- copyright:
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+    default-language: GHC2021
+    default-extensions:
+        GADTs
+        TypeFamilies
+        Arrows
+        ScopedTypeVariables
+        OverloadedStrings
+
+executable dommy-ghc
+    import:           warnings
+    build-depends:
+        base,
+        rhine,
+        rhine-tree,
+        jsaddle,
+        jsaddle-webkit2gtk,
+        lens
+    other-modules:
+        Dommy
+    ghc-options: -threaded
+    hs-source-dirs: app
+    main-is: DommyGHC.hs

@@ -1,0 +1,73 @@
+cabal-version:      3.0
+name:               rhine-tree
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            MIT
+license-file:       LICENSE
+author:             Manuel Bärenz
+maintainer:         programming@manuelbaerenz.de
+-- copyright:
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+    default-language: GHC2021
+    default-extensions:
+        GADTs
+        TypeFamilies
+        Arrows
+        ScopedTypeVariables
+        OverloadedLists
+        OverloadedStrings
+
+library
+    import:           warnings
+    exposed-modules:
+        FRP.Rhine.Tree
+        FRP.Rhine.Tree.Types
+    -- other-modules:
+    -- other-extensions:
+    build-depends:    base >=4.16 && < 4.21
+        , transformers
+        , base-compat
+        , sop-core
+        , lens
+        , text
+        , automaton
+        , rhine
+        , these
+        , semialign
+        , jsaddle
+        , time
+        , vector-sized
+        , vector
+        , finite-typelits
+    hs-source-dirs:   src
+
+executable dommy
+    import:           warnings
+    build-depends:
+        base,
+        rhine,
+        rhine-tree,
+        jsaddle,
+        text,
+        lens
+    ghc-options: -threaded
+    hs-source-dirs: app
+    main-is: Dommy.hs
+
+test-suite rhine-tree-test
+    import:           warnings
+    default-language: GHC2021
+    -- other-modules:
+    -- other-extensions:
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:
+        base ^>=4.18.2.1,
+        rhine-tree
