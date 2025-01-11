@@ -633,10 +633,10 @@ runTraversableS StreamT {state, step} =
     }
 
 -- FIXME maybe rewrite with Iso somehow?
-handleCompose :: (Functor f, Applicative m, Monad composed) => (forall s. s -> f s) -> (forall x. composed x -> m (f x)) -> (forall x. m (f x) -> composed x) -> StreamT composed a -> StreamT m (f a)
-handleCompose pure_ uncompose compose StreamT {state, step} =
+handleCompose :: (Applicative f, Applicative m, Monad composed) => (forall x. composed x -> m (f x)) -> (forall x. m (f x) -> composed x) -> StreamT composed a -> StreamT m (f a)
+handleCompose uncompose compose StreamT {state, step} =
   StreamT
-    { state = pure_ state
+    { state = pure state
     , step = \s ->
         uncompose (compose (pure s) >>= step) <&>
         (\results -> Result (fmap resultState results) (fmap output results))
@@ -644,13 +644,13 @@ handleCompose pure_ uncompose compose StreamT {state, step} =
 
 -- FIXME all these should go to a separate module
 handleExceptT :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
-handleExceptT = handleCompose pure runExceptT ExceptT
+handleExceptT = handleCompose runExceptT ExceptT
 
 -- handleExceptT' :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
 -- handleExceptT' = hoist' _ . snapshotCompose . hoist (Compose . runExceptT)
 
 handleMaybeT :: (Monad m) => StreamT (MaybeT m) a -> StreamT m (Maybe a)
-handleMaybeT = handleCompose pure runMaybeT MaybeT
+handleMaybeT = handleCompose runMaybeT MaybeT
 
 {- | Snapshot part of the side effect that was performed at this step.
 -}
