@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -35,7 +35,6 @@ import Data.Semialign (Align (..), Semialign (..))
 import Data.Stream hiding (hoist')
 import Data.Stream qualified as StreamT
 import Data.Stream.Recursive (Recursive (..))
-import Data.Stream.Recursive qualified as Recursive (fromRecursive, toRecursive)
 import Data.Stream.Result
 
 {- | An optimized version of 'StreamT' which has an extra constructor for stateless streams.
@@ -51,7 +50,7 @@ data OptimizedStreamT m a
     Stateful (StreamT m a)
   | -- | A stateless stream is simply an action in a monad which is performed repetitively.
     Stateless (m a)
-  deriving (Functor)
+  deriving (Functor, Foldable, Traversable)
 
 {- | Remove the optimization layer.
 
@@ -152,7 +151,7 @@ withOptimized f stream = Stateful $ f $ toStreamT stream
 
 {- | Map a morphism of streams to optimized streams.
 
-In contrast to 'withOptimized', the monad type is allowed to change.
+In contrast to 'withOptimized', the functor type is allowed to change.
 -}
 handleOptimized :: (Functor m) => (StreamT m a -> StreamT n b) -> OptimizedStreamT m a -> OptimizedStreamT n b
 handleOptimized f stream = Stateful $ f $ toStreamT stream
@@ -188,7 +187,7 @@ stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 This will typically be a performance penalty.
 -}
 toRecursive :: (Functor m) => OptimizedStreamT m a -> Recursive m a
-toRecursive (Stateful stream) = Recursive.toRecursive stream
+toRecursive (Stateful stream) = StreamT.toRecursive stream
 toRecursive (Stateless f) = go
   where
     go = Recursive $ Result go <$> f
@@ -198,8 +197,17 @@ toRecursive (Stateless f) = go
   The internal state is the stream itself.
 -}
 fromRecursive :: Recursive m a -> OptimizedStreamT m a
-fromRecursive = Stateful . Recursive.fromRecursive
+fromRecursive = Stateful . StreamT.fromRecursive
 {-# INLINE fromRecursive #-}
+
+-- | See 'Data.Stream.catMaybeS'.
+catMaybeS :: Monad m => OptimizedStreamT m (Maybe a) -> OptimizedStreamT m a
+catMaybeS (Stateful stream) = Stateful $ StreamT.catMaybeS stream
+catMaybeS (Stateless f) = Stateless g
+  where
+    g = do
+      aMaybe <- f
+      maybe g return aMaybe
 
 -- | See 'Data.Stream.concatS'.
 concatS :: (Monad m) => OptimizedStreamT m [a] -> OptimizedStreamT m a
@@ -220,3 +228,9 @@ applyExcept streamF streamA = Stateful $ StreamT.applyExcept (toStreamT streamF)
 selectExcept :: (Monad m) => OptimizedStreamT (ExceptT (Either e1 e2) m) a -> OptimizedStreamT (ExceptT (e1 -> e2) m) a -> OptimizedStreamT (ExceptT e2 m) a
 selectExcept streamE streamF = Stateful $ StreamT.selectExcept (toStreamT streamE) (toStreamT streamF)
 {-# INLINE selectExcept #-}
+
+-- | Similar to 'fmap', but the function is allowed to perform a side effect in a monad @m@.
+mmap :: (Monad m) => (a -> m b) -> OptimizedStreamT m a -> OptimizedStreamT m b
+mmap f (Stateful stream) = Stateful $ StreamT.mmap f stream
+mmap f (Stateless g) = Stateless $ g >>= f
+{-# INLINE mmap #-}

@@ -12,7 +12,10 @@ import Data.List (uncons)
 import Data.Maybe (maybeToList)
 
 -- transformers
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.Trans.State.Strict (StateT (..))
+
+-- containers
+import Data.Map.Strict qualified as M
 
 -- selective
 import Control.Selective ((<*?))
@@ -58,7 +61,14 @@ tests =
         ]
     , testGroup
         "parallely"
-        [ testCase "Outputs separate sums" $ runIdentity (embed (parallely sumN) [[], [], [1, 2], [10, 20], [100], [], [1000, 200]]) @?= [[], [], [1, 2], [11, 22], [111], [], [1111, 222]]
+        [ testCase "Outputs separate sums (lists)" $
+            runIdentity
+              (embed (parallely sumN) [[], [], [1, 2], [10, 20], [100], [], [1000, 200]])
+              @?= [[], [], [1, 2], [11, 22], [111], [], [1111, 222]]
+        , testCase "Outputs separate sums (maps)" $
+            runIdentity
+              (embed (parallely sumN) (M.fromAscList <$> [[], [], [(1, 1)], [(2, 2)], [(1, 10)], [(1, 100), (2, 20)]]))
+              @?= (M.fromAscList <$> [[], [], [(1, 1)], [(2, 2)], [(1, 11)], [(1, 111), (2, 22)]])
         ]
     , testGroup
         "Selective"
