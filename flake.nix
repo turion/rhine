@@ -183,7 +183,7 @@
       # Usage: nix build
       packages = forAllPlatforms (system: pkgs: {
         default = pkgs.rhine-all;
-      });
+      } // lib.mapAttrs (ghcVersion: haskellPackages: pkgs.linkFarm "rhine-all-${ghcVersion}" (lib.genAttrs pnames (pname: haskellPackages.${pname}))) (hpsFor pkgs));
 
       # We re-export the entire nixpkgs package set with our overlay.
       # Usage examples:
@@ -206,5 +206,7 @@
           ]);
         })
         (hpsFor pkgs));
+
+      inherit supportedGhcs;
     };
 }

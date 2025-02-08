@@ -103,22 +103,33 @@ jobs:
       - name: Cabal bench
         run: cabal bench all
 
+  generate-flake-ghc-matrix:
+    name: Generate GHC versions for nix flake build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.generate-versions.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - name: Generate versions
+        id: generate-versions
+        run: |
+          echo -n "versions=" >> "$GITHUB_OUTPUT"
+          nix eval .#supportedGhcs --json >> "$GITHUB_OUTPUT"
+
   build-flake:
     name: Nix Flake
+    needs: generate-flake-ghc-matrix
     strategy:
       matrix:
         os:
           - ubuntu-latest
           - macos-latest
+        version: ${{ fromJSON(needs.generate-flake-ghc-matrix.outputs.versions) }}
+      fail-fast: false # So the cache is still filled
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Free disk space
-        run: |
-          if [ "$(uname --kernel-name)" = "Linux" ]; then
-            sudo rm -rf /usr/local/* /usr/share/* /opt/*
-            docker rmi $(docker image ls -aq)
-          fi
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
       - uses: cachix/cachix-action@v15
@@ -132,35 +143,13 @@ jobs:
       - name: Flake check
         run: nix flake check
       - name: Build all packages
-        run: nix build --accept-flake-config
-
-  build-devshell:
-    name: Nix Flake Develop
-    needs:
-      - generateMatrix
-      - build-flake
-    strategy:
-      matrix: ${{ fromJSON(needs.generateMatrix.outputs.matrix) }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Free disk space
+        run: nix build .#${{ matrix.version }} --accept-flake-config
+      - run: nix develop .#${{ matrix.version }} --accept-flake-config -c cabal update
+      - run: nix develop .#${{ matrix.version }} --accept-flake-config -c cabal test all
+      - name: Check whether .nix files are formatted
         run: |
-          if [ "$(uname --kernel-name)" = "Linux" ]; then
-            sudo rm -rf /usr/local/* /usr/share/* /opt/*
-            docker rmi $(docker image ls -aq)
-          fi
-      - uses: cachix/install-nix-action@v30
-      - uses: DeterminateSystems/magic-nix-cache-action@v8
-      - uses: cachix/cachix-action@v15
-        with:
-          name: rhine
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Run tests
-        run: |
-          ghc="ghc$(echo ${{ matrix.ghc }} | tr -d '.')" # Removes the dot from the ghc version and prepends "ghc"
-          nix develop .#${ghc} --accept-flake-config -c cabal update
-          nix develop .#${ghc} --accept-flake-config -c cabal test all
+          nix fmt
+          git diff --exit-code
 
   cabal-check:
     name: Check and format all cabal files
@@ -178,7 +167,6 @@ jobs:
     needs:
       - build-cabal
       - build-flake
-      - build-devshell
     runs-on:
       - ubuntu-latest
     steps:
