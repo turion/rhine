@@ -86,7 +86,7 @@ common test-deps
     QuickCheck >=2.14 && <2.16,
     tasty >=1.4 && <1.6,
     tasty-hunit ^>=0.10,
-    tasty-quickcheck ^>=0.10,
+    tasty-quickcheck >=0.10 && <1.12,
 
 common bench-deps
   build-depends:
