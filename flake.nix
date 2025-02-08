@@ -64,10 +64,6 @@
             (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
               time-domain = doJailbreak hprev.time-domain;
             })
-            (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.6") {
-              cabal-gild = doJailbreak hprev.cabal-gild;
-              fourmolu = doJailbreak hprev.fourmolu;
-            })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               # Remove these as nixpkgs progresses!
               finite-typelits = hprev.finite-typelits_0_2_1_0;
