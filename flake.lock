@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1731107003,
-        "narHash": "sha256-au6hQM8V4lZtYiwYZl88pAr7xNtFit3pQR0AXvUTuyo=",
+        "lastModified": 1741685149,
+        "narHash": "sha256-ZDKGbRT7JFlp5Uzfcrd1aj/lRp/BD5QzGLYfYU5pgLw=",
         "owner": "turion",
         "repo": "monad-schedule",
-        "rev": "f6651c56975bd9e126b9d1d5c8eed0a304d38a30",
+        "rev": "b8e5d6eebd62eb50c7803d86d91d3e2a8e02c351",
         "type": "github"
       },
       "original": {
@@ -22,11 +22,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1731745710,
-        "narHash": "sha256-SVeiClbgqL071JpAspOu0gCkPSAL51kSIRwo4C/pghA=",
+        "lastModified": 1741692589,
+        "narHash": "sha256-t1BrOTAUIkRY4YlSspERzz5iaFbzJTIE6mhLmnWrDaA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "dfaa4cb76c2d450d8f396bb6b9f43cede3ade129",
+        "rev": "a7010334ad6d8082bb8aa5dd2e37bf3b98b1a713",
         "type": "github"
       },
       "original": {
