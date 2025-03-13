@@ -1,4 +1,4 @@
-module Automaton.Except where
+module Automaton.Traversing where
 
 -- base
 import Data.Functor.Identity (Identity (runIdentity))
@@ -13,4 +13,5 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Data.Automaton (embed)
 import Data.Automaton.Trans.Except (safe, safely, step)
 
-tests = testGroup "Except" [testCase "step" $ runIdentity (embed (safely $ step (\a -> return (a, ())) >> safe 0) [1, 1, 1]) @?= [1, 0, 0]]
+tests = testGroup "Traversing" [
+  testCase "step" $ runIdentity (embed (safely $ step (\a -> return (a, ())) >> safe 0) [1, 1, 1]) @?= [1, 0, 0]]
