@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE StrictData #-}
 
 module Data.Stream.Result where
@@ -15,7 +15,7 @@ This type is used in streams and automata to encode the result of a state transi
 The new state should always be strict to avoid space leaks.
 -}
 data Result s a = Result {resultState :: s, output :: ~a}
-  deriving (Functor)
+  deriving (Functor, Foldable, Traversable)
 
 instance Bifunctor Result where
   second = fmap

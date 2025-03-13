@@ -1,25 +1,5 @@
 {
   "nodes": {
-    "monad-schedule": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1731107003,
-        "narHash": "sha256-au6hQM8V4lZtYiwYZl88pAr7xNtFit3pQR0AXvUTuyo=",
-        "owner": "turion",
-        "repo": "monad-schedule",
-        "rev": "f6651c56975bd9e126b9d1d5c8eed0a304d38a30",
-        "type": "github"
-      },
-      "original": {
-        "owner": "turion",
-        "repo": "monad-schedule",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1731745710,
@@ -38,7 +18,6 @@
     },
     "root": {
       "inputs": {
-        "monad-schedule": "monad-schedule",
         "nixpkgs": "nixpkgs"
       }
     }

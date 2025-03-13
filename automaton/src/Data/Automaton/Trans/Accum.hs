@@ -12,10 +12,14 @@ module Data.Automaton.Trans.Accum (
 where
 
 -- base
-import Control.Arrow (arr, returnA, (>>>))
+import Data.Functor ((<&>))
+import Data.Tuple (swap)
 
 -- transformers
 import Control.Monad.Trans.Accum
+
+-- profunctors
+import Data.Profunctor (Profunctor (dimap))
 
 -- automaton
 import Data.Automaton (Automaton, feedback, withAutomaton)
@@ -27,7 +31,7 @@ The original automaton is interpreted to take the current accumulated state as i
 
 This is the opposite of 'runAccumS'.
 -}
-accumS :: (Functor m, Monad m) => Automaton m (w, a) (w, b) -> Automaton (AccumT w m) a b
+accumS :: (Functor m) => Automaton m (w, a) (w, b) -> Automaton (AccumT w m) a b
 accumS = withAutomaton $ \f a -> AccumT $ \w ->
   (\(Result s (w', b)) -> (Result s b, w'))
     <$> f (w, a)
@@ -36,7 +40,7 @@ accumS = withAutomaton $ \f a -> AccumT $ \w ->
 
 This is the opposite of 'accumS'.
 -}
-runAccumS :: (Functor m, Monad m) => Automaton (AccumT w m) a b -> Automaton m (w, a) (w, b)
+runAccumS :: (Functor m) => Automaton (AccumT w m) a b -> Automaton m (w, a) (w, b)
 runAccumS = withAutomaton $ \f (w, a) ->
   (\(Result s b, w') -> Result s (w', b))
     <$> runAccumT (f a) w
@@ -46,15 +50,12 @@ runAccumS = withAutomaton $ \f (w, a) ->
 The current state is output on every step.
 -}
 runAccumS_ ::
-  (Functor m, Monoid w, Monad m) =>
+  (Functor m, Monoid w) =>
   -- | An automaton with a global accumulation state effect
   Automaton (AccumT w m) a b ->
   Automaton m a (w, b)
-runAccumS_ automaton = feedback mempty $ proc (a, wState) -> do
-  (wAdd, b) <- runAccumS automaton -< (wState, a)
-  let wState' = wState <> wAdd
-  returnA -< ((wState', b), wState')
+runAccumS_ automaton = feedback mempty $ dimap swap (\(w, b) -> ((w, b), w)) $ runAccumS automaton
 
 -- | Like 'runAccumS_', but don't output the current accum.
-runAccumS__ :: (Functor m, Monoid w, Monad m) => Automaton (AccumT w m) a b -> Automaton m a b
-runAccumS__ automaton = runAccumS_ automaton >>> arr snd
+runAccumS__ :: (Functor m, Monoid w) => Automaton (AccumT w m) a b -> Automaton m a b
+runAccumS__ automaton = runAccumS_ automaton <&> snd

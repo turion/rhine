@@ -13,9 +13,6 @@ import Test.Tasty
 -- tasty-hunit
 import Test.Tasty.HUnit
 
--- monad-schedule
-import Control.Monad.Schedule.Trans (Schedule, runScheduleT, wait)
-
 -- automaton
 import Data.Automaton (accumulateWith, constM, embed)
 

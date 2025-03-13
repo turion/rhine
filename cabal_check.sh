@@ -6,6 +6,7 @@ for cabalfile in $(ls */*.cabal)
 do
     pushd $(dirname $cabalfile)
     cabal check
-    cabal-gild --mode=check --input=$(basename $cabalfile)
+    cabal-gild --io=$(basename $cabalfile)
     popd
 done
+git diff --exit-code
