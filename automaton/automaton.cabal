@@ -30,6 +30,7 @@ common opts
   build-depends:
     MonadRandom >=0.5,
     base >=4.16 && <4.21,
+    changeset ^>=0.1.0.2,
     mmorph ^>=1.2,
     mtl >=2.2 && <2.4,
     profunctors ^>=5.6,
@@ -66,6 +67,7 @@ library
     Data.Automaton
     Data.Automaton.Recursive
     Data.Automaton.Trans.Accum
+    Data.Automaton.Trans.Changeset
     Data.Automaton.Trans.Except
     Data.Automaton.Trans.Maybe
     Data.Automaton.Trans.RWS
@@ -95,6 +97,7 @@ test-suite automaton-test
     Automaton
     Automaton.Except
     Automaton.Trans.Accum
+    Automaton.Trans.Changeset
     Stream
 
   build-depends:

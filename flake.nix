@@ -57,6 +57,13 @@
                   sha256 = "sha256-llDBQuU5ez/0MiOIMH97P4BQhFDyPfTMWinq1wJrDGI=";
                 }
                 { };
+              changeset = hprev.callHackageDirect
+                {
+                  pkg = "changeset";
+                  ver = "0.1.0.2";
+                  sha256 = "sha256-syoEPISCtFJgH/Gk/mSWvf4EJLyaFEp7oPzNtcVrvVI=";
+                }
+                { };
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               monad-schedule = dontCheck hprev.monad-schedule;

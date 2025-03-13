@@ -1,3 +1,4 @@
+cabal-version: 2.2
 name: rhine-examples
 version: 1.5
 synopsis: Some simple example applications with rhine
@@ -5,7 +6,7 @@ description:
   Diverse console example applications with rhine
   that show some of the standard components.
 
-license: BSD3
+license: BSD-3-Clause
 license-file: LICENSE
 author: Manuel Bärenz
 maintainer: programming@manuelbaerenz.de
@@ -13,11 +14,9 @@ maintainer: programming@manuelbaerenz.de
 category: FRP
 build-type: Simple
 extra-doc-files: ChangeLog.md
-cabal-version: 2.0
 
-executable HelloWorld
+common opts
   hs-source-dirs: src
-  main-is: HelloWorld.hs
   ghc-options:
     -Wall
     -threaded
@@ -26,70 +25,17 @@ executable HelloWorld
 
   build-depends:
     base >=4.16 && <4.21,
-    rhine ^>=1.5
-
-  default-language: Haskell2010
-  default-extensions: TypeOperators
-
-  if flag(dev)
-    ghc-options: -Werror
-
-executable Demonstration
-  hs-source-dirs: src
-  main-is: Demonstration.hs
-  ghc-options:
-    -Wall
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base >=4.16 && <4.21,
-    rhine ^>=1.5
-
-  default-language: Haskell2010
-  default-extensions: TypeOperators
-
-  if flag(dev)
-    ghc-options: -Werror
-
-executable ADSR
-  hs-source-dirs: src
-  main-is: ADSR.hs
-  ghc-options:
-    -Wall
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base >=4.16 && <4.21,
-    rhine ^>=1.5
-
-  default-language: Haskell2010
-  default-extensions: TypeOperators
-
-  if flag(dev)
-    ghc-options: -Werror
-
-executable Ball
-  hs-source-dirs: src
-  main-is: Ball.hs
-  ghc-options:
-    -Wall
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base >=4.16 && <4.21,
+    monad-schedule ^>=0.2,
     random >=1.1,
-    rhine ^>=1.5
+    rhine ^>=1.5,
+    simple-affine-space >=0.2,
+    transformers >=0.5.6.2,
 
   default-language: Haskell2010
   default-extensions:
     Arrows
     DataKinds
+    OverloadedStrings
     RankNTypes
     TypeFamilies
     TypeOperators
@@ -97,87 +43,54 @@ executable Ball
   if flag(dev)
     ghc-options: -Werror
 
-executable Periodic
-  hs-source-dirs: src
-  main-is: Periodic.hs
-  ghc-options:
-    -Wall
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
+executable HelloWorld
+  import: opts
+  main-is: HelloWorld.hs
 
+executable Demonstration
+  import: opts
+  main-is: Demonstration.hs
+
+executable ADSR
+  import: opts
+  main-is: ADSR.hs
+
+executable Ball
+  import: opts
+  main-is: Ball.hs
   build-depends:
-    base >=4.16 && <4.21,
-    monad-schedule >=0.1,
-    rhine ^>=1.5,
-    transformers >=0.5
+    random >=1.1
 
-  default-language: Haskell2010
-  default-extensions: TypeOperators
-
-  if flag(dev)
-    ghc-options: -Werror
+executable Periodic
+  import: opts
+  main-is: Periodic.hs
+  build-depends:
+    automaton,
+    transformers >=0.5,
 
 executable EventClock
-  hs-source-dirs: src
+  import: opts
   main-is: EventClock.hs
-  ghc-options:
-    -Wall
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
   build-depends:
-    base >=4.16 && <4.21,
-    random >=1.1,
-    rhine ^>=1.5
-
-  default-language: Haskell2010
-  default-extensions: TypeOperators
-
-  if flag(dev)
-    ghc-options: -Werror
+    random >=1.1
 
 executable Sawtooth
-  hs-source-dirs: src
+  import: opts
   main-is: Sawtooth.hs
-  ghc-options:
-    -Wall
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base >=4.16 && <4.21,
-    rhine ^>=1.5
-
-  default-language: Haskell2010
-  default-extensions: TypeOperators
-
-  if flag(dev)
-    ghc-options: -Werror
 
 executable RandomWalk
-  hs-source-dirs: src
+  import: opts
   main-is: RandomWalk.hs
-  ghc-options:
-    -Wall
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
   build-depends:
-    base >=4.16 && <4.21,
     random >=1.1,
-    rhine ^>=1.5,
-    simple-affine-space
+    simple-affine-space,
 
-  default-language: Haskell2010
-  default-extensions:
-    TypeOperators
-
-  if flag(dev)
-    ghc-options: -Werror
+executable Accum
+  import: opts
+  main-is: Accum.hs
+  build-depends:
+    text,
+    transformers,
 
 flag dev
   description: Enable warnings as errors. Active on ci.

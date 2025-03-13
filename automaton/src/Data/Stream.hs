@@ -103,6 +103,17 @@ constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
 
+-- | Call the monadic action once on the first tick and provide its result indefinitely.
+initialised :: (Monad m) => m a -> StreamT m a
+initialised action =
+  let step mr@(Just r) = pure $! Result mr r
+      step Nothing = (step . Just =<< action)
+   in StreamT
+        { state = Nothing
+        , step
+        }
+{-# INLINE initialised #-}
+
 instance (Functor m) => Functor (StreamT m) where
   fmap f StreamT {state, step} = StreamT state $! fmap (fmap f) <$> step
   {-# INLINE fmap #-}

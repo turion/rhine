@@ -12,7 +12,8 @@ module Data.Automaton.Trans.Accum (
 where
 
 -- base
-import Control.Arrow (arr, returnA, (>>>))
+import Control.Arrow (returnA)
+import Data.Functor ((<&>))
 
 -- transformers
 import Control.Monad.Trans.Accum
@@ -27,7 +28,7 @@ The original automaton is interpreted to take the current accumulated state as i
 
 This is the opposite of 'runAccumS'.
 -}
-accumS :: (Functor m, Monad m) => Automaton m (w, a) (w, b) -> Automaton (AccumT w m) a b
+accumS :: (Functor m) => Automaton m (w, a) (w, b) -> Automaton (AccumT w m) a b
 accumS = withAutomaton $ \f a -> AccumT $ \w ->
   (\(Result s (w', b)) -> (Result s b, w'))
     <$> f (w, a)
@@ -36,7 +37,7 @@ accumS = withAutomaton $ \f a -> AccumT $ \w ->
 
 This is the opposite of 'accumS'.
 -}
-runAccumS :: (Functor m, Monad m) => Automaton (AccumT w m) a b -> Automaton m (w, a) (w, b)
+runAccumS :: (Functor m) => Automaton (AccumT w m) a b -> Automaton m (w, a) (w, b)
 runAccumS = withAutomaton $ \f (w, a) ->
   (\(Result s b, w') -> Result s (w', b))
     <$> runAccumT (f a) w
@@ -57,4 +58,4 @@ runAccumS_ automaton = feedback mempty $ proc (a, wState) -> do
 
 -- | Like 'runAccumS_', but don't output the current accum.
 runAccumS__ :: (Functor m, Monoid w, Monad m) => Automaton (AccumT w m) a b -> Automaton m a b
-runAccumS__ automaton = runAccumS_ automaton >>> arr snd
+runAccumS__ automaton = runAccumS_ automaton <&> snd
