@@ -41,6 +41,7 @@ common opts
     transformers >=0.5,
     sop-core ^>=0.5,
     free >= 5.1,
+    foldable1-classes-compat ^>=0.1,
 
   if flag(dev)
     ghc-options: -Werror
