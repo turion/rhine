@@ -29,6 +29,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 -- automaton
 import Automaton.Except
 import Automaton.Trans.Accum
+import Automaton.Trans.Changeset
 import Data.Automaton
 import Data.Automaton.Recursive
 import Data.Automaton.Trans.Maybe
@@ -72,6 +73,7 @@ tests =
     , testCase "lastS" $ runIdentity (embed (lastS 0) [Nothing, Just 10]) @?= [0, 10]
     , Automaton.Except.tests
     , Automaton.Trans.Accum.tests
+    , Automaton.Trans.Changeset.tests
     ]
 
 inMaybe :: Automaton Maybe (Maybe a) a
