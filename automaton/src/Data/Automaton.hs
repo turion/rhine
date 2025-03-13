@@ -386,9 +386,14 @@ withAutomaton :: (Functor m1, Functor m2) => (forall s. (a1 -> m1 (Result s b1))
 withAutomaton f = Automaton . StreamOptimized.mapOptimizedStreamT (ReaderT . f . runReaderT) . getAutomaton
 {-# INLINE withAutomaton #-}
 
-instance (Monad m) => Profunctor (Automaton m) where
-  dimap f g Automaton {getAutomaton} = Automaton $ g <$> hoist (withReaderT f) getAutomaton
-  lmap f Automaton {getAutomaton} = Automaton $ hoist (withReaderT f) getAutomaton
+-- | Change the output type and effect of an automaton without changing its state type.
+withAutomaton_ :: (Functor m1, Functor m2) => (forall s. m1 (Result s b1) -> m2 (Result s b2)) -> Automaton m1 a b1 -> Automaton m2 a b2
+withAutomaton_ f = Automaton . StreamOptimized.mapOptimizedStreamT (mapReaderT f) . getAutomaton
+{-# INLINE withAutomaton_ #-}
+
+instance (Functor m) => Profunctor (Automaton m) where
+  dimap f g Automaton {getAutomaton} = Automaton $ g <$> StreamOptimized.hoist' (withReaderT f) getAutomaton
+  lmap f Automaton {getAutomaton} = Automaton $ StreamOptimized.hoist' (withReaderT f) getAutomaton
   rmap = fmap
 
 instance (Monad m) => Choice (Automaton m) where
