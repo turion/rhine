@@ -46,6 +46,7 @@ import Data.Semialign (Align (..), Semialign (..))
 
 -- automaton
 import Data.Stream (StreamT (..), fixStream)
+import Data.Stream qualified as StreamT
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
   OptimizedStreamT (..),
@@ -536,3 +537,13 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
+
+-- | Call the monadic action once on the first tick and provide its result indefinitely.
+initialised :: (Monad m) => (a -> m b) -> Automaton m a b
+initialised = Automaton . Stateful . StreamT.initialised . ReaderT
+{-# INLINE initialised #-}
+
+-- | Like 'initialised', but ignores the input.
+initialised_ :: (Monad m) => m b -> Automaton m a b
+initialised_ = initialised . const
+{-# INLINE initialised_ #-}
