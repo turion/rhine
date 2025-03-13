@@ -381,7 +381,7 @@ embed (Automaton (Stateless m)) = mapM $ runReaderT m
 
 -- * Modifying automata
 
--- | Change the output type and effect of an automaton without changing its state type.
+-- | Change the input and output type and effect of an automaton without changing its state type.
 withAutomaton :: (Functor m1, Functor m2) => (forall s. (a1 -> m1 (Result s b1)) -> (a2 -> m2 (Result s b2))) -> Automaton m1 a1 b1 -> Automaton m2 a2 b2
 withAutomaton f = Automaton . StreamOptimized.mapOptimizedStreamT (ReaderT . f . runReaderT) . getAutomaton
 {-# INLINE withAutomaton #-}
