@@ -38,7 +38,8 @@ library
     mmorph ^>=1.2,
     monad-bayes ^>=1.3,
     rhine ^>=1.5,
-    transformers >=0.5
+    transformers >=0.5,
+    containers
 
   hs-source-dirs: src
   default-language: Haskell2010
