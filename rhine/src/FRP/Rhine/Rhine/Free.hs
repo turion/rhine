@@ -88,3 +88,9 @@ feedback resBuf Rhine {clocks, sn} =
     { clocks
     , sn = feedbackSN resBuf sn
     }
+
+wire :: Rhine m td cls1 a b -> Rhine m td cls2 c d -> (FreeSN m cls1 a b -> FreeSN m cls2 c d -> FreeSN m (Append cls1 cls2) e f) -> Rhine m td (Append cls1 cls2) e f
+wire (Rhine cls1 sn1) (Rhine cls2 sn2) f = Rhine
+  { clocks = appendClocks cls1 cls2
+  , sn = f sn1 sn2
+  }
