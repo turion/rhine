@@ -26,7 +26,12 @@ instance Profunctor (Rhine m td cls) where
       }
 
 (>@>) :: Rhine m td cls1 a b -> Rhine m td cls2 b c -> Rhine m td (Append cls1 cls2) a c
-(>@>) = wire $ \sn1 sn2  appendClocksSN clocks2 sn1 >>> prependClocksSN clocks1 sn2
+Rhine clocks1 sn1 >@> Rhine clocks2 sn2 =
+  let clocks = appendClocks clocks1 clocks2
+   in Rhine
+        { clocks
+        , sn = appendClocksSN clocks2 sn1 >>> prependClocksSN clocks1 sn2
+        }
 
 infix 5 @@
 (@@) :: (Clock m cl, GetClockProxy cl) => ClSF m cl a b -> cl -> Rhine m (Time cl) '[cl] (At cl a) (At cl b)
@@ -47,12 +52,15 @@ infix 2 >--
 
 infixr 1 -->
 (-->) :: (HasClock clC cls2) => RhineAndResamplingBuffer m td cls1 clC a c -> Rhine m td cls2 (At clC c) d -> Rhine m td (Append cls1 cls2) a d
-RhineAndResamplingBuffer positionB rh1 rb --> rh2 =
+RhineAndResamplingBuffer positionB (Rhine cls1 sn1) rb --> Rhine cls2 sn2 =
   let positionC = position
-   in wire rh1 rh2 $ \sn1 sn2 ->
+   in Rhine
+        { clocks = appendClocks cls1 cls2
+        , sn =
             appendClocksSN cls2 sn1
               >>> FreeSN (liftFree2 (Resampling (orderedPositionsInAppend cls1 cls2 positionB positionC) rb))
               >>> prependClocksSN cls1 sn2
+        }
 
 eraseClockRhine :: (Monad m, MonadSchedule m) => Rhine m td cls a b -> Automaton m a b
 eraseClockRhine Rhine {clocks, sn} = proc a -> do
@@ -64,7 +72,11 @@ flow = reactimate . eraseClockRhine . (>>>^ const ())
 
 infix 2 *@*
 (*@*) :: Rhine m td cls1 a b -> Rhine m td cls2 c d -> Rhine m td (Append cls1 cls2) (a, c) (b, d)
-(*@*) = wire $ \sn1 sn2 -> appendClocksSN cls2 sn1 *** prependClocksSN cls1 sn2
+Rhine cls1 sn1 *@* Rhine cls2 sn2 =
+  Rhine
+    { clocks = appendClocks cls1 cls2
+    , sn = appendClocksSN cls2 sn1 *** prependClocksSN cls1 sn2
+    }
 
 feedback ::
   (HasClock clA cls, HasClock clB cls) =>
