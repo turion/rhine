@@ -154,18 +154,26 @@ Several [strategies exist](https://github.com/turion/rhine/issues/151) and it de
 For [`FixedStep`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine-Clock-FixedStep.html#t:FixedStep) clocks, it won't matter since the execution of the program isn't tied to a realtime clock.
 For [`ClSF`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine-ClSF-Core.html#t:ClSF)s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
 
+## Support
+
+Any question about Rhine is welcome.
+
+* You can open a discussion at [Github discussions](https://github.com/turion/rhine/discussions) for a specific question.
+* For general discussions, comments and questions, join the [Matrix channel `#rhine:matrix.org`](https://matrix.to/#/#rhine:matrix.org).
+* If you think you've found a bug, open [an issue in Github](https://github.com/turion/rhine/issues).
+
 ## Development
 
 See [`Contributing.md`](./Contributing.md) for details.
 
 * Rhine usually follows up-to-date GHC versions.
 * Contributions are welcome!
-  There are always a few issues labelled `help needed`,
+  There are always a few issues labelled [`help wanted`](https://github.com/turion/rhine/issues?q=state%3Aopen%20label%3A%22help%20wanted%22),
   in case you're looking for an easy way to get started.
 * Rhine is a beginner-friendly Haskell project!
   Even if you're new to Haskell and FRP, you can contribute.
   This is a good place to start contributing to open-source projects.
-  Have a look at issues labelled `good first issue`.
+  Have a look at issues labelled [`good first issue`](https://github.com/turion/rhine/issues?q=state%3Aopen%20label%3A%22good%20first%20issue%22).
   If you have questions, don't hesitate to ask on Github.
 
 ## Related projects
