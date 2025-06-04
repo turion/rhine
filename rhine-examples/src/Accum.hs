@@ -36,4 +36,4 @@ logSoFar = sinceStart >>> arrMCl printLog
 main :: IO ()
 main = do
   putStrLn "You can add a personal message to the log."
-  void $ flip runAccumT [] $ flow $ personalMessage @@ liftClock StdinClock |@| logSoFar @@ everyTwoSeconds
+  void $ flip runAccumT [] $ flow $ const (Present (), Present ()) ^>>@ (personalMessage @@ liftClock StdinClock *@* logSoFar @@ everyTwoSeconds)

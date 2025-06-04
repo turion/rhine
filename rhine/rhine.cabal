@@ -132,10 +132,8 @@ library
     FRP.Rhine.ResamplingBuffer.LIFO
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
-    FRP.Rhine.Rhine.Free
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
-    FRP.Rhine.SN.Free
     FRP.Rhine.SN.Type
     FRP.Rhine.Schedule
     FRP.Rhine.Type

@@ -18,9 +18,7 @@ import System.Random
 import Data.Vector2
 
 -- rhine
-import FRP.Rhine hiding (Rhine, flow, sn)
-import FRP.Rhine.Rhine.Free
-import FRP.Rhine.SN.Free
+import FRP.Rhine
 
 type Point = Vector2 Float
 
@@ -81,7 +79,7 @@ resample ::
   ( HasClocksOrdered clA clB cls
   , Monad m
   ) =>
-  FreeSN m cls (At clA Point) (At clB Point)
+  SN m cls (At clA Point) (At clB Point)
 resample = resampling $ keepLast zeroVector
 
 -- | Wire together all components

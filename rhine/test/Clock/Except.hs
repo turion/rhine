@@ -59,7 +59,7 @@ exceptClockTests =
   testGroup
     "ExceptClock"
     [ testCase "Raises the exception in ExceptT on EOF" $ withTestStdin $ do
-        Left result <- runExceptT $ flow $ clId @@ exceptClock
+        Left result <- runExceptT $ flow $ Present ^>>@ (clId @@ exceptClock)
         isEOFError result @? "It's an EOF error"
     ]
 
@@ -81,12 +81,12 @@ catchClockTests =
   testGroup
     "CatchClock"
     [ testCase "Outputs the exception of the second clock as well" $ withTestStdin $ do
-        Left result <- runExceptT $ flow $ clId @@ testClock
+        Left result <- runExceptT $ flow $ Present ^>>@ (clId @@ testClock)
         isEOFError result @? "It's an EOF error"
     , testCase "Can recover from an exception" $ withTestStdin $ do
         let stopInClsf :: ClSF ME TestCatchClockMaybe () ()
             stopInClsf = catchClSF clId $ constMCl empty
-        result <- runExceptT $ runMaybeT $ flow_ $ stopInClsf @@ testClockMaybe
+        result <- runExceptT $ runMaybeT $ flow $ Present ^>>@ (stopInClsf @@ testClockMaybe)
         result @?= Right Nothing
     ]
 
@@ -116,13 +116,13 @@ failingClockTests =
   testGroup
     "FailingClock"
     [ testCase "flow fails immediately" $ do
-        result <- runExceptT $ flow_ $ clId @@ FailingClock
+        result <- runExceptT $ flow $ Present ^>>@ (clId @@ FailingClock)
         result @?= Left ()
     , testCase "CatchClock recovers from failure at init" $ do
         let
           clsfStops :: ClSF (MaybeT IO) CatchFailingClock () ()
           clsfStops = catchClSF clId $ constM $ lift empty
-        result <- runMaybeT $ flow_ $ clsfStops @@ catchFailingClock
+        result <- runMaybeT $ flow $ Present ^>>@ (clsfStops @@ catchFailingClock)
         result @?= Nothing -- The ClSF stopped the execution, not the clock
     ]
 
@@ -144,13 +144,13 @@ delayedClockTests =
             tag <- tagS -< ()
             textSoFar <- mappendS -< either (const []) pure tag
             throwOn' -< (isLeft tag, Just textSoFar)
-        result <- runExceptT $ flow_ $ throwCollectedText @@ delayedClock
+        result <- runExceptT $ flow $ Present ^>>@ (throwCollectedText @@ delayedClock)
         result @?= Left (Just ["data", "test"])
     , testCase "DelayException throws error after 1 step" $ withTestStdin $ do
         let
           dontThrow :: ClSF (ExceptT (Maybe [Text]) IO) DelayedClock () ()
           dontThrow = clId
-        result <- runExceptT $ flow_ $ dontThrow @@ delayedClock
+        result <- runExceptT $ flow $ Present ^>>@ (dontThrow @@ delayedClock)
         result @?= Left Nothing
     ]
 
@@ -170,7 +170,7 @@ innerWriterTests = testCase "DelayException throws error after 1 step, but can w
     tellStdin :: (MonadWriter [Text] m) => ClSF m ClWriterExcept () ()
     tellStdin = catchClSF (tagS >>> arrMCl (tell . pure)) clId
 
-  (Left e, result) <- runWriterT $ runExceptT $ flow $ tellStdin @@ clWriterExcept
+  (Left e, result) <- runWriterT $ runExceptT $ flow $ Present ^>>@ (tellStdin @@ clWriterExcept)
   isEOFError e @? "is EOF"
   result @?= ["test", "data"]
 
