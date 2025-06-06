@@ -57,6 +57,7 @@ common opts
     time >=1.8,
     transformers >=0.5,
     vector-sized >=1.4,
+    profunctors ^>= 5.6.2,
 
   if flag(dev)
     ghc-options: -Werror
@@ -131,8 +132,10 @@ library
     FRP.Rhine.ResamplingBuffer.LIFO
     FRP.Rhine.ResamplingBuffer.Timeless
     FRP.Rhine.ResamplingBuffer.Util
+    FRP.Rhine.Rhine.Free
     FRP.Rhine.SN
     FRP.Rhine.SN.Combinators
+    FRP.Rhine.SN.Free
     FRP.Rhine.SN.Type
     FRP.Rhine.Schedule
     FRP.Rhine.Type
@@ -160,6 +163,8 @@ library
     time >=1.8,
     time-domain ^>=0.1.0.2,
     transformers >=0.5,
+    free-category ^>= 0.0.4.5,
+    sop-core ^>= 0.5.0.2,
 
   -- Directories containing source files.
   hs-source-dirs: src

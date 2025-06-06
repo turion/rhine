@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 
-import FRP.Rhine
+import FRP.Rhine hiding ((^>>>), (@@), flow)
+import FRP.Rhine.Rhine.Free
+import FRP.Rhine.SN.Free
 
 main :: IO ()
-main = flow $ constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)
+main = flow $ Present ^>>> constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)
