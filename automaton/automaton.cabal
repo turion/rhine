@@ -48,9 +48,11 @@ common opts
   default-extensions:
     Arrows
     DataKinds
+    DerivingStrategies
     FlexibleContexts
     FlexibleInstances
     ImportQualifiedPost
+    LambdaCase
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType
@@ -64,6 +66,7 @@ common opts
 library
   import: opts
   exposed-modules:
+    Control.Monad.Trans.List
     Data.Automaton
     Data.Automaton.Recursive
     Data.Automaton.Trans.Accum
@@ -99,6 +102,7 @@ test-suite automaton-test
     Automaton.Trans.Accum
     Automaton.Trans.Changeset
     Stream
+    Test.Control.Monad.Trans.List
 
   build-depends:
     QuickCheck >=2.14 && <2.16,
