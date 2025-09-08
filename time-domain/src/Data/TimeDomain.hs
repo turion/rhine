@@ -1,23 +1,22 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+
 {- |
 This module defines the 'TimeDomain' class.
 Its instances model time,
 simulated and realtime.
 Several instances such as 'UTCTime', 'Double' and 'Integer' are supplied here.
 -}
-
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
-
-module Data.TimeDomain
-  ( module Data.TimeDomain
-  , UTCTime
-  )
-  where
+module Data.TimeDomain (
+  module Data.TimeDomain,
+  UTCTime,
+)
+where
 
 -- time
-import Data.Time.Clock (UTCTime, diffUTCTime, addUTCTime)
+import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
 
 {- |
 A time domain is an affine space representing a notion of time,
@@ -29,20 +28,18 @@ Expected laws:
 * @(t `addTime` dt) `diffTime` t = dt@
 * @(t `addTime` dt1) `addTime` dt2 = t `addTime` (dt1 `add` dt2)@
 -}
-class TimeDifference (Diff time) => TimeDomain time where
+class (TimeDifference (Diff time)) => TimeDomain time where
   -- | The type of differences or durations between two timestamps
   type Diff time
 
-  {- | Compute the difference between two timestamps.
-
-  Mnemonic: 'diffTime' behaves like the '(-)' operator:
-
-  @'diffTime' earlier later = later `'diffTime'` earlier@ is the duration it takes from @earlier@ to @later@.
-  -}
+  -- | Compute the difference between two timestamps.
+  --
+  --   Mnemonic: 'diffTime' behaves like the '(-)' operator:
+  --
+  --   @'diffTime' earlier later = later `'diffTime'` earlier@ is the duration it takes from @earlier@ to @later@.
   diffTime :: time -> time -> Diff time
 
-  {- | Add a time difference to a timestamp.
-  -}
+  -- | Add a time difference to a timestamp.
   addTime :: time -> Diff time -> time
 
 {- | A type of durations, or differences betweens time stamps.
@@ -103,14 +100,14 @@ instance TimeDomain () where
   addTime _ _ = ()
 
 -- | Any 'Num' can be wrapped to form a 'TimeDomain'.
-newtype NumTimeDomain a = NumTimeDomain { fromNumTimeDomain :: a }
-  deriving Num
+newtype NumTimeDomain a = NumTimeDomain {fromNumTimeDomain :: a}
+  deriving (Num)
 
-instance Num a => TimeDifference (NumTimeDomain a) where
+instance (Num a) => TimeDifference (NumTimeDomain a) where
   difference = (-)
   add = (+)
 
-instance Num a => TimeDomain (NumTimeDomain a) where
+instance (Num a) => TimeDomain (NumTimeDomain a) where
   type Diff (NumTimeDomain a) = NumTimeDomain a
   diffTime = (-)
   addTime = (+)
