@@ -56,24 +56,13 @@
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
             (hfinal: hprev: {
               monad-bayes = markUnbroken hprev.monad-bayes;
-              changeset = hprev.callHackageDirect
-                {
-                  pkg = "changeset";
-                  ver = "0.1.0.2";
-                  sha256 = "sha256-syoEPISCtFJgH/Gk/mSWvf4EJLyaFEp7oPzNtcVrvVI=";
-                }
-                { };
+              changeset = markUnbroken (doJailbreak hprev.changeset);
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               monad-schedule = dontCheck hprev.monad-schedule;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
-              # Remove these as nixpkgs progresses!
-              finite-typelits = hprev.finite-typelits_0_2_1_0;
-
-              vector-sized = hprev.vector-sized_1_6_1;
-
-              microstache = doJailbreak hprev.microstache;
+              # Remove these after https://github.com/turion/rhine/issues/399
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
             })
