@@ -50,13 +50,6 @@
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
             (hfinal: hprev: {
               monad-bayes = markUnbroken hprev.monad-bayes;
-              time-domain = hprev.callHackageDirect
-                {
-                  pkg = "time-domain";
-                  ver = "0.1.0.5";
-                  sha256 = "sha256-llDBQuU5ez/0MiOIMH97P4BQhFDyPfTMWinq1wJrDGI=";
-                }
-                { };
               changeset = hprev.callHackageDirect
                 {
                   pkg = "changeset";
@@ -67,9 +60,6 @@
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               monad-schedule = dontCheck hprev.monad-schedule;
-            })
-            (hfinal: hprev: lib.optionalAttrs (lib.versionOlder hprev.ghc.version "9.4") {
-              time-domain = doJailbreak hprev.time-domain;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               # Remove these as nixpkgs progresses!
