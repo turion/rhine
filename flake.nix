@@ -206,6 +206,8 @@
         })
         (hpsFor pkgs));
 
-      inherit supportedGhcs;
+      # Doesn't build on darwin
+      # https://github.com/NixOS/nixpkgs/issues/367686
+      supportedGhcs = lib.lists.removePrefix ["ghc92" "ghc94"] supportedGhcs;
     };
 }
