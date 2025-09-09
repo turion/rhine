@@ -50,7 +50,7 @@ common opts
   build-depends:
     automaton ^>=1.5,
     base >=4.16 && <4.21,
-    monad-schedule ^>=0.2,
+    monad-schedule ^>=1.5,
     mtl >=2.2 && <2.4,
     selective ^>=0.7,
     text >=1.2 && <2.2,
@@ -158,7 +158,7 @@ library
     sop-core ^>=0.5,
     text >=1.2 && <2.2,
     time >=1.8,
-    time-domain ^>=0.1.0.2,
+    time-domain ^>=1.5,
     transformers >=0.5,
 
   -- Directories containing source files.

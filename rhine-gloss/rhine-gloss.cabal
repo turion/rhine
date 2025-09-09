@@ -41,7 +41,7 @@ library
     base >=4.16 && <4.21,
     gloss >=1.12,
     mmorph >=1.1,
-    monad-schedule >=0.1,
+    monad-schedule >=1.5,
     rhine ^>=1.5,
     transformers >=0.5
 

@@ -29,7 +29,7 @@ library
   build-depends:
     base >=4.16 && <4.21,
     exceptions >=0.10.4,
-    monad-schedule >=0.1.2,
+    monad-schedule >=1.5,
     rhine ^>=1.5,
     terminal >=0.2.0.0,
     time >=1.9.3,
