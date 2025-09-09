@@ -13,7 +13,6 @@ description:
 
 extra-source-files: CHANGELOG.md
 category: FRP
-homepage: https://github.com/turion/time-domain/
 tested-with:
   ghc ==8.8
   ghc ==8.10
@@ -27,7 +26,7 @@ tested-with:
 
 source-repository head
   type: git
-  location: https://github.com/turion/time-domain
+  location: https://github.com/turion/rhine
 
 library
   exposed-modules: Data.TimeDomain
