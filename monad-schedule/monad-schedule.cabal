@@ -1,0 +1,87 @@
+cabal-version:   2.4
+name:            monad-schedule
+version:         0.2.0.2
+license:         MIT
+license-file:    LICENSE
+author:          Manuel Bärenz
+maintainer:      programming@manuelbaerenz.de
+synopsis:        A new, simple, composable concurrency abstraction.
+description:
+  A monad @m@ is said to allow scheduling if you can pass a number of actions @m a@ to it,
+  and those can be executed at the same time concurrently.
+  You can observe the result of the actions after some time:
+  Some actions will complete first, and the results of these are returned then as a list @'NonEmpty' a@.
+  Other actions are still running, and for these you will receive continuations of type @m a@,
+  which you can further run or schedule to completion as you like.
+
+category:        Concurrency
+extra-doc-files: CHANGELOG.md
+
+tested-with:
+  GHC == 9.2
+  GHC == 9.4
+  GHC == 9.6
+  GHC == 9.8
+  GHC == 9.10
+  GHC == 9.12
+
+source-repository head
+  type:     git
+  location: https://github.com/turion/monad-schedule
+
+common deps
+  build-depends:
+    , base          >=4.16.0 && <4.22
+    , base-compat   >=0.13 && < 0.15
+    , free          >=5.1 && < 5.3
+    , stm           ^>=2.5
+    , time-domain   ^>=0.1
+    , transformers  >=0.5 && < 0.7
+    , operational   ^>=0.2.4
+  if flag(dev)
+    ghc-options: -Werror
+  ghc-options:
+    -W
+
+library
+  import:           deps
+  exposed-modules:
+    Control.Monad.Schedule.Class
+    Control.Monad.Schedule.FreeAsync
+    Control.Monad.Schedule.OSThreadPool
+    Control.Monad.Schedule.RoundRobin
+    Control.Monad.Schedule.Sequence
+    Control.Monad.Schedule.Trans
+    Control.Monad.Schedule.Yield
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+
+test-suite test
+  import:           deps
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  other-modules:
+    FreeAsync
+    Trans
+    Yield
+
+  hs-source-dirs:   test
+  build-depends:
+    , HUnit                       ^>=1.6
+    , monad-schedule
+    , QuickCheck                  >=2.14 && <2.16
+    , test-framework              ^>=0.8
+    , test-framework-hunit        ^>=0.3
+    , test-framework-quickcheck2  ^>=0.3
+    , generic-arbitrary           ^>=1.0
+    , time                        >=1.9
+
+  default-language: Haskell2010
+
+  ghc-options: -threaded
+
+flag dev
+  description: Enable warnings as errors. Active on ci.
+  default: False
+  manual: True

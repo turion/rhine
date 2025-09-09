@@ -13,10 +13,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
-    monad-schedule = {
-      url = "github:turion/monad-schedule";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs:
@@ -79,7 +75,6 @@
 
       # A nixpkgs overlay containing necessary overrides on all dependencies, for reuse in downstream projects
       dependenciesOverlay = lib.composeManyExtensions [
-        inputs.monad-schedule.overlays.default
         localDependenciesOverlay
       ];
 
