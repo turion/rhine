@@ -1,6 +1,6 @@
 cabal-version: 2.4
 name: monad-schedule
-version: 0.2.0.2
+version: 1.5
 license: MIT
 license-file: LICENSE
 author: Manuel Bärenz
@@ -35,7 +35,7 @@ common deps
     free >=5.1 && <5.3,
     operational ^>=0.2.4,
     stm ^>=2.5,
-    time-domain ^>=0.1,
+    time-domain ^>=1.5,
     transformers >=0.5 && <0.7,
 
   if flag(dev)
