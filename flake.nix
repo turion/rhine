@@ -185,9 +185,9 @@
       devShells = forAllPlatforms (systems: pkgs: mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
-          nativeBuildInputs = (with hp; [
+          nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.4")
             haskell-language-server
-          ]) ++ (with pkgs; [
+          ) ++ (with pkgs; [
             haskellPackages.fourmolu
             haskellPackages.cabal-gild
             cabal-install
@@ -197,6 +197,6 @@
 
       # Doesn't build on darwin
       # https://github.com/NixOS/nixpkgs/issues/367686
-      supportedGhcs = lib.lists.removePrefix ["ghc92" "ghc94"] supportedGhcs;
+      supportedGhcs = lib.lists.removePrefix [ "ghc92" "ghc94" ] supportedGhcs;
     };
 }
