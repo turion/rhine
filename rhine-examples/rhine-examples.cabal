@@ -24,7 +24,7 @@ common opts
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.16 && <4.21,
+    base >=4.16 && <4.22,
     monad-schedule ^>=1.5,
     random >=1.1,
     rhine ^>=1.5,

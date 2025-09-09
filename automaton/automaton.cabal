@@ -29,7 +29,7 @@ source-repository this
 common opts
   build-depends:
     MonadRandom >=0.5,
-    base >=4.16 && <4.21,
+    base >=4.16 && <4.22,
     changeset ^>=0.1.0.2,
     mmorph ^>=1.2,
     mtl >=2.2 && <2.4,
