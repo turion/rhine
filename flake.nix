@@ -32,7 +32,13 @@
       # To be kept in sync with the `tested-with:` section in rhine.cabal.
       # To do: Automated check whether this is the same as what get-tested returns.
       # Currently blocked on https://github.com/Kleidukos/get-tested/issues/39
-      supportedGhcs = [ "ghc92" "ghc94" "ghc96" "ghc98" "ghc910" ];
+      supportedGhcs = [
+        "ghc92"
+        "ghc94"
+        "ghc96"
+        "ghc98"
+        "ghc910"
+      ];
 
       # All Haskell packages defined here that contain a library section
       libPnames = filter (pname: pname != "rhine-examples") pnames;
@@ -50,24 +56,13 @@
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
             (hfinal: hprev: {
               monad-bayes = markUnbroken hprev.monad-bayes;
-              changeset = hprev.callHackageDirect
-                {
-                  pkg = "changeset";
-                  ver = "0.1.0.2";
-                  sha256 = "sha256-syoEPISCtFJgH/Gk/mSWvf4EJLyaFEp7oPzNtcVrvVI=";
-                }
-                { };
+              changeset = markUnbroken (doJailbreak hprev.changeset);
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               monad-schedule = dontCheck hprev.monad-schedule;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
-              # Remove these as nixpkgs progresses!
-              finite-typelits = hprev.finite-typelits_0_2_1_0;
-
-              vector-sized = hprev.vector-sized_1_6_1;
-
-              microstache = doJailbreak hprev.microstache;
+              # Remove these after https://github.com/turion/rhine/issues/399
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
             })
@@ -190,9 +185,9 @@
       devShells = forAllPlatforms (systems: pkgs: mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
-          nativeBuildInputs = (with hp; [
+          nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.4")
             haskell-language-server
-          ]) ++ (with pkgs; [
+          ) ++ (with pkgs; [
             haskellPackages.fourmolu
             haskellPackages.cabal-gild
             cabal-install
@@ -200,6 +195,8 @@
         })
         (hpsFor pkgs));
 
-      inherit supportedGhcs;
+      # Doesn't build on darwin
+      # https://github.com/NixOS/nixpkgs/issues/367686
+      supportedGhcs = lib.lists.removePrefix [ "ghc92" "ghc94" ] supportedGhcs;
     };
 }
