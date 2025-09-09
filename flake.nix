@@ -77,6 +77,11 @@
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
             })
+            (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.12") {
+              # Remove these after some nixpkgs bump
+              statistics = doJailbreak hprev.statistics;
+              monad-bayes = doJailbreak hprev.monad-bayes;
+            })
           ];
         in
         {
