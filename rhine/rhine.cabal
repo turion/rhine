@@ -36,6 +36,7 @@ tested-with:
   ghc ==9.6
   ghc ==9.8
   ghc ==9.10
+  ghc ==9.12
 
 source-repository head
   type: git
@@ -49,7 +50,7 @@ source-repository this
 common opts
   build-depends:
     automaton ^>=1.5,
-    base >=4.16 && <4.21,
+    base >=4.16 && <4.22,
     monad-schedule ^>=1.5,
     mtl >=2.2 && <2.4,
     selective ^>=0.7,
