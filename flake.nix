@@ -29,7 +29,6 @@
       # To do: Automated check whether this is the same as what get-tested returns.
       # Currently blocked on https://github.com/Kleidukos/get-tested/issues/39
       supportedGhcs = [
-        "ghc92"
         "ghc94"
         "ghc96"
         "ghc98"
@@ -192,6 +191,6 @@
 
       # Doesn't build on darwin
       # https://github.com/NixOS/nixpkgs/issues/367686
-      supportedGhcs = lib.lists.removePrefix [ "ghc92" "ghc94" ] supportedGhcs;
+      supportedGhcs = lib.lists.removePrefix [ "ghc94" ] supportedGhcs;
     };
 }
