@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -51,7 +53,7 @@ data OptimizedStreamT m a
     Stateful (StreamT m a)
   | -- | A stateless stream is simply an action in a monad which is performed repetitively.
     Stateless (m a)
-  deriving (Functor)
+  deriving (Functor, Foldable, Traversable)
 
 {- | Remove the optimization layer.
 
@@ -220,3 +222,7 @@ applyExcept streamF streamA = Stateful $ StreamT.applyExcept (toStreamT streamF)
 selectExcept :: (Monad m) => OptimizedStreamT (ExceptT (Either e1 e2) m) a -> OptimizedStreamT (ExceptT (e1 -> e2) m) a -> OptimizedStreamT (ExceptT e2 m) a
 selectExcept streamE streamF = Stateful $ StreamT.selectExcept (toStreamT streamE) (toStreamT streamF)
 {-# INLINE selectExcept #-}
+
+mmap :: Monad m => (a -> m b) -> OptimizedStreamT m a -> OptimizedStreamT m b
+mmap f (Stateful stream) = Stateful $ StreamT.mmap f stream
+mmap f (Stateless g) = Stateless $ g >>= f
