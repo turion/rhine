@@ -3,6 +3,10 @@
 
 module Clock.FixedStep where
 
+-- base
+import Data.List (sort)
+import Data.Maybe (catMaybes)
+
 -- vector-sized
 import Data.Vector.Sized (toList)
 
@@ -12,8 +16,13 @@ import Test.Tasty (testGroup)
 -- tasty-hunit
 import Test.Tasty.HUnit (testCase, (@?=))
 
+-- monad-schedule
+import Control.Monad.Schedule.Trans (runScheduleIO)
+
 -- rhine
 import FRP.Rhine
+
+-- rhine (test)
 import Util
 
 tests =
@@ -50,4 +59,13 @@ tests =
                 , Nothing
                 , Just ([24, 21, 18, 15], 24)
                 ]
+    , testGroup
+        "Schedule"
+        [ testCase "Can schedule two FixedStep clocks" $ do
+            let f300 = absoluteS @@ FixedStep @300
+            let f500 = absoluteS @@ FixedStep @500
+            output <- runScheduleIO @_ @Integer $ runRhine (f300 +@+ f500) $ replicate 10 ()
+            let timestamps = either id id <$> catMaybes output
+            timestamps @?= sort timestamps
+        ]
     ]
