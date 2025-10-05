@@ -37,7 +37,9 @@ import Control.Monad.Bayes.Sampler.Strict
 import Data.Automaton.Trans.Except
 
 -- rhine
-import FRP.Rhine hiding (Result)
+import FRP.Rhine hiding (Rhine, flow, sn, Result)
+import FRP.Rhine.Rhine.Free hiding (feedback)
+import FRP.Rhine.SN.Free
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -344,55 +346,64 @@ mainSingleRate =
 
 -- ** Multi-rate: Simulation, inference, display at different rates
 
+type ModelClock = IOClock App (Millisecond 100)
+
+modelClock :: ModelClock
+modelClock = ioClock waitClock
+
 {- | The part of the program which simulates latent position and sensor,
    running 10 times a second.
 -}
-modelRhine :: Rhine App (GlossConcTClock SamplerIO (Millisecond 100)) Temperature (Temperature, (Sensor, Pos))
-modelRhine = (clId &&& genModelWithoutTemperature) @@ glossConcTClock waitClock
+model :: ClSF App ModelClock Temperature (Sensor, Pos)
+model = genModelWithoutTemperature
+
+type TemperatureClock = GlossClockUTC SamplerIO GlossEventClockIO
+
+temperatureClock :: TemperatureClock
+temperatureClock = glossClockUTC GlossEventClockIO
 
 -- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF App (GlossClockUTC SamplerIO GlossEventClockIO) () Temperature
+userTemperature :: ClSF App TemperatureClock () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
     selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
     selector (EventKey (SpecialKey KeyDown) Down _ _) = Just (1 / 1.2)
     selector _ = Nothing
 
+type InferenceClock = LiftClock SamplerIO GlossConcT Busy
+
 {- | This part performs the inference (and passes along temperature, sensor and position simulations).
    It runs as fast as possible, so this will potentially drain the CPU.
 -}
-inference :: Rhine App (GlossConcTClock SamplerIO (Millisecond 100)) (Temperature, (Sensor, Pos)) Result
-inference = inferenceBehaviour @@ glossConcTClock waitClock
-
-inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
-inferenceBehaviour = proc (temperature, (measured, latent)) -> do
+inference :: ClSF App InferenceClock Sensor ([(Pos, Log Double)], [(Temperature, Log Double)])
+inference = proc measured -> do
   positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
-  returnA
-    -<
-      Result
-        { temperature
-        , measured
-        , latent
-        , particlesPosition = first snd <$> positionsAndTemperatures
-        , particlesTemperature = first fst <$> positionsAndTemperatures
-        }
+  let
+    particlesPosition = first snd <$> positionsAndTemperatures
+    particlesTemperature = first fst <$> positionsAndTemperatures
+  returnA -< (particlesPosition, particlesTemperature)
 
--- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
-visualisationRhine :: Rhine App (GlossClockUTC SamplerIO GlossSimClockIO) Result ()
-visualisationRhine = visualisation @@ glossClockUTC GlossSimClockIO
+type VisualisationClock = GlossClockUTC SamplerIO GlossSimClockIO
 
-{- FOURMOLU_DISABLE -}
+visualisationClock :: VisualisationClock
+visualisationClock = glossClockUTC GlossSimClockIO
+
+visualisationMultiRate :: ClSF App VisualisationClock Result ()
+visualisationMultiRate = visualisation
+
 -- | Compose all four asynchronous components to a single 'Rhine'.
-mainRhineMultiRate =
-  userTemperature
-    @@ glossClockUTC GlossEventClockIO
-      >-- keepLast initialTemperature -->
-        modelRhine
-        >-- keepLast (initialTemperature, (zeroVector, zeroVector)) -->
-          inference
-            >-- keepLast emptyResult -->
-              visualisationRhine
-{- FOURMOLU_ENABLE -}
+mainRhineMultiRate = Rhine
+  { clocks = temperatureClock .:. modelClock .:. (liftClock Busy :: InferenceClock) .:. visualisationClock .:. cnil
+  , sn = proc _ -> do
+      temperature <- synchronous userTemperature -< Present ()
+      measuredAndLatent <- synchronous model <<< resampling (keepLast initialTemperature) -< temperature
+      positionsAndTemperatures <- synchronous inference <<< resampling (keepLast zeroVector) -< fmap fst measuredAndLatent
+      temperatureVisualisation <- resampling $ keepLast initialTemperature -< temperature
+      (measured, latent) <- arr (fmap fst &&& fmap snd) <<< resampling (keepLast (zeroVector, zeroVector)) -< measuredAndLatent
+      (particlesPosition, particlesTemperature) <- arr (fmap fst &&& fmap snd) <<< resampling (keepLast ([], [])) -< positionsAndTemperatures
+      synchronous visualisationMultiRate -< Result <$> temperatureVisualisation <*> measured <*> latent <*> particlesPosition <*> particlesTemperature
+      returnA -< ()
+  }
 
 mainMultiRate :: IO ()
 mainMultiRate =

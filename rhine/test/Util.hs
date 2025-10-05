@@ -8,14 +8,13 @@ import Control.Monad.Schedule.Trans (Schedule, runScheduleT)
 
 -- rhine
 import FRP.Rhine
+import Control.Monad.Schedule.Class (MonadSchedule)
 
-runScheduleRhinePure :: (Clock (Schedule (Diff (Time cl))) cl, GetClockProxy cl) => Rhine (Schedule (Diff (Time cl))) cl a b -> [a] -> [Maybe b]
+runScheduleRhinePure :: (Ord (Diff td), TimeDifference (Diff td)) => Rhine (Schedule (Diff td)) td cls a b -> [a] -> [b]
 runScheduleRhinePure rhine = runSchedule . runRhine rhine
 
-runRhine :: (Clock m cl, GetClockProxy cl, Monad m) => Rhine m cl a b -> [a] -> m [Maybe b]
-runRhine rhine input = do
-  automaton <- eraseClock rhine
-  embed automaton input
+runRhine :: (Monad m, MonadSchedule m) => Rhine m td cls a b -> [a] -> m [b]
+runRhine rhine = embed $ eraseClock rhine
 
 -- FIXME Move to monad-schedule
 runSchedule :: Schedule diff a -> a
