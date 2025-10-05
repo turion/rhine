@@ -47,16 +47,19 @@ module FRP.Rhine.SN (
   ClassyClock (..),
   orderedPositionsInAppend,
   AtAny,
-  AtSome (..),
+  AtSome,
   atAny,
+  atAny',
   atThis,
   currentlyAny,
-  Flip (..)
+  Flip (..),
+  currentlySome
 )
 where
 
 -- FIXME sort imports and exports
 
+import Control.Applicative (Alternative ((<|>)))
 import Control.Arrow.Free
 import Control.Category (Category)
 import Control.Monad.Schedule.Class (MonadSchedule)
@@ -68,9 +71,9 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (fromList, toList)
 import Data.Automaton (concatS)
 import Data.Proxy (Proxy (..))
-import Data.SOP (NP (..), NS (..), SListI, hmap, K (..))
+import Data.SOP (NP (..), NS (..), SListI, hmap, K (..), HSequence (htraverse'), sList, SList (..), All)
 import Data.Type.Equality ((:~:) (Refl))
-
+import Data.Maybe (fromMaybe)
 import Data.Profunctor (Profunctor (..), WrappedArrow (..))
 
 import FRP.Rhine.ClSF.Core
@@ -352,6 +355,10 @@ appendClocks Clocks {getClocks = cl :* cls} clocks =
   let Clocks {getClocks} = appendClocks Clocks {getClocks = cls} clocks
    in Clocks {getClocks = cl :* getClocks}
 
+-- FIXME This can fundamentally only work if b does not depend on the clocks.
+-- Otherwise who knows whether b will be present on cl?
+-- We could of course have a (Maybe b) or (AtSome cls b).
+-- But like this we prove here that all SNComponent constructors are somewhat clock-polymorphic.
 addClockSNComponent :: SNComponent m cls a b -> SNComponent m (cl ': cls) a b
 addClockSNComponent (Synchronous position clsf) = Synchronous (S position) clsf
 addClockSNComponent (Resampling positions clsf) = Resampling (OPThere positions) clsf
@@ -392,6 +399,14 @@ orderedPositionsInAppend Clocks {getClocks = _ :* getClocks} cls2 (S pos1) pos2 
 -- Revisit with GHC 9.6.
 orderedPositionsInAppend Clocks {getClocks = Nil} _ _ _ = error "orderedPositionsInAppend: Internal error. Please report as a rhine bug."
 
+now :: forall m cls a . All (Clock m) cls => SN m cls a (Tick cls)
+now = case sList @cls of
+  SNil -> arr $ const $ error "now: Internal error"
+  SCons -> arr Present >>> synchronousTop _ >>> _
+  where
+    synchronousTop :: Clock m cl => ClSF m cl a b -> SN m (cl ': cls') (At cl a) (At cl b)
+    synchronousTop = synchronous
+
 runClocks :: (Monad m, MonadSchedule m) => Clocks m td cls -> Automaton m () (Tick cls)
 runClocks cls = performOnFirstSample $ scheduleAutomatons <$> getRunningClocks (getClocks cls)
   where
@@ -410,11 +425,16 @@ runClocks cls = performOnFirstSample $ scheduleAutomatons <$> getRunningClocks (
     scheduleAutomatons :: (Monad m, MonadSchedule m) => [Automaton m () a] -> Automaton m () a
     scheduleAutomatons msfs = concatS $ scheduleList (fromList msfs) >>> arr toList
 
+-- Could generalise the data type to vary as well
 newtype AtAny cls a = AtAny {getAtAny :: Maybe (AtSome cls a)}
 newtype AtSome cls a = AtSome {getAtSome :: NS (K a) cls}
 
+-- FIXME Don't know which of these will be more useful
 atAny :: AtSome cls a -> AtAny cls a
 atAny = AtAny . Just
+
+atAny' :: SListI cls => NS (Flip At a) cls -> AtAny cls a
+atAny' = AtAny . fmap AtSome . htraverse' (fmap K . currently . getFlip)
 
 currentlyAny :: AtAny cls a -> Maybe (AtSome cls a)
 currentlyAny = getAtAny
@@ -425,3 +445,24 @@ newtype Flip f a b = Flip {getFlip :: f b a}
 atThis :: forall cl cls a . HasClock cl cls => At cl a -> AtAny cls a
 atThis cla@(Present a) = AtAny $ Just $ AtSome $ injectPosition (position @cl) $ K a
 atThis Absent = AtAny Nothing
+
+-- FIXME more should be possible, indeed we can guarantee that the tick is on the same clock
+currentlySome :: SN m cls (AtAny cls a) (AtSome cls a)
+currentlySome = arr $ fromMaybe (error "currentlySome: Internal error") . getAtAny
+
+currentlySome' :: SN m cls (NP (Flip At a) cls) (AtSome cls a)
+currentlySome' = arr atSomeUnsafe
+  where
+    -- It's only safe inside an SN with only cls and no further clocks
+    atSomeUnsafe :: NP (Flip At a) cls -> AtSome cls a
+    atSomeUnsafe = _
+
+atOnly :: At cl a -> AtAny '[cl] a
+atOnly = AtAny . fmap (AtSome . Z . K) . currently
+
+atEither :: (HasClock cl1 cls, HasClock cl2 cls) => Either (At cl1 a) (At cl2 a) -> AtAny cls a
+atEither = either atThis atThis
+
+-- | The clocks should be different. If they are not, the left signal will be used
+atEach :: (HasClock cl1 cls, HasClock cl2 cls) => (At cl1 a, At cl2 a) -> AtAny cls a
+atEach (cl1a, cl2a) = AtAny $ getAtAny (atThis cl1a) <|> getAtAny (atThis cl2a)
