@@ -50,10 +50,25 @@
           # Check on nixpkgs bumps whether some of these can be removed.
           temporaryHaskellOverrides = with prev.haskell.lib.compose; [
             (hfinal: hprev: {
-              monad-bayes = markUnbroken hprev.monad-bayes;
+              # Remove once nixpkgs has caught up
+              monad-bayes = hprev.callHackageDirect {
+                pkg = "monad-bayes";
+                ver = "1.3.0.5";
+                sha256 = "sha256-JK2Xya+xtPFIjJ6I+bb7dCU+JBJdhxGUMxB9jEZxZ78=";
+              } { };
+              # Transitive dependencies of monad-bayes
+              vty = hprev.vty_6_4;
+              brick = hprev.callHackageDirect {
+                pkg = "brick";
+                ver = "2.10";
+                sha256 = "sha256-m1PvPySOuTZbcnCm4j7M7AihK0w8OGKumyRR3jU5nfw=";
+              } { };
+
               changeset = markUnbroken (doJailbreak hprev.changeset);
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
+              # For custom version: Don't test because tests don't work on Mac (https://github.com/tweag/monad-bayes/issues/368)
+              monad-bayes = dontCheck hprev.monad-bayes;
               monad-schedule = dontCheck hprev.monad-schedule;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
