@@ -27,7 +27,7 @@ source-repository this
 library
   exposed-modules: FRP.Rhine.Terminal
   build-depends:
-    base >=4.16 && <4.21,
+    base >=4.16 && <4.22,
     exceptions >=0.10.4,
     monad-schedule >=1.5,
     rhine ^>=1.5,
@@ -47,7 +47,7 @@ executable rhine-terminal-simple
   main-is: TerminalSimple.hs
   ghc-options: -threaded
   build-depends:
-    base >=4.16 && <4.21,
+    base >=4.16 && <4.22,
     rhine ^>=1.5,
     rhine-terminal,
     terminal >=0.2.0.0,
@@ -71,7 +71,7 @@ test-suite rhine-terminal-tests
   main-is: tests/Main.hs
   ghc-options: -threaded
   build-depends:
-    base >=4.16 && <4.21,
+    base >=4.16 && <4.22,
     exceptions >=0.10.4,
     hspec,
     rhine ^>=1.5,

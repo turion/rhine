@@ -33,6 +33,7 @@
         "ghc96"
         "ghc98"
         "ghc910"
+        "ghc912"
       ];
 
       # All Haskell packages defined here that contain a library section
@@ -75,6 +76,11 @@
               # Remove these after https://github.com/turion/rhine/issues/399
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
+            })
+            (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.12") {
+              # Remove these after some nixpkgs bump
+              statistics = doJailbreak hprev.statistics;
+              monad-bayes = doJailbreak hprev.monad-bayes;
             })
           ];
         in
