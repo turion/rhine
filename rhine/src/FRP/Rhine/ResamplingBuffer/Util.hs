@@ -15,7 +15,7 @@ import Data.Stream.Optimized (toStreamT)
 import Data.Stream.Result (Result (..), mapResultState)
 
 -- rhine
-import FRP.Rhine.ClSF hiding (step)
+import FRP.Rhine.ClSF hiding (step, toStreamT)
 import FRP.Rhine.Clock
 import FRP.Rhine.ResamplingBuffer
 
@@ -39,7 +39,7 @@ resbuf  >>-^ clsf = helper resbuf $ toStreamT $ getAutomaton clsf
       , get = \theTimeInfo (JointState b s) -> do
           Result b' b <- get theTimeInfo b
           Result s' c <- step s `runReaderT` b `runReaderT` theTimeInfo
-          return $! Result (JointState b' s') c
+          pure $! Result (JointState b' s') c
       }
 
 infix 1 ^->>
@@ -58,7 +58,7 @@ clsf ^->> resBuf = helper (toStreamT (getAutomaton clsf)) resBuf
     , put = \theTimeInfo a (JointState buf s) -> do
       Result s' b <- step s `runReaderT` a `runReaderT` theTimeInfo
       buf' <- put theTimeInfo b buf
-      return $! JointState buf' s'
+      pure $! JointState buf' s'
     , get = \theTimeInfo (JointState buf s) -> mapResultState (`JointState` s) <$> get theTimeInfo buf
       }
 
@@ -76,11 +76,11 @@ ResamplingBuffer buf1 put1 get1 *-* ResamplingBuffer buf2 put2 get2 = Resampling
   , put = \theTimeInfo (a, c) (JointState s1 s2) -> do
       s1' <- put1 theTimeInfo a s1
       s2' <- put2 theTimeInfo c s2
-      return $! JointState s1' s2'
+      pure $! JointState s1' s2'
   , get = \theTimeInfo (JointState s1 s2) -> do
       Result s1' b <- get1 theTimeInfo s1
       Result s2' d <- get2 theTimeInfo s2
-      return $! Result (JointState s1' s2') (b, d)
+      pure $! Result (JointState s1' s2') (b, d)
   }
 
 infixl 4 &-&

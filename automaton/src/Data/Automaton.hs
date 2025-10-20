@@ -430,6 +430,8 @@ instance (Monad m) => Traversing (Automaton m) where
   wander f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ f $ runReaderT m
   {-# INLINE wander #-}
 
+-- ** Traversing automata
+
 -- | Only step the automaton if the input is 'Just'.
 mapMaybeS :: (Monad m) => Automaton m a b -> Automaton m (Maybe a) (Maybe b)
 mapMaybeS = traverse'
@@ -485,6 +487,22 @@ parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ pa
         }
 parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
 
+-- ** Interaction with 'StreamT'
+
+{- | Create an 'Automaton' from a stream.
+
+It will ignore its input.
+-}
+fromStream :: (Monad m) => StreamT m a -> Automaton m any a
+fromStream = Automaton . Stateful . hoist lift
+
+{- | Create a 'StreamT' from an 'Automaton'.
+
+The resulting stream can read the current input as an effect in 'ReaderT'.
+-}
+toStreamT :: (Functor m) => Automaton m a b -> StreamT (ReaderT a m) b
+toStreamT = StreamOptimized.toStreamT . getAutomaton
+
 -- | Given a transformation of streams, apply it to an automaton, without changing the input.
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
@@ -492,6 +510,8 @@ handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
 -- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
 handleAutomaton :: (Monad m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
+
+-- ** Buffering
 
 {- | Buffer the output of an automaton. See 'Data.Stream.concatS'.
 
