@@ -24,7 +24,7 @@ import Data.List.NonEmpty as N
 import Control.Monad.Schedule.Class
 
 -- automaton
-import Data.Automaton
+import Data.Automaton hiding (toStreamT)
 import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
 
 -- rhine
