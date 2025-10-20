@@ -12,6 +12,7 @@ import Control.Applicative (Alternative (..), Applicative (..), liftA2)
 import Control.Monad ((<$!>))
 import Data.Bifunctor (bimap)
 import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Monoid (Ap (..))
 import Prelude hiding (Applicative (..))
 
@@ -368,20 +369,20 @@ instance (Selective m) => Selective (StreamT m) where
       eitherResult :: Result s (Either a b) -> Either (Result s a) (Result s b)
       eitherResult (Result s eab) = bimap (Result s) (Result s) eab
 
+{- | Run both streams in parallel and use @'Semialign' m@ to decide which stream produces output.
+  If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.
+-}
 instance (Semialign m) => Semialign (StreamT m) where
   align (StreamT s10 step1) (StreamT s20 step2) =
     StreamT
-      { state = These s10 s20
-      , step = \case
-          This s1 -> mapResultState This . fmap This <$> step1 s1
-          That s2 -> mapResultState That . fmap That <$> step2 s2
-          These s1 s2 -> commuteTheseResult <$> align (step1 s1) (step2 s2)
+      { state = JointState s10 s20
+      , step = \(JointState s1 s2) -> align (step1 s1) (step2 s2) <&> updateTheseState s1 s2
       }
     where
-      commuteTheseResult :: These (Result s1 a1) (Result s2 a2) -> Result (These s1 s2) (These a1 a2)
-      commuteTheseResult (This (Result s1 a1)) = Result (This s1) (This a1)
-      commuteTheseResult (That (Result s2 a2)) = Result (That s2) (That a2)
-      commuteTheseResult (These (Result s1 a1) (Result s2 a2)) = Result (These s1 s2) (These a1 a2)
+      updateTheseState :: s1 -> s2 -> These (Result s1 a) (Result s2 b) -> Result (JointState s1 s2) (These a b)
+      updateTheseState _s1 s2 (This (Result s1 a)) = Result (JointState s1 s2) $ This a
+      updateTheseState s1 _s2 (That (Result s2 b)) = Result (JointState s1 s2) $ That b
+      updateTheseState _ _ (These (Result s1 a) (Result s2 b)) = Result (JointState s1 s2) $ These a b
   {-# INLINE align #-}
 
 instance (Align m) => Align (StreamT m) where
