@@ -26,6 +26,7 @@ import Data.Semialign (Semialign (..), Align (..))
 
 -- automaton
 import Data.Automaton
+
 import Data.Stream.Filter (FilterStream (..))
 
 {- | An automaton that filters or traverses its output using a type operator @f@.
@@ -104,8 +105,7 @@ instance (Monad m, Monad f, Traversable f) => Strong (FilterAutomaton m f) where
 
 instance (Monad m, Monad f, Traversable f) => Choice (FilterAutomaton m f) where
   left' = left
-
--- | Run two automata in parallel and 'align' their outputs.
+-- \| Run two automata in parallel and 'align' their outputs.
 instance (Applicative m, Semialign f) => Semialign (FilterAutomaton m f a) where
   align fa1 fa2 = FilterAutomaton $ align <$> getFilterAutomaton fa1 <*> getFilterAutomaton fa2
 
