@@ -45,7 +45,7 @@ import Data.These (these)
 -- witherable
 import Witherable (Filterable (..), Witherable)
 
--- align
+-- semialign
 import Data.Semialign (Align (..), Semialign (..))
 
 -- automaton
