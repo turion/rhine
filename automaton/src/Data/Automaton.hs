@@ -133,6 +133,9 @@ instance (Eq s, Floating s, VectorSpace v s, Applicative m) => VectorSpace (Auto
   dot (Automaton s) (Automaton v) = coerce $ dot s v
   normalize (Automaton v) = coerce v
 
+{- | Run both automata in parallel and use @'Semialign' m@ to decide which automaton produces output.
+  If you understand @m@ as an effect that models the passage of time, then 'align' runs both automata concurrently.
+-}
 instance (Semialign m) => Semialign (Automaton m a) where
   align automaton1 automaton2 =
     Automaton $
