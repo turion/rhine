@@ -31,9 +31,8 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 
 -- profunctors
-import Data.Profunctor (Choice (..), Profunctor (..), Strong)
-import Data.Profunctor.Strong (Strong (..))
-import Data.Profunctor.Traversing
+import Data.Profunctor (Choice (..), Profunctor (..), Strong (..))
+import Data.Profunctor.Traversing (Traversing (..))
 
 -- selective
 import Control.Selective (Selective)
