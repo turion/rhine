@@ -30,7 +30,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 
 -- profunctors
-import Data.Profunctor (Choice (..), Profunctor (..), Strong (..))
+import Data.Profunctor (Choice (..), Cochoice (..), Profunctor (..), Strong (..))
 import Data.Profunctor.Traversing (Traversing (..))
 
 -- selective
@@ -432,6 +432,20 @@ instance (Monad m) => Traversing (Automaton m) where
       }
   wander f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ f $ runReaderT m
   {-# INLINE wander #-}
+
+instance (Monad m) => Cochoice (Automaton m) where
+  unleft = handleAutomaton $ \StreamT {state, step} ->
+    let
+      go s ea = do
+        Result s' ebd <- runReaderT (step s) ea
+        case ebd of
+          Left b -> pure $ Result s' b
+          Right d -> go s $ Right d
+     in
+      StreamT
+        { state
+        , step = \s -> ReaderT $ \a -> go s $ Left a
+        }
 
 -- ** Traversing automata
 
