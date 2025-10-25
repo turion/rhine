@@ -15,7 +15,7 @@ import Prelude hiding (filter, id, (.))
 import Control.Monad.Trans.Reader (ReaderT(..))
 
 -- profunctors
-import Data.Profunctor (Profunctor (..), Strong (..), Choice (..))
+import Data.Profunctor (Profunctor (..), Strong (..), Choice (..), Cochoice)
 import Data.Profunctor.Traversing (Traversing (..))
 
 -- witherable
@@ -26,9 +26,12 @@ import Data.Semialign (Semialign (..), Align (..))
 
 -- automaton
 import Data.Automaton
-import Data.Stream (hoist')
+import Data.Stream (hoist', StreamT (..))
 import Data.Stream.Filter (FilterStream (..), streamFilter)
 import Data.Stream.Optimized (OptimizedStreamT (Stateful))
+import Data.Profunctor.Choice (Cochoice(..))
+import Control.Selective ((<*?))
+import Data.Stream.Result (Result(..))
 
 {- | An automaton that filters or traverses its output using a type operator @f@.
 
@@ -118,6 +121,11 @@ instance (Monad m, Monad f, Traversable f) => Strong (FilterAutomaton m f) where
 
 instance (Monad m, Monad f, Traversable f) => Choice (FilterAutomaton m f) where
   left' = left
+
+| When looping, this will break when any of the positions in @f@ breaks.
+instance (Monad m, Traversable f) => Cochoice (FilterAutomaton m f) where
+  unright = FilterAutomaton . unright . fmap sequence  . getFilterAutomaton
+
 -- \| Run two automata in parallel and 'align' their outputs.
 instance (Applicative m, Semialign f) => Semialign (FilterAutomaton m f a) where
   align fa1 fa2 = FilterAutomaton $ align <$> getFilterAutomaton fa1 <*> getFilterAutomaton fa2
