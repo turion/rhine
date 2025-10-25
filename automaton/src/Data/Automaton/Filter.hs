@@ -33,6 +33,7 @@ import Data.Profunctor.Choice (Cochoice(..))
 import Control.Selective ((<*?))
 import Data.Stream.Result (Result(..))
 
+
 {- | An automaton that filters or traverses its output using a type operator @f@.
 
 When @f@ is 'Maybe', then @'FilterAutomaton' 'Maybe' a b@ can filter in the sense that not every input necessarily leads to an output.
