@@ -58,7 +58,6 @@
                 sha256 = "sha256-JK2Xya+xtPFIjJ6I+bb7dCU+JBJdhxGUMxB9jEZxZ78=";
               } { };
               # Transitive dependencies of monad-bayes
-              vty = hprev.vty_6_4;
               brick = hprev.callHackageDirect {
                 pkg = "brick";
                 ver = "2.10";
@@ -184,9 +183,12 @@
 
       # This builds all rhine packages on all GHCs, as well as docs and sdist
       # Usage: nix build
-      packages = forAllPlatforms (system: pkgs: {
-        default = pkgs.rhine-all;
-      } // lib.mapAttrs (ghcVersion: haskellPackages: pkgs.linkFarm "rhine-all-${ghcVersion}" (lib.genAttrs pnames (pname: haskellPackages.${pname}))) (hpsFor pkgs));
+      packages = forAllPlatforms (system: pkgs:
+        lib.mapAttrs (ghcVersion: haskellPackages: pkgs.linkFarm "rhine-all-${ghcVersion}" (lib.genAttrs pnames (pname: haskellPackages.${pname}))) (hpsFor pkgs)
+        // {
+          default = pkgs.rhine-all;
+        }
+      );
 
       # We re-export the entire nixpkgs package set with our overlay.
       # Usage examples:
