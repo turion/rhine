@@ -46,8 +46,8 @@ jobs:
         id: set-matrix
         with:
           cabal-file: "rhine/rhine.cabal"
-          ubuntu: true
-          version: 0.1.6.0
+          ubuntu-version: latest
+          version: 0.1.9.0
 
   build-cabal:
     runs-on: ubuntu-latest
