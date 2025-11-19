@@ -9,14 +9,17 @@ module Data.Stream where
 
 -- base
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
-import Control.Monad ((<$!>))
+import Control.Monad (forM, (<$!>))
 import Data.Bifunctor (bimap)
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.Functor.Compose (Compose (..))
 import Data.Monoid (Ap (..))
 import Prelude hiding (Applicative (..))
 
 -- transformers
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE, withExceptT)
+import Control.Monad.Trans.Except (ExceptT (..), runExceptT, throwE, withExceptT)
 
 -- mmorph
 import Control.Monad.Morph (MFunctor (hoist))
@@ -35,6 +38,7 @@ import Data.Align
 
 -- automaton
 import Data.Stream.Internal
+import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Result
 
 -- * Creating streams
@@ -75,7 +79,8 @@ It is nevertheless possible to define streams recursively, but one needs to firs
 Then for the greatest generality, 'fixStream' and 'fixStream'' can be used, and some special cases are covered by functions
 such as 'fixA', 'Data.Automaton.parallely', 'many' and 'some'.
 -}
-data StreamT m a = forall s.
+data StreamT m a
+  = forall s.
   StreamT
   { state :: s
   -- ^ The internal state of the stream
@@ -103,6 +108,37 @@ constM :: (Functor m) => m a -> StreamT m a
 constM ma = StreamT () $ const $ Result () <$> ma
 {-# INLINE constM #-}
 
+-- | Like 'fmap' or 'rmap', but the postcomposed function may have an effect in @m@.
+mmap :: (Monad m) => (a -> m b) -> StreamT m a -> StreamT m b
+mmap f StreamT {state, step} =
+  StreamT
+    { state
+    , step = \s -> do
+        Result s' a <- step s
+        Result s' <$> f a
+    }
+{-# INLINE mmap #-}
+
+{- | Translate a coalgebraically encoded stream into a recursive one.
+
+This is usually a performance penalty.
+-}
+toRecursive :: (Functor m) => StreamT m a -> Recursive m a
+toRecursive automaton = Recursive $ mapResultState toRecursive <$> stepStream automaton
+{-# INLINE toRecursive #-}
+
+{- | Translate a recursive stream into a coalgebraically encoded one.
+
+The internal state is the stream itself.
+-}
+fromRecursive :: Recursive m a -> StreamT m a
+fromRecursive coalgebraic =
+  StreamT
+    { state = coalgebraic
+    , step = getRecursive
+    }
+{-# INLINE fromRecursive #-}
+
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => m a -> StreamT m a
 initialised action =
@@ -126,6 +162,14 @@ instance (Applicative m) => Applicative (StreamT m) where
   StreamT stateF0 stepF <*> StreamT stateA0 stepA =
     StreamT (JointState stateF0 stateA0) (\(JointState stateF stateA) -> apResult <$> stepF stateF <*> stepA stateA)
   {-# INLINE (<*>) #-}
+
+instance (Foldable m) => Foldable (StreamT m) where
+  foldMap f StreamT {state, step} = go state
+    where
+      go s = step s & foldMap (\(Result s' a) -> f a <> go s')
+
+instance (Traversable m, Functor m) => Traversable (StreamT m) where
+  traverse f = fmap fromRecursive . traverse f . toRecursive
 
 deriving via Ap (StreamT m) a instance (Applicative m, Num a) => Num (StreamT m a)
 
@@ -253,7 +297,7 @@ concatS StreamT {state, step} =
     go (s, []) = do
       Result s' as <- step s
       go (s', as)
-    go (s, a : as) = return $ Result (s, as) a
+    go (s, a : as) = pure $ Result (s, as) a
 {-# INLINE concatS #-}
 
 -- ** Exception handling
@@ -274,7 +318,7 @@ applyExcept (StreamT state1 step1) (StreamT state2 step2) =
     step (Left s1) = do
       resultOrException <- lift $ runExceptT $ step1 s1
       case resultOrException of
-        Right result -> return $! mapResultState Left result
+        Right result -> pure $! mapResultState Left result
         Left f -> step (Right (state2, f))
     step (Right (s2, f)) = mapResultState (Right . (,f)) <$!> withExceptT f (step2 s2)
 {-# INLINE applyExcept #-}
@@ -295,7 +339,7 @@ foreverExcept StreamT {state, step} =
       resultOrException <- runExceptT $ step s
       case resultOrException of
         Left _ -> stepNew state
-        Right result -> return result
+        Right result -> pure result
 
 -- | Whenever an exception occurs, output it and retry on the next step.
 exceptS :: (Applicative m) => StreamT (ExceptT e m) b -> StreamT m (Either e b)
@@ -320,7 +364,7 @@ selectExcept (StreamT stateE0 stepE) (StreamT stateF0 stepF) =
     step (Left stateE) = do
       resultOrException <- lift $ runExceptT $ stepE stateE
       case resultOrException of
-        Right result -> return $ mapResultState Left result
+        Right result -> pure $ mapResultState Left result
         Left (Left e1) -> step (Right (e1, stateF0))
         Left (Right e2) -> throwE e2
     step (Right (e1, stateF)) = withExceptT ($ e1) $ mapResultState (Right . (e1,)) <$> stepF stateF
@@ -337,20 +381,20 @@ instance (Selective m) => Selective (StreamT m) where
       eitherResult :: Result s (Either a b) -> Either (Result s a) (Result s b)
       eitherResult (Result s eab) = bimap (Result s) (Result s) eab
 
+{- | Run both streams in parallel and use @'Semialign' m@ to decide which stream produces output.
+  If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.
+-}
 instance (Semialign m) => Semialign (StreamT m) where
   align (StreamT s10 step1) (StreamT s20 step2) =
     StreamT
-      { state = These s10 s20
-      , step = \case
-          This s1 -> mapResultState This . fmap This <$> step1 s1
-          That s2 -> mapResultState That . fmap That <$> step2 s2
-          These s1 s2 -> commuteTheseResult <$> align (step1 s1) (step2 s2)
+      { state = JointState s10 s20
+      , step = \(JointState s1 s2) -> align (step1 s1) (step2 s2) <&> updateTheseState s1 s2
       }
     where
-      commuteTheseResult :: These (Result s1 a1) (Result s2 a2) -> Result (These s1 s2) (These a1 a2)
-      commuteTheseResult (This (Result s1 a1)) = Result (This s1) (This a1)
-      commuteTheseResult (That (Result s2 a2)) = Result (That s2) (That a2)
-      commuteTheseResult (These (Result s1 a1) (Result s2 a2)) = Result (These s1 s2) (These a1 a2)
+      updateTheseState :: s1 -> s2 -> These (Result s1 a) (Result s2 b) -> Result (JointState s1 s2) (These a b)
+      updateTheseState _s1 s2 (This (Result s1 a)) = Result (JointState s1 s2) $ This a
+      updateTheseState s1 _s2 (That (Result s2 b)) = Result (JointState s1 s2) $ That b
+      updateTheseState _ _ (These (Result s1 a) (Result s2 b)) = Result (JointState s1 s2) $ These a b
   {-# INLINE align #-}
 
 instance (Align m) => Align (StreamT m) where
@@ -437,7 +481,7 @@ fixStream' transformState transformStep =
   where
     step fix@(Fix {getFix}) = mapResultState Fix <$> transformStep fix step getFix
 
-{- | The solution to the equation @'fixA stream = stream <*> 'fixA' stream@.
+{- | The solution to the equation @'fixA' stream = stream <*> 'fixA' stream@.
 
 Such a fix point operator needs to be used instead of the above direct definition because recursive definitions of streams
 loop at runtime due to the coalgebraic encoding of the state.
@@ -445,3 +489,41 @@ loop at runtime due to the coalgebraic encoding of the state.
 fixA :: (Applicative m) => StreamT m (a -> a) -> StreamT m a
 fixA StreamT {state, step} = fixStream (JointState state) $
   \stepA (JointState s ss) -> apResult <$> step s <*> stepA ss
+
+-- FIXME Generalisation in []
+runListS :: (Monad m) => StreamT (Compose m []) a -> StreamT m [a]
+runListS StreamT {state, step} =
+  StreamT
+    { state = [state]
+    , step = \states -> do
+        results <- forM states $ getCompose . step
+        let flatResults = concat results
+        pure $ Result (resultState <$> flatResults) (output <$> flatResults)
+    }
+
+-- FIXME maybe rewrite with Iso somehow?
+handleCompose :: (Functor f, Monad m, Monad composed) => (forall s. s -> f s) -> (forall x. composed x -> m (f x)) -> (forall x. m (f x) -> composed x) -> StreamT composed a -> StreamT m (f a)
+handleCompose pure_ uncompose compose StreamT {state, step} =
+  StreamT
+    { state = pure_ state
+    , step = \s -> do
+        results <- uncompose $ do
+          states <- compose $ pure s
+          step states
+        pure $! Result (fmap resultState results) (fmap output results)
+    }
+
+-- FIXME all these should go to a separate module
+handleExceptT :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
+handleExceptT = handleCompose pure runExceptT ExceptT
+
+-- FIXME handleMaybeT
+
+snapshot :: (Functor m) => StreamT m a -> StreamT m (m a)
+snapshot StreamT {state, step} =
+  StreamT
+    { state
+    , step = \s ->
+        let result = step s
+         in flip Result (output <$> result) . resultState <$> result
+    }

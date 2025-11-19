@@ -28,6 +28,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
 import Automaton.Except
+import Automaton.Filter
 import Automaton.Trans.Accum
 import Automaton.Trans.Changeset
 import Data.Automaton
@@ -72,6 +73,7 @@ tests =
     , testCase "sumN" $ runIdentity (embed (arr (const (1 :: Integer)) >>> sumN) [(), (), ()]) @?= [1, 2, 3]
     , testCase "lastS" $ runIdentity (embed (lastS 0) [Nothing, Just 10]) @?= [0, 10]
     , Automaton.Except.tests
+    , Automaton.Filter.tests
     , Automaton.Trans.Accum.tests
     , Automaton.Trans.Changeset.tests
     ]
@@ -94,4 +96,4 @@ char :: Char -> Parser Char
 char c = do
   c' <- aChar
   guard $ c == c'
-  return c
+  pure c
