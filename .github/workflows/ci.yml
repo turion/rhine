@@ -15,7 +15,7 @@ jobs:
     name: "Run hlint"
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Set up HLint
       uses: haskell-actions/hlint-setup@v2
@@ -31,7 +31,7 @@ jobs:
     name: "Run fourmolu"
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: haskell-actions/run-fourmolu@v11
       with:
         version: "0.14.0.0"
@@ -56,7 +56,7 @@ jobs:
       matrix: ${{ fromJSON(needs.generateMatrix.outputs.matrix) }}
     name: Haskell GHC ${{ matrix.ghc }} cabal
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: haskell-actions/setup@v2
         id: setup
         with:
@@ -119,7 +119,7 @@ jobs:
     outputs:
       versions: ${{ steps.generate-versions.outputs.versions }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v31
       - name: Generate versions
         id: generate-versions
@@ -139,7 +139,7 @@ jobs:
       fail-fast: false # So the cache is still filled
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v31
       - uses: cachix/cachix-action@v16
         with:
@@ -161,7 +161,7 @@ jobs:
     runs-on:
       - ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: tfausak/cabal-gild-setup-action@v2
         with:
           version: 1.3.0.1
