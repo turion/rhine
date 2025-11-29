@@ -34,7 +34,7 @@ jobs:
     - uses: actions/checkout@v6
     - uses: haskell-actions/run-fourmolu@v11
       with:
-        version: "0.14.0.0"
+        version: "0.15.0.0"
 
   generateMatrix:
     name: "Generate matrix from cabal"

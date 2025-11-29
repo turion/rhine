@@ -36,7 +36,8 @@ apInjs_NPNonEmpty :: (SListI xs) => NP f (x ': xs) -> NonEmpty (NS f (x ': xs))
 apInjs_NPNonEmpty (fx :* fxs) = Z fx :| (S <$> apInjs_NP fxs)
 
 -- | A nonempty list of 'StreamT's, unzipped into their states and their steps.
-data Streams m b = forall state (states :: [Type]).
+data Streams m b
+  = forall state (states :: [Type]).
   (SListI states) =>
   Streams
   { states :: NP I (state ': states)
