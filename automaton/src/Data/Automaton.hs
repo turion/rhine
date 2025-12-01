@@ -499,6 +499,10 @@ The new values are 'mappend'ed from the left.
 mappendFrom :: (Monoid w, Monad m) => w -> Automaton m w w
 mappendFrom = accumulateWith mappend
 
+-- | Like 'mappendFrom', but 'mappend'ing new values from the right.
+mappendFromR :: (Monoid w, Monad m) => w -> Automaton m w w
+mappendFromR = accumulateWith $ flip mappend
+
 -- | Delay the input by one step.
 delay ::
   (Applicative m) =>
