@@ -70,7 +70,11 @@ tests =
     , testCase "delay" $ runIdentity (embed (count >>> delay 0) [(), (), ()]) @?= [0, 1, 2]
     , testCase "sumS" $ runIdentity (embed (arr (const (1 :: Float)) >>> sumS) [(), (), ()]) @?= [1, 2, 3]
     , testCase "sumN" $ runIdentity (embed (arr (const (1 :: Integer)) >>> sumN) [(), (), ()]) @?= [1, 2, 3]
-    , testCase "lastS" $ runIdentity (embed (lastS 0) [Nothing, Just 10]) @?= [0, 10]
+    , testGroup
+        "lastS"
+        [ testCase "Remembers a Just value" $ runIdentity (embed (lastS 0) [Nothing, Just 10]) @?= [0, 10]
+        , testCase "Remembers the last of several Just values" $ runIdentity (embed (lastS 0) [Nothing, Nothing, Just 1, Nothing, Just 2, Just 10]) @?= [0, 0, 1, 1, 2, 10]
+        ]
     , Automaton.Except.tests
     , Automaton.Trans.Accum.tests
     , Automaton.Trans.Changeset.tests
@@ -94,4 +98,4 @@ char :: Char -> Parser Char
 char c = do
   c' <- aChar
   guard $ c == c'
-  return c
+  pure c
