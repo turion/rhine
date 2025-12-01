@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -31,9 +30,8 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 
 -- profunctors
-import Data.Profunctor (Choice (..), Profunctor (..), Strong)
-import Data.Profunctor.Strong (Strong (..))
-import Data.Profunctor.Traversing
+import Data.Profunctor (Choice (..), Cochoice (..), Profunctor (..), Strong (..))
+import Data.Profunctor.Traversing (Traversing (..))
 
 -- selective
 import Control.Selective (Selective)
@@ -41,11 +39,17 @@ import Control.Selective (Selective)
 -- simple-affine-space
 import Data.VectorSpace (VectorSpace (..))
 
--- align
+-- these
+import Data.These (these)
+
+-- witherable
+import Witherable (Filterable (..), Witherable)
+
+-- semialign
 import Data.Semialign (Align (..), Semialign (..))
 
 -- automaton
-import Data.Stream (StreamT (..), fixStream)
+import Data.Stream (StreamT (..))
 import Data.Stream qualified as StreamT
 import Data.Stream.Internal (JointState (..))
 import Data.Stream.Optimized (
@@ -81,8 +85,8 @@ automaton2 :: Automaton m b c
 sequentially :: Automaton m a c
 sequentially = automaton1 >>> automaton2
 
-parallely :: Automaton m (a, b) (b, c)
-parallely = automaton1 *** automaton2
+inParallel :: Automaton m (a, b) (b, c)
+inParallel = automaton1 *** automaton2
 @
 In sequential composition, the output of the first automaton is passed as input to the second one.
 In parallel composition, both automata receive input simulataneously and process it independently.
@@ -129,6 +133,9 @@ instance (Eq s, Floating s, VectorSpace v s, Applicative m) => VectorSpace (Auto
   dot (Automaton s) (Automaton v) = coerce $ dot s v
   normalize (Automaton v) = coerce v
 
+{- | Run both automata in parallel and use @'Semialign' m@ to decide which automaton produces output.
+  If you understand @m@ as an effect that models the passage of time, then 'align' runs both automata concurrently.
+-}
 instance (Semialign m) => Semialign (Automaton m a) where
   align automaton1 automaton2 =
     Automaton $
@@ -426,6 +433,22 @@ instance (Monad m) => Traversing (Automaton m) where
   wander f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ f $ runReaderT m
   {-# INLINE wander #-}
 
+instance (Monad m) => Cochoice (Automaton m) where
+  unleft = handleAutomaton $ \StreamT {state, step} ->
+    let
+      go s ea = do
+        Result s' ebd <- runReaderT (step s) ea
+        case ebd of
+          Left b -> pure $ Result s' b
+          Right d -> go s $ Right d
+     in
+      StreamT
+        { state
+        , step = \s -> ReaderT $ \a -> go s $ Left a
+        }
+
+-- ** Traversing automata
+
 -- | Only step the automaton if the input is 'Just'.
 mapMaybeS :: (Monad m) => Automaton m a b -> Automaton m (Maybe a) (Maybe b)
 mapMaybeS = traverse'
@@ -446,22 +469,70 @@ traverseS_ automaton = traverse' automaton >>> arr (const ())
 
 Caution: Uses memory of the order of the largest list that was ever input during runtime.
 -}
-parallely :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
+parallelyList :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
+parallelyList = parallely
+
+{- | Launch many copies of the automaton in parallel, depending on the input shape.
+
+* This generalises 'parallelyList' from lists to arbitrary 'Witherable's satisfying 'Align'
+  such as 'Map's, 'Seq'uences', and other data structures.
+* The copies of the automaton are launched on demand as the input shape changes in such a way that there are new positions.
+* The automaton copy on a particular position will always receive the input from that position.
+* Only those automaton copies on positions with a matching input will be stepped.
+
+For example, if the first input is a map with keys @k1@ and @k2@,
+two copies will be started, one for each key.
+If the next input map has keys @k1@ and @k3@,
+the first automaton at key @k1@ will be stepped,
+the copy at @k2@ will not be stepped and keeps its state,
+and a new copy will be launched at @k3@.
+
+Caution: Uses memory of the order of the largest input that was ever input during runtime.
+-}
+parallely :: (Applicative m, Witherable t, Align t) => Automaton m a b -> Automaton m (t a) (t b)
 parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
   where
-    parallely' :: (Applicative m) => StreamT (ReaderT a m) b -> StreamT (ReaderT [a] m) [b]
-    parallely' StreamT {state, step} = fixStream (JointState state) $ \fixstep jointState@(JointState s fixstate) -> ReaderT $ \case
-      [] -> pure $! Result jointState []
-      (a : as) -> apResult . fmap (:) <$> runReaderT (step s) a <*> runReaderT (fixstep fixstate) as
+    parallely' :: (Applicative m, Witherable t, Align t) => StreamT (ReaderT a m) b -> StreamT (ReaderT (t a) m) (t b)
+    parallely' StreamT {state, step} =
+      StreamT
+        { state = nil
+        , step = \s -> ReaderT $ \as ->
+            let aligned = align s as
+                traversed = traverse (these (\s -> pure $ Result s Nothing) (fmap (fmap Just) . runReaderT (step state)) (\s a -> fmap Just <$> runReaderT (step s) a)) aligned
+                tupleised = fmap (\(Result s aMaybe) -> (s, aMaybe)) <$> traversed
+             in tupleised <&> (\sas -> let output = Witherable.mapMaybe snd sas in Result (fst <$> sas) output)
+        }
 parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
+
+-- ** Interaction with 'StreamT'
+
+{- | Create an 'Automaton' from a stream.
+
+It will ignore its input.
+-}
+fromStream :: (Monad m) => StreamT m a -> Automaton m any a
+fromStream = Automaton . Stateful . hoist lift
+
+{- | Create a 'StreamT' from an 'Automaton'.
+
+The resulting stream can read the current input as an effect in 'ReaderT'.
+-}
+toStreamT :: (Functor m) => Automaton m a b -> StreamT (ReaderT a m) b
+toStreamT = StreamOptimized.toStreamT . getAutomaton
 
 -- | Given a transformation of streams, apply it to an automaton, without changing the input.
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
 
+-- | Like 'handleAutomaton_', but with fewer constraints.
+handleAutomatonF_ :: (Functor m) => (forall m. (Functor m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
+handleAutomatonF_ f = Automaton . StreamOptimized.withOptimizedF f . getAutomaton
+
 -- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
-handleAutomaton :: (Monad m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
+handleAutomaton :: (Functor m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
+
+-- ** Buffering
 
 {- | Buffer the output of an automaton. See 'Data.Stream.concatS'.
 
@@ -471,6 +542,36 @@ then the next 9 inputs will be ignored.
 -}
 concatS :: (Monad m) => Automaton m a [b] -> Automaton m a b
 concatS (Automaton automaton) = Automaton $ Data.Stream.Optimized.concatS automaton
+
+-- * Handling effects
+
+{- | Continuously interpret a first order effect.
+
+Several types are relevant here:
+
+* @sig@: An effect signature functor, that encodes one effect.
+  For example, @'Either' e@ for raising exceptions of type @e@, or @(w, )@ for a logging effect.
+* @eff@: A monad that carries the effect.
+  This can be a monad transformer stack including a transformer corresponding to @sig@, such as 'ExceptT' for 'Either'.
+  It can also be the @Eff@ monad of an effect library such as @polysemy@, @bluefin@, @effectful@ and so on.
+* @m@: The underlying monad in which the interpretation is performed, think "@eff@ without the effects from @sig@".
+
+This function takes two functions, one to create effects in @eff@ from the signature, and the other to fully interpret them in @m@,
+storing the complete effect information in @sig@ again.
+It then executes the given automaton, extracting the effect by interpretation, and sending it back in.
+The execution semantics is that of the monad @eff@, while the pure effect of the whole computation is returned in the output, encoded in @sig@.
+
+For examples, see 'Data.Stream.handleEffect'.
+-}
+handleEffect ::
+  (Monad m, Monad eff, Functor sig) =>
+  -- | Send a declarative effect in the signature to the effect carrier monad.
+  (forall x. sig x -> eff x) ->
+  -- | Interpret the effect in @m@, returning its result in the signature.
+  (forall x. eff x -> m (sig x)) ->
+  Automaton eff a b ->
+  Automaton m a (sig b)
+handleEffect send interpret = handleAutomaton $ StreamT.handleEffect (lift . send) (\raction -> ReaderT $ \a -> interpret $ runReaderT raction a)
 
 -- * Examples
 

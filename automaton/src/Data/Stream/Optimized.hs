@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -35,7 +35,6 @@ import Data.Semialign (Align (..), Semialign (..))
 import Data.Stream hiding (hoist')
 import Data.Stream qualified as StreamT
 import Data.Stream.Recursive (Recursive (..))
-import Data.Stream.Recursive qualified as Recursive (fromRecursive, toRecursive)
 import Data.Stream.Result
 
 {- | An optimized version of 'StreamT' which has an extra constructor for stateless streams.
@@ -51,7 +50,7 @@ data OptimizedStreamT m a
     Stateful (StreamT m a)
   | -- | A stateless stream is simply an action in a monad which is performed repetitively.
     Stateless (m a)
-  deriving (Functor)
+  deriving (Functor, Foldable, Traversable)
 
 {- | Remove the optimization layer.
 
@@ -150,6 +149,10 @@ In contrast to 'handleOptimized', the stream morphism must be independent of the
 withOptimized :: (Monad n) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> OptimizedStreamT n a -> OptimizedStreamT n b
 withOptimized f stream = Stateful $ f $ toStreamT stream
 
+-- | Like 'withOptimized', but with fewer constraints.
+withOptimizedF :: (Functor n) => (forall m. (Functor m) => StreamT m a -> StreamT m b) -> OptimizedStreamT n a -> OptimizedStreamT n b
+withOptimizedF f stream = Stateful $ f $ toStreamT stream
+
 {- | Map a morphism of streams to optimized streams.
 
 In contrast to 'withOptimized', the monad type is allowed to change.
@@ -188,7 +191,7 @@ stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 This will typically be a performance penalty.
 -}
 toRecursive :: (Functor m) => OptimizedStreamT m a -> Recursive m a
-toRecursive (Stateful stream) = Recursive.toRecursive stream
+toRecursive (Stateful stream) = StreamT.toRecursive stream
 toRecursive (Stateless f) = go
   where
     go = Recursive $ Result go <$> f
@@ -198,7 +201,7 @@ toRecursive (Stateless f) = go
   The internal state is the stream itself.
 -}
 fromRecursive :: Recursive m a -> OptimizedStreamT m a
-fromRecursive = Stateful . Recursive.fromRecursive
+fromRecursive = Stateful . StreamT.fromRecursive
 {-# INLINE fromRecursive #-}
 
 -- | See 'Data.Stream.concatS'.

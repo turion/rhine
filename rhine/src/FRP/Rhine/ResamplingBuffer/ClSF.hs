@@ -7,13 +7,13 @@ module FRP.Rhine.ResamplingBuffer.ClSF where
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 
 -- automaton
-import Data.Automaton
+import Data.Automaton hiding (toStreamT)
 import Data.Stream
 import Data.Stream.Optimized (toStreamT)
 import Data.Stream.Result (mapResultState)
 
 -- rhine
-import FRP.Rhine.ClSF.Core
+import FRP.Rhine.ClSF.Core hiding (toStreamT)
 import FRP.Rhine.ResamplingBuffer
 
 {- | Given a clocked signal function that accepts
@@ -39,6 +39,6 @@ clsfBuffer = clsfBuffer' . toStreamT . getAutomaton
     clsfBuffer' StreamT {state, step} =
       ResamplingBuffer
         { buffer = (state, [])
-        , put = \ti1 a (s, as) -> return (s, (ti1, a) : as)
+        , put = \ti1 a (s, as) -> pure (s, (ti1, a) : as)
         , get = \ti2 (s, as) -> mapResultState (,[]) <$> runReaderT (runReaderT (step s) as) ti2
         }
