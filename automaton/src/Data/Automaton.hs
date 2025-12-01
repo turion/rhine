@@ -492,7 +492,10 @@ accumulateWith ::
   Automaton m a b
 accumulateWith f state = unfold state $ \a b -> let b' = f a b in Result b' b'
 
--- | Like 'accumulateWith', with 'mappend' as the accumulation function.
+{- | Like 'accumulateWith', with 'mappend' as the accumulation function.
+
+The new values are 'mappend'ed from the left.
+-}
 mappendFrom :: (Monoid w, Monad m) => w -> Automaton m w w
 mappendFrom = accumulateWith mappend
 
