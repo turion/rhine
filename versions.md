@@ -4,6 +4,15 @@ This document lists those major version bumps that are more likely to have broke
 as well as guidance on how to fix these breakages.
 You might still want to consult the changelogs of the individual packages, since only the biggest breakages are documented here.
 
+## 1.5 -> 1.6: Changed definition of `SN` datatype
+
+For efficiency reasons, the `SN` datatype was changed to a newtype over `Automaton`.
+The resulting `SN` constructions profit from much better inlining than before.
+Thanks to András Kovács for recommending this.
+
+As a user, you now need to use the constructor functions `synchronous`, `sequential` and so on.
+They have the same name in lowercase, and have basically the same type signature.
+
 ## 1.2 -> 1.3: Removed dunai dependency
 
 Rhine doesn't depend on [`dunai`](https://hackage.haskell.org/package/dunai) anymore.

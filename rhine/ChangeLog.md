@@ -5,6 +5,11 @@
 * Removed `SN` GADT in favour of semantic functions, for a > 100x speedup in some benchmarks
   (https://github.com/turion/rhine/pull/348)
 
+## 1.6
+
+* Support GHC 9.12
+* Replace 'SN' GADT definition by newtype. Thanks to András Kovács for the suggestion.
+
 ## 1.5
 
 * Added `forever` utility for recursion in `ClSFExcept`
