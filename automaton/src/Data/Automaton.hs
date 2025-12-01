@@ -20,7 +20,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
 import Data.Maybe (fromMaybe)
-import Data.Monoid (First (..), Sum (..))
+import Data.Monoid (Last (..), Sum (..))
 import Prelude hiding (id, (.))
 
 -- mmorph
@@ -547,9 +547,7 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 
 -- | Remembers the last 'Just' value, defaulting to the given initialisation value.
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
--- From the naming, it's unintuitive that we use First and not Last,
--- but this is correct since mappendS appends from left.
-lastS a = arr First >>> mappendS >>> arr (getFirst >>> fromMaybe a)
+lastS a = arr Last >>> mappendFromR mempty >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
 
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
