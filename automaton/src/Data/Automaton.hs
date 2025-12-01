@@ -492,9 +492,16 @@ accumulateWith ::
   Automaton m a b
 accumulateWith f state = unfold state $ \a b -> let b' = f a b in Result b' b'
 
--- | Like 'accumulateWith', with 'mappend' as the accumulation function.
+{- | Like 'accumulateWith', with 'mappend' as the accumulation function.
+
+The new values are 'mappend'ed from the left.
+-}
 mappendFrom :: (Monoid w, Monad m) => w -> Automaton m w w
 mappendFrom = accumulateWith mappend
+
+-- | Like 'mappendFrom', but 'mappend'ing new values from the right.
+mappendFromR :: (Monoid w, Monad m) => w -> Automaton m w w
+mappendFromR = accumulateWith $ flip mappend
 
 -- | Delay the input by one step.
 delay ::
@@ -540,7 +547,7 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 
 -- | Remembers the last 'Just' value, defaulting to the given initialisation value.
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
-lastS a = arr Last >>> mappendS >>> arr (getLast >>> fromMaybe a)
+lastS a = arr Last >>> mappendFromR mempty >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
 
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
