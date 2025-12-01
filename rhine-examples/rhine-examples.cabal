@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: rhine-examples
-version: 1.5
+version: 1.6
 synopsis: Some simple example applications with rhine
 description:
   Diverse console example applications with rhine
@@ -25,9 +25,9 @@ common opts
 
   build-depends:
     base >=4.16 && <4.22,
-    monad-schedule ^>=1.5,
+    monad-schedule ^>=1.6,
     random >=1.1,
-    rhine ^>=1.5,
+    rhine ^>=1.6,
     simple-affine-space >=0.2,
     transformers >=0.5.6.2,
 
