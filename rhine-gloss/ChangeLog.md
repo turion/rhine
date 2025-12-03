@@ -1,5 +1,11 @@
 # Revision history for rhine-gloss
 
+## Upcoming
+
+* Remove dependency on `monad-schedule` because of performance problems.
+  See https://github.com/turion/rhine/issues/377.
+* Revert scheduling in the `IO` backend to `IO`.
+
 ## 1.4
 
 * Use `FreeAsyncT` in the gloss IO backend for fairer concurrency.

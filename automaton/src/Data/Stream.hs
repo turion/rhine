@@ -289,6 +289,9 @@ withStreamT f StreamT {state, step} = StreamT state $ fmap f step
 This function lets a stream control the speed at which it produces data,
 since it can decide to produce any amount of output at every step.
 -}
+
+-- FIXME this reverses? doc?
+-- FIXME generalise to traversable?
 concatS :: (Monad m) => StreamT m [a] -> StreamT m a
 concatS StreamT {state, step} =
   StreamT

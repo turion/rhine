@@ -40,6 +40,8 @@ common opts
     these >=1.1 && <=1.3,
     transformers >=0.5,
     witherable ^>=0.5,
+    sop-core ^>=0.5,
+    free >= 5.1,
 
   if flag(dev)
     ghc-options: -Werror
@@ -68,6 +70,7 @@ library
     Data.Automaton
     Data.Automaton.Filter
     Data.Automaton.Recursive
+    Data.Automaton.Schedule
     Data.Automaton.Trans.Accum
     Data.Automaton.Trans.Changeset
     Data.Automaton.Trans.Except
@@ -100,6 +103,7 @@ test-suite automaton-test
     Automaton
     Automaton.Except
     Automaton.Filter
+    Automaton.Schedule
     Automaton.Trans.Accum
     Automaton.Trans.Changeset
     Stream

@@ -70,7 +70,6 @@
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               # For custom version: Don't test because tests don't work on Mac (https://github.com/tweag/monad-bayes/issues/368)
               monad-bayes = dontCheck hprev.monad-bayes;
-              monad-schedule = dontCheck hprev.monad-schedule;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.10") {
               # Remove these after https://github.com/turion/rhine/issues/399
