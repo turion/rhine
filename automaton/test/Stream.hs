@@ -18,15 +18,13 @@ import Test.Tasty (testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
-import Automaton
 import Data.Stream (StreamT, constM, handleExceptT, handleWriterT, mmap, snapshot, streamToList, unfold, unfold_)
 import Data.Stream.Result
 
 tests =
   testGroup
     "Stream"
-    [ Automaton.tests
-    , testGroup
+    [ testGroup
         "Selective"
         [ testCase "Selects second stream based on first stream" $
             let automaton1 = unfold 0 (\n -> Result (n + 1) (if even n then Right n else Left n))
