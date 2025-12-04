@@ -5,7 +5,9 @@ import Control.Monad (when)
 import Control.Monad.Identity (Identity (..))
 
 -- transformers
-import Control.Monad.Trans.Except (throwE)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (ExceptT (..), throwE)
+import Control.Monad.Trans.Reader (ReaderT (..), ask)
 import Control.Monad.Trans.Writer.Lazy (runWriter, tell)
 
 -- selective
@@ -18,7 +20,9 @@ import Test.Tasty (testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
-import Data.Stream (StreamT, constM, handleExceptT, handleWriterT, mmap, snapshot, streamToList, unfold, unfold_)
+import Data.Stream (StreamT (..), constM, foreverExceptE, handleExceptT, handleWriterT, mmap, snapshot, streamToList, unfold, unfold_)
+import Data.Stream.Except qualified as StreamExcept
+import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Result
 
 tests =
@@ -56,7 +60,44 @@ tests =
                  in take 3 (fmap fst $ runIdentity $ streamToList $ handleWriterT stream) @?= [[1], [1, 2], [1, 2, 3]]
             ]
         ]
+    , testGroup
+        "foreverExceptE"
+        [ testCase "Uses initial ReaderT value, stores exceptions, and resets state" $
+            take 5 (runIdentity $ streamToList $ foreverExceptE 0 throwsNext)
+              @?= [0, 1, 2, 3, 4]
+        , testCase "StreamExcept.foreverE behaves the same for stateful streams" $
+            let streamExcept = StreamExcept.CoalgebraicExcept $ StreamOptimized.Stateful throwsNext
+             in take 5 (runIdentity $ streamToList $ StreamOptimized.toStreamT $ StreamExcept.foreverE 0 streamExcept)
+                  @?= [0, 1, 2, 3, 4]
+        , testCase "StreamExcept.foreverE handles stateless streams" $
+            let stateless =
+                  StreamExcept.CoalgebraicExcept $
+                    StreamOptimized.Stateless $ do
+                      ExceptT $ ReaderT $ \e -> if e > 10 then pure $ Right e else pure $ Left $ e + 1
+             in take 4 (runIdentity $ streamToList $ StreamOptimized.toStreamT $ StreamExcept.foreverE 0 stateless)
+                  @?= [11, 11, 11, 11]
+        , testCase "StreamExcept.foreverE handles RecursiveExcept via bind" $
+            let recursive = StreamExcept.RecursiveExcept $
+                  StreamOptimized.toRecursive $
+                    StreamOptimized.Stateful $
+                      StreamT 0 $ \n -> ExceptT $ ReaderT $ \lastE ->
+                        if n < lastE
+                          then pure $ Right $ Result (n + 1) n
+                          else pure $ Left $ lastE + 1
+             in take 10 (runIdentity $ streamToList $ StreamOptimized.toStreamT $ StreamExcept.foreverE 0 recursive)
+                  @?= [0, 0, 1, 0, 1, 2, 0, 1, 2, 3]
+        ]
     ]
 
 nats :: (Applicative m) => StreamT m Int
 nats = unfold_ 0 (+ 1)
+
+-- | Emit the current ReaderT value when 'shouldThrow' is False; otherwise throw its successor.
+throwsNext :: StreamT (ExceptT Int (ReaderT Int Identity)) Int
+throwsNext = StreamT False $ \shouldThrow ->
+  do
+    exceptionValue <- lift ask
+    if shouldThrow
+      then throwE (exceptionValue + 1)
+      else
+        pure $ Result True exceptionValue
