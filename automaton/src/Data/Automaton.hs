@@ -653,6 +653,12 @@ lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendFromR mempty >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
 
+-- | Indefinitely outputs the first input value
+initial :: (Applicative m) => Automaton m a a
+initial = unfold Nothing $ \aInput -> \case
+  Nothing -> Result (Just aInput) aInput
+  s@(Just a) -> Result s a
+
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => (a -> m b) -> Automaton m a b
 initialised = Automaton . Stateful . StreamT.initialised . ReaderT

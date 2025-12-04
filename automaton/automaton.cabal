@@ -52,6 +52,7 @@ common opts
     FlexibleContexts
     FlexibleInstances
     ImportQualifiedPost
+    LambdaCase
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType
