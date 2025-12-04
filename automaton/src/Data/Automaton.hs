@@ -5,6 +5,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Data.Automaton where
 
@@ -650,6 +651,12 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendFromR mempty >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
+
+-- | Indefinitely outputs the first input value
+firstS :: Applicative m => Automaton m a a
+firstS = unfold Nothing $ \aInput -> \case
+  Nothing -> Result (Just aInput) aInput
+  s@(Just a) -> Result s a
 
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => (a -> m b) -> Automaton m a b
