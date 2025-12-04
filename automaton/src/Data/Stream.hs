@@ -21,6 +21,7 @@ import Prelude hiding (Applicative (..))
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except (ExceptT (..), except, runExceptT, throwE, withExceptT)
 import Control.Monad.Trans.Maybe (MaybeT (..))
+import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.Writer (WriterT (runWriterT), writer)
 
 -- mmorph
@@ -355,6 +356,23 @@ foreverExcept StreamT {state, step} =
       case resultOrException of
         Left _ -> stepNew state
         Right result -> pure result
+
+{- | Like 'foreverExcept', but keep the last thrown exception.
+
+Before any exception was thrown, an initialisation value is given.
+-}
+foreverExceptE :: (Functor m, Monad m) => e -> StreamT (ExceptT e (ReaderT e m)) a -> StreamT m a
+foreverExceptE e StreamT {state, step} =
+  StreamT
+    { state = JointState e state
+    , step = stepNew
+    }
+  where
+    stepNew (JointState e s) = do
+      resultOrException <- runReaderT (runExceptT (step s)) e
+      case resultOrException of
+        Left e -> stepNew $! JointState e state
+        Right result -> pure $! mapResultState (JointState e) result
 
 -- | Whenever an exception occurs, output it and retry on the next step.
 exceptS :: (Applicative m) => StreamT (ExceptT e m) b -> StreamT m (Either e b)

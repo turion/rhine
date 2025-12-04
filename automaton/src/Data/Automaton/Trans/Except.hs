@@ -322,6 +322,15 @@ safe = try . liftS
 forever :: (Monad m) => AutomatonExcept a b m e -> Automaton m a b
 forever = Automaton . StreamExcept.forever . getAutomatonExcept
 
+{- | Like 'forever', but keep the last thrown exception.
+
+Before any exception was thrown, an initialisation value is given.
+-}
+foreverE :: (Monad m) =>
+  -- | The initial value that is supplied to the 'ReaderT' context before the first exception is thrown
+  e -> AutomatonExcept a b (ReaderT e m) e -> Automaton m a b
+foreverE e = Automaton . StreamExcept.foreverE e . hoist (\rae -> ReaderT $ \e -> ReaderT $ \a -> runReaderT (runReaderT rae a) e) . getAutomatonExcept
+
 {- | Inside the 'AutomatonExcept' monad, execute an action of the wrapped monad.
 This passes the last input value to the action, but doesn't advance a tick.
 -}

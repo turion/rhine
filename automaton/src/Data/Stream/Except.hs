@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Data.Stream.Except where
 
 -- base
@@ -11,6 +12,7 @@ import Data.Void
 -- transformers
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except
+import Control.Monad.Trans.Reader (ReaderT (..))
 
 -- mmorph
 import Control.Monad.Morph (MFunctor, hoist)
@@ -19,7 +21,7 @@ import Control.Monad.Morph (MFunctor, hoist)
 import Control.Selective
 
 -- automaton
-import Data.Stream (foreverExcept)
+import Data.Stream (foreverExcept, foreverExceptE)
 import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
@@ -124,3 +126,19 @@ forever (CoalgebraicExcept (StreamOptimized.Stateful stream)) = StreamOptimized.
 forever (CoalgebraicExcept (StreamOptimized.Stateless f)) = StreamOptimized.Stateless go
   where
     go = runExceptT f >>= either (const go) pure
+
+{- | Like 'forever', but keep the last thrown exception.
+
+Before any exception was thrown, an initialisation value is given.
+-}
+foreverE :: (Monad m) =>
+  -- | The initial value that is supplied to the 'ReaderT' context before the first exception is thrown
+  e -> StreamExcept a (ReaderT e m) e -> OptimizedStreamT m a
+foreverE e = \case
+  recursive@(RecursiveExcept _) -> safely $ go e
+    where
+      go e = hoist (`runReaderT` e) recursive >>= go
+  (CoalgebraicExcept (StreamOptimized.Stateful stream)) -> StreamOptimized.Stateful $ foreverExceptE e stream
+  (CoalgebraicExcept (StreamOptimized.Stateless f)) -> StreamOptimized.Stateless $ go e
+    where
+      go e = runReaderT (runExceptT f) e >>= either go pure
