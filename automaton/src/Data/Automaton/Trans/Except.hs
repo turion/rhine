@@ -317,6 +317,8 @@ See 'safely' for an example.
 safe :: (Monad m) => Automaton m a b -> AutomatonExcept a b m e
 safe = try . liftS
 
+{- | Run the automaton until the exception is thrown, then restart, continuing this cycle forever.
+-}
 forever :: (Monad m) => AutomatonExcept a b m e -> Automaton m a b
 forever = Automaton . StreamExcept.forever . getAutomatonExcept
 

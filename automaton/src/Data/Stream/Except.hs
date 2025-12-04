@@ -97,11 +97,25 @@ instance MFunctor (StreamExcept a) where
   hoist morph (RecursiveExcept recursive) = RecursiveExcept $ hoist (mapExceptT morph) recursive
   hoist morph (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist (mapExceptT morph) coalgebraic
 
+{- | If no exception can occur, the stream can be executed without the 'ExceptT'
+layer.
+
+Used to exit the 'StreamExcept' context, often in combination with 'safe'.
+-}
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept
+
+{- | A stream without an 'ExceptT' layer never throws an exception,
+and can thus have an arbitrary exception type.
+
+In particular, the exception type can be 'Void', so it can be used as the last statement in a 'StreamExcept' @do@-block.
+See 'safely' for an example.
+-}
 safe :: (Monad m) => OptimizedStreamT m a -> StreamExcept a m void
 safe = CoalgebraicExcept . hoist lift
 
+{- | Run the stream until the exception is thrown, then restart, continuing this cycle forever.
+-}
 forever :: (Monad m) => StreamExcept a m e -> OptimizedStreamT m a
 forever recursive@(RecursiveExcept _) = safely go
   where
