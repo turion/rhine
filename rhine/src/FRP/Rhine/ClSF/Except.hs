@@ -61,6 +61,7 @@ throwOn' = proc (b, e) ->
   if b
     then throwS -< e
     else returnA -< ()
+{-# INLINABLE throwOn' #-}
 
 -- | Throw the exception 'e' whenever the function evaluates to 'True'.
 throwOnCond :: (Monad m) => (a -> Bool) -> e -> ClSF (ExceptT e m) cl a a
