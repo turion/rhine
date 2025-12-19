@@ -354,6 +354,23 @@ stepAutomaton (Automaton automatonT) a =
     <&> mapResultState Automaton
 {-# INLINE stepAutomaton #-}
 
+{- | Run a number of steps of an automaton.
+
+This consumes the input values, performs all side effects, and returns the updated automaton together with all output value.
+
+Essentially, this performs 'stepAutomaton' for every input.
+-}
+stepsAutomaton :: (Functor m, Monad m) => Automaton m a b -> [a] -> m (Result (Automaton m a b) [b])
+stepsAutomaton automaton@(Automaton stream) as = case stream of
+  Stateless f -> Result automaton <$> traverse (runReaderT f) as
+  Stateful StreamT {state, step} -> go state as <&> mapResultState (Automaton . Stateful . flip StreamT step)
+    where
+      go s [] = pure $ Result s []
+      go s (a : as) = do
+        Result s' b <- runReaderT (step s) a
+        fmap (b :) <$> go s' as
+{-# INLINE stepsAutomaton #-}
+
 {- | Run an automaton with trivial input and output indefinitely.
 
 If the input and output of an automaton does not contain information,
@@ -389,6 +406,10 @@ embed (Automaton (Stateful StreamT {state, step})) = go state
 embed (Automaton (Stateless m)) = mapM $ runReaderT m
 
 -- * Modifying automata
+
+-- | Adds a copy of itself (with advancing state) to the output.
+selfAware :: Functor m => Automaton m a b -> Automaton m a (b, Automaton m a b)
+selfAware (Automaton os) = Automaton $ fmap Automaton <$> StreamOptimized.selfAware os
 
 -- | Change the input and output type and effect of an automaton without changing its state type.
 withAutomaton :: (Functor m1, Functor m2) => (forall s. (a1 -> m1 (Result s b1)) -> (a2 -> m2 (Result s b2))) -> Automaton m1 a1 b1 -> Automaton m2 a2 b2

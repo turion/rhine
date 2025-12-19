@@ -186,6 +186,11 @@ stepOptimizedStream (Stateful stream) = mapResultState Stateful <$> stepStream s
 stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 {-# INLINE stepOptimizedStream #-}
 
+-- | Adds a copy of itself (with advancing state) to the output.
+selfAware :: Functor m => OptimizedStreamT m a -> OptimizedStreamT m (a, OptimizedStreamT m a)
+selfAware (Stateful stream) = Stateful $ fmap Stateful <$> StreamT.selfAware stream
+selfAware os@(Stateless m) = Stateless $ fmap (, os) m
+
 {- | Translate to the recursive encoding of streams.
 
 This will typically be a performance penalty.
