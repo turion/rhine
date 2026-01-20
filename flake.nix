@@ -58,7 +58,7 @@
                 sha256 = "sha256-JK2Xya+xtPFIjJ6I+bb7dCU+JBJdhxGUMxB9jEZxZ78=";
               } { };
               # Transitive dependencies of monad-bayes
-              vty = hprev.vty_6_4;
+              vty = hprev.vty_6_5;
               brick = hprev.callHackageDirect {
                 pkg = "brick";
                 ver = "2.10";
@@ -204,7 +204,7 @@
       devShells = forAllPlatforms (systems: pkgs: mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
-          nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.4")
+          nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.6")
             haskell-language-server
           ) ++ (with pkgs; [
             haskellPackages.fourmolu
