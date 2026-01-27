@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: automaton
-version: 1.6
+version: 1.6.1
 synopsis: Effectful streams and automata in coalgebraic encoding
 description:
   Effectful streams have an internal state and a step function.
