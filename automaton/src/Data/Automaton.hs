@@ -476,7 +476,7 @@ parallelyList = parallely
 {- | Launch many copies of the automaton in parallel, depending on the input shape.
 
 * This generalises 'parallelyList' from lists to arbitrary 'Witherable's satisfying 'Align'
-  such as 'Map's, 'Seq'uences', and other data structures.
+  such as 'Map's, 'Seq'uences, and other data structures.
 * The copies of the automaton are launched on demand as the input shape changes in such a way that there are new positions.
 * The automaton copy on a particular position will always receive the input from that position.
 * Only those automaton copies on positions with a matching input will be stepped.
