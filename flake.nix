@@ -65,7 +65,11 @@
                 sha256 = "sha256-m1PvPySOuTZbcnCm4j7M7AihK0w8OGKumyRR3jU5nfw=";
               } { };
 
-              changeset = markUnbroken (doJailbreak hprev.changeset);
+              changeset = hprev.callHackageDirect {
+                pkg = "changeset";
+                ver = "0.1.1";
+                sha256 = "sha256-Y8F48Fe1m5YYnQ8IPcpS7rS19kcYqrnRC9RsToSOweI=";
+              } { };
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               # For custom version: Don't test because tests don't work on Mac (https://github.com/tweag/monad-bayes/issues/368)
