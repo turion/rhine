@@ -30,7 +30,7 @@ common opts
   build-depends:
     MonadRandom >=0.5,
     base >=4.16 && <4.22,
-    changeset ^>=0.1.0.2,
+    changeset ^>=0.1.1,
     mmorph ^>=1.2,
     mtl >=2.2 && <2.4,
     profunctors ^>=5.6,

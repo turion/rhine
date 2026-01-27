@@ -58,14 +58,18 @@
                 sha256 = "sha256-JK2Xya+xtPFIjJ6I+bb7dCU+JBJdhxGUMxB9jEZxZ78=";
               } { };
               # Transitive dependencies of monad-bayes
-              vty = hprev.vty_6_4;
+              vty = hprev.vty_6_5;
               brick = hprev.callHackageDirect {
                 pkg = "brick";
                 ver = "2.10";
                 sha256 = "sha256-m1PvPySOuTZbcnCm4j7M7AihK0w8OGKumyRR3jU5nfw=";
               } { };
 
-              changeset = markUnbroken (doJailbreak hprev.changeset);
+              changeset = hprev.callHackageDirect {
+                pkg = "changeset";
+                ver = "0.1.1";
+                sha256 = "sha256-Y8F48Fe1m5YYnQ8IPcpS7rS19kcYqrnRC9RsToSOweI=";
+              } { };
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
               # For custom version: Don't test because tests don't work on Mac (https://github.com/tweag/monad-bayes/issues/368)
@@ -200,7 +204,7 @@
       devShells = forAllPlatforms (systems: pkgs: mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
-          nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.4")
+          nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.6")
             haskell-language-server
           ) ++ (with pkgs; [
             haskellPackages.fourmolu
