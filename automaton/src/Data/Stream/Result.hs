@@ -46,3 +46,4 @@ instance (Monad m) => Applicative (ResultStateT s m) where
 -- | Like 'unzip'.
 unzipResult :: (Functor f) => f (Result s a) -> Result (f s) (f a)
 unzipResult results = Result (resultState <$> results) (output <$> results)
+

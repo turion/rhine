@@ -15,7 +15,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Monoid (Ap (..))
 import Data.Tuple (swap)
-import Prelude hiding (Applicative (..))
+import Prelude hiding ((.), Applicative (..))
 
 -- transformers
 import Control.Monad.Trans.Class
@@ -42,6 +42,12 @@ import Data.Align
 import Data.Stream.Internal
 import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Result
+import Control.Monad.Trans.Reader (Reader, ask, runReader)
+import Control.Monad.Trans.Free (FreeT (..), liftF, iterT, hoistFreeT, foldFreeT, iterTM)
+import Control.Category (Category (..))
+import Data.Function ((&))
+import Control.Monad.Trans.State.Strict (StateT(..))
+import Control.Monad.Trans.Compose (ComposeT(..))
 
 -- * Creating streams
 
@@ -504,6 +510,8 @@ loop at runtime due to the coalgebraic encoding of the state.
 fixA :: (Applicative m) => StreamT m (a -> a) -> StreamT m a
 fixA StreamT {state, step} = fixStream (JointState state) $
   \stepA (JointState s ss) -> apResult <$> step s <*> stepA ss
+<<<<<<< conflict 2 of 2
++++++++ pmuwrqml a4bfa877 "Merge pull request #425 from turion/update_flake_lock_action" (rebase destination)
 
 -- * Effect handling
 
@@ -556,3 +564,30 @@ handleWriterT = handleEffect (writer . swap) (fmap swap . runWriterT)
 -- | Execute a stream until it stops, then output 'Nothing' forever.
 handleMaybeT :: (Monad m) => StreamT (MaybeT m) a -> StreamT m (Maybe a)
 handleMaybeT = handleEffect (MaybeT . pure) runMaybeT
+
+newtype StreamProcessor m a b  = StreamProcessor { getStreamProcessor :: StreamT (FreeT (Reader a) m) b}
+instance Monad m => Category (StreamProcessor m) where
+  id = StreamProcessor $ constM $ liftF ask
+  StreamProcessor StreamT { state = stateBC0, step = stepBC} . StreamProcessor StreamT { state = stateAB0, step = stepAB} = StreamProcessor $ StreamT
+    {state = JointState stateBC0 stateAB0
+    , step = \(JointState stateBC stateAB) -> do
+        -- foldFreeT (\f -> do
+        --   Result stateAB' b <- stepAB stateAB
+        --   Result stateBC' c <- runReader f b
+        --   pure $ Result _ _ ) $ stepBC stateBC
+        -- FIXME use result state?
+        (\(Result sab c, sbc) -> Result (JointState sab sbc) c) <$> runStateT (getComposeT $ iterTM (\f -> ComposeT $ StateT $ \sab -> do
+            Result sab' b <- stepAB sab
+            runStateT (getComposeT $ runReader f b) sab'
+            ) $ stepBC stateBC) stateAB
+    }
+
+parsp :: StreamProcessor m aL b -> StreamProcessor m aR b -> StreamProcessor m (Either aL aR) b
+parsp (StreamProcessor StreamT { state = stateL0, step = stepL}) (StreamProcessor StreamT { state = stateR0, step = stepR}) = StreamProcessor $ StreamT
+  {state = JointState stateL0 stateR0
+  -- , step = fmap (fmap (\(b, s) -> Result s b)) $ runStateT $ _ -- \(JointState stateL stateR) -> _
+  , step = _
+  }
+  where
+    merge :: FreeT (Reader aL) m b -> FreeT (Reader aR) m b -> FreeT (Reader (Either aL aR)) m b
+    merge = _ -- This can't work because it's internal choice
