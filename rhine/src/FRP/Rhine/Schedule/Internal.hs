@@ -1,9 +1,12 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE RankNTypes #-}
 
 module FRP.Rhine.Schedule.Internal where
 
 -- base
 import Control.Arrow
+import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar)
+import Control.Monad (forM_)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
@@ -19,8 +22,18 @@ import Data.SOP (HCollapse (hcollapse), HSequence (htraverse'), I (..), K (K), N
 -- monad-schedule
 import Control.Monad.Schedule.Class
 
+-- transformers
+import Control.Monad.Trans.Accum (AccumT)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (ExceptT (..))
+import Control.Monad.Trans.Reader (ReaderT (..), ask)
+import Control.Monad.Trans.Writer.CPS (WriterT, runWriterT, writerT)
+
 -- automaton
+import Control.Monad.Morph (MFunctor (hoist))
+import Data.Automaton (Automaton (..))
 import Data.Stream hiding (concatS)
+import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
 import Data.Stream.Result
 
 -- | One step of a stream, with the state type argument going last, so it is usable with sop-core.
@@ -86,3 +99,42 @@ scheduleStreams' = scheduleStreams . foldrMap1 buildStreams consStreams
         { states = I state :* states
         , steps = Step (ResultStateT step) :* steps
         }
+
+schedIO' :: NonEmpty (StreamT IO a) -> StreamT IO a
+schedIO' streams = initialising startStreams `comp` constM (ask >>= (lift . takeMVar))
+  where
+    startStreams = do
+      var <- newEmptyMVar
+      forM_ streams $ forkIO . reactimate . (`comp` constM (ask >>= (lift . putMVar var)))
+      pure var
+
+schedExcept' :: (Monad m) => (forall x. NonEmpty (StreamT m x) -> StreamT m x) -> NonEmpty (StreamT (ExceptT e m) a) -> StreamT (ExceptT e m) a
+schedExcept' sched streams =
+  streams
+    <&> exceptS
+    & sched
+    & withStreamT (fmap sequenceA >>> ExceptT)
+
+schedWriter :: (Monad m, Monoid w) => (forall x. NonEmpty (StreamT m x) -> StreamT m x) -> NonEmpty (StreamT (WriterT w m) a) -> StreamT (WriterT w m) a
+schedWriter sched =
+  fmap (withStreamT (runWriterT >>> fmap (\(Result s a, w) -> Result s (a, w))))
+    >>> sched
+    >>> withStreamT (fmap (\(Result s (a, w)) -> (Result s a, w)) >>> writerT)
+
+schedAccum :: (Monad m, Monoid w) => (forall x. NonEmpty (StreamT m x) -> StreamT m x) -> NonEmpty (StreamT (AccumT w m) a) -> StreamT (AccumT w m) a
+schedAccum sched = _
+
+schedReader :: (Monad m) => (forall x. NonEmpty (StreamT m x) -> StreamT m x) -> NonEmpty (StreamT (ReaderT r m) a) -> StreamT (ReaderT r m) a
+schedReader sched = fmap (withStreamT _) >>> _
+
+initialising :: (Applicative m, Monad m) => m r -> StreamT m r
+initialising action =
+  let step mr@(Just r) = pure $! Result mr r
+      step Nothing = (step . Just =<< action)
+   in StreamT
+        { state = Nothing
+        , step
+        }
+
+comp :: (Monad m) => StreamT m r -> StreamT (ReaderT r m) a -> StreamT m a
+comp smr srma = toStreamT $ hoist (`runReaderT` ()) $ getAutomaton $ Automaton (Stateful $ hoist lift smr) >>> Automaton (Stateful srma)

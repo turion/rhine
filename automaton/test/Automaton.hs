@@ -29,6 +29,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 -- automaton
 import Automaton.Except
 import Automaton.Filter
+import Automaton.Schedule
 import Automaton.Trans.Accum
 import Automaton.Trans.Changeset
 import Data.Automaton
@@ -80,6 +81,7 @@ tests =
     , Automaton.Filter.tests
     , Automaton.Trans.Accum.tests
     , Automaton.Trans.Changeset.tests
+    , Automaton.Schedule.tests
     ]
 
 inMaybe :: Automaton Maybe (Maybe a) a
