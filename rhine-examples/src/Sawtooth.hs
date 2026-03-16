@@ -18,4 +18,4 @@ sawtooth =
         returnA -< time
 
 main :: IO ()
-main = flow $ sawtooth >-> arrMCl print @@ (waitClock :: Millisecond 200)
+main = flow $ Present ^>>@ (sawtooth >-> arrMCl print @@ (waitClock :: Millisecond 200))
