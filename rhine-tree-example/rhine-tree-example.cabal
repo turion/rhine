@@ -29,7 +29,7 @@ executable dommy-ghc
         rhine,
         rhine-tree,
         jsaddle,
-        jsaddle-webkit2gtk,
+        -- jsaddle-webkit2gtk,
         lens
     other-modules:
         Dommy

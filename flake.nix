@@ -179,7 +179,12 @@
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
         mapAttrs (system: pkgs: f system (pkgs.extend overlay)) inputs.nixpkgs.legacyPackages;
-      rhine-tree-js = pkgs: import ./rhine-tree/nix { inherit pkgs overlay lib; };
+      rhine-tree-js = pkgs:
+        let
+          wasmPkgs = inputs.ghc-wasm-meta.packages.x86_64-linux;
+          result = import ./rhine-tree/nix { inherit pkgs overlay lib wasmPkgs; };
+        in
+        result;
     in
     {
       # Reexport the overlay so other downstream flakes can use it to develop rhine projects with low effort.
@@ -222,9 +227,26 @@
       # Serve static files only:
       #   nix run .#rhine-tree-js-serve
       #   # Then open: http://localhost:8080
+      # One-shot (compile + serve):
+      #   nix run .#rhine-tree-app-wasm
+      #   # Then open: http://localhost:8080
+      # Serve static files only (no WASM yet; ES modules need HTTP, not file://):
+      #   nix run .#rhine-tree-js-serve
+      #   # Then open: http://localhost:8080
+      # Manual three-step alternative:
+      # Step 1 — build the static files + build.sh:
+      #   nix build .#rhine-tree-js
+      #   cp -r --no-preserve=mode result/ dist/
+      # Step 2 — compile dommy.wasm (needs live Hackage; run inside the wasm shell):
+      #   nix develop .#wasm
+      #   cd dist && bash build.sh
+      # Step 3 — serve:
+      #   python3 -m http.server 8080 --directory dist/
+      #   # Then open: http://localhost:8080
       packages = forAllPlatforms (system: pkgs:                {
         default = pkgs.rhine-all;
-        rhine-tree-js = rhine-tree-js pkgs;
+        rhine-tree-js = (rhine-tree-js pkgs).staticFiles;
+        rhine-tree-js-serve = (rhine-tree-js pkgs).serveScript;
       } // lib.mapAttrs (ghcVersion: haskellPackages: pkgs.linkFarm "rhine-all-${ghcVersion}" (lib.genAttrs pnames (pname: haskellPackages.${pname}))) (hpsFor pkgs));
 
       # `nix run .#rhine-tree-app-wasm` — compile dommy.wasm and serve it.
@@ -270,10 +292,12 @@
       #   cabal run dommy-warp
       #   # Then open: http://localhost:8080
       #
-      # WASM shell — optional, for interactive debugging only.
-      #              `nix build .#rhine-tree-js` is now fully sandboxed.
+      # WASM shell — compile dommy.wasm after `nix build .#rhine-tree-js`
+      #              (or just use `nix run .#rhine-tree-app-wasm` instead):
+      #   nix build .#rhine-tree-js && cp -r --no-preserve=mode result/ dist/
       #   nix develop .#wasm
-      #   wasm32-wasi-cabal build ...
+      #   cd dist && bash build.sh
+      #   # (then serve dist/ with python3 -m http.server 8080)
       #
       # Format Haskell sources (fourmolu is available in every shell above):
       #   fourmolu -i $(git ls-files '*.hs')

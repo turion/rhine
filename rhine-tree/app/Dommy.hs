@@ -1,34 +1,13 @@
-{-# LANGUAGE ApplicativeDo #-}
-import Data.Functor (void)
-import Data.Text (Text)
-import FRP.Rhine.Tree
-import FRP.Rhine.Tree.Types (Content (ContentText), DOM (..), Node (..))
-import Language.Javascript.JSaddle
-  ( JSM,
-  )
-import qualified Data.Text as T
-import FRP.Rhine (count)
+{-# LANGUAGE GHCForeignImportPrim #-}
+-- | WASM entry point for the rhine-tree demo app.
+-- Build with: wasm32-wasi-cabal build exe:dommy
+--
+-- The `foreign export javascript` pragma is only meaningful with the GHC WASM
+-- backend. The JS loader (main.js) calls `hs_start` to boot the application.
+foreign export javascript "hs_start" main :: IO ()
 
-default (Text)
+import FRP.Rhine.Tree.App (mainJSM)
+import Language.Javascript.JSaddle.Wasm qualified as JSaddle.Wasm
 
 main :: IO ()
-main = mainJSM
--- main = run 8080 mainJSM -- using JSaddle Warp, needs an extra file
-
-mainJSM :: JSM ()
-mainJSM = do
-  clock <- createJSMClock
-  logJS "created"
-  flowJSM mainClSF clock
-
-mainClSF :: JSMSF DOM () ()
--- mainClSF = do
---   void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims" :: Text)]
---   void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims hier" :: Text)]
--- mainClSF = (void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims" :: Text)]) *>
---   (void $ permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims hier" :: Text)]) -- FIXME y do notaton no work?
-mainClSF = void $ proc () -> do
-  permanent'' $ Node ("p" :: Text) [] [ContentText ("I bims" :: Text)] -< ()
-  (_, i) <- permanent'' $ Node ("div" :: Text) [] [ContentText ("I bims hier" :: Text)] -< ()
-  n <- count -< ()
-  dynamic (Node "div" [] []) (varying $ Node "p" [] . pure . ContentText) -< T.pack $ show (i, n :: Integer)
+main = JSaddle.Wasm.run mainJSM
