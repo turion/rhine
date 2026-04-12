@@ -16,7 +16,7 @@ module Data.TimeDomain (
 where
 
 -- time
-import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
+import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
 
 {- |
 A time domain is an affine space representing a notion of time,
@@ -59,9 +59,13 @@ class TimeDifference d where
 
 -- | Differences between 'UTCTime's are measured in seconds.
 instance TimeDomain UTCTime where
-  type Diff UTCTime = Double
-  diffTime t1 t2 = realToFrac $ diffUTCTime t1 t2
-  addTime = flip $ addUTCTime . realToFrac
+  type Diff UTCTime = NominalDiffTime
+  diffTime = diffUTCTime
+  addTime = flip addUTCTime
+
+instance TimeDifference NominalDiffTime where
+  difference = (-)
+  add = (+)
 
 instance TimeDifference Double where
   difference = (-)

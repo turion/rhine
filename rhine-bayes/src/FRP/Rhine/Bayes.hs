@@ -108,15 +108,15 @@ wienerVaryingLogDomain = wienerVarying >>> arr Exp
   * The output is the number of events since the last tick.
 -}
 poissonInhomogeneous ::
-  (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
-  BehaviourF m td (Diff td) Int
-poissonInhomogeneous = arrM $ \rate -> ReaderT $ \timeInfo -> poisson $ realToFrac $ sinceLast timeInfo / rate
+  (MonadDistribution m, Measured t (Diff td), RealFrac t) =>
+  BehaviourF m td t Int
+poissonInhomogeneous = arrM $ \rate -> ReaderT $ \timeInfo -> poisson $ realToFrac $ measure (sinceLast timeInfo) / rate
 
 -- | Like 'poissonInhomogeneous', but the rate is constant.
 poissonHomogeneous ::
-  (MonadDistribution m, Real (Diff td), Fractional (Diff td)) =>
+  (MonadDistribution m, Measured t (Diff td), RealFrac t) =>
   -- | The (constant) rate of the process
-  Diff td ->
+  t ->
   BehaviourF m td () Int
 poissonHomogeneous rate = arr (const rate) >>> poissonInhomogeneous
 
@@ -125,12 +125,12 @@ poissonHomogeneous rate = arr (const rate) >>> poissonInhomogeneous
   The live input corresponds to inverse shape parameter, which is variance over mean.
 -}
 gammaInhomogeneous ::
-  (MonadDistribution m, Real (Diff td), Fractional (Diff td), Floating (Diff td)) =>
+  (MonadDistribution m, Measured t (Diff td), RealFrac t, Floating t) =>
   -- | The scale parameter
-  Diff td ->
-  BehaviourF m td (Diff td) Int
+  t ->
+  BehaviourF m td t Int
 gammaInhomogeneous gamma = proc rate -> do
-  t <- sinceInitS -< ()
+  t <- arr measure <<< sinceInitS -< ()
   accumulateWith (+) 0 <<< poissonInhomogeneous -< gamma / t * exp (-t / rate)
 
 {- | The inhomogeneous Bernoulli process, https://en.wikipedia.org/wiki/Bernoulli_process

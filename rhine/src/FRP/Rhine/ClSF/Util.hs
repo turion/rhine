@@ -36,6 +36,7 @@ import Data.TimeDomain
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.ClSF.Except
 import FRP.Rhine.Clock
+import FRP.Rhine.Clock.Util (Measured (measure))
 
 -- * Read time information
 
@@ -155,19 +156,19 @@ clId = Control.Category.id
 integralFrom ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   v ->
   BehaviorF m td v v
 integralFrom v0 = proc v -> do
   _sinceLast <- timeInfoOf sinceLast -< ()
-  sumFrom v0 -< _sinceLast *^ v
+  sumFrom v0 -< measure _sinceLast *^ v
 
 -- | Euler integration, with zero initial offset.
 integral ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   BehaviorF m td v v
 integral = integralFrom zeroVector
@@ -179,20 +180,20 @@ integral = integralFrom zeroVector
 derivativeFrom ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   v ->
   BehaviorF m td v v
 derivativeFrom v0 = proc v -> do
   vLast <- delay v0 -< v
   TimeInfo {..} <- timeInfo -< ()
-  returnA -< (v ^-^ vLast) ^/ sinceLast
+  returnA -< (v ^-^ vLast) ^/ measure sinceLast
 
 -- | Numerical derivative with input initialised to zero.
 derivative ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   BehaviorF m td v v
 derivative = derivativeFrom zeroVector
@@ -203,7 +204,7 @@ derivative = derivativeFrom zeroVector
 threePointDerivativeFrom ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , Measured s (Diff td)
   , Num s
   ) =>
   -- | The initial position
@@ -220,7 +221,7 @@ threePointDerivativeFrom v0 = proc v -> do
 threePointDerivative ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , Measured s (Diff td)
   , Num s
   ) =>
   BehaviorF m td v v
@@ -239,7 +240,7 @@ threePointDerivative = threePointDerivativeFrom zeroVector
 weightedAverageFrom ::
   ( Monad m
   , VectorSpace v s
-  , s ~ Diff td
+  , Measured s (Diff td)
   , Num s
   ) =>
   -- | The initial position
@@ -259,7 +260,7 @@ averageFrom ::
   ( Monad m
   , VectorSpace v s
   , Floating s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   -- | The initial position
   v ->
@@ -269,7 +270,7 @@ averageFrom ::
 averageFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = exp $ -(sinceLast / t)
+    weight = exp $ -(measure sinceLast / measure t)
   weightedAverageFrom v0 -< (v, weight)
 
 -- | An average, or low pass, initialised to zero.
@@ -277,7 +278,7 @@ average ::
   ( Monad m
   , VectorSpace v s
   , Floating s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   -- | The time scale on which the signal is averaged
   Diff td ->
@@ -293,7 +294,7 @@ averageLinFrom ::
   ( Monad m
   , VectorSpace v s
   , Floating s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   -- | The initial position
   v ->
@@ -303,7 +304,7 @@ averageLinFrom ::
 averageLinFrom v0 t = proc v -> do
   TimeInfo {..} <- timeInfo -< ()
   let
-    weight = t / (sinceLast + t)
+    weight = measure t / (measure sinceLast + measure t)
   weightedAverageFrom v0 -< (v, weight)
 
 -- | Linearised version of 'average'.
@@ -311,7 +312,7 @@ averageLin ::
   ( Monad m
   , VectorSpace v s
   , Floating s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   -- | The time scale on which the signal is averaged
   Diff td ->
@@ -325,7 +326,7 @@ lowPass ::
   ( Monad m
   , VectorSpace v s
   , Floating s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   Diff td ->
   BehaviourF m td v v
@@ -337,7 +338,7 @@ highPass ::
   , VectorSpace v s
   , Floating s
   , Eq s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   -- | The time constant @t@
   Diff td ->
@@ -350,7 +351,7 @@ bandPass ::
   , VectorSpace v s
   , Floating s
   , Eq s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   -- | The time constant @t@
   Diff td ->
@@ -363,7 +364,7 @@ bandStop ::
   , VectorSpace v s
   , Floating s
   , Eq s
-  , s ~ Diff td
+  , Measured s (Diff td)
   ) =>
   -- | The time constant @t@
   Diff td ->
