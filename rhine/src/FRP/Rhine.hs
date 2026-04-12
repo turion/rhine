@@ -28,7 +28,6 @@ import FRP.Rhine.Clock as X
 import FRP.Rhine.Clock.FixedStep as X
 import FRP.Rhine.Clock.Periodic as X
 import FRP.Rhine.Clock.Proxy as X
-import FRP.Rhine.Clock.Realtime.Audio as X
 import FRP.Rhine.Clock.Realtime.Busy as X
 import FRP.Rhine.Clock.Realtime.Event as X
 import FRP.Rhine.Clock.Realtime.Millisecond as X
