@@ -1,26 +1,139 @@
-{ pkgs, overlay, lib, wasmPkgs }:
-# rhine-tree browser app — static web files + build script.
+{ pkgs, nixpkgsSrc, lib, ghcWasmMeta }:
+# rhine-tree browser app — WASM cross-compiled fully inside the Nix sandbox.
 #
 # `nix build .#rhine-tree-js` produces a directory containing:
-#   - main.js      : ES-module WASI loader (loads dommy.wasm at runtime)
-#   - index.html   : minimal HTML page
-#   - build.sh     : script that compiles dommy.wasm when run inside `nix develop .#wasm`
+#   - main.js          : ES-module WASI loader (loads dommy.wasm at runtime)
+#   - ghc_wasm_jsffi.js: generated JSFFI glue (produced by post-link.mjs)
+#   - dommy.wasm       : the compiled WASM binary (optimised with wasm-opt)
+#   - index.html       : minimal HTML page
 #
-# WASM compilation cannot run inside the Nix sandbox because wasm32-wasi-cabal
-# needs live network access to the Hackage index (the same constraint affects
-# every project in https://github.com/haskell-wasm).
-#
-# Full workflow:
-#   nix build .#rhine-tree-js          # build the static files + build.sh
-#   cp -r --no-preserve=mode result/ dist/
-#   nix develop .#wasm                 # enter the WASM toolchain shell
-#   cd dist && bash build.sh           # compiles dommy.wasm into dist/
-#   # exit the shell, then serve:
-#   python3 -m http.server 8080 --directory dist/
-#   # open http://localhost:8080
+# Everything is built in-sandbox via callCabal2nix cross-compilation.
+# No network access, no `cabal update`, no wasm32-wasi-cabal needed at runtime.
+# Approach adapted from https://github.com/ners/nix-wasm (GHC 9.12 / ghc9122).
 let
-  npmDeps = wasmPkgs.npm-deps;
-  wasmTools = wasmPkgs.all_9_12;
+  system = pkgs.stdenv.system;
+  ghc = "ghc9122";
+  targetPrefix = "wasm32-wasi-";
+
+  # Instantiate nixpkgs for the wasm32-wasi cross target.
+  # This mirrors the ners/nix-wasm GHC 9.12 approach exactly.
+  wasmPkgs = import nixpkgsSrc {
+    inherit system;
+    crossSystem = lib.systems.elaborate lib.systems.examples.wasi32 // { isStatic = false; };
+    config.replaceCrossStdenv = { buildPackages, baseStdenv }:
+      buildPackages.stdenvNoCC.override {
+        inherit (baseStdenv) buildPlatform hostPlatform targetPlatform;
+        cc = ghcWasmMeta.packages.${system}.all_9_12 // {
+          isGNU = false;
+          isClang = true;
+          libc = ghcWasmMeta.packages.${system}.wasi-sdk.overrideAttrs
+            (attrs: { pname = attrs.name; version = "unstable1"; });
+          inherit targetPrefix;
+          bintools = ghcWasmMeta.packages.${system}.all_9_12 // {
+            inherit targetPrefix;
+            bintools = ghcWasmMeta.packages.${system}.all_9_12 // { inherit targetPrefix; };
+          };
+        };
+      };
+    crossOverlays = [
+      (final: prev: {
+        cabal-install = ghcWasmMeta.packages.${system}.wasm32-wasi-cabal-9_12;
+        haskell = (prev.haskell.override (old: {
+          buildPackages = lib.recursiveUpdate old.buildPackages {
+            haskell.compiler.${ghc} =
+              ghcWasmMeta.packages.${system}.wasm32-wasi-ghc-9_12 // { inherit targetPrefix; };
+          };
+        })) // {
+          packageOverrides = lib.composeManyExtensions [
+            prev.haskell.packageOverrides
+            (hfinal: hprev: {
+              ghc = ghcWasmMeta.packages.${system}.wasm32-wasi-ghc-9_12 // {
+                inherit
+                  (nixpkgsSrc.legacyPackages.${system}.haskell.packages.${ghc}.ghc)
+                  version haskellCompilerName;
+                inherit targetPrefix;
+              };
+
+              mkDerivation = args: (hprev.mkDerivation (args // {
+                enableLibraryProfiling = false;
+                enableSharedLibraries = true;
+                enableStaticLibraries = false;
+                enableExternalInterpreter = false;
+                doBenchmark = false;
+                doHaddock = false;
+                doCheck = false;
+                jailbreak = true;
+                configureFlags = (args.configureFlags or [ ]) ++ [
+                  "--with-ld=${prev.stdenv.cc.bintools}/bin/lld"
+                  "--with-ar=${prev.stdenv.cc.bintools}/bin/ar"
+                  "--with-strip=${prev.stdenv.cc.bintools}/bin/strip"
+                ];
+                setupHaskellDepends = (args.setupHaskellDepends or [ ]) ++ [
+                  ghcWasmMeta.packages.${system}.wasi-sdk
+                ];
+                preBuild = "${args.preBuild or ""}\nexport NIX_CC=$CC";
+              })).overrideAttrs (attrs: {
+                name = "${attrs.pname}-${targetPrefix}${attrs.version}";
+                preSetupCompilerEnvironment = "export CC_FOR_BUILD=$CC";
+              });
+
+              # zlib needs the C library as a build dependency under WASM
+              zlib = prev.haskell.lib.compose.addBuildDepend hprev.zlib-clib hprev.zlib;
+
+              # Local monorepo packages — cross-compiled from source
+              time-domain = hfinal.callCabal2nix "time-domain" ../../time-domain { };
+              monad-schedule = hfinal.callCabal2nix "monad-schedule" ../../monad-schedule { };
+              automaton = hfinal.callCabal2nix "automaton" ../../automaton { };
+              automaton-lens = hfinal.callCabal2nix "automaton-lens" ../../automaton-lens { };
+              rhine = hfinal.callCabal2nix "rhine" ../../rhine { };
+              # Enable the `wasm` flag so dommy-warp (jsaddle-warp → warp → crypton → basement)
+              # is disabled — basement's cbits don't have a WASI code path.
+              rhine-tree = prev.haskell.lib.compose.enableCabalFlag "wasm"
+                (hfinal.callCabal2nix "rhine-tree" ../../rhine-tree { });
+            })
+          ];
+        };
+      })
+    ];
+  };
+
+  wasmHaskellPkgs = wasmPkgs.haskell.packages.${ghc};
+
+  # The dommy executable, compiled to WASM.
+  # callCabal2nix automatically depends on the local overrides above.
+  dommyWasmExe = wasmHaskellPkgs.rhine-tree;
+
+  # The raw .wasm binary produced by the GHC WASM backend.
+  dommyWasmBin = pkgs.runCommand "dommy-raw.wasm" { } ''
+    find ${dommyWasmExe}/bin -name "dommy" -print0 \
+      | xargs -0 -I{} cp {} $out
+  '';
+
+  # Run post-link.mjs to generate ghc_wasm_jsffi.js and the linked .wasm.
+  # post-link.mjs lives in GHC's lib directory inside the WASM toolchain.
+  postLinkOutputs = pkgs.runCommand "dommy-post-link"
+    {
+      nativeBuildInputs = [
+        ghcWasmMeta.packages.${system}.all_9_12
+        pkgs.nodejs
+      ];
+    } ''
+    mkdir -p $out
+    LIBDIR="$(wasm32-wasi-ghc --print-libdir)"
+    NODE_PATH="${ghcWasmMeta.packages.${system}.npm-deps}/lib/node_modules" \
+      node "$LIBDIR/post-link.mjs" \
+        --input ${dommyWasmBin} \
+        --output $out/ghc_wasm_jsffi.js
+  '';
+
+  # Optimise the linked WASM binary with wasm-opt.
+  dommyWasm = pkgs.runCommand "dommy.wasm"
+    {
+      nativeBuildInputs = [ ghcWasmMeta.packages.${system}.all_9_12 ];
+    } ''
+    wasm-opt -O2 --enable-bulk-memory \
+      ${postLinkOutputs}/dommy.wasm -o $out
+  '';
 
   # ES-module loader: instantiates the WASM binary + WASI shim in the browser.
   # Uses @bjorn3/browser_wasi_shim via jsDelivr CDN (bare npm specifiers are not
@@ -78,79 +191,17 @@ let
     '';
   };
 
-  # Shell script that compiles dommy.wasm.
-  # Must be run from inside `nix develop .#wasm` with the repo root as $PWD.
-  # Argument: destination directory (defaults to $PWD/dist).
-  buildSh = pkgs.writeShellScript "build.sh" ''
-    set -euo pipefail
-
-    DEST="''${1:-$PWD/dist}"
-    # When called via appScript the CWD is the repo root; fall back to git otherwise.
-    REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
-
-    if ! command -v wasm32-wasi-cabal &>/dev/null; then
-      echo "ERROR: wasm32-wasi-cabal not found." >&2
-      echo "Run this script from inside: nix develop .#wasm" >&2
-      exit 1
-    fi
-
-    # Write a minimal cabal.project in a subdirectory of $DEST that only
-    # includes rhine-tree, avoiding monorepo packages with TUI deps
-    # unbuildable under WASM (e.g. brick/vty pulled in by rhine-bayes).
-    WASM_PROJ_DIR="$DEST/wasm-project"
-    mkdir -p "$WASM_PROJ_DIR"
-    echo "packages: $REPO_ROOT/rhine-tree/rhine-tree.cabal" > "$WASM_PROJ_DIR/cabal.project"
-
-    # Update the Hackage index only if it is absent; wasm32-wasi-cabal update
-    # is known to segfault on some systems when the index is already up to date.
-    HACKAGE_INDEX="$HOME/.cabal/packages/hackage.haskell.org/01-index.tar"
-    if [[ ! -f "$HACKAGE_INDEX" ]]; then
-      echo "==> Updating Hackage index (first run)..."
-      wasm32-wasi-cabal update
-    else
-      echo "==> Hackage index already present, skipping update."
-    fi
-
-    echo "==> Building exe:dommy..."
-    wasm32-wasi-cabal build --project-dir="$WASM_PROJ_DIR" exe:dommy -j"$(nproc)"
-
-    WASM_BIN="$(wasm32-wasi-cabal list-bin --project-dir="$WASM_PROJ_DIR" exe:dommy 2>/dev/null | tail -1)"
-    echo "==> WASM binary: $WASM_BIN"
-
-    echo "==> Running post-link.mjs..."
-    LIBDIR="$(wasm32-wasi-ghc --print-libdir)"
-    export NODE_PATH="${npmDeps}/lib/node_modules"
-    node "$LIBDIR/post-link.mjs" --input "$WASM_BIN" --output "$DEST/ghc_wasm_jsffi.js"
-
-    echo "==> Optimising with wasm-opt..."
-    wasm-opt -O2 --enable-bulk-memory "$WASM_BIN" -o "$DEST/dommy.wasm"
-
-    echo "==> Done. Serve with:"
-    echo "    python3 -m http.server 8080 --directory $DEST/"
-  '';
-
   # The static files package (produced by `nix build .#rhine-tree-js`).
-  staticFiles = pkgs.runCommand "rhine-tree-js"
-    { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  # Contains everything needed to serve the app directly — no further build steps required.
+  staticFiles = pkgs.runCommand "rhine-tree-js" { } ''
     mkdir -p $out
-    cp ${mainJs}    $out/main.js
-    cp ${indexHtml} $out/index.html
-    cp ${buildSh}   $out/build.sh
-    chmod +x        $out/build.sh
-    # Convenience: serve the directory over HTTP so the browser can load it.
-    # Usage: nix build .#rhine-tree-js && bash result/serve.sh
-    cat > $out/serve.sh <<'EOF'
-#!/usr/bin/env python3
-import http.server, os, sys
-port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-print(f"Serving http://localhost:{port}/  (Ctrl-C to stop)")
-http.server.test(HandlerClass=http.server.SimpleHTTPRequestHandler, port=port)
-EOF
-    chmod +x $out/serve.sh
+    cp ${mainJs}                         $out/main.js
+    cp ${indexHtml}                      $out/index.html
+    cp ${postLinkOutputs}/ghc_wasm_jsffi.js $out/ghc_wasm_jsffi.js
+    cp ${dommyWasm}                      $out/dommy.wasm
   '';
 
-  # Serve the static files over HTTP for browser testing (no WASM compilation).
+  # Serve the static files over HTTP for browser testing.
   # Usage: nix run .#rhine-tree-js-serve
   serveScript = pkgs.writeShellApplication {
     name = "rhine-tree-js-serve";
@@ -162,40 +213,16 @@ EOF
     '';
   };
 
-  # All-in-one app script for `nix run .#rhine-tree-app-wasm`.
-  #
-  # Intentionally kept thin: it does NOT embed the WASM toolchain in its own
-  # closure (that would require downloading gigabytes just to evaluate the app
-  # derivation).  Instead it delegates to `nix develop .#wasm --command …`
-  # which fetches the toolchain lazily at runtime, outside any Nix sandbox, so
-  # `wasm32-wasi-cabal update` can reach the network.
+  # All-in-one script: build is already done by Nix, just serve.
+  # Usage: nix run .#rhine-tree-app-wasm
   appScript = pkgs.writeShellApplication {
     name = "rhine-tree-app-wasm";
-    runtimeInputs = [ pkgs.nix pkgs.git pkgs.python3 ];
+    runtimeInputs = [ pkgs.python3 ];
     text = ''
-      set -euo pipefail
-
-      # Must be run from inside the rhine repository.
-      REPO_ROOT="$(git rev-parse --show-toplevel)"
-
-      # Prepare a writable dist directory next to the repo.
-      DIST="$(mktemp -d -t rhine-tree-js.XXXXXX)"
-      trap 'rm -rf "$DIST"' EXIT
-
-      echo "==> Copying static files to $DIST..."
-      cp ${mainJs}    "$DIST/main.js"
-      cp ${indexHtml} "$DIST/index.html"
-      cp ${buildSh}   "$DIST/build.sh"
-
-      echo "==> Entering WASM shell and running build.sh..."
-      # `nix develop .#wasm --command …` puts all_9_12 tools on PATH and then
-      # runs the command without a sandbox, so network access works fine.
-      (cd "$REPO_ROOT" && nix develop .#wasm --command bash "$DIST/build.sh" "$DIST")
-
-      echo ""
-      echo "==> Serving at http://localhost:8080  (Ctrl-C to stop)"
-      echo "    Open: http://localhost:8080"
-      python3 -m http.server 8080 --directory "$DIST"
+      PORT="''${1:-8080}"
+      echo "==> Serving rhine-tree WASM app at http://localhost:$PORT/  (Ctrl-C to stop)"
+      echo "    Open: http://localhost:$PORT/"
+      python3 -m http.server "$PORT" --directory ${staticFiles}
     '';
   };
 
