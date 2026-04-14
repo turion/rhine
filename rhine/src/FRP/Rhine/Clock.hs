@@ -8,6 +8,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- |
 'Clock's are the central new notion in Rhine.
@@ -60,7 +61,7 @@ Different values of the same clock type should tick at the same speed,
 and only differ in implementation details.
 Often, clocks are singletons.
 -}
-class (TimeDomain (Time cl)) => Clock m cl where
+class (TimeDomain (Time cl), MonadTime m (Time cl)) => Clock m cl where
   -- | The time domain, i.e. type of the time stamps the clock creates.
   type Time cl
 
@@ -102,7 +103,7 @@ data HoistClock m1 m2 cl = HoistClock
   }
 
 instance
-  (Monad m1, Monad m2, Clock m1 cl) =>
+  (Monad m1, Monad m2, Clock m1 cl, MonadTime m2 (Time cl)) =>
   Clock m2 (HoistClock m1 m2 cl)
   where
   type Time (HoistClock m1 m2 cl) = Time cl
@@ -136,7 +137,9 @@ ioClock unhoistedClock =
 
 class (TimeDomain td, MonadChangeset td (Diff td) m) => MonadTime m td where
   getTime :: m td
+  getTime = current
   wait :: Diff td -> m ()
+  wait = change
 
 newtype UTCT m a = UTCT {getUTCT :: m a}
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadPlus, Alternative)

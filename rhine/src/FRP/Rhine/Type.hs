@@ -50,7 +50,7 @@ Since the caller will not know when the clock @'In' cl@ ticks,
 the input 'a' has to be given at all times, even those when it doesn't tick.
 -}
 eraseClock ::
-  (Monad m, Clock m cl, GetClockProxy cl) =>
+  (Monad m, Clock m cl, GetClockProxy cl, MonadTime m (Time cl)) =>
   Rhine m cl a b ->
   Automaton m a (Maybe b)
 eraseClock Rhine {..} = proc a -> do

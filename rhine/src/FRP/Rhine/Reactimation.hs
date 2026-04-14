@@ -50,13 +50,11 @@ flow ::
   , Clock m cl
   , GetClockProxy cl
   , Time cl ~ Time (In cl)
-  , Time cl ~ Time (Out cl)
+  , Time cl ~ Time (Out cl), MonadTime m (Time cl)
   ) =>
   Rhine m cl () () ->
   m void
-flow rhine = do
-  automaton <- eraseClock rhine
-  reactimate $ automaton >>> arr (const ())
+flow rhine = reactimate $ eraseClock rhine >>> arr (const ())
 {-# INLINE flow #-}
 
 {- | Like 'flow', but with the type signature specialized to @m ()@.
@@ -68,7 +66,7 @@ flow_ ::
   , Clock m cl
   , GetClockProxy cl
   , Time cl ~ Time (In cl)
-  , Time cl ~ Time (Out cl)
+  , Time cl ~ Time (Out cl), MonadTime m (Time cl)
   ) =>
   Rhine m cl () () ->
   m ()

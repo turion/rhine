@@ -43,12 +43,12 @@ eraseClockClSF proxy initialTime clsf = proc (time, tag, a) -> do
 * Since the input and output clocks are not always guaranteed to tick, the inputs and outputs are 'Maybe'.
 -}
 eraseClockSN ::
-  -- | Initial time
-  Time cl ->
   -- The original signal network
-  SN m cl a b ->
+  Monad m => SN m cl a b ->
   Automaton m (Time cl, Tag cl, Maybe a) (Maybe b)
-eraseClockSN time = flip runReader time . getSN
+eraseClockSN sn = proc input@(time, _tag, _aMaybe) -> do
+  initTime <- cached -< time
+  runReaderS $ getSN sn -< (initTime, input)
 {-# INLINE eraseClockSN #-}
 
 {- | Translate a resampling buffer into an automaton.

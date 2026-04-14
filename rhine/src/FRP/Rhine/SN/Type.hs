@@ -1,7 +1,7 @@
 module FRP.Rhine.SN.Type where
 
 -- transformers
-import Control.Monad.Trans.Reader (Reader)
+import Control.Monad.Trans.Reader (ReaderT)
 
 -- automaton
 import Data.Automaton
@@ -24,7 +24,7 @@ The type parameters are:
 * 'a': The input type. Input arrives at the rate @In cl@.
 * 'b': The output type. Output arrives at the rate @Out cl@.
 -}
-newtype SN m cl a b = SN {getSN :: Reader (Time cl) (Automaton m (Time cl, Tag cl, Maybe a) (Maybe b))}
+newtype SN m cl a b = SN {getSN :: (Automaton (ReaderT (Time cl) m) (Time cl, Tag cl, Maybe a) (Maybe b))}
 
 instance (GetClockProxy cl) => ToClockProxy (SN m cl a b) where
   type Cl (SN m cl a b) = cl
