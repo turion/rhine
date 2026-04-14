@@ -32,6 +32,8 @@ library
   exposed-modules: Data.TimeDomain
   build-depends:
     base >=4.13.0 && <4.22,
+    changeset ^>=0.2.1,
+    groups ^>=0.5.3,
     time >=1.11 && <1.16,
 
   hs-source-dirs: src
