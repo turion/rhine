@@ -20,6 +20,7 @@ import FRP.Rhine.Reactimation.ClockErasure
 import FRP.Rhine.ResamplingBuffer (ResamplingBuffer)
 import FRP.Rhine.SN
 import FRP.Rhine.Schedule (In, Out)
+import Control.Arrow (returnA)
 
 {- |
 A 'Rhine' consists of a 'SN' together with a clock of matching type 'cl'.
@@ -51,13 +52,12 @@ the input 'a' has to be given at all times, even those when it doesn't tick.
 eraseClock ::
   (Monad m, Clock m cl, GetClockProxy cl) =>
   Rhine m cl a b ->
-  m (Automaton m a (Maybe b))
-eraseClock Rhine {..} = do
-  (runningClock, initTime) <- runClock clock
-  -- Run the main loop
-  return $ proc a -> do
-    (time, tag) <- runningClock -< ()
-    eraseClockSN initTime sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
+  Automaton m a (Maybe b)
+eraseClock Rhine {..} = proc a -> do
+  time <- constM getTime -< ()
+  (dt, tag) <- runClock clock -< time
+  arrM wait -< dt
+  eraseClockSN sn -< (time, tag, a <$ inTag (toClockProxy sn) tag)
 {-# INLINE eraseClock #-}
 
 {- |

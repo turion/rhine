@@ -76,9 +76,6 @@ instance (GetClockProxy cl1, GetClockProxy cl2) => GetClockProxy (ParallelClock 
   getClockProxy = ParallelProxy getClockProxy getClockProxy
 
 instance (GetClockProxy cl) => GetClockProxy (HoistClock m1 m2 cl)
-instance (GetClockProxy cl) => GetClockProxy (RescaledClock cl time)
-instance (GetClockProxy cl) => GetClockProxy (RescaledClockM m cl time)
-instance (GetClockProxy cl) => GetClockProxy (RescaledClockS m cl time tag)
 
 -- | Extract a clock proxy from a type.
 class ToClockProxy a where

@@ -5,6 +5,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 {- |
 'Clock's are the central new notion in Rhine.
@@ -17,21 +20,22 @@ such as clocks lifted along monad morphisms or time rescalings.
 -}
 module FRP.Rhine.Clock where
 
--- base
-import Control.Arrow
-import Control.Category qualified as Category
 
 -- transformers
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
 -- automaton
-import Data.Automaton (Automaton, arrM, hoistS, feedback)
+import Data.Automaton (Automaton, hoistS)
 
 -- time-domain
 import Data.TimeDomain
-import Data.Maybe (fromMaybe)
-import Data.Functor ((<&>))
+import Control.Monad.Changeset.Class (MonadChangeset (..))
+import Control.Applicative (Alternative)
+import Control.Monad (MonadPlus)
+import Data.Time (getCurrentTime)
+import Control.Concurrent (threadDelay)
+import Control.Monad.Morph (MFunctor (..), MMonad (..))
 
 -- * The 'Clock' type class
 
@@ -91,128 +95,6 @@ retag f TimeInfo {..} = TimeInfo {tag = f tag, ..}
 
 -- * Certain universal building blocks to produce new clocks from given ones
 
--- ** Rescalings of time domains
-
--- | A pure morphism of time domains is just a function.
-type Rescaling cl time = Time cl -> time
-
-{- | An effectful morphism of time domains is a Kleisli arrow.
-   It can use a side effect to rescale a point in one time domain
-   into another one.
--}
-type RescalingM m cl time = Time cl -> m time
-
-{- | An effectful, stateful morphism of time domains is an 'Automaton'
-   that uses side effects to rescale a point in one time domain
-   into another one.
--}
-type RescalingS m cl time tag = Automaton m (time, time) (Time cl)
-type RescalingSDiff m cl time tag = Automaton m (time, time, Diff (Time cl), Tag cl) (Diff time, tag)
-
-
-{- | Convert an effectful morphism of time domains into a stateful one with initialisation.
-   Think of its type as @RescalingM m cl time -> RescalingSInit m cl time tag@,
-   although this type is ambiguous.
--}
-rescaleMToSInit ::
-  (Monad m) =>
-  (time1 -> m time2) ->
-  time1 ->
-  m (Automaton m (time1, tag) (time2, tag), time2)
-rescaleMToSInit rescaling time1 = (arrM rescaling *** Category.id,) <$> rescaling time1
-
--- ** Applying rescalings to clocks
-
--- | Applying a morphism of time domains yields a new clock.
-data RescaledClock cl time = RescaledClock
-  { unscaledClock :: cl
-  , rescaleTime :: time -> Time cl
-  , rescaleDiffTime :: Diff (Time cl) -> Diff time
-  }
-
-instance
-  (Monad m, TimeDomain time, Clock m cl) =>
-  Clock m (RescaledClock cl time)
-  where
-  type Time (RescaledClock cl time) = time
-  type Tag (RescaledClock cl time) = Tag cl
-  runClock RescaledClock {..} = arr rescaleTime >>> runClock unscaledClock >>> (arr rescaleDiffTime *** Category.id)
-  {-# INLINE runClock #-}
-
-{- | Instead of a mere function as morphism of time domains,
-   we can transform one time domain into the other with an effectful morphism.
--}
-data RescaledClockM m cl time = RescaledClockM
-  { unscaledClockM :: cl
-  -- ^ The clock before the rescaling
-  , rescaleTimeM :: time -> m (Time cl)
-  -- ^ Computing the new time effectfully from the old time
-  , rescaleDiffTimeM :: Diff (Time cl) -> m (Diff time)
-  }
-
-instance
-  (Monad m, TimeDomain time, Clock m cl) =>
-  Clock m (RescaledClockM m cl time)
-  where
-  type Time (RescaledClockM m cl time) = time
-  type Tag (RescaledClockM m cl time) = Tag cl
-  runClock RescaledClockM {..} = arrM rescaleTimeM >>> runClock unscaledClockM >>> (arrM rescaleDiffTimeM *** Category.id)
-  {-# INLINE runClock #-}
-
--- | A 'RescaledClock' is trivially a 'RescaledClockM'.
-rescaledClockToM :: (Monad m) => RescaledClock cl time -> RescaledClockM m cl time
-rescaledClockToM RescaledClock {..} =
-  RescaledClockM
-    { unscaledClockM = unscaledClock
-    , rescaleTimeM = return . rescaleTime
-    , rescaleDiffTimeM = return . rescaleDiffTime
-    }
-
-{- | Instead of a mere function as morphism of time domains,
-   we can transform one time domain into the other with an automaton.
--}
-data RescaledClockS m cl time tag = RescaledClockS
-  { unscaledClockS :: cl
-  -- ^ The clock before the rescaling
-  , rescaleSTime :: RescalingS m cl time tag
-  , rescaleSDiffTime :: RescalingSDiff m cl time tag
-  -- ^ The rescaling stream function, and rescaled initial time,
-  --   depending on the initial time before rescaling
-  }
-
-instance
-  (Monad m, TimeDomain time, Clock m cl) =>
-  Clock m (RescaledClockS m cl time tag)
-  where
-  type Time (RescaledClockS m cl time tag) = time
-  type Tag (RescaledClockS m cl time tag) = tag
-  runClock RescaledClockS {..} = feedback Nothing $ proc (time, initTimeMaybe) -> do
-    let initTime = fromMaybe time initTimeMaybe
-    rescaledTime <- rescaleSTime -< (initTime, time)
-    (unscaledDiffTime, unscaledTag) <- runClock unscaledClockS -< rescaledTime
-    rescaledDiffTimeAndTag <- rescaleSDiffTime -< (initTime, time, unscaledDiffTime, unscaledTag)
-    returnA -< (rescaledDiffTimeAndTag, Just initTime)
-  {-# INLINE runClock #-}
-
--- | A 'RescaledClockM' is trivially a 'RescaledClockS'.
-rescaledClockMToS ::
-  (Monad m) =>
-  RescaledClockM m cl time ->
-  RescaledClockS m cl time (Tag cl)
-rescaledClockMToS RescaledClockM {..} =
-  RescaledClockS
-    { unscaledClockS = unscaledClockM
-    , rescaleSTime = arrM $ \(_initTime, time) -> rescaleTimeM time
-    , rescaleSDiffTime = arrM $ \(_initTime, _time, diffTime, tag) -> rescaleDiffTimeM diffTime <&> (, tag)
-    }
-
--- | A 'RescaledClock' is trivially a 'RescaledClockS'.
-rescaledClockToS ::
-  (Monad m) =>
-  RescaledClock cl time ->
-  RescaledClockS m cl time (Tag cl)
-rescaledClockToS = rescaledClockMToS . rescaledClockToM
-
 -- | Applying a monad morphism yields a new clock.
 data HoistClock m1 m2 cl = HoistClock
   { unhoistedClock :: cl
@@ -249,3 +131,30 @@ ioClock unhoistedClock =
     { monadMorphism = liftIO
     , ..
     }
+
+-- *
+
+class (TimeDomain td, MonadChangeset td (Diff td) m) => MonadTime m td where
+  getTime :: m td
+  wait :: Diff td -> m ()
+
+newtype UTCT m a = UTCT {getUTCT :: m a}
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadPlus, Alternative)
+
+instance MonadTrans UTCT where
+  lift = UTCT
+
+instance MFunctor UTCT where
+  hoist f = UTCT . f . getUTCT
+
+instance MMonad UTCT where
+  embed f (UTCT ma)= f ma
+
+instance MonadIO m => MonadChangeset UTCTime Double (UTCT m) where
+  changeset f = UTCT $ liftIO $ do
+    now <- getCurrentTime
+    let (a, waitDiff) = f now
+    threadDelay $ floor $ waitDiff * 1_000_000
+    pure a
+
+instance MonadIO m => MonadTime (UTCT m) UTCTime

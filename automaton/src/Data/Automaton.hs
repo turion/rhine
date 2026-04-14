@@ -662,3 +662,8 @@ initialised = Automaton . Stateful . StreamT.initialised . ReaderT
 initialised_ :: (Monad m) => m b -> Automaton m a b
 initialised_ = initialised . const
 {-# INLINE initialised_ #-}
+
+-- FIXME I have this like ten times elsewhere
+-- FIXME naming, docs
+cached :: Monad m => Automaton m a a
+cached = feedback Nothing $ arr $ \(aNow, aInitMaybe) -> let aInit = fromMaybe aNow aInitMaybe in (aInit, Just aInit)
