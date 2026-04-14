@@ -82,8 +82,8 @@ instance Semigroup GlossClock where
 instance Clock GlossM GlossClock where
   type Time GlossClock = Float
   type Tag GlossClock = Maybe Event
-  initClock _ = return (constM (GlossM $ yield >> lift ask) >>> (sumS *** Category.id), 0)
-  {-# INLINE initClock #-}
+  runClock _ = return (constM (GlossM $ yield >> lift ask) >>> (sumS *** Category.id), 0)
+  {-# INLINE runClock #-}
 
 instance GetClockProxy GlossClock
 

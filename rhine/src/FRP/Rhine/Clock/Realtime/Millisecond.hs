@@ -40,8 +40,8 @@ newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (Un
 instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
-  initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second snd))
-  {-# INLINE initClock #-}
+  runClock (Millisecond cl) = arr _ >>> runClock cl >>> _
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (Millisecond n)
 

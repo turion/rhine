@@ -1,8 +1,14 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 -- {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -- TODO Find out exact version of cabal? GHC? that have a problem with this
@@ -23,11 +29,14 @@ where
 -- base
 import Control.Arrow
 import Data.Time.Clock
-import GHC.Float (double2Float)
+import GHC.Float (double2Float, float2Double)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 
 -- transformers
 import Control.Monad.IO.Class
+
+-- changeset
+import Data.Monoid.RightAction
 
 -- automaton
 import Data.Automaton
@@ -39,6 +48,12 @@ import Data.TimeDomain (diffTime)
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import GHC.Generics (Generically (..), Generic)
+import Control.Monad.Trans.Reader (ReaderT (..), ask)
+import Data.IORef (IORef, newIORef, writeIORef)
+import Control.Monad.Changeset.Class (MonadChangeset (..))
+import Data.Monoid (Sum (..))
+import Control.Concurrent (threadDelay)
 
 -- | Rates at which audio signals are typically sampled.
 data AudioRate
@@ -95,6 +110,42 @@ theBufferSize ::
   a
 theBufferSize = fromInteger . natVal
 
+newtype AudioBufferedIO a = AudioBufferedIO
+  { getAudioBufferedIO :: ReaderT (IORef UTCTime) IO a
+  }
+  deriving newtype (Functor, Applicative, Monad, MonadIO)
+
+runAudioBufferedIO :: AudioBufferedIO a -> IO a
+runAudioBufferedIO AudioBufferedIO {..} = do
+  initTime <- getCurrentTime
+  ref <- newIORef initTime
+  runReaderT getAudioBufferedIO ref
+
+data AudioDiffTime = AudioDiffTime
+  { progress :: Sum Double
+  , waitBuffer :: Sum Double
+  }
+  deriving stock (Generic)
+  deriving (Semigroup, Monoid) via (Generically AudioDiffTime)
+
+instance RightAction AudioDiffTime UTCTime where
+  actRight t AudioDiffTime {..} = addUTCTime (realToFrac $ getSum progress) t
+
+instance MonadChangeset UTCTime AudioDiffTime AudioBufferedIO where
+  current = liftIO getCurrentTime
+  change AudioDiffTime {..} = do
+    ref <- AudioBufferedIO ask
+    liftIO $ do
+      threadDelay $ round (getSum waitBuffer) * 1_000_000
+      now <- getCurrentTime
+      writeIORef ref now
+  -- TODO Remove this default impl with next changeset release
+  changeset f = do
+    s <- current
+    let (a, w) = f s
+    change w
+    pure a
+
 instance
   (MonadIO m, KnownNat bufferSize, AudioClockRate rate) =>
   Clock m (AudioClock rate bufferSize)
@@ -102,31 +153,25 @@ instance
   type Time (AudioClock rate bufferSize) = UTCTime
   type Tag (AudioClock rate bufferSize) = Maybe Double
 
-  initClock audioClock = do
+  runClock audioClock =
     let
       step =
         picosecondsToDiffTime $
           round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double) -- The only sufficiently precise conversion function
       bufferSize = theBufferSize audioClock
 
-      runningClock :: (MonadIO m) => UTCTime -> Maybe Double -> Automaton m () (UTCTime, Maybe Double)
-      runningClock initialTime maybeWasLate = safely $ do
-        bufferFullTime <- try $ proc () -> do
+      runningClock :: (MonadIO m) => Automaton m (UTCTime) (Double, Maybe Double)
+      runningClock = proc (lastTime) -> do
           n <- count -< ()
           let nextTime = (realToFrac step * fromIntegral (n :: Int)) `addUTCTime` initialTime
           _ <- throwOn' -< (n >= bufferSize, nextTime)
           returnA -< (nextTime, if n == 0 then maybeWasLate else Nothing)
-        currentTime <- once_ $ liftIO getCurrentTime
-        let
-          lateDiff = currentTime `diffTime` bufferFullTime
-          late = if lateDiff > 0 then Just lateDiff else Nothing
-        safe $ runningClock bufferFullTime late
-    initialTime <- liftIO getCurrentTime
-    return
-      ( runningClock initialTime Nothing
-      , initialTime
-      )
-  {-# INLINE initClock #-}
+          let
+              lateDiff = currentTime `diffTime` bufferFullTime
+              late = if lateDiff > 0 then Just lateDiff else Nothing
+          returnA -< _
+    in runningClock
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (AudioClock rate bufferSize)
 
@@ -151,12 +196,8 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
   type Time (PureAudioClock rate) = Double
   type Tag (PureAudioClock rate) = ()
 
-  initClock audioClock =
-    return
-      ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
-      , 0
-      )
-  {-# INLINE initClock #-}
+  runClock audioClock = arr (const (1 / thePureRateNum audioClock, ()))
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (PureAudioClock rate)
 
@@ -170,5 +211,6 @@ pureAudioClockF :: PureAudioClockF rate
 pureAudioClockF =
   RescaledClock
     { unscaledClock = PureAudioClock
-    , rescale = double2Float
+    , rescaleTime = float2Double
+    , rescaleDiffTime = double2Float
     }

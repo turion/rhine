@@ -82,8 +82,8 @@ initSchedule ::
   cl2 ->
   RunningClockInit m (Time cl1) (Either (Tag cl1) (Tag cl2))
 initSchedule cl1 cl2 = do
-  (runningClock1, initTime) <- initClock cl1
-  (runningClock2, _) <- initClock cl2
+  (runningClock1, initTime) <- runClock cl1
+  (runningClock2, _) <- runClock cl2
   pure
     ( runningSchedule cl1 cl2 runningClock1 runningClock2
     , initTime
@@ -112,9 +112,9 @@ instance
   where
   type Time (SequentialClock cl1 cl2) = Time cl1
   type Tag (SequentialClock cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  initClock SequentialClock {..} =
+  runClock SequentialClock {..} =
     initSchedule sequentialCl1 sequentialCl2
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 -- ** Parallelly combined clocks
 
@@ -137,9 +137,9 @@ instance
   where
   type Time (ParallelClock cl1 cl2) = Time cl1
   type Tag (ParallelClock cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  initClock ParallelClock {..} =
+  runClock ParallelClock {..} =
     initSchedule parallelCl1 parallelCl2
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 -- * Navigating the clock tree
 

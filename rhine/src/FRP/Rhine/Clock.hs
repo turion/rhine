@@ -26,10 +26,12 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
 -- automaton
-import Data.Automaton (Automaton, arrM, hoistS)
+import Data.Automaton (Automaton, arrM, hoistS, feedback)
 
 -- time-domain
 import Data.TimeDomain
+import Data.Maybe (fromMaybe)
+import Data.Functor ((<&>))
 
 -- * The 'Clock' type class
 
@@ -63,13 +65,7 @@ class (TimeDomain (Time cl)) => Clock m cl where
   --   if one of its subclocks (if any) ticked.
   type Tag cl
 
-  -- | The method that produces to a clock value a running clock,
-  --   i.e. an effectful stream of tagged time stamps together with an initialisation time.
-  initClock ::
-    -- | The clock value, containing e.g. settings or device parameters
-    cl ->
-    -- | The stream of time stamps, and the initial time
-    RunningClockInit m (Time cl) (Tag cl)
+  runClock :: cl -> Automaton m (Time cl) (Diff (Time cl), Tag cl)
 
 -- * Auxiliary definitions and utilities
 
@@ -110,12 +106,9 @@ type RescalingM m cl time = Time cl -> m time
    that uses side effects to rescale a point in one time domain
    into another one.
 -}
-type RescalingS m cl time tag = Automaton m (Time cl, Tag cl) (time, tag)
+type RescalingS m cl time tag = Automaton m (time, time) (Time cl)
+type RescalingSDiff m cl time tag = Automaton m (time, time, Diff (Time cl), Tag cl) (Diff time, tag)
 
-{- | Like 'RescalingS', but allows for an initialisation
-   of the rescaling morphism, together with the initial time.
--}
-type RescalingSInit m cl time tag = Time cl -> m (RescalingS m cl time tag, time)
 
 {- | Convert an effectful morphism of time domains into a stateful one with initialisation.
    Think of its type as @RescalingM m cl time -> RescalingSInit m cl time tag@,
@@ -133,7 +126,8 @@ rescaleMToSInit rescaling time1 = (arrM rescaling *** Category.id,) <$> rescalin
 -- | Applying a morphism of time domains yields a new clock.
 data RescaledClock cl time = RescaledClock
   { unscaledClock :: cl
-  , rescale :: Rescaling cl time
+  , rescaleTime :: time -> Time cl
+  , rescaleDiffTime :: Diff (Time cl) -> Diff time
   }
 
 instance
@@ -142,13 +136,8 @@ instance
   where
   type Time (RescaledClock cl time) = time
   type Tag (RescaledClock cl time) = Tag cl
-  initClock (RescaledClock cl f) = do
-    (runningClock, initTime) <- initClock cl
-    return
-      ( runningClock >>> first (arr f)
-      , f initTime
-      )
-  {-# INLINE initClock #-}
+  runClock RescaledClock {..} = arr rescaleTime >>> runClock unscaledClock >>> (arr rescaleDiffTime *** Category.id)
+  {-# INLINE runClock #-}
 
 {- | Instead of a mere function as morphism of time domains,
    we can transform one time domain into the other with an effectful morphism.
@@ -156,8 +145,9 @@ instance
 data RescaledClockM m cl time = RescaledClockM
   { unscaledClockM :: cl
   -- ^ The clock before the rescaling
-  , rescaleM :: RescalingM m cl time
+  , rescaleTimeM :: time -> m (Time cl)
   -- ^ Computing the new time effectfully from the old time
+  , rescaleDiffTimeM :: Diff (Time cl) -> m (Diff time)
   }
 
 instance
@@ -166,21 +156,16 @@ instance
   where
   type Time (RescaledClockM m cl time) = time
   type Tag (RescaledClockM m cl time) = Tag cl
-  initClock RescaledClockM {..} = do
-    (runningClock, initTime) <- initClock unscaledClockM
-    rescaledInitTime <- rescaleM initTime
-    return
-      ( runningClock >>> first (arrM rescaleM)
-      , rescaledInitTime
-      )
-  {-# INLINE initClock #-}
+  runClock RescaledClockM {..} = arrM rescaleTimeM >>> runClock unscaledClockM >>> (arrM rescaleDiffTimeM *** Category.id)
+  {-# INLINE runClock #-}
 
 -- | A 'RescaledClock' is trivially a 'RescaledClockM'.
 rescaledClockToM :: (Monad m) => RescaledClock cl time -> RescaledClockM m cl time
 rescaledClockToM RescaledClock {..} =
   RescaledClockM
     { unscaledClockM = unscaledClock
-    , rescaleM = return . rescale
+    , rescaleTimeM = return . rescaleTime
+    , rescaleDiffTimeM = return . rescaleDiffTime
     }
 
 {- | Instead of a mere function as morphism of time domains,
@@ -189,7 +174,8 @@ rescaledClockToM RescaledClock {..} =
 data RescaledClockS m cl time tag = RescaledClockS
   { unscaledClockS :: cl
   -- ^ The clock before the rescaling
-  , rescaleS :: RescalingSInit m cl time tag
+  , rescaleSTime :: RescalingS m cl time tag
+  , rescaleSDiffTime :: RescalingSDiff m cl time tag
   -- ^ The rescaling stream function, and rescaled initial time,
   --   depending on the initial time before rescaling
   }
@@ -200,14 +186,13 @@ instance
   where
   type Time (RescaledClockS m cl time tag) = time
   type Tag (RescaledClockS m cl time tag) = tag
-  initClock RescaledClockS {..} = do
-    (runningClock, initTime) <- initClock unscaledClockS
-    (rescaling, rescaledInitTime) <- rescaleS initTime
-    return
-      ( runningClock >>> rescaling
-      , rescaledInitTime
-      )
-  {-# INLINE initClock #-}
+  runClock RescaledClockS {..} = feedback Nothing $ proc (time, initTimeMaybe) -> do
+    let initTime = fromMaybe time initTimeMaybe
+    rescaledTime <- rescaleSTime -< (initTime, time)
+    (unscaledDiffTime, unscaledTag) <- runClock unscaledClockS -< rescaledTime
+    rescaledDiffTimeAndTag <- rescaleSDiffTime -< (initTime, time, unscaledDiffTime, unscaledTag)
+    returnA -< (rescaledDiffTimeAndTag, Just initTime)
+  {-# INLINE runClock #-}
 
 -- | A 'RescaledClockM' is trivially a 'RescaledClockS'.
 rescaledClockMToS ::
@@ -217,7 +202,8 @@ rescaledClockMToS ::
 rescaledClockMToS RescaledClockM {..} =
   RescaledClockS
     { unscaledClockS = unscaledClockM
-    , rescaleS = rescaleMToSInit rescaleM
+    , rescaleSTime = arrM $ \(_initTime, time) -> rescaleTimeM time
+    , rescaleSDiffTime = arrM $ \(_initTime, _time, diffTime, tag) -> rescaleDiffTimeM diffTime <&> (, tag)
     }
 
 -- | A 'RescaledClock' is trivially a 'RescaledClockS'.
@@ -239,13 +225,8 @@ instance
   where
   type Time (HoistClock m1 m2 cl) = Time cl
   type Tag (HoistClock m1 m2 cl) = Tag cl
-  initClock HoistClock {..} = do
-    (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
-    return
-      ( hoistS monadMorphism runningClock
-      , initialTime
-      )
-  {-# INLINE initClock #-}
+  runClock HoistClock {..} = hoistS monadMorphism $ runClock unhoistedClock
+  {-# INLINE runClock #-}
 
 -- | Lift a clock type into a monad transformer.
 type LiftClock m t = HoistClock m (t m)

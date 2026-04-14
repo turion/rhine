@@ -39,8 +39,8 @@ unyieldClock cl = UnscheduleClock cl $ const $ liftIO Concurrent.yield
 instance (TimeDomain (Time cl), Clock (ScheduleT (Diff (Time cl)) m) cl, Monad m) => Clock m (UnscheduleClock m cl) where
   type Tag (UnscheduleClock _ cl) = Tag cl
   type Time (UnscheduleClock _ cl) = Time cl
-  initClock UnscheduleClock {scheduleClock, scheduleWait} = run $ first (hoistS run) <$> initClock scheduleClock
+  runClock UnscheduleClock {scheduleClock, scheduleWait} = run $ first (hoistS run) <$> runClock scheduleClock
     where
       run :: ScheduleT (Diff (Time cl)) m a -> m a
       run = runScheduleT scheduleWait
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}

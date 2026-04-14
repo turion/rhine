@@ -51,6 +51,7 @@ common opts
   build-depends:
     automaton ^>=1.6,
     base >=4.16 && <4.22,
+    changeset ^>=0.1.1,
     monad-schedule ^>=1.6,
     mtl >=2.2 && <2.4,
     selective ^>=0.7,

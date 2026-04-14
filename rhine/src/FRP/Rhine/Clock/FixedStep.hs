@@ -49,7 +49,7 @@ stepsize fixedStep@FixedStep = natVal fixedStep
 instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n) where
   type Time (FixedStep n) = Integer
   type Tag (FixedStep n) = ()
-  initClock cl =
+  runClock cl =
     let step = stepsize cl
      in return
           ( arr (const step)
@@ -57,7 +57,7 @@ instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n)
               >>> arrM (\time -> wait step $> (time, ()))
           , 0
           )
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (FixedStep n)
 

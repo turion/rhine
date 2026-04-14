@@ -101,8 +101,8 @@ data FailingClock = FailingClock
 instance (Monad m) => Clock (ExceptT () m) FailingClock where
   type Time FailingClock = UTCTime
   type Tag FailingClock = ()
-  initClock FailingClock = throwE ()
-  {-# INLINE initClock #-}
+  runClock FailingClock = throwE ()
+  {-# INLINE runClock #-}
 
 instance GetClockProxy FailingClock
 

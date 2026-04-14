@@ -1,37 +1,38 @@
 module FRP.Rhine.Clock.Realtime where
 
 -- base
-import Control.Arrow (arr)
-import Control.Concurrent (threadDelay)
-import Control.Monad (guard)
+import Control.Arrow (arr, returnA)
 import Control.Monad.IO.Class
 
 -- time
-import Data.Time (addUTCTime, diffUTCTime, getCurrentTime)
+import Data.Time (diffUTCTime, getCurrentTime)
 
 -- automaton
-import Data.Automaton
 
 -- rhine
 import FRP.Rhine.Clock
 
 -- time-domain
-import Data.TimeDomain (Diff, UTCTime)
+import Data.TimeDomain (Diff, UTCTime, TimeDomain (addTime), diffTime)
+import Data.Automaton (sumS, mappendS, sumN)
+import Control.Monad (guard)
 
 {- | A clock rescaled to the 'UTCTime' time domain.
 
 There are different strategies how a clock may be rescaled, see below.
 -}
-type UTCClock m cl = RescaledClockS m cl UTCTime (Tag cl)
+type UTCClock m cl = RescaledClockM m cl UTCTime
 
--- | Rescale an 'IO' clock to the UTC time domain, overwriting its timestamps.
-overwriteUTC :: (MonadIO m) => cl -> UTCClock m cl
-overwriteUTC cl =
-  RescaledClockS
-    { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arrM $ \(_timePassed, tag) -> (,tag) <$> liftIO getCurrentTime, now)
+{- | Rescale an 'IO' clock to the UTC time domain, overwriting its timestamps.
+
+It's the unscaled clock's responsibility to produce the waiting effect.
+-}
+overwriteUTC :: (MonadIO m) => cl -> (UTCTime -> Time cl) -> UTCClock m cl
+overwriteUTC cl rescale =
+  RescaledClockM
+    { unscaledClockM = cl
+    , rescaleTimeM = pure . rescale
+    , rescaleDiffTimeM = const $ return 0
     }
 
 {- | Rescale a clock to the UTC time domain.
@@ -41,13 +42,16 @@ and the increments (durations between ticks) are taken from the original clock.
 No attempt at waiting until the specified time is made,
 the timestamps of the original clock are trusted unconditionally.
 -}
-addUTC :: (Real (Time cl), MonadIO m) => cl -> UTCClock m cl
+addUTC :: (Real (Diff (Time cl)), MonadIO m) => cl -> UTCClock m cl
 addUTC cl =
-  RescaledClockS
-    { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arr $ \(timePassed, tag) -> (addUTCTime (realToFrac timePassed) now, tag), now)
+  RescaledClockM
+    { unscaledClockM = cl
+    -- FIXME maybe a rescaled clock that records the initial time?
+    , rescaleTimeM = _
+    --  const $ do
+    --     now <- liftIO getCurrentTime
+    --     return (arr $ \(timePassed, tag) -> (addUTCTime (realToFrac timePassed) now, tag), now)
+    , rescaleDiffTimeM = return . realToFrac
     }
 
 {- | Like 'UTCClock', but also output in the tag whether and by how much the target realtime was missed.
@@ -74,21 +78,22 @@ this option (around 100 microseconds). For fast clocks it is recommended
 that @-threaded@ not be used in order to miss less ticks. The clock will adjust
 the wait time, up to no wait time at all, to catch up when a tick is missed.
 -}
-waitUTC :: (Real (Time cl), MonadIO m, Fractional (Diff (Time cl))) => cl -> WaitUTCClock m cl
+waitUTC :: (Fractional (Time cl), MonadIO m, Real (Diff (Time cl)), Fractional (Diff (Time cl))) => cl -> WaitUTCClock m cl
 waitUTC unscaledClockS =
   RescaledClockS
     { unscaledClockS
-    , rescaleS = \_ -> do
-        initTime <- liftIO getCurrentTime
-        let
-          runningClock = arrM $ \(sinceInitTarget, tag) -> liftIO $ do
-            beforeSleep <- getCurrentTime
-            let
-              diff :: Rational
-              diff = toRational $ beforeSleep `diffUTCTime` initTime
-              remaining = toRational sinceInitTarget - diff
-            threadDelay $ round $ 1000000 * remaining
-            now <- getCurrentTime
-            return (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
-        return (runningClock, initTime)
+    , rescaleSTime = arr $ \(initTime, time) -> realToFrac $ time `diffUTCTime` initTime
+    , rescaleSDiffTime = proc (initTime, lastTime, dTime, tag) -> do
+        let diffTimeRescaled = realToFrac dTime -- FIXME Is this really a good function to use
+        targetTimeDiff <- sumN -< diffTimeRescaled
+        let targetTime = addTime initTime targetTimeDiff
+            waitTime = targetTime `diffTime` lastTime
+        returnA -< (waitTime, (tag, guard (waitTime < 0) >> return (realToFrac waitTime)))
+            -- let
+            --   diff :: Rational
+            --   diff = toRational $ beforeSleep `diffUTCTime` initTime
+            --   remaining = toRational initTime - diff
+            -- threadDelay $ round $ 1000000 * remaining
+            -- now <- getCurrentTime
+            -- return _ -- (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
     }

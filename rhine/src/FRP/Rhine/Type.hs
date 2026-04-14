@@ -53,7 +53,7 @@ eraseClock ::
   Rhine m cl a b ->
   m (Automaton m a (Maybe b))
 eraseClock Rhine {..} = do
-  (runningClock, initTime) <- initClock clock
+  (runningClock, initTime) <- runClock clock
   -- Run the main loop
   return $ proc a -> do
     (time, tag) <- runningClock -< ()

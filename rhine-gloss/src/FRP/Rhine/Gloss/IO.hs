@@ -126,7 +126,7 @@ data GlossEventClockIO = GlossEventClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
   type Time GlossEventClockIO = Float
   type Tag GlossEventClockIO = Event
-  initClock _ = return (constM getEvent, 0)
+  runClock _ = return (constM getEvent, 0)
     where
       getEvent = do
         GlossEnv {eventVar, timeRef} <- GlossConcT ask
@@ -134,7 +134,7 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
         liftIO $ do
           time <- readIORef timeRef
           return (time, event)
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy GlossEventClockIO
 
@@ -149,12 +149,12 @@ data GlossSimClockIO = GlossSimClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
   type Time GlossSimClockIO = Float
   type Tag GlossSimClockIO = ()
-  initClock _ = return (constM getTime &&& arr (const ()), 0)
+  runClock _ = return (constM getTime &&& arr (const ()), 0)
     where
       getTime = GlossConcT $ do
         GlossEnv {timeVar} <- ask
         lift $ asyncMVar timeVar
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy GlossSimClockIO
 

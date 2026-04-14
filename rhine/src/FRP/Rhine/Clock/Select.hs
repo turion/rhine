@@ -57,14 +57,14 @@ instance (Monoid cl, Semigroup a) => Monoid (SelectClock cl a) where
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
   type Time (SelectClock cl a) = Time cl
   type Tag (SelectClock cl a) = a
-  initClock SelectClock {..} = do
-    (runningClock, initialTime) <- initClock mainClock
+  runClock SelectClock {..} = do
+    (runningClock, initialTime) <- runClock mainClock
     let
       runningSelectClock = filterS $ proc _ -> do
         (time, tag) <- runningClock -< ()
         returnA -< (time,) <$> select tag
     return (runningSelectClock, initialTime)
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (SelectClock cl a)
 

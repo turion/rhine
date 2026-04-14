@@ -27,12 +27,12 @@ instance (MonadIO m) => Clock m Never where
   type Time Never = UTCTime
   type Tag Never = Void
 
-  initClock _ = do
+  runClock _ = do
     initialTime <- liftIO getCurrentTime
     return
       ( constM (liftIO . forever . threadDelay $ 10 ^ 9)
       , initialTime
       )
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy Never
