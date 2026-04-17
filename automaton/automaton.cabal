@@ -42,6 +42,11 @@ common opts
     witherable ^>=0.5,
     sop-core ^>=0.5,
     free >= 5.1,
+    containers >= 0.5,
+    -- FIXME only temporarily, we might move ScheduleT out there or redefine it
+    monad-schedule ^>=1.6,
+    time-domain ^>=1.6,
+
 
   if flag(dev)
     ghc-options: -Werror

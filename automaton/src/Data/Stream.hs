@@ -265,8 +265,8 @@ reactimate :: (Monad m) => StreamT m () -> m void
 reactimate StreamT {state, step} = go state
   where
     go s = do
-      Result s' () <- step s
-      go s'
+      Result s' unit <- step s
+      unit `seq` go s'
 {-# INLINE reactimate #-}
 
 -- | Run a stream, collecting the outputs in a lazy, infinite list.
