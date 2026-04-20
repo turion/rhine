@@ -222,13 +222,9 @@ launchInGlossThread settings glossLoop = do
 -}
 flowGlossIO ::
   ( MonadIO m
-  , Clock (GlossConcT m) cl
-  , GetClockProxy cl
-  , Time cl ~ Time (In cl)
-  , Time cl ~ Time (Out cl)
   ) =>
   GlossSettings ->
-  Rhine (GlossConcT m) cl () () ->
+  Rhine (GlossConcT m) td cls () () ->
   m ()
 flowGlossIO settings = launchInGlossThread settings . flow
 

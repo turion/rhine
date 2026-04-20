@@ -21,12 +21,12 @@ tests =
     "Clock.FixedStep"
     [ testCase "Outputs linearly increasing ticks" $
         let
-          output = runScheduleRhinePure (absoluteS @@ (FixedStep @5)) $ replicate 4 ()
+          output = runScheduleRhinePure (absoluteS @@ (FixedStep @5)) $ replicate 4 $ Present ()
          in
-          output @?= Just <$> [5, 10, 15, 20]
+          output @?= [5, 10, 15, 20]
     , testCase "Outputs scheduled ticks in order" $
         let
-          output = runScheduleRhinePure ((absoluteS @@ (FixedStep @5)) |@| (absoluteS @@ (FixedStep @3))) $ replicate 6 ()
+          output = runScheduleRhinePure ((absoluteS @@ (FixedStep @5)) *@* (absoluteS @@ (FixedStep @3))) $ replicate 6 (Present (), Present ())
          in
           output @?= Just <$> [3, 5, 6, 9, 10, 12]
     , testCase "Outputs scheduled ticks in order (mirrored)" $

@@ -35,7 +35,6 @@ import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Yield
 
 -- automaton
-import Data.Automaton.Trans.Except (performOnFirstSample)
 import qualified Data.Automaton.Trans.Reader as AutomatonReader
 import qualified Data.Automaton.Trans.Writer as AutomatonWriter
 
@@ -112,21 +111,20 @@ flowGlossClSF ::
   -- | The @gloss@-compatible 'ClSF'.
   GlossClSF ->
   IO ()
-flowGlossClSF settings clsf = flowGloss settings $ clsf >-> arrMCl paintAll @@ GlossClock
+flowGlossClSF settings clsf = flowGloss settings $ Present ^>>@ (clsf >-> arrMCl paintAll @@ GlossClock) @>>^ const ()
 
-type WorldAutomaton = Automaton Identity ((Float, Maybe Event), ()) (Picture, Maybe ())
+type WorldAutomaton = Automaton Identity ((Float, Maybe Event), ()) (Picture, ())
 
 -- | The main function that will start the @gloss@ backend and run the 'Rhine'
 flowGloss ::
-  (Clock GlossM cl, GetClockProxy cl) =>
   GlossSettings ->
-  Rhine GlossM cl () () ->
+  Rhine GlossM td cls () () ->
   IO ()
 flowGloss GlossSettings {..} rhine =
   play display backgroundColor stepsPerSecond (worldAutomaton, Blank) getPic handleEvent simStep
   where
     worldAutomaton :: WorldAutomaton
-    worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
+    worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (runYieldT . unGlossM) $ eraseClock rhine
     stepWith :: (Float, Maybe Event) -> (WorldAutomaton, Picture) -> (WorldAutomaton, Picture)
     stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = runIdentity $ stepAutomaton automaton ((diff, eventMaybe), ()) in (automaton', picture)
     getPic (_, pic) = pic

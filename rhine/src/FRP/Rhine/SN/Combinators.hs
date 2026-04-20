@@ -15,87 +15,84 @@ import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.SN
 import FRP.Rhine.Schedule
+import Data.Profunctor (Profunctor(..))
 
 {- FOURMOLU_DISABLE -}
--- | Postcompose a signal network with a pure function.
+{- | Postcompose a signal network with a pure function.
+
+This is just a flipped alias for 'rmap'.
+-}
 (>>>^)
   :: Monad m
-  => SN m cl a b
-  ->          (b -> c)
-  -> SN m cl a      c
-SN {getSN} >>>^ f = SN $ getSN <&> (>>> arr (fmap f))
+  => SN m cls a b
+  ->           (b -> c)
+  -> SN m cls a      c
+(>>>^) = flip rmap
 
--- | Precompose a signal network with a pure function.
+{- | Precompose a signal network with a pure function.
+
+This is just an alias for 'lmap'.
+-}
 (^>>>)
   :: Monad m
-  =>        (a -> b)
-  -> SN m cl      b c
-  -> SN m cl a      c
-f ^>>> SN {getSN} = SN $ getSN <&> (arr (fmap (fmap f)) >>>)
+  =>         (a -> b)
+  -> SN m cls      b c
+  -> SN m cls a      c
+(^>>>) = lmap
 
 -- | Postcompose a signal network with a 'ClSF'.
 (>--^)
-  :: ( GetClockProxy cl , Clock m (Out cl)
-     , Time cl ~ Time (Out cl)
-     , Monad m
-     )
-  => SN    m      cl  a b
-  -> ClSF  m (Out cl)   b c
-  -> SN    m      cl  a   c
-(>--^) = postcompose
+  :: (HasClock clbc cls, Monad m, Clock m clbc)
+  => SN    m        cls  a b
+  -> ClSF  m   clbc        b c
+  -> SN    m        cls  a  (At clbc c)
+sn >--^ clsf = sn >>>^ Present >>> synchronous clsf
 
 -- | Precompose a signal network with a 'ClSF'.
 (^-->)
-  :: ( Clock m (In cl), GetClockProxy cl, Monad m
-     , Time cl ~ Time (In cl)
-     )
-  => ClSF m (In cl) a b
-  -> SN   m     cl    b c
-  -> SN   m     cl  a   c
-(^-->) = precompose
+  :: (HasClock clab cls, Clock m clab)
+  => ClSF m         clab a b
+  -> SN   m cls (At clab   b) c
+  -> SN   m cls (At clab a)   c
+clsf ^--> sn = synchronous clsf >>> sn
 
--- | Compose two signal networks on the same clock in data-parallel.
---   At one tick of @cl@, both networks are stepped.
+{- | Compose two signal networks on the same clocks in data-parallel.
+
+At one tick of any of @cls@, both networks are stepped.
+
+This is just an alias for '***'.
+-}
 (****)
   :: Monad m
-  => SN m cl  a      b
-  -> SN m cl     c      d
-  -> SN m cl (a, c) (b, d)
-SN sn1 **** SN sn2 = SN $ do
-  sn1' <- sn1
-  sn2' <- sn2
-  pure $ arr (\(time, tag, mac) -> ((time, tag, fst <$> mac), (time, tag, snd <$> mac))) >>> (sn1' *** sn2') >>> arr (\(mb, md) -> (,) <$> mb <*> md)
+  => SN m cls  a      b
+  -> SN m cls     c      d
+  -> SN m cls (a, c) (b, d)
+(****) = (***)
+
+
+-- FIXME These type signatures are in general not implementable because Append is not injective. Maybe there is some way around this?
+
+-- -- | Compose two signal networks on different clocks in clock-parallel.
+-- --   At one tick of any of @cls1@ or @cls2@, either or both of the networks are stepped,
+-- --   dependent on which clock has ticked.
+-- (||||)
+--   :: SN m         cls1       a b
+--   -> SN m              cls2  a b
+--   -> SN m (Append cls1 cls2) a b
+-- (||||) = parallel
 
 -- | Compose two signal networks on different clocks in clock-parallel.
 --   At one tick of @ParClock cl1 cl2@, one of the networks is stepped,
 --   dependent on which constituent clock has ticked.
---
---   Note: This is essentially an infix synonym of 'Parallel'
-(||||)
-  :: ( Monad m, Clock m clL, Clock m clR
-     , Clock m (Out clL), Clock m (Out clR)
-     , GetClockProxy clL, GetClockProxy clR
-     , Time clL ~ Time clR
-     , Time clL ~ Time (Out clL), Time clL ~ Time (In clL)
-     , Time clR ~ Time (Out clR), Time clR ~ Time (In clR)
-     )
-  => SN m             clL      a b
-  -> SN m                 clR  a b
-  -> SN m (ParClock clL clR) a b
-(||||) = parallel
-
--- | Compose two signal networks on different clocks in clock-parallel.
---   At one tick of @ParClock cl1 cl2@, one of the networks is stepped,
---   dependent on which constituent clock has ticked.
-(++++)
-  :: ( Monad m, Clock m clL, Clock m clR
-     , Clock m (Out clL), Clock m (Out clR)
-     , GetClockProxy clL, GetClockProxy clR
-     , Time clL ~ Time clR
-     , Time clL ~ Time (Out clL), Time clL ~ Time (In clL)
-     , Time clR ~ Time (Out clR), Time clR ~ Time (In clR)
-     )
-  => SN m             clL      a         b
-  -> SN m                 clR  a           c
-  -> SN m (ParClock clL clR) a (Either b c)
-snL ++++ snR = (snL >>>^ Left) |||| (snR >>>^ Right)
+-- (++++)
+--   :: ( Monad m, Clock m clL, Clock m clR
+--      , Clock m (Out clL), Clock m (Out clR)
+--      , GetClockProxy clL, GetClockProxy clR
+--      , Time clL ~ Time clR
+--      , Time clL ~ Time (Out clL), Time clL ~ Time (In clL)
+--      , Time clR ~ Time (Out clR), Time clR ~ Time (In clR)
+--      )
+--   => SN m             cls1      a         b
+--   -> SN m                 cls2  a           c
+--   -> SN m (Append cls1 cls2)    a (Either b c)
+-- snL ++++ snR = (snL >>>^ Left) |||| (snR >>>^ Right)

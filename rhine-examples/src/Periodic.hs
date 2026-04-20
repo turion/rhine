@@ -17,8 +17,8 @@ everyNowAndThen =
   sinceInitS >>> proc time ->
     returnA -< unwords ["It's now", show time, "o'clock."]
 
-mainRhine :: (MonadIO m) => Rhine (ScheduleT Integer m) MyClock () ()
-mainRhine = everyNowAndThen >-> arrMCl (liftIO . putStrLn) @@ Periodic
+mainRhine :: (MonadIO m) => Rhine (ScheduleT Integer m) Integer '[MyClock] (At MyClock ()) (At MyClock ())
+mainRhine = everyNowAndThen >-> arrMCl (liftIO . putStrLn)@@ Periodic
 
 main :: IO ()
-main = runScheduleIO $ flow mainRhine
+main = runScheduleIO $ flow $ Present ^>>@ mainRhine
