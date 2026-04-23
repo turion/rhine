@@ -5,6 +5,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Data.Automaton where
 
@@ -651,12 +652,18 @@ lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendFromR mempty >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
 
+-- | Indefinitely outputs the first input value
+firstS :: Applicative m => Automaton m a a
+firstS = unfold Nothing $ \aInput -> \case
+  Nothing -> Result (Just aInput) aInput
+  s@(Just a) -> Result s a
+
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => (a -> m b) -> Automaton m a b
 initialised = Automaton . Stateful . StreamT.initialised . ReaderT
 {-# INLINE initialised #-}
 
--- | Like 'initialised', but ignores the input.
+-- | Like 'initialised_', but ignores the input.
 initialised_ :: (Monad m) => m b -> Automaton m a b
 initialised_ = initialised . const
 {-# INLINE initialised_ #-}
