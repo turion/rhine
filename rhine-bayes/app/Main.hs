@@ -56,7 +56,7 @@ type Sensor = Pos
 
 -- | Harmonic oscillator with white noise
 prior1d ::
-  (Diff td ~ Double) =>
+  (Measured Double (Diff td)) =>
   -- | Starting position
   Double ->
   -- | Starting velocity
@@ -66,19 +66,19 @@ prior1d initialPosition initialVelocity = feedback 0 $ proc (temperature, positi
   impulse <- whiteNoiseVarying -< temperature
   let acceleration = (-3) * position' + impulse
   -- Integral over roughly the last 10 seconds, dying off exponentially, as to model a small friction term
-  velocity <- arr (+ initialVelocity) <<< decayIntegral 10 -< acceleration
+  velocity <- arr (+ initialVelocity) <<< decayIntegral (unmeasure 10.0) -< acceleration
   position <- integralFrom initialPosition -< velocity
   returnA -< (position, position)
 
 -- | 2D harmonic oscillator with noise
-prior :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td Temperature Pos
+prior :: (MonadDistribution m, Measured Double (Diff td)) => BehaviourF m td Temperature Pos
 prior = prior1d 10 0 &&& prior1d 0 10
 
 -- ** Observation
 
 -- | An integral where the integrated value dies of exponentially
-decayIntegral :: (VectorSpace v (Diff td), Monad m, Floating (Diff td)) => Diff td -> BehaviourF m td v v
-decayIntegral timeConstant = (timeConstant *^) <$> average timeConstant
+decayIntegral :: (VectorSpace v Double, Measured Double (Diff td), Monad m) => Diff td -> BehaviourF m td v v
+decayIntegral timeConstant = (measure timeConstant *^) <$> average timeConstant
 
 -- | The assumed standard deviation of the sensor noise
 sensorNoiseTemperature :: Double
@@ -89,7 +89,7 @@ noise :: StochasticProcess td Pos
 noise = whiteNoise sensorNoiseTemperature &&& whiteNoise sensorNoiseTemperature
 
 -- | A generative model of the sensor position, given the noise
-generativeModel :: (Diff td ~ Double) => StochasticProcessF td Pos Sensor
+generativeModel :: (Measured Double (Diff td)) => StochasticProcessF td Pos Sensor
 generativeModel = proc latent -> do
   noiseNow <- noise -< ()
   returnA -< latent ^+^ noiseNow
@@ -107,10 +107,10 @@ initialTemperature :: Temperature
 initialTemperature = 7
 
 -- | We assume the user changes the temperature randomly every 3 seconds.
-temperatureProcess :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td () Temperature
+temperatureProcess :: (MonadDistribution m, Measured Double (Diff td)) => BehaviourF m td () Temperature
 temperatureProcess =
   -- Draw events from a Poisson process with a rate of one event per 3 seconds
-  poissonHomogeneous 3
+  poissonHomogeneous 3.0
     -- For every event, draw a number from a normal distribution
     >>> arrMCl (flip replicateM $ normal 0 0.2)
     -- Sum the numbers and log-transform then into the positive reals
@@ -127,7 +127,7 @@ runLogDomain = exp . ln
 {- | Generate a random position and sensor value, given a temperature.
    Used for simulating a situation upon which we will perform inference.
 -}
-genModelWithoutTemperature :: (MonadDistribution m, Diff td ~ Double) => BehaviourF m td Temperature (Sensor, Pos)
+genModelWithoutTemperature :: (MonadDistribution m, Measured Double (Diff td)) => BehaviourF m td Temperature (Sensor, Pos)
 genModelWithoutTemperature = proc temperature -> do
   latent <- prior -< temperature
   sensor <- generativeModel -< latent
@@ -136,7 +136,7 @@ genModelWithoutTemperature = proc temperature -> do
 {- | Given sensor data, sample a latent position and a temperature, and weight them according to the likelihood of the observed sensor position.
    Used to infer position and temperature.
 -}
-posteriorTemperatureProcess :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td Sensor (Temperature, Pos)
+posteriorTemperatureProcess :: (MonadMeasure m, Measured Double (Diff td)) => BehaviourF m td Sensor (Temperature, Pos)
 posteriorTemperatureProcess = proc sensor -> do
   temperature <- temperatureProcess -< ()
   latent <- prior -< temperature
@@ -180,7 +180,7 @@ double2FloatTuple = double2Float *** double2Float
 type App = GlossConcT SamplerIO
 
 -- | Draw the results of the simulation and inference
-visualisation :: (Diff td ~ Double) => BehaviourF App td Result ()
+visualisation :: (Measured Double (Diff td)) => BehaviourF App td Result ()
 visualisation = proc Result {temperature, measured, latent, particlesPosition, particlesTemperature} -> do
   constMCl clearIO -< ()
   time <- sinceInitS -< ()
@@ -194,7 +194,7 @@ visualisation = proc Result {temperature, measured, latent, particlesPosition, p
                   [0 ..]
                   [ printf "Temperature: %.2f" temperature
                   , printf "Particles: %i" $ length particlesPosition
-                  , printf "Time: %.1f" time
+                  , printf "Time: %.1f" (measure @Double time)
                   ]
               return $ translate 0 ((-150) * n) $ text message
           , color red $ rectangleUpperSolid thermometerWidth $ double2Float temperature * thermometerScale
@@ -275,7 +275,7 @@ temperaturePrior = gamma 1 7
 {- | On startup, sample values from the temperature prior.
   Then keep sampling from the position prior and condition by the likelihood of the measured sensor position.
 -}
-posteriorTemperatureCollapse :: (MonadMeasure m, Diff td ~ Double) => BehaviourF m td Sensor (Temperature, Pos)
+posteriorTemperatureCollapse :: (MonadMeasure m, Measured Double (Diff td)) => BehaviourF m td Sensor (Temperature, Pos)
 posteriorTemperatureCollapse = proc sensor -> do
   temperature <- performOnFirstSample (arr_ <$> temperaturePrior) -< ()
   latent <- prior -< temperature
@@ -285,7 +285,7 @@ posteriorTemperatureCollapse = proc sensor -> do
 {- | Given an actual temperature, simulate a latent position and measured sensor position,
    and based on the sensor data infer the latent position and the temperature.
 -}
-filteredCollapse :: (Diff td ~ Double) => BehaviourF App td Temperature Result
+filteredCollapse :: (Measured Double (Diff td)) => BehaviourF App td Temperature Result
 filteredCollapse = proc temperature -> do
   (measured, latent) <- genModelWithoutTemperature -< temperature
   particlesAndTemperature <- runPopulationCl nParticles resampleSystematic posteriorTemperatureCollapse -< measured
@@ -300,7 +300,7 @@ filteredCollapse = proc temperature -> do
         }
 
 -- | Run simulation, inference, and visualization synchronously
-mainClSFCollapse :: (Diff td ~ Double) => BehaviourF App td () ()
+mainClSFCollapse :: (Measured Double (Diff td)) => BehaviourF App td () ()
 mainClSFCollapse = proc () -> do
   output <- filteredCollapse -< initialTemperature
   visualisation -< output
@@ -316,7 +316,7 @@ mainSingleRateCollapse =
 {- | Given an actual temperature, simulate a latent position and measured sensor position,
    and based on the sensor data infer the latent position and the temperature.
 -}
-filtered :: (Diff td ~ Double) => BehaviourF App td Temperature Result
+filtered :: (Measured Double (Diff td)) => BehaviourF App td Temperature Result
 filtered = proc temperature -> do
   (measured, latent) <- genModelWithoutTemperature -< temperature
   positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
@@ -331,7 +331,7 @@ filtered = proc temperature -> do
         }
 
 -- | Run simulation, inference, and visualization synchronously
-mainClSF :: (Diff td ~ Double) => BehaviourF App td () ()
+mainClSF :: (Measured Double (Diff td)) => BehaviourF App td () ()
 mainClSF = proc () -> do
   output <- filtered -< initialTemperature
   visualisation -< output
@@ -364,7 +364,7 @@ userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr 
 inference :: Rhine App (GlossConcTClock SamplerIO (Millisecond 100)) (Temperature, (Sensor, Pos)) Result
 inference = inferenceBehaviour @@ glossConcTClock waitClock
 
-inferenceBehaviour :: (MonadDistribution m, Diff td ~ Double, MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
+inferenceBehaviour :: (MonadDistribution m, Measured Double (Diff td), MonadIO m) => BehaviourF m td (Temperature, (Sensor, Pos)) Result
 inferenceBehaviour = proc (temperature, (measured, latent)) -> do
   positionsAndTemperatures <- runPopulationCl nParticles resampleSystematic posteriorTemperatureProcess -< measured
   returnA

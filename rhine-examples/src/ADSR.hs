@@ -49,7 +49,7 @@ data ADSR time s = ADSR
   }
 
 -- | Some sample settings for an 'ADSR'.
-myADSR :: ADSR UTCTime Double
+myADSR :: ADSR UTCTime (Diff UTCTime)
 myADSR =
   ADSR
     { a = 0.05

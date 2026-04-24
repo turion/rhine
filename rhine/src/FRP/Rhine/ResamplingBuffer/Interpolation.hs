@@ -19,6 +19,7 @@ import Data.TimeDomain (Diff)
 
 -- rhine
 import FRP.Rhine.ClSF
+import FRP.Rhine.Clock.Util (Measured (measure))
 import FRP.Rhine.ResamplingBuffer
 import FRP.Rhine.ResamplingBuffer.KeepLast
 import FRP.Rhine.ResamplingBuffer.Util
@@ -30,8 +31,8 @@ linear ::
   , Clock m cl2
   , VectorSpace v s
   , Num s
-  , s ~ Diff (Time cl1)
-  , s ~ Diff (Time cl2)
+  , Measured s (Diff (Time cl1))
+  , Measured s (Diff (Time cl2))
   ) =>
   -- | The initial velocity (derivative of the signal)
   v ->
@@ -39,10 +40,10 @@ linear ::
   v ->
   ResamplingBuffer m cl1 cl2 v v
 linear initVelocity initPosition =
-  (derivativeFrom initPosition &&& clId) &&& timeInfoOf sinceInit
+  (derivativeFrom initPosition &&& clId) &&& timeInfoOf (measure . sinceInit)
     ^->> keepLast ((initVelocity, initPosition), 0)
       >>-^ proc ((velocity, lastPosition), sinceInit1) -> do
-        sinceInit2 <- timeInfoOf sinceInit -< ()
+        sinceInit2 <- timeInfoOf (measure . sinceInit) -< ()
         let diff = sinceInit2 - sinceInit1
         returnA -< lastPosition ^+^ diff *^ velocity
 
@@ -62,14 +63,14 @@ sinc ::
   , Clock m cl1
   , Clock m cl2
   , VectorSpace v s
-  , Ord s
   , Floating s
-  , s ~ Diff (Time cl1)
-  , s ~ Diff (Time cl2)
+  , Ord (Diff (Time cl1))
+  , Measured s (Diff (Time cl1))
+  , Measured s (Diff (Time cl2))
   ) =>
   -- | The size of the interpolation window
   --   (for how long in the past to remember incoming values)
-  s ->
+  Diff (Time cl1) ->
   ResamplingBuffer m cl1 cl2 v v
 sinc windowSize =
   historySince windowSize
@@ -78,7 +79,7 @@ sinc windowSize =
       returnA -< vectorSum $ mkSinc sinceInit2 <$> as
   where
     mkSinc sinceInit2 (TimeInfo {..}, as) =
-      let t = pi * (sinceInit2 - sinceInit) / sinceLast
+      let t = pi * (measure sinceInit2 - measure sinceInit) / measure sinceLast
        in (sin t / t) *^ as
     vectorSum = foldr (^+^) zeroVector
 
@@ -98,19 +99,19 @@ cubic ::
   , Floating v
   , Eq v
   , Fractional s
-  , s ~ Diff (Time cl1)
-  , s ~ Diff (Time cl2)
+  , Measured s (Diff (Time cl1))
+  , Measured s (Diff (Time cl2))
   ) =>
   ResamplingBuffer m cl1 cl2 v v
 {- FOURMOLU_DISABLE -}
 cubic =
-  ((delay zeroVector &&& threePointDerivative) &&& (sinceInitS >-> delay 0))
+  ((delay zeroVector &&& threePointDerivative) &&& (sinceInitS >-> arr measure >-> delay 0))
     >-> (clId &&& delay (zeroVector, 0))
    ^->> keepLast ((zeroVector, 0), (zeroVector, 0))
    >>-^ proc (((dv, v), t1), ((dv', v'), t1')) -> do
      t2 <- sinceInitS -< ()
      let
-       t        = (t1 - t1') / (t2 - t1')
+       t        = (t1 - t1') / (measure t2 - t1')
        tsquared = t ^ 2
        tcubed   = t ^ 3
        vInter   = ( 2 * tcubed - 3 * tsquared     + 1) *^  v'

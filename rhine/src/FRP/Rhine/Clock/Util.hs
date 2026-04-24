@@ -9,6 +9,9 @@ import Control.Arrow
 -- time-domain
 import Data.TimeDomain
 
+-- time
+import Data.Time (NominalDiffTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
+
 -- automaton
 import Data.Automaton (Automaton, delay)
 
@@ -36,3 +39,11 @@ genTimeInfo _ initialTime = proc (absolute, tag) -> do
         , ..
         }
 {-# INLINE genTimeInfo #-}
+
+class Measured v a where
+  measure :: a -> v
+  unmeasure :: v -> a
+
+instance Measured Double NominalDiffTime where
+  measure = realToFrac . nominalDiffTimeToSeconds
+  unmeasure = secondsToNominalDiffTime . realToFrac

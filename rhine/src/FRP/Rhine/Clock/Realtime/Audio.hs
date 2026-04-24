@@ -39,6 +39,7 @@ import Data.TimeDomain (diffTime)
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import FRP.Rhine.Clock.Util (measure)
 
 -- | Rates at which audio signals are typically sampled.
 data AudioRate
@@ -118,7 +119,7 @@ instance
           returnA -< (nextTime, if n == 0 then maybeWasLate else Nothing)
         currentTime <- once_ $ liftIO getCurrentTime
         let
-          lateDiff = currentTime `diffTime` bufferFullTime
+          lateDiff = measure $ currentTime `diffTime` bufferFullTime
           late = if lateDiff > 0 then Just lateDiff else Nothing
         safe $ runningClock bufferFullTime late
     initialTime <- liftIO getCurrentTime
