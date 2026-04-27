@@ -20,6 +20,7 @@ common warnings
         TypeFamilies
         Arrows
         ScopedTypeVariables
+        OverloadedLists
         OverloadedStrings
 
 library
@@ -27,9 +28,10 @@ library
     exposed-modules:
         FRP.Rhine.Tree
         FRP.Rhine.Tree.Types
+        FRP.Rhine.Tree.App
     -- other-modules:
     -- other-extensions:
-    build-depends:    base >=4.16 && < 4.21
+    build-depends:    base >=4.16 && < 4.22
         , transformers
         , base-compat
         , sop-core
@@ -41,37 +43,34 @@ library
         , semialign
         , jsaddle
         , time
-        , stm
+        , vector-sized
+        , vector
+        , finite-typelits
     hs-source-dirs:   src
 
+-- WASM executable: build with wasm32-wasi-cabal, served in the browser.
+-- The -no-hs-main / reactor flags are only meaningful with the WASM backend;
+-- they are harmless no-ops on native GHC but you would normally only build
+-- this target with wasm32-wasi-cabal.
 executable dommy
     import:           warnings
     build-depends:
         base,
-        rhine,
         rhine-tree,
-        jsaddle,
-        text,
-        lens
-    ghc-options: -threaded
+        jsaddle-wasm
+    -- For the GHC WASM backend:
+    --   -no-hs-main            : don't emit a C main(); we export hs_start instead
+    --   -optl-mexec-model=reactor : produce a WASI reactor (callable multiple times)
+    --   --export=hs_start       : preserve the hs_start export through dead-code elimination
+    ghc-options: -no-hs-main
+                 -optl-mexec-model=reactor
+                 "-optl-Wl,--export=hs_start"
     hs-source-dirs: app
     main-is: Dommy.hs
 
-
--- Flag: set to True when building with the GHC WASM backend.
--- This disables dommy-warp (which depends on warp/TLS/crypton — unbuildable under WASM).
-flag wasm
-    description: Building with the GHC WASM backend
-    default:     False
-    manual:      True
-
 -- Warp executable: build with normal GHC, serves the app at http://localhost:8080.
--- Disabled when building with the WASM backend (jsaddle-warp → warp → crypton → basement
--- cannot compile for WASM because basement's cbits has no WASI code path).
 executable dommy-warp
     import:           warnings
-    if flag(wasm)
-        buildable: False
     build-depends:
         base,
         rhine-tree,
@@ -79,7 +78,6 @@ executable dommy-warp
     ghc-options: -threaded
     hs-source-dirs: app
     main-is: DommyWarp.hs
-
 
 test-suite rhine-tree-test
     import:           warnings

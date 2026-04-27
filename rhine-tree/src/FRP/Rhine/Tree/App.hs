@@ -15,8 +15,8 @@ import Control.Concurrent (threadDelay)
 default (Text)
 
 -- | The top-level JSM entry point.
-mainJSM' :: JSM ()
-mainJSM' = do
+mainJSM :: JSM ()
+mainJSM = do
   logJS "hi"
   install $ do
     lift $ logJS "installing"
@@ -24,18 +24,14 @@ mainJSM' = do
     lift $ do
       logJS "onclick"
       printJS (x, y)
-  loop
-  where
-    loop = do
-      logJS "loop"
-      syncPoint
-      liftIO $ threadDelay 10_000
-      loop
+    (x',y') <- clickableDiv $ T.pack $ show (x,y)
+    (x'',y'') <- clickableDiv $ T.pack $ show (x',y')
+    void $ clickableDiv $ T.pack $ show (x'',y'')
 
 
 
-mainJSM :: JSM ()
-mainJSM = do
+mainJSM' :: JSM ()
+mainJSM' = do
   clock <- createJSMClock
   logJS "created"
   flowJSM mainClSF clock

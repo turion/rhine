@@ -53,6 +53,7 @@ import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
 import Control.Monad.Trans.Cont (ContT (..), evalContT)
 import Control.Concurrent.STM
+import Control.Monad.Fix (MonadFix (..))
 
 default (Text)
 
@@ -457,6 +458,12 @@ instance Monad m => Alternative (WidgetT m) where
   empty = WidgetT $ ContT $ const $ pure ()
   WidgetT (ContT cb1) <|> WidgetT (ContT cb2) = WidgetT $ ContT $ \f -> cb1 f >> cb2 f
 
+-- instance MonadFix (WidgetT m) where
+--   mfix f = WidgetT $ ContT $ \k -> do
+--     let thing = ($ k) $ flip $ runContT . getWidgetT . f
+--     _
+
+
 -- Probably incorrect, it will block
 concurrently' :: MonadIO m => WidgetT m a -> WidgetT m b -> WidgetT m (a, b)
 concurrently' (WidgetT (ContT cb1)) (WidgetT (ContT cb2)) = WidgetT $ ContT $ \f -> do
@@ -509,25 +516,31 @@ await widget = do
 
 jsmWidget :: MakeObject o => JSM o -> Text -> WidgetT JSM (JSVal, JSVal, [JSVal])
 jsmWidget mkObject methodName = mkWidget mkObject $ \o cb -> do
-  logJS "jsmWidget"
   o ^. jss methodName (fun $ \a b es -> cb (a, b, es))
-  logJS "jsmWidget syncPoint"
   syncPoint
-  logJS "jsmWidget after syncPoint"
+
+clickableDiv :: Text -> WidgetT JSM (Double, Double)
+clickableDiv label = do
+  (_, _, es) <- jsmWidget mkObject "onclick"
+  case es of
+    [e] -> lift $ do
+      clientX <- e ^. js ("clientX" :: Text) >>= valToNumber
+      clientY <- e ^. js ("clientY" :: Text) >>= valToNumber
+      pure (clientX, clientY)
+    _ -> empty
+  where
+    mkObject = do
+      doc <- jsg ("document" :: Text)
+      doc ^. js "body" . js "body" . jss "append" ("<div id='" <> label <> "'>" <> label <> "</div>")
+      pure doc
 
 docOnClick :: WidgetT JSM (Double, Double)
 docOnClick = do
-  lift $ logJS "docOnClick"
-  (_, _, es) <- jsmWidget (jsg ("document" :: Text)) "onClick"
-  lift $ logJS "after jsmWidget onClick"
-  lift syncPoint
+  (_, _, es) <- jsmWidget (jsg ("document" :: Text)) "onclick"
   case es of
     [e] -> lift $ do
-      syncPoint
-      logJS "clientXY"
       clientX <- e ^. js ("clientX" :: Text) >>= valToNumber
       clientY <- e ^. js ("clientY" :: Text) >>= valToNumber
-      syncPoint
       pure (clientX, clientY)
     _ -> empty
 

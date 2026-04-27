@@ -13,7 +13,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
-    ghc-wasm-meta.url = "gitlab:ghc/ghc-wasm-meta?host=gitlab.haskell.org";
+    ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
   };
 
   outputs = inputs:
@@ -43,7 +43,7 @@
       # The Haskell packages set, for every supported GHC version
       hpsFor = pkgs:
         lib.genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
-        // { default = pkgs.haskellPackages; };
+        // { default = pkgs.haskell.packages.ghc912; };
 
       # A nixpkgs overlay containing necessary overrides on dependencies added in rhine
       localDependenciesOverlay = final: prev:
@@ -179,6 +179,12 @@
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
         mapAttrs (system: pkgs: f system (pkgs.extend overlay)) inputs.nixpkgs.legacyPackages;
+      rhine-tree-js = pkgs:
+        import ./rhine-tree/nix {
+          inherit pkgs lib;
+          nixpkgsSrc = inputs.nixpkgs;
+          ghcWasmMeta = inputs.ghc-wasm-meta;
+        };
     in
     {
       # Reexport the overlay so other downstream flakes can use it to develop rhine projects with low effort.
@@ -189,41 +195,13 @@
 
       # Usage: nix fmt
       formatter = forAllPlatforms (system: pkgs: pkgs.nixpkgs-fmt);
-      # Build outputs.
-      #
-      # All packages, all GHC versions, docs and sdist:
-      #   nix build                              # → result/ symlink to rhine-all
-      #
-      # Single package (default GHC, currently 9.12):
-      #   nix build .#haskellPackages.rhine
-      #
-      # All packages for a specific GHC:
-      #   nix build .#ghc912                     # or ghc94 / ghc96 / ghc98 / ghc910
-      #
-      # Hackage upload artefacts:
-      #   nix build .#rhine-sdist                # → result/ contains *.tar.gz for each lib
-      #   nix build .#rhine-docs                 # → result/ contains documentation tarballs
-      #
-      # rhine-tree browser app — GHC 9.12 WASM backend (runs fully in the browser):
-      # One-shot (compile + serve):
-      #   nix run .#rhine-tree-app-wasm
-      #   # Then open: http://localhost:8080
-      # Serve static files only (no WASM yet; ES modules need HTTP, not file://):
-      #   nix run .#rhine-tree-js-serve
-      #   # Then open: http://localhost:8080
-      # Manual three-step alternative:
-      # Step 1 — build the static files + build.sh:
-      #   nix build .#rhine-tree-js
-      #   cp -r --no-preserve=mode result/ dist/
-      # Step 2 — compile dommy.wasm (needs live Hackage; run inside the wasm shell):
-      #   nix develop .#wasm
-      #   cd dist && bash build.sh
-      # Step 3 — serve:
-      #   python3 -m http.server 8080 --directory dist/
-      #   # Then open: http://localhost:8080
+
+      # This builds all rhine packages on all GHCs, as well as docs and sdist
+      # Usage: nix build
       packages = forAllPlatforms (system: pkgs:                {
-       default = pkgs.rhine-all;
-        rhine-tree-js = (pkgs.pkgsCross.ghcjs.extend overlay).haskell.packages.ghc910.rhine-tree;
+        default = pkgs.rhine-all;
+      } // lib.optionalAttrs (system == "x86_64-linux") {
+        rhine-tree-js = rhine-tree-js pkgs;
       } // lib.mapAttrs (ghcVersion: haskellPackages: pkgs.linkFarm "rhine-all-${ghcVersion}" (lib.genAttrs pnames (pname: haskellPackages.${pname}))) (hpsFor pkgs));
 
       # We re-export the entire nixpkgs package set with our overlay.
@@ -249,15 +227,15 @@
         (hpsFor pkgs)) //
       {
         wasm =
-          let pkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.${system};
+          let pkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.x86_64-linux;
           in
           pkgs.mkShell {
             packages = [
-              inputs.ghc-wasm-meta.packages.${system}.all_9_10
+              inputs.ghc-wasm-meta.packages.x86_64-linux.all_9_12
               # pkgs.dart-sass
             ];
           };
-        x86_64-linux.js =
+        js =
           let
             pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux.pkgsCross.ghcjs.extend overlay;
             hp = pkgs.haskell.packages.ghc910;
