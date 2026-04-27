@@ -27,14 +27,14 @@
         "host": "gitlab.haskell.org",
         "lastModified": 1778577188,
         "narHash": "sha256-1Mm6hRs0O9LbNkMtgXzKMwUlSF4w3zBRJKFxqPybNq0=",
-        "owner": "haskell-wasm",
+        "owner": "ghc",
         "repo": "ghc-wasm-meta",
         "rev": "ce5f7dd003ad25c42dcbdb5d07ca2387ad0ddf93",
         "type": "gitlab"
       },
       "original": {
         "host": "gitlab.haskell.org",
-        "owner": "haskell-wasm",
+        "owner": "ghc",
         "repo": "ghc-wasm-meta",
         "type": "gitlab"
       }

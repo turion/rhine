@@ -6,12 +6,34 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import FRP.Rhine (count)
 import FRP.Rhine.Tree
-import FRP.Rhine.Tree.Types (Content (ContentText), Node (..))
-import Language.Javascript.JSaddle (JSM)
+import FRP.Rhine.Tree.Types (Content (ContentText), Node (..), DOM)
+import Language.Javascript.JSaddle (JSM, liftJSM, syncPoint)
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.IO.Class (MonadIO(..))
+import Control.Concurrent (threadDelay)
 
 default (Text)
 
 -- | The top-level JSM entry point.
+mainJSM' :: JSM ()
+mainJSM' = do
+  logJS "hi"
+  install $ do
+    lift $ logJS "installing"
+    (x, y) <- docOnClick
+    lift $ do
+      logJS "onclick"
+      printJS (x, y)
+  loop
+  where
+    loop = do
+      logJS "loop"
+      syncPoint
+      liftIO $ threadDelay 10_000
+      loop
+
+
+
 mainJSM :: JSM ()
 mainJSM = do
   clock <- createJSMClock

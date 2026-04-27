@@ -1,12 +1,14 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module FRP.Rhine.Tree where
 
 -- base
 
-import Control.Applicative (Alternative)
+import Control.Applicative (Alternative (..))
 -- base-compat
 
 -- transformers
@@ -19,10 +21,10 @@ import Control.Applicative (Alternative)
 
 -- rhine-tree
 
-import Control.Concurrent (Chan, newChan, readChan, writeChan)
+import Control.Concurrent (Chan, newChan, readChan, writeChan, newEmptyMVar, putMVar, forkIO, takeMVar, tryPutMVar)
 import Control.Lens (ALens', Index, IndexedTraversal', IxValue, Ixed (..), Lens', Prism', Traversal', itraversed, re, to, view, (%~), (<.), (^.), (^?), (^@..))
 import Control.Monad (join, void)
-import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Class (lift, MonadTrans)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Control.Monad.Trans.State.Strict qualified as StateT
@@ -39,16 +41,18 @@ import Data.Monoid (Alt (..))
 import Data.Proxy (Proxy (..))
 import Data.Stream (StreamT (..))
 import Data.Stream.Result (mapResultState, unzipResult)
-import Data.Text hiding (index, length)
-import Data.Text qualified as T hiding (length)
+import Data.Text hiding (empty, index, length)
+import Data.Text qualified as T hiding (empty, length)
 import Data.These (these)
 import Data.Vector qualified as V
 import FRP.Rhine hiding (readerS, runReaderS, step)
 import FRP.Rhine.ClSF.State qualified as ClSF
 import FRP.Rhine.Tree.Types
-import Language.Javascript.JSaddle (MonadJSM (..), fun, js, js1, js2, jsg, jss, syncPoint, valToNumber)
+import Language.Javascript.JSaddle (MonadJSM (..), fun, js, js1, js2, jsg, jss, syncPoint, valToNumber, MakeObject, JSVal)
 import Language.Javascript.JSaddle.Types (JSM)
 import Prelude hiding (unzip)
+import Control.Monad.Trans.Cont (ContT (..), evalContT)
+import Control.Concurrent.STM
 
 default (Text)
 
@@ -93,6 +97,9 @@ instance HasEvent DOM where
 data IndexList c t a b where
   Here :: (c a) => t a -> IndexList c t a a
   There :: (Ixed a) => Index a -> IndexList c t (IxValue a) b -> IndexList c t a b
+
+-- This makes GHC blow up of course
+-- deriving instance (Show (Index a), (Show (IndexList c t (IxValue a) b))) => (Show (IndexList c t a b))
 
 -- Lensing :: AtL a => Index a -> IndexList c t (IxValue a) b -> IndexList c t a b
 
@@ -140,6 +147,8 @@ indexAutomaton eHere eThere = proc i -> do
 -- splitIndexList (input, Lensing i eventList) = Right ((input, eventList), Right $ atl i)
 
 data SomeEvent root = forall a. SomeEvent {_someEvent :: EventList root a}
+
+-- deriving instance Show (SomeEvent root)
 
 someEventHere :: SomeEvent node -> Maybe (Event node)
 someEventHere (SomeEvent (Here (AnEvent e))) = Just e
@@ -233,7 +242,7 @@ createJSMClock = do
       ( fun $ \a b [e] -> do
           clientX <- e ^. js ("clientX" :: Text) >>= valToNumber
           clientY <- e ^. js ("clientY" :: Text) >>= valToNumber
-          liftIO $ print clientX
+          printJS clientX
           liftIO $ writeChan events $ SomeEvent $ Here $ AnEvent OnClick {clientX, clientY}
           syncPoint
       )
@@ -414,7 +423,7 @@ permanent'' v = feedback Nothing $ proc (_, iMaybe) -> do
 dynamic :: (AppendChild node, Eq (Index node)) => IxValue node -> JSMSF (IxValue node) a b -> JSMSF node a (Maybe b)
 dynamic v sf = proc a -> do
   (_, i) <- permanent'' v -< ()
-  constMCl (lift $ logJS "dyńamic") -< ()
+  constMCl (lift $ logJS "dynamic") -< ()
   dynamicAt sf -< (i, a) -- FIXME But this doesn't start because there is no event going to it.
   -- It's time to do dom diffing and attaching events
 
@@ -433,7 +442,103 @@ dynamicAt sf = arr join <<< pushTreeSF' sf'
 -- modal :: TreeSF' m cl (IxValue node) (i, a) o -> TreeSF' m cl node (i, Maybe a) o
 -- modal sf = _
 
+printJS :: Show a => a -> JSM ()
+printJS = logJS . T.show
+
 logJS :: Text -> JSM ()
 logJS msg = do
   c <- jsg ("console" :: Text)
   void $ c ^. js1 ("log" :: Text) msg
+
+newtype WidgetT m a = WidgetT { getWidgetT :: ContT () m a }
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadTrans)
+
+instance Monad m => Alternative (WidgetT m) where
+  empty = WidgetT $ ContT $ const $ pure ()
+  WidgetT (ContT cb1) <|> WidgetT (ContT cb2) = WidgetT $ ContT $ \f -> cb1 f >> cb2 f
+
+-- Probably incorrect, it will block
+concurrently' :: MonadIO m => WidgetT m a -> WidgetT m b -> WidgetT m (a, b)
+concurrently' (WidgetT (ContT cb1)) (WidgetT (ContT cb2)) = WidgetT $ ContT $ \f -> do
+  varA <- liftIO newEmptyMVar
+  varB <- liftIO newEmptyMVar
+  cb1 $ liftIO . putMVar varA
+  cb2 $ liftIO . putMVar varB
+  a <- liftIO $ takeMVar varA
+  b <- liftIO $ takeMVar varB
+  f (a, b)
+
+-- WIP this is actually zip
+concurrently :: WidgetT IO a -> WidgetT IO b -> WidgetT IO (a, b)
+concurrently (WidgetT (ContT cb1)) (WidgetT (ContT cb2)) = WidgetT $ ContT $ \f -> do
+  varA <- newEmptyMVar
+  varB <- newEmptyMVar
+  cb1 $ putMVar varA
+  cb2 $ putMVar varB
+  void $ forkIO $ do
+    a <- takeMVar varA
+    b <- takeMVar varB
+    f (a, b)
+
+mkWidget :: Monad m => m ctxt -> (ctxt -> (a -> m ()) -> m ()) -> WidgetT m a
+mkWidget constructor callback = WidgetT $ ContT $ \f -> do
+  ctxt <- constructor
+  callback ctxt f
+
+install :: Monad m => WidgetT m () -> m ()
+install = evalContT . getWidgetT
+
+poll :: MonadIO m => WidgetT m a -> Automaton m arbitrary (Maybe a)
+poll widget = initialised_ constructor >>> arrM poll'
+  where
+    constructor = do
+      chan <- liftIO $ atomically newTChan
+      install $ do
+        a <- widget
+        liftIO $ atomically $ writeTChan chan a
+      pure chan
+    poll' = liftIO . atomically . tryReadTChan
+
+await :: MonadIO m => WidgetT m a -> m a
+await widget = do
+  var <- liftIO newEmptyMVar
+  install $ do
+    a <- widget
+    liftIO $ void $ tryPutMVar var a
+  liftIO $ takeMVar var
+
+jsmWidget :: MakeObject o => JSM o -> Text -> WidgetT JSM (JSVal, JSVal, [JSVal])
+jsmWidget mkObject methodName = mkWidget mkObject $ \o cb -> do
+  logJS "jsmWidget"
+  o ^. jss methodName (fun $ \a b es -> cb (a, b, es))
+  logJS "jsmWidget syncPoint"
+  syncPoint
+  logJS "jsmWidget after syncPoint"
+
+docOnClick :: WidgetT JSM (Double, Double)
+docOnClick = do
+  lift $ logJS "docOnClick"
+  (_, _, es) <- jsmWidget (jsg ("document" :: Text)) "onClick"
+  lift $ logJS "after jsmWidget onClick"
+  lift syncPoint
+  case es of
+    [e] -> lift $ do
+      syncPoint
+      logJS "clientXY"
+      clientX <- e ^. js ("clientX" :: Text) >>= valToNumber
+      clientY <- e ^. js ("clientY" :: Text) >>= valToNumber
+      syncPoint
+      pure (clientX, clientY)
+    _ -> empty
+
+
+-- Automaton (WidgetT m) a b = forall s . (s, (a, s) -> WidgetT m (b, s))
+-- = forall s . (s, ((b, s) -> m ()) -> ((a, s) -> m ()))
+
+-- runWidgetS :: Automaton (WidgetT m) a () -> Automaton m a ()
+-- -- runWidgetS = hoistS evalContT
+-- runWidgetS = handleAutomaton $ \StreamT { state, step } ->
+--   StreamT
+--     { state
+--     , step = \s -> ReaderT $ \a -> let x = runReaderT (step s) a in _
+--     }

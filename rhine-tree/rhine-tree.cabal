@@ -41,6 +41,7 @@ library
         , semialign
         , jsaddle
         , time
+        , stm
     hs-source-dirs:   src
 
 executable dommy

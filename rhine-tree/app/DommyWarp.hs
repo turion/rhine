@@ -8,4 +8,6 @@ import FRP.Rhine.Tree.App (mainJSM)
 import Language.Javascript.JSaddle.Warp (run)
 
 main :: IO ()
-main = run 8080 mainJSM
+main = do
+  putStrLn "Let's go"
+  run 8080 mainJSM
