@@ -4,6 +4,7 @@ module Data.Stream.Except where
 import Control.Category ((>>>))
 import Control.Monad (ap)
 import Data.Bifunctor (bimap)
+import Data.Bitraversable (bisequenceA)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Void
@@ -68,11 +69,9 @@ instance (Traversable m) => Traversable (StreamExcept a m) where
       traverseRecursive =
         getRecursive
           >>> runExceptT
-          >>> fmap (bimap f (mapResultState traverseRecursive >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
+          >>> fmap (bimap f (mapResultState traverseRecursive >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bisequenceA)
           >>> sequenceA
           >>> fmap (ExceptT >>> fmap (mapResultState Recursive))
-      bitraverseEither :: (Functor f) => Either (f a) (f b) -> f (Either a b)
-      bitraverseEither = either (fmap Left) (fmap Right)
 
 instance (Functor m) => Functor (StreamExcept a m) where
   fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe

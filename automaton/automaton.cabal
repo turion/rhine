@@ -47,15 +47,26 @@ common opts
     -W
 
   default-extensions:
+    ApplicativeDo
     Arrows
     DataKinds
+    DerivingStrategies
+    DerivingVia
+    ExistentialQuantification
     FlexibleContexts
     FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
     ImportQualifiedPost
+    InstanceSigs
     LambdaCase
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType
+    NumericUnderscores
+    RankNTypes
+    ScopedTypeVariables
+    StandaloneDeriving
     TupleSections
     TypeApplications
     TypeFamilies
