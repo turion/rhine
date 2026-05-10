@@ -55,10 +55,15 @@ class (TimeDifference (Diff time)) => TimeDomain time where
 
 Expected laws:
 
+* @dt `add` 'zero' = dt@ and @dt `difference` 'zero' = dt@
 * `add` is commutative and associative
 * @(dt1 `difference` dt2) `add` dt2 = dt1@
 -}
 class TimeDifference d where
+  -- | The zero duration, i.e. no time has passed.
+  --   Additive identity for 'difference' and 'add'.
+  zero :: d
+
   -- | Calculate the difference between two durations,
   --   compatibly with 'diffTime'.
   difference :: d -> d -> d
@@ -74,6 +79,7 @@ instance TimeDomain UTCTime where
   addTime = flip $ addUTCTime . realToFrac
 
 instance TimeDifference Double where
+  zero = 0
   difference = (-)
   add = (+)
 
@@ -84,6 +90,7 @@ instance TimeDomain Double where
   addTime = (+)
 
 instance TimeDifference Float where
+  zero = 0
   difference = (-)
   add = (+)
 
@@ -94,6 +101,7 @@ instance TimeDomain Float where
   addTime = (+)
 
 instance TimeDifference Integer where
+  zero = 0
   difference = (-)
   add = (+)
 
@@ -104,6 +112,7 @@ instance TimeDomain Integer where
   addTime = (+)
 
 instance TimeDifference () where
+  zero = ()
   difference _ _ = ()
   add _ _ = ()
 
@@ -118,6 +127,7 @@ newtype NumTimeDomain a = NumTimeDomain {fromNumTimeDomain :: a}
   deriving (Num)
 
 instance (Num a) => TimeDifference (NumTimeDomain a) where
+  zero = 0
   difference = (-)
   add = (+)
 
