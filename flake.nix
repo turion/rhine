@@ -67,8 +67,8 @@
 
               changeset = hprev.callHackageDirect {
                 pkg = "changeset";
-                ver = "0.1.1";
-                sha256 = "sha256-Y8F48Fe1m5YYnQ8IPcpS7rS19kcYqrnRC9RsToSOweI=";
+                ver = "0.2.1";
+                sha256 = "sha256-vg31JEOtvslkOcn6ivSkD84sg93KFKnTBIUXZbd06H8=";
               } { };
             })
             (hfinal: hprev: lib.optionalAttrs prev.stdenv.isDarwin {
