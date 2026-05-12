@@ -11,10 +11,14 @@ import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Reactimation.Combinators
-import FRP.Rhine.Schedule
 import FRP.Rhine.Type
+import Control.Monad.Schedule.Class (MonadSchedule)
+import FRP.Rhine.SN (At(Present))
 
 -- * Running a Rhine
+
+-- FIXME Right now I still need a Present ^>>@ everywhere. Maybe a variant of flow with type signature Rhine m td cls (At cl ()) a?
+-- Or a type class for trivial types?
 
 {- |
 Takes a closed 'Rhine' (with trivial input and output),
@@ -43,20 +47,8 @@ main :: MyMonad ()
 main = flow $ mainSF @@ clock
 @
 -}
-
--- TODO Can we chuck the constraints into Clock m cl?
-flow ::
-  ( Monad m
-  , Clock m cl
-  , GetClockProxy cl
-  , Time cl ~ Time (In cl)
-  , Time cl ~ Time (Out cl)
-  ) =>
-  Rhine m cl () () ->
-  m void
-flow rhine = do
-  automaton <- eraseClock rhine
-  reactimate $ automaton >>> arr (const ())
+flow :: (Monad m, MonadSchedule m) => Rhine m td cls () a -> m ()
+flow = reactimate . eraseClock . (@>>^ const ())
 {-# INLINE flow #-}
 
 {- | Like 'flow', but with the type signature specialized to @m ()@.
@@ -64,13 +56,8 @@ flow rhine = do
 This is sometimes useful when dealing with ambiguous types.
 -}
 flow_ ::
-  ( Monad m
-  , Clock m cl
-  , GetClockProxy cl
-  , Time cl ~ Time (In cl)
-  , Time cl ~ Time (Out cl)
-  ) =>
-  Rhine m cl () () ->
+  (Monad m, MonadSchedule m) =>
+  Rhine m td cls () () ->
   m ()
 flow_ = flow
 
@@ -80,12 +67,10 @@ flow_ = flow
 reactimateCl ::
   ( Monad m
   , Clock m cl
-  , GetClockProxy cl
-  , cl ~ In cl
-  , cl ~ Out cl
+  , MonadSchedule m, GetClockProxy cl
   ) =>
   cl ->
   ClSF m cl () () ->
   m ()
-reactimateCl cl clsf = flow $ clsf @@ cl
+reactimateCl cl clsf = flow $ Present ^>>@ (clsf @@ cl)
 {-# INLINE reactimateCl #-}

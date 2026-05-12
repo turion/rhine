@@ -10,6 +10,8 @@ import Data.Automaton
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 
+-- FIXME Is it still applicable?
+
 -- Andras Kovacs' trick: Encode in the domain
 
 {- | An 'SN' is a side-effectful asynchronous /__s__ignal __n__etwork/,

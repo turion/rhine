@@ -20,10 +20,7 @@ import FRP.Rhine.Gloss.Pure
    It is combined of two subsystems, the event part and the simulation part.
    @a@ is the type of subevents that are selected.
 -}
-type GlossCombinedClock a =
-  SequentialClock
-    (GlossEventClock a)
-    GlossSimulationClock
+type GlossCombinedClock a = '[GlossEventClock a, GlossSimulationClock]
 
 -- ** Events
 
@@ -88,7 +85,7 @@ myGlossRhine
   = myEventSubsystem @@ myEventClock >-- collect --> mySim @@ glossSimulationClock
 @
 -}
-type GlossRhine a = Rhine GlossM (GlossCombinedClock a) () ()
+type GlossRhine a = Rhine GlossM Float (GlossCombinedClock a) () ()
 
 {- | For most applications, it is sufficient to implement
 a single signal function
@@ -102,6 +99,6 @@ buildGlossRhine ::
   ClSF GlossM GlossSimulationClock [a] () ->
   GlossRhine a
 buildGlossRhine selector clsfSim =
-  timeInfoOf tag @@ glossEventSelectClock selector
+  Present ^>>@ (timeInfoOf tag @@ glossEventSelectClock selector)
     >-- collect
-    --> clsfSim @@ glossSimulationClock
+    --> (clsfSim @@ glossSimulationClock) @>>^ const ()

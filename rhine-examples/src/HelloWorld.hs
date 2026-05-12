@@ -3,4 +3,4 @@
 import FRP.Rhine
 
 main :: IO ()
-main = flow $ constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100)
+main = flow $ Present ^>>@ (constMCl (putStrLn "Hello World!") @@ (waitClock :: Millisecond 100))

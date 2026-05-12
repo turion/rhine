@@ -8,7 +8,9 @@ import Text.Printf
 import System.Random
 
 -- rhine
-import FRP.Rhine
+import FRP.Rhine hiding (sn, flow, Rhine)
+import FRP.Rhine.SN.Free
+import FRP.Rhine.Rhine.Free
 
 type Ball = (Double, Double, Double)
 type BallVel = (Double, Double, Double)
@@ -73,21 +75,15 @@ statusMsg :: ClSF IO StatusClock Ball ()
 statusMsg = arrMCl $ \(x, y, z) ->
   printf "%.2f %.2f %.2f\n" x y z
 
-startVelRh :: Rhine IO StdinClock () BallVel
-startVelRh = startVel @@ StdinClock
-
-ballRh :: Rhine IO SimClock (Maybe BallVel) Ball
-ballRh = ball @@ waitClock
-
-statusRh :: Rhine IO StatusClock Ball ()
-statusRh = statusMsg @@ waitClock
-
-ballStatusRh :: Rhine IO (SeqClock SimClock StatusClock) (Maybe BallVel) ()
-ballStatusRh = ballRh >-- downsampleSimToStatus --> statusRh
-
 main :: IO ()
-main =
-  flow $
-    startVelRh
-      >-- fifoUnbounded
-      --> ballStatusRh
+main = flow $ Rhine
+  { clocks = StdinClock .:. (waitClock :: SimClock) .:. (waitClock :: StatusClock) .:. cnil
+  , sn =
+      arr Present
+      >>> synchronous startVel
+      >>> resampling fifoUnbounded
+      >>> synchronous ball
+      >>> resampling downsampleSimToStatus
+      >>> synchronous statusMsg
+      >>> arr (const ())
+  }
