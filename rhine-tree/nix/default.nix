@@ -9,10 +9,10 @@
 #
 # Everything is built in-sandbox via callCabal2nix cross-compilation.
 # No network access, no `cabal update`, no wasm32-wasi-cabal needed at runtime.
-# Approach adapted from https://github.com/ners/nix-wasm (GHC 9.12 / ghc9122).
+# Approach adapted from https://github.com/ners/nix-wasm (GHC 9.12).
 let
   system = pkgs.stdenv.system;
-  ghc = "ghc9122";
+  ghc = "ghc912";
   targetPrefix = "wasm32-wasi-";
 
   # Instantiate nixpkgs for the wasm32-wasi cross target.

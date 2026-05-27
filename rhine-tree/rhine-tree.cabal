@@ -12,6 +12,13 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
+flag wasm
+    description: Build for the GHC WASM backend. Disables the dommy-warp
+                 (jsaddle-warp) executable because its C dependencies
+                 (basement cbits) do not have a WASI code path.
+    default:     False
+    manual:      True
+
 common warnings
     ghc-options: -Wall
     default-language: GHC2021
@@ -46,6 +53,7 @@ library
         , vector-sized
         , vector
         , finite-typelits
+        , stm
     hs-source-dirs:   src
 
 -- WASM executable: build with wasm32-wasi-cabal, served in the browser.
@@ -69,8 +77,12 @@ executable dommy
     main-is: Dommy.hs
 
 -- Warp executable: build with normal GHC, serves the app at http://localhost:8080.
+-- Disabled when building for WASM (flag wasm) because jsaddle-warp →
+-- warp → crypton → basement has cbits without a WASI code path.
 executable dommy-warp
     import:           warnings
+    if flag(wasm)
+        buildable: False
     build-depends:
         base,
         rhine-tree,

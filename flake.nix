@@ -40,6 +40,15 @@
       # All Haskell packages defined here that contain a library section
       libPnames = filter (pname: pname != "rhine-examples") pnames;
 
+      # Packages that can be cross-compiled to JS/WASM — excludes anything with
+      # C library dependencies that have no WASI / GHCJS code path:
+      #   rhine-bayes  → monad-bayes → brick → vty-unix → terminfo → ncurses
+      #   rhine-gloss  → gloss → OpenGL
+      #   rhine-terminal → terminfo → ncurses
+      jsPnames = filter
+        (pname: !builtins.elem pname [ "rhine-bayes" "rhine-gloss" "rhine-terminal" ])
+        pnames;
+
       # The Haskell packages set, for every supported GHC version
       hpsFor = pkgs:
         lib.genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
@@ -213,7 +222,7 @@
 
       # Usage: nix develop (will use the default GHC)
       # Alternatively, specify the GHC: nix develop .#ghc98
-      devShells = forAllPlatforms (systems: pkgs:  (mapAttrs
+      devShells = forAllPlatforms (system: pkgs: (mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
           nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.6")
@@ -225,23 +234,29 @@
           ]);
         })
         (hpsFor pkgs)) //
-      {
+      lib.optionalAttrs (system == "x86_64-linux") {
+        # Usage: nix develop .#wasm
+        # Provides the GHC WASM toolchain (wasm32-wasi-ghc, wasm32-wasi-cabal, etc.)
+        # for building rhine-tree's dommy executable for the browser.
         wasm =
-          let pkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.x86_64-linux;
+          let wasmPkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.x86_64-linux;
           in
-          pkgs.mkShell {
+          wasmPkgs.mkShell {
             packages = [
               inputs.ghc-wasm-meta.packages.x86_64-linux.all_9_12
-              # pkgs.dart-sass
             ];
           };
+        # Usage: nix develop .#js
+        # Provides a GHCJS cross-compilation environment for JS-compatible packages.
+        # Note: packages with C library dependencies (rhine-bayes, rhine-gloss,
+        # rhine-terminal) are excluded — they have no GHCJS code path.
         js =
           let
-            pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux.pkgsCross.ghcjs.extend overlay;
-            hp = pkgs.haskell.packages.ghc910;
+            jsPkgs = inputs.nixpkgs.legacyPackages.x86_64-linux.pkgsCross.ghcjs.extend overlay;
+            hp = jsPkgs.haskell.packages.ghc910;
           in
           hp.shellFor {
-            packages = ps: map (pname: ps.${pname}) pnames;
+            packages = ps: map (pname: ps.${pname}) jsPnames;
             nativeBuildInputs = with hp; [
               cabal-gild
               cabal-install
