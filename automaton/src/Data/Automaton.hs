@@ -78,6 +78,7 @@ and related type classes.
 This allows for more ways of creating or composing them.
 
 For example, you can sequentially and parallely compose two automata:
+
 @
 automaton1 :: Automaton m a b
 automaton2 :: Automaton m b c
@@ -88,6 +89,7 @@ sequentially = automaton1 >>> automaton2
 inParallel :: Automaton m (a, b) (b, c)
 inParallel = automaton1 *** automaton2
 @
+
 In sequential composition, the output of the first automaton is passed as input to the second one.
 In parallel composition, both automata receive input simulataneously and process it independently.
 

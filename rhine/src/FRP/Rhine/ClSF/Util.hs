@@ -45,6 +45,7 @@ timeInfo = constM ask
 
 {- | Utility to apply functions to the current 'TimeInfo',
 such as record selectors:
+
 @
 printAbsoluteTime :: ClSF IO cl () ()
 printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
