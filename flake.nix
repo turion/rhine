@@ -34,6 +34,7 @@
         "ghc98"
         "ghc910"
         "ghc912"
+        "ghc914"
       ];
 
       # All Haskell packages defined here that contain a library section

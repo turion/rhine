@@ -279,6 +279,17 @@ streamToList StreamT {state, step} = go state
       (a :) <$> go s'
 {-# INLINE streamToList #-}
 
+-- | Perform a number of steps, returning the stream in the state after the steps, and the output.
+stepsStream :: (Monad m) => Int -> StreamT m a -> m (Result (StreamT m a) [a])
+stepsStream n StreamT {state, step} = go n state
+  where
+    go n s = if n > 0
+      then do
+        Result s' a <- step s
+        fmap (a :) <$> go (n - 1) s'
+      else pure $! Result StreamT {state, step} []
+{-# INLINE stepsStream #-}
+
 -- * Modifying streams
 
 -- | Change the output type and effect of a stream without changing its state type.
@@ -316,6 +327,13 @@ snapshot StreamT {state, step} =
         let result = step s
          in flip Result (output <$> result) . resultState <$> result
     }
+
+-- | Adds a copy of itself (with advancing state) to the output.
+selfAware :: Functor m => StreamT m a -> StreamT m (a, StreamT m a)
+selfAware StreamT {state, step} = StreamT
+  { state
+  , step = let self = flip StreamT step in \s ->  fmap (, self s) <$> step s
+  }
 
 -- ** Exception handling
 
