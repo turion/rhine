@@ -49,12 +49,17 @@ common opts
   default-extensions:
     Arrows
     DataKinds
+    DerivingVia
     FlexibleContexts
     FlexibleInstances
+    GADTs
     ImportQualifiedPost
+    LambdaCase
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType
+    RankNTypes
+    StandaloneDeriving
     TupleSections
     TypeApplications
     TypeFamilies

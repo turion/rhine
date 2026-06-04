@@ -1,0 +1,104 @@
+cabal-version:      3.0
+name:               rhine-tree
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            MIT
+license-file:       LICENSE
+author:             Manuel Bärenz
+maintainer:         programming@manuelbaerenz.de
+-- copyright:
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+flag wasm
+    description: Build for the GHC WASM backend. Disables the dommy-warp
+                 (jsaddle-warp) executable because its C dependencies
+                 (basement cbits) do not have a WASI code path.
+    default:     False
+    manual:      True
+
+common warnings
+    ghc-options: -Wall
+    default-language: GHC2021
+    default-extensions:
+        GADTs
+        TypeFamilies
+        Arrows
+        ScopedTypeVariables
+        OverloadedLists
+        OverloadedStrings
+
+library
+    import:           warnings
+    exposed-modules:
+        FRP.Rhine.Tree
+        FRP.Rhine.Tree.Types
+        FRP.Rhine.Tree.App
+    -- other-modules:
+    -- other-extensions:
+    build-depends:    base >=4.16 && < 4.22
+        , transformers
+        , base-compat
+        , sop-core
+        , lens
+        , text
+        , automaton
+        , rhine
+        , these
+        , semialign
+        , jsaddle
+        , time
+        , vector-sized
+        , vector
+        , finite-typelits
+        , stm
+    hs-source-dirs:   src
+
+-- WASM executable: build with wasm32-wasi-cabal, served in the browser.
+-- The -no-hs-main / reactor flags are only meaningful with the WASM backend;
+-- they are harmless no-ops on native GHC but you would normally only build
+-- this target with wasm32-wasi-cabal.
+executable dommy
+    import:           warnings
+    build-depends:
+        base,
+        rhine-tree,
+        jsaddle-wasm
+    -- For the GHC WASM backend:
+    --   -no-hs-main            : don't emit a C main(); we export hs_start instead
+    --   -optl-mexec-model=reactor : produce a WASI reactor (callable multiple times)
+    --   --export=hs_start       : preserve the hs_start export through dead-code elimination
+    ghc-options: -no-hs-main
+                 -optl-mexec-model=reactor
+                 "-optl-Wl,--export=hs_start"
+    hs-source-dirs: app
+    main-is: Dommy.hs
+
+-- Warp executable: build with normal GHC, serves the app at http://localhost:8080.
+-- Disabled when building for WASM (flag wasm) because jsaddle-warp →
+-- warp → crypton → basement has cbits without a WASI code path.
+executable dommy-warp
+    import:           warnings
+    if flag(wasm)
+        buildable: False
+    build-depends:
+        base,
+        rhine-tree,
+        jsaddle-warp
+    ghc-options: -threaded
+    hs-source-dirs: app
+    main-is: DommyWarp.hs
+
+test-suite rhine-tree-test
+    import:           warnings
+    default-language: GHC2021
+    -- other-modules:
+    -- other-extensions:
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:
+        base ^>=4.18.2.1,
+        rhine-tree

@@ -13,6 +13,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
+    ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
   };
 
   outputs = inputs:
@@ -39,10 +40,19 @@
       # All Haskell packages defined here that contain a library section
       libPnames = filter (pname: pname != "rhine-examples") pnames;
 
+      # Packages that can be cross-compiled to JS/WASM — excludes anything with
+      # C library dependencies that have no WASI / GHCJS code path:
+      #   rhine-bayes  → monad-bayes → brick → vty-unix → terminfo → ncurses
+      #   rhine-gloss  → gloss → OpenGL
+      #   rhine-terminal → terminfo → ncurses
+      jsPnames = filter
+        (pname: !builtins.elem pname [ "rhine-bayes" "rhine-gloss" "rhine-terminal" ])
+        pnames;
+
       # The Haskell packages set, for every supported GHC version
       hpsFor = pkgs:
         lib.genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
-        // { default = pkgs.haskellPackages; };
+        // { default = pkgs.haskell.packages.ghc912; };
 
       # A nixpkgs overlay containing necessary overrides on dependencies added in rhine
       localDependenciesOverlay = final: prev:
@@ -80,6 +90,9 @@
               # Remove these after https://github.com/turion/rhine/issues/399
               gloss-rendering = doJailbreak hprev.gloss-rendering;
               gloss = doJailbreak hprev.gloss;
+
+              # For rhine-tree
+              websockets = doJailbreak hprev.websockets;
             })
             (hfinal: hprev: lib.optionalAttrs (lib.versionAtLeast hprev.ghc.version "9.12") {
               # Remove these after some nixpkgs bump
@@ -175,6 +188,12 @@
       # Helper to build a flake output for all systems that are defined in nixpkgs
       forAllPlatforms = f:
         mapAttrs (system: pkgs: f system (pkgs.extend overlay)) inputs.nixpkgs.legacyPackages;
+      rhine-tree-js = pkgs:
+        import ./rhine-tree/nix {
+          inherit pkgs lib;
+          nixpkgsSrc = inputs.nixpkgs;
+          ghcWasmMeta = inputs.ghc-wasm-meta;
+        };
     in
     {
       # Reexport the overlay so other downstream flakes can use it to develop rhine projects with low effort.
@@ -188,8 +207,10 @@
 
       # This builds all rhine packages on all GHCs, as well as docs and sdist
       # Usage: nix build
-      packages = forAllPlatforms (system: pkgs: {
+      packages = forAllPlatforms (system: pkgs:                {
         default = pkgs.rhine-all;
+      } // lib.optionalAttrs (system == "x86_64-linux") {
+        rhine-tree-js = rhine-tree-js pkgs;
       } // lib.mapAttrs (ghcVersion: haskellPackages: pkgs.linkFarm "rhine-all-${ghcVersion}" (lib.genAttrs pnames (pname: haskellPackages.${pname}))) (hpsFor pkgs));
 
       # We re-export the entire nixpkgs package set with our overlay.
@@ -201,7 +222,7 @@
 
       # Usage: nix develop (will use the default GHC)
       # Alternatively, specify the GHC: nix develop .#ghc98
-      devShells = forAllPlatforms (systems: pkgs: mapAttrs
+      devShells = forAllPlatforms (system: pkgs: (mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
           nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.6")
@@ -212,7 +233,38 @@
             cabal-install
           ]);
         })
-        (hpsFor pkgs));
+        (hpsFor pkgs)) //
+      lib.optionalAttrs (system == "x86_64-linux") {
+        # Usage: nix develop .#wasm
+        # Provides the GHC WASM toolchain (wasm32-wasi-ghc, wasm32-wasi-cabal, etc.)
+        # for building rhine-tree's dommy executable for the browser.
+        wasm =
+          let wasmPkgs = inputs.ghc-wasm-meta.inputs.nixpkgs.legacyPackages.x86_64-linux;
+          in
+          wasmPkgs.mkShell {
+            packages = [
+              inputs.ghc-wasm-meta.packages.x86_64-linux.all_9_12
+            ];
+          };
+        # Usage: nix develop .#js
+        # Provides a GHCJS cross-compilation environment for JS-compatible packages.
+        # Note: packages with C library dependencies (rhine-bayes, rhine-gloss,
+        # rhine-terminal) are excluded — they have no GHCJS code path.
+        js =
+          let
+            jsPkgs = inputs.nixpkgs.legacyPackages.x86_64-linux.pkgsCross.ghcjs.extend overlay;
+            hp = jsPkgs.haskell.packages.ghc910;
+          in
+          hp.shellFor {
+            packages = ps: map (pname: ps.${pname}) jsPnames;
+            nativeBuildInputs = with hp; [
+              cabal-gild
+              cabal-install
+              fourmolu
+              haskell-language-server
+            ];
+          };
+      });
 
       # Doesn't build on darwin
       # https://github.com/NixOS/nixpkgs/issues/367686

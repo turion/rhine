@@ -1,12 +1,67 @@
 {
   "nodes": {
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "ghc-wasm-meta": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "host": "gitlab.haskell.org",
+        "lastModified": 1780507186,
+        "narHash": "sha256-qp/sLxsc3mHrXyVRTWn0zmqWMg+60G36zUGLeLhGIHQ=",
+        "owner": "haskell-wasm",
+        "repo": "ghc-wasm-meta",
+        "rev": "ba0c8238314857ef1d5db1f20bb17b96178c9bd3",
+        "type": "gitlab"
+      },
+      "original": {
+        "host": "gitlab.haskell.org",
+        "owner": "haskell-wasm",
+        "repo": "ghc-wasm-meta",
+        "type": "gitlab"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1776750258,
-        "narHash": "sha256-jab3OFEK7MpiAolaLBjvIxdf258UWvvusWxPJPE5ito=",
+        "lastModified": 1780534559,
+        "narHash": "sha256-e2jiIqs6o/8rso9xFGitwOMsWxxLAQkZ758GoUR10Kw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8d73c2809cb39eecce6284c38100e69a6064e5d9",
+        "rev": "42312874ce88f32e2a8f922f57fe00ca9f649d4e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-26.05-darwin",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1779847850,
+        "narHash": "sha256-4xcMyKu9RgxxgIRnEzW79jiSvqzs0shQJxI2G3Mbu18=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0c6db2b5d257d845bbee67a38dee43bbca3bd462",
         "type": "github"
       },
       "original": {
@@ -18,7 +73,23 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "ghc-wasm-meta": "ghc-wasm-meta",
+        "nixpkgs": "nixpkgs_2"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     }
   },
