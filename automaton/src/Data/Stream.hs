@@ -69,9 +69,11 @@ while the coalgebraic encoding knows its state only at runtime.
 
 This performance gain comes at a peculiar cost:
 Recursive definitions /of/ streams are not possible, e.g. an equation like:
+
 @
   fixA stream = stream <*> fixA stream
 @
+
 This is impossible since the stream under definition itself appears in the definition body,
 and thus the internal /state type/ would be recursively defined, which GHC doesn't allow:
 Type level recursion is not supported in existential types.
@@ -422,10 +424,12 @@ instance (Align m) => Align (StreamT m) where
 
 If you want to define a stream recursively, this is not possible directly.
 For example, consider this definition:
+
 @
 loops :: Monad m => StreamT m [Int]
 loops = (:) <$> unfold_ 0 (+ 1) <*> loops
 @
+
 The defined value @loops@ contains itself in its definition.
 This means that the internal state type of @loops@ must itself be recursively defined.
 But GHC cannot do this automatically, because type level and value level are separate.

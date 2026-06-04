@@ -183,6 +183,7 @@ This type is useful because it is a monad in the /exception type/ @e@.
     function, which can throw exceptions in a different type.
 
 Consider this example:
+
 @
 automaton :: AutomatonExcept a b m e1
 f :: e1 -> AutomatonExcept a b m e2
