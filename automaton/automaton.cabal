@@ -33,6 +33,7 @@ common opts
     changeset ^>=0.2,
     containers >=0.5,
     free >=5.1,
+    list-t ^>=1.0,
     mmorph ^>=1.2,
     mtl >=2.2 && <2.4,
     profunctors ^>=5.6,

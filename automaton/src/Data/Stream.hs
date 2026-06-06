@@ -19,6 +19,7 @@ import Control.Monad.Trans.Except (ExceptT (..), except, runExceptT, throwE, wit
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.Writer (WriterT (runWriterT), writer)
+import ListT (ListT, fromFoldable, toList)
 
 -- mmorph
 import Control.Monad.Morph (MFunctor (hoist))
@@ -575,3 +576,7 @@ handleWriterT = handleEffect (writer . swap) (fmap swap . runWriterT)
 -- | Execute a stream until it stops, then output 'Nothing' forever.
 handleMaybeT :: (Monad m) => StreamT (MaybeT m) a -> StreamT m (Maybe a)
 handleMaybeT = handleEffect (MaybeT . pure) runMaybeT
+
+-- | Execute and collect all branches of a nondeterministic stream.
+handleListT :: (Monad m) => StreamT (ListT m) a -> StreamT m [a]
+handleListT = handleEffect fromFoldable toList
