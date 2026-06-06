@@ -1,18 +1,14 @@
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Data.Stream where
 
 -- base
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
-import Control.Monad ((<$!>))
+import Control.Monad (join, (<$!>))
 import Data.Bifunctor (bimap)
 import Data.Function ((&))
 import Data.Functor ((<&>))
+import Data.Functor.Compose (Compose (..))
 import Data.Monoid (Ap (..))
 import Data.Tuple (swap)
 import Prelude hiding (Applicative (..))
@@ -38,7 +34,13 @@ import Data.These (These (..))
 -- semialign
 import Data.Align
 
+-- witherable
+import Witherable (Filterable (..), Witherable)
+
 -- automaton
+
+import Control.Arrow ((>>>))
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Stream.Internal
 import Data.Stream.Recursive (Recursive (..))
 import Data.Stream.Result
@@ -81,7 +83,7 @@ An stream defined thusly will typically hang and/or leak memory, trying to build
 
 It is nevertheless possible to define streams recursively, but one needs to first identify the recursive definition of its /state type/.
 Then for the greatest generality, 'fixStream' and 'fixStream'' can be used, and some special cases are covered by functions
-such as 'fixA', 'Data.Automaton.parallely', 'many' and 'some'.
+such as 'fixA', 'many' and 'some'.
 -}
 data StreamT m a
   = forall s.
@@ -103,7 +105,7 @@ unfold state step =
     , step = pure . step
     }
 
--- | Like 'unfold', but output the current state.
+-- | Like 'unfold', but output the current (updated) state.
 unfold_ :: (Applicative m) => s -> (s -> s) -> StreamT m s
 unfold_ state step = unfold state $ \s -> let s' = step s in Result s' s'
 
@@ -176,6 +178,8 @@ instance (Traversable m, Functor m) => Traversable (StreamT m) where
   traverse f = fmap fromRecursive . traverse f . toRecursive
 
 deriving via Ap (StreamT m) a instance (Applicative m, Num a) => Num (StreamT m a)
+deriving via Ap (StreamT m) a instance (Applicative m, Semigroup a) => Semigroup (StreamT m a)
+deriving via Ap (StreamT m) a instance (Applicative m, Monoid a) => Monoid (StreamT m a)
 
 instance (Applicative m, Fractional a) => Fractional (StreamT m a) where
   fromRational = pure . fromRational
@@ -252,6 +256,43 @@ stepStream :: (Functor m) => StreamT m a -> m (Result (StreamT m a) a)
 stepStream StreamT {state, step} = mapResultState (`StreamT` step) <$> step state
 {-# INLINE stepStream #-}
 
+{- | Build an infinite, lazy structure from the values of the stream.
+
+Since potentially infinitely many values are created by the stream,
+it is not necessary to provide a starting accumulator.
+
+Also, the accumulation cannot be terminated from the accumulation function itself,
+this has to be done by the stream's effect in @m@.
+See 'foldStreamM' for a more general accumulation function which can break depending on the current value.
+
+Example usage:
+@
+streamToList = foldStream (:)
+@
+-}
+foldStream ::
+  (Monad m) =>
+  -- | The accumulation function which prepends a value of the stream to the lazy accumulator.
+  (a -> b -> b) ->
+  StreamT m a ->
+  m b
+foldStream accum StreamT {state, step} = go state
+  where
+    go s = do
+      Result s' a <- step s
+      accum a <$> go s'
+{-# INLINE foldStream #-}
+
+-- | Like 'foldStream', but add an effect in @m@ at every step.
+foldStreamM :: (Monad m) => (a -> b -> m b) -> StreamT m a -> m b
+foldStreamM accum StreamT {state, step} = go state
+  where
+    go s = do
+      Result s' a <- step s
+      b <- go s'
+      accum a b
+{-# INLINE foldStreamM #-}
+
 {- | Run a stream with trivial output.
 
 If the output of a stream does not contain information,
@@ -263,20 +304,12 @@ e.g. 'Maybe' or 'Either' could terminate with a 'Nothing' or 'Left' value,
 or 'IO' can raise an exception.
 -}
 reactimate :: (Monad m) => StreamT m () -> m void
-reactimate StreamT {state, step} = go state
-  where
-    go s = do
-      Result s' () <- step s
-      go s'
+reactimate = foldStream $ const id
 {-# INLINE reactimate #-}
 
 -- | Run a stream, collecting the outputs in a lazy, infinite list.
 streamToList :: (Monad m) => StreamT m a -> m [a]
-streamToList StreamT {state, step} = go state
-  where
-    go s = do
-      Result s' a <- step s
-      (a :) <$> go s'
+streamToList = foldStream (:)
 {-# INLINE streamToList #-}
 
 -- * Modifying streams
@@ -286,10 +319,36 @@ withStreamT :: (Functor m, Functor n) => (forall s. m (Result s a) -> n (Result 
 withStreamT f StreamT {state, step} = StreamT state $ fmap f step
 {-# INLINE withStreamT #-}
 
+instance (Monad m) => Filterable (StreamT m) where
+  mapMaybe f StreamT {state, step} = StreamT {state, step = go}
+    where
+      go s = do
+        Result s' a <- step s
+        case f a of
+          Nothing -> go s'
+          Just b -> return $ Result s' b
+
+instance (Traversable m, Monad m) => Witherable (StreamT m)
+
+{- | Drop all 'Nothing' values from the output.
+
+Results in a stream that doesn't tick as often as the original stream.
+
+If the original stream outputs 'Nothing',
+it is retried until it produces data.
+
+Also see 'Filterable' and 'Witherable'.
+-}
+catMaybeS :: (Monad m) => StreamT m (Maybe a) -> StreamT m a
+catMaybeS = catMaybes
+
 {- | Buffer the output of a stream, returning one value at a time.
 
 This function lets a stream control the speed at which it produces data,
 since it can decide to produce any amount of output at every step.
+
+If the original stream outputs an empty list and the buffer is empty,
+it is retried until it produces data.
 -}
 concatS :: (Monad m) => StreamT m [a] -> StreamT m a
 concatS StreamT {state, step} =
@@ -399,7 +458,10 @@ instance (Selective m) => Selective (StreamT m) where
       eitherResult (Result s eab) = bimap (Result s) (Result s) eab
 
 {- | Run both streams in parallel and use @'Semialign' m@ to decide which stream produces output.
-  If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.
+
+If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.
+
+Note: This doesn't need @'Monad' m@ or even @'Applicative' m@.
 -}
 instance (Semialign m) => Semialign (StreamT m) where
   align (StreamT s10 step1) (StreamT s20 step2) =
@@ -560,3 +622,70 @@ handleWriterT = handleEffect (writer . swap) (fmap swap . runWriterT)
 -- | Execute a stream until it stops, then output 'Nothing' forever.
 handleMaybeT :: (Monad m) => StreamT (MaybeT m) a -> StreamT m (Maybe a)
 handleMaybeT = handleEffect (MaybeT . pure) runMaybeT
+
+-- FIXME Generalisation in []
+runListS :: (Monad m) => StreamT (Compose m []) a -> StreamT m [a]
+runListS = runTraversableS
+
+runTraversableS :: (Monad m, Traversable t, Monad t) => StreamT (Compose m t) a -> StreamT m (t a)
+runTraversableS StreamT {state, step} =
+  StreamT
+    { state = pure state
+    , step = \states -> do
+        results <- traverse (getCompose . step) states
+        return $ unzipResult $ join results
+    }
+
+-- FIXME maybe rewrite with Iso somehow?
+handleCompose :: (Applicative f, Applicative m, Monad composed) => (forall x. composed x -> m (f x)) -> (forall x. m (f x) -> composed x) -> StreamT composed a -> StreamT m (f a)
+handleCompose uncompose compose StreamT {state, step} =
+  StreamT
+    { state = pure state
+    , step = \s ->
+        uncompose (compose (pure s) >>= step) <&>
+        (\results -> Result (fmap resultState results) (fmap output results))
+    }
+
+-- FIXME all these should go to a separate module
+handleExceptT :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
+handleExceptT = handleCompose runExceptT ExceptT
+
+-- handleExceptT' :: (Monad m) => StreamT (ExceptT e m) a -> StreamT m (Either e a)
+-- handleExceptT' = hoist' _ . snapshotCompose . hoist (Compose . runExceptT)
+
+handleMaybeT :: (Monad m) => StreamT (MaybeT m) a -> StreamT m (Maybe a)
+handleMaybeT = handleCompose runMaybeT MaybeT
+
+{- | Snapshot part of the side effect that was performed at this step.
+-}
+snapshotCompose :: (Functor m, Functor f) => StreamT (Compose m f) a -> StreamT (Compose m f) (f a)
+snapshotCompose StreamT {state, step} =
+  StreamT
+    { state
+    , step =
+        step
+          >>> getCompose
+          >>> fmap (\result -> flip Result (output <$> result) . resultState <$> result)
+          >>> Compose
+    }
+
+-- snapshotCompose' :: (Monad m, Functor f) => StreamT (Compose m f) a -> StreamT m (f a)
+-- snapshotCompose' StreamT {state, step} =
+--   StreamT
+--     { state = pure state
+--     , step = pure
+--           >>> Compose
+--           >>> _
+--     }
+
+
+{- | Snapshot the side effect that was performed at this step.
+-}
+snapshot :: (Functor m) => StreamT m a -> StreamT m (m a)
+snapshot StreamT {state, step} =
+  StreamT
+    { state
+    , step = \s ->
+        let result = step s
+         in flip Result (output <$> result) . resultState <$> result
+    }

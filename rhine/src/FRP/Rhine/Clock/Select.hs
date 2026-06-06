@@ -19,7 +19,7 @@ import Control.Arrow
 import Data.Maybe (maybeToList)
 
 -- automaton
-import Data.Automaton (Automaton, concatS)
+import Data.Automaton (Automaton, catMaybeS)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -60,16 +60,10 @@ instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
   initClock SelectClock {..} = do
     (runningClock, initialTime) <- initClock mainClock
     let
-      runningSelectClock = filterS $ proc _ -> do
+      runningSelectClock = catMaybeS $ proc _ -> do
         (time, tag) <- runningClock -< ()
         returnA -< (time,) <$> select tag
     return (runningSelectClock, initialTime)
   {-# INLINE initClock #-}
 
 instance GetClockProxy (SelectClock cl a)
-
-{- | Helper function that runs an 'Automaton' with 'Maybe' output
-   until it returns a value.
--}
-filterS :: (Monad m) => Automaton m () (Maybe b) -> Automaton m () b
-filterS = concatS . (>>> arr maybeToList)

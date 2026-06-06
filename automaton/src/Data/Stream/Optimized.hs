@@ -35,6 +35,7 @@ import Data.Semialign (Align (..), Semialign (..))
 import Data.Stream hiding (hoist')
 import Data.Stream qualified as StreamT
 import Data.Stream.Recursive (Recursive (..))
+import Data.Stream.Recursive qualified as Recursive (fromRecursive, toRecursive)
 import Data.Stream.Result
 
 {- | An optimized version of 'StreamT' which has an extra constructor for stateless streams.
@@ -50,7 +51,7 @@ data OptimizedStreamT m a
     Stateful (StreamT m a)
   | -- | A stateless stream is simply an action in a monad which is performed repetitively.
     Stateless (m a)
-  deriving (Functor, Foldable, Traversable)
+  deriving (Functor)
 
 {- | Remove the optimization layer.
 
@@ -191,7 +192,7 @@ stepOptimizedStream oa@(Stateless m) = Result oa <$> m
 This will typically be a performance penalty.
 -}
 toRecursive :: (Functor m) => OptimizedStreamT m a -> Recursive m a
-toRecursive (Stateful stream) = StreamT.toRecursive stream
+toRecursive (Stateful stream) = Recursive.toRecursive stream
 toRecursive (Stateless f) = go
   where
     go = Recursive $ Result go <$> f
@@ -201,8 +202,17 @@ toRecursive (Stateless f) = go
   The internal state is the stream itself.
 -}
 fromRecursive :: Recursive m a -> OptimizedStreamT m a
-fromRecursive = Stateful . StreamT.fromRecursive
+fromRecursive = Stateful . Recursive.fromRecursive
 {-# INLINE fromRecursive #-}
+
+-- | See 'Data.Stream.catMaybeS'.
+catMaybeS :: Monad m => OptimizedStreamT m (Maybe a) -> OptimizedStreamT m a
+catMaybeS (Stateful stream) = Stateful $ StreamT.catMaybeS stream
+catMaybeS (Stateless f) = Stateless g
+  where
+    g = do
+      aMaybe <- f
+      maybe g return aMaybe
 
 -- | See 'Data.Stream.concatS'.
 concatS :: (Monad m) => OptimizedStreamT m [a] -> OptimizedStreamT m a
