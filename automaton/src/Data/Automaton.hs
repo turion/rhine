@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Data.Automaton where
@@ -477,7 +476,7 @@ parallelyList = parallely
 {- | Launch many copies of the automaton in parallel, depending on the input shape.
 
 * This generalises 'parallelyList' from lists to arbitrary 'Witherable's satisfying 'Align'
-  such as 'Map's, 'Seq'uences', and other data structures.
+  such as 'Map's, 'Seq'uences, and other data structures.
 * The copies of the automaton are launched on demand as the input shape changes in such a way that there are new positions.
 * The automaton copy on a particular position will always receive the input from that position.
 * Only those automaton copies on positions with a matching input will be stepped.
@@ -652,6 +651,12 @@ count = feedback 0 $! arr (\(_, n) -> let n' = n + 1 in (n', n'))
 lastS :: (Monad m) => a -> Automaton m (Maybe a) a
 lastS a = arr Last >>> mappendFromR mempty >>> arr (getLast >>> fromMaybe a)
 {-# INLINE lastS #-}
+
+-- | Indefinitely outputs the first input value
+initial :: (Applicative m) => Automaton m a a
+initial = unfold Nothing $ \aInput -> \case
+  Nothing -> Result (Just aInput) aInput
+  s@(Just a) -> Result s a
 
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => (a -> m b) -> Automaton m a b

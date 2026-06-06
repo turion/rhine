@@ -58,13 +58,15 @@ class (TimeDomain (Time cl)) => Clock m cl where
   -- | The time domain, i.e. type of the time stamps the clock creates.
   type Time cl
 
-  -- | Additional information that the clock may output at each tick,
-  --   e.g. if a realtime promise was met, if an event occurred,
-  --   if one of its subclocks (if any) ticked.
+  {- | Additional information that the clock may output at each tick,
+  e.g. if a realtime promise was met, if an event occurred,
+  if one of its subclocks (if any) ticked.
+  -}
   type Tag cl
 
-  -- | The method that produces to a clock value a running clock,
-  --   i.e. an effectful stream of tagged time stamps together with an initialisation time.
+  {- | The method that produces to a clock value a running clock,
+  i.e. an effectful stream of tagged time stamps together with an initialisation time.
+  -}
   initClock ::
     -- | The clock value, containing e.g. settings or device parameters
     cl ->
@@ -190,8 +192,9 @@ data RescaledClockS m cl time tag = RescaledClockS
   { unscaledClockS :: cl
   -- ^ The clock before the rescaling
   , rescaleS :: RescalingSInit m cl time tag
-  -- ^ The rescaling stream function, and rescaled initial time,
-  --   depending on the initial time before rescaling
+  {- ^ The rescaling stream function, and rescaled initial time,
+  depending on the initial time before rescaling
+  -}
   }
 
 instance

@@ -4,24 +4,6 @@
 In this package, you can find several working Rhine examples,
 which you can run and toy around with.
 
-## How to run
-
-### `cabal`
-
-Navigate to this directory, and then execute:
-
-```
-cabal sandbox init
-cabal install --only-dependencies
-```
-
-To run the example `ExampleName`, just execute `cabal run ExampleName`.
-
-### `stack`
-
-For initialisation, and upon every change, execute `stack build`.
-To run the example `ExampleName`, just execute `stack exec ExampleName`.
-
 ## The examples
 
 ### `HelloWorld`

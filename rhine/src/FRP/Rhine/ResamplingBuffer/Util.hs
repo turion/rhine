@@ -5,8 +5,14 @@ Several utilities to create 'ResamplingBuffer's.
 -}
 module FRP.Rhine.ResamplingBuffer.Util where
 
+-- base
+import Data.Function ((&))
+
 -- transformers
 import Control.Monad.Trans.Reader (runReaderT)
+
+-- time-domain
+import Data.TimeDomain (TimeDomain (..))
 
 -- automaton
 import Data.Stream (StreamT (..))
@@ -18,6 +24,7 @@ import Data.Stream.Result (Result (..), mapResultState)
 import FRP.Rhine.ClSF hiding (step, toStreamT)
 import FRP.Rhine.Clock
 import FRP.Rhine.ResamplingBuffer
+import FRP.Rhine.Schedule (ParallelClock)
 
 -- * Utilities to build 'ResamplingBuffer's from smaller components
 
@@ -102,3 +109,75 @@ timestamped ::
   (forall b. ResamplingBuffer m cl clf b (f b)) ->
   ResamplingBuffer m cl clf a (f (a, TimeInfo cl))
 timestamped resBuf = (clId &&& timeInfo) ^->> resBuf
+
+infixl 4 |-|
+
+-- | Combine two 'ResamplingBuffer's in parallel input time.
+--
+-- The resulting 'ResamplingBuffer' will consume input whenever either of the input clocks ticks.
+--
+-- Caution: The time differences are split up between the two buffers, so the total passed time on the inputs is not the same as on the output.
+(|-|) ::
+  ( Monad m,
+    TimeDomain (Time cl),
+    Time clL ~ Time cl,
+    Time clR ~ Time cl
+  ) =>
+  ResamplingBuffer m clL cl a b ->
+  ResamplingBuffer m clR cl a c ->
+  ResamplingBuffer m (ParallelClock clL clR) cl a (b, c)
+ResamplingBuffer stateL putL getL |-| ResamplingBuffer stateR putR getR =
+  ResamplingBuffer
+    { buffer = JointState (JointState Nothing stateL) (JointState Nothing stateR),
+      put = \theTimeInfo a (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR)) -> do
+        let now = absolute theTimeInfo
+        case tag theTimeInfo of
+          Left tagL -> do
+            sL' <- putL (theTimeInfo & retag (const tagL) & fixSinceLast lastTimeMaybeL) a sL
+            pure $! JointState (JointState (Just now) sL') (JointState lastTimeMaybeR sR)
+          Right tagR -> do
+            sR' <- putR (theTimeInfo & retag (const tagR) & fixSinceLast lastTimeMaybeR) a sR
+            pure $! JointState (JointState lastTimeMaybeL sL) (JointState (Just now) sR'),
+      get = \theTimeInfo (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR)) -> do
+        Result sL' b <- getL theTimeInfo sL
+        Result sR' c <- getR theTimeInfo sR
+        pure $! Result (JointState (JointState lastTimeMaybeL sL') (JointState lastTimeMaybeR sR')) (b, c)
+    }
+
+infixl 4 ||-||
+
+-- | Combine two 'ResamplingBuffer's in parallel output time.
+--
+-- The resulting 'ResamplingBuffer' will produce output whenever either of the output clocks ticks.
+--
+-- Caution: The time differences are split up between the two buffers, so the total passed time on the input is not the same as on the outputs.
+(||-||) ::
+  ( Monad m,
+    TimeDomain (Time cl),
+    Time clL ~ Time cl,
+    Time clR ~ Time cl
+  ) =>
+  ResamplingBuffer m cl                clL      a b ->
+  ResamplingBuffer m cl                    clR  a b ->
+  ResamplingBuffer m cl (ParallelClock clL clR) a b
+ResamplingBuffer stateL putL getL ||-|| ResamplingBuffer stateR putR getR =
+  ResamplingBuffer
+    { buffer = JointState (JointState Nothing stateL) (JointState Nothing stateR),
+      put = \theTimeInfo a (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR)) -> do
+        sL' <- putL theTimeInfo a sL
+        sR' <- putR theTimeInfo a sR
+        pure $! JointState (JointState lastTimeMaybeL sL') (JointState lastTimeMaybeR sR'),
+      get = \theTimeInfo (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR)) -> case tag theTimeInfo of
+        Left tagL -> do
+          Result sL' b <- getL (theTimeInfo & retag (const tagL) & fixSinceLast lastTimeMaybeL) sL
+          pure $! Result (JointState (JointState lastTimeMaybeL sL') (JointState lastTimeMaybeR sR)) b
+        Right tagR -> do
+          Result sR' b <- getR (theTimeInfo & retag (const tagR) & fixSinceLast lastTimeMaybeR) sR
+          pure $! Result (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR')) b
+    }
+
+-- | Helper function for 'ResamplingBuffer's over 'ParallelClock's to fix the 'sinceLast' field of the 'TimeInfo'.
+fixSinceLast :: (TimeDomain (Time cl)) => Maybe (Time cl) -> TimeInfo cl -> TimeInfo cl
+fixSinceLast lastTimeMaybe theTimeInfo = case lastTimeMaybe of
+  Nothing -> theTimeInfo
+  Just lastTime -> theTimeInfo {sinceLast = absolute theTimeInfo `diffTime` lastTime}

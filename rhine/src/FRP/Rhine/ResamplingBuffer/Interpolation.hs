@@ -67,8 +67,9 @@ sinc ::
   , s ~ Diff (Time cl1)
   , s ~ Diff (Time cl2)
   ) =>
-  -- | The size of the interpolation window
-  --   (for how long in the past to remember incoming values)
+  {- | The size of the interpolation window
+  (for how long in the past to remember incoming values)
+  -}
   s ->
   ResamplingBuffer m cl1 cl2 v v
 sinc windowSize =

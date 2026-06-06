@@ -18,6 +18,7 @@ personalMessage :: ClSF (AccumT [Text] IO) (Lifting StdinClock) () ()
 personalMessage = tagS >>> arrMCl (pure >>> add)
 
 type Lifting = LiftClock IO (AccumT [Text])
+
 type EveryTwoSeconds = Lifting (Millisecond 2000)
 
 everyTwoSeconds :: EveryTwoSeconds
@@ -35,5 +36,5 @@ logSoFar = sinceStart >>> arrMCl printLog
 
 main :: IO ()
 main = do
-  putStrLn "You can add a personal message to the log."
+  putStrLn "You can add a personal message to the log by typing and pressing enter."
   void $ flip runAccumT [] $ flow $ personalMessage @@ liftClock StdinClock |@| logSoFar @@ everyTwoSeconds

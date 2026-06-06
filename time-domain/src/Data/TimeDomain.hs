@@ -32,11 +32,12 @@ class (TimeDifference (Diff time)) => TimeDomain time where
   -- | The type of differences or durations between two timestamps
   type Diff time
 
-  -- | Compute the difference between two timestamps.
-  --
-  --   Mnemonic: 'diffTime' behaves like the '(-)' operator:
-  --
-  --   @'diffTime' earlier later = later `'diffTime'` earlier@ is the duration it takes from @earlier@ to @later@.
+  {- | Compute the difference between two timestamps.
+
+  Mnemonic: 'diffTime' behaves like the '(-)' operator:
+
+  @'diffTime' earlier later = later `'diffTime'` earlier@ is the duration it takes from @earlier@ to @later@.
+  -}
   diffTime :: time -> time -> Diff time
 
   -- | Add a time difference to a timestamp.
@@ -50,8 +51,9 @@ Expected laws:
 * @(dt1 `difference` dt2) `add` dt2 = dt1@
 -}
 class TimeDifference d where
-  -- | Calculate the difference between two durations,
-  --   compatibly with 'diffTime'.
+  {- | Calculate the difference between two durations,
+  compatibly with 'diffTime'.
+  -}
   difference :: d -> d -> d
 
   -- | Add two time differences.

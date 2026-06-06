@@ -24,10 +24,11 @@ import FRP.Rhine.ResamplingBuffer
 -}
 clsfBuffer ::
   (Monad m) =>
-  -- | The clocked signal function that consumes
-  --   and a list of timestamped inputs,
-  --   and outputs a single value.
-  --   The list will contain the /newest/ element in the head.
+  {- | The clocked signal function that consumes
+  and a list of timestamped inputs,
+  and outputs a single value.
+  The list will contain the /newest/ element in the head.
+  -}
   ClSF m cl2 [(TimeInfo cl1, a)] b ->
   ResamplingBuffer m cl1 cl2 a b
 clsfBuffer = clsfBuffer' . toStreamT . getAutomaton

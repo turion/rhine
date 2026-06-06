@@ -34,9 +34,10 @@ import FRP.Rhine.Clock.Proxy
 -}
 data SelectClock cl a = SelectClock
   { mainClock :: cl
-  -- ^ The main clock
-  -- | Return 'Nothing' if no tick of the subclock is required,
-  --   or 'Just a' if the subclock should tick, with tag 'a'.
+  {- ^ The main clock
+  | Return 'Nothing' if no tick of the subclock is required,
+  or 'Just a' if the subclock should tick, with tag 'a'.
+  -}
   , select :: Tag cl -> Maybe a
   }
 

@@ -56,8 +56,9 @@ In this case, 'FilterAutomaton' branches out and can explore multiple outputs at
 -}
 newtype FilterAutomaton m f a b = FilterAutomaton
   { getFilterAutomaton :: Automaton m a (f b)
-  -- ^ Interpret a 'FilterAutomaton'.
-  --   For instance if @f = 'Maybe'@, the resulting automaton will output 'Nothing' whenever there is no output of the 'FilterAutomaton'.
+  {- ^ Interpret a 'FilterAutomaton'.
+  For instance if @f = 'Maybe'@, the resulting automaton will output 'Nothing' whenever there is no output of the 'FilterAutomaton'.
+  -}
   }
   deriving (Functor, Applicative, Alternative) via Compose (Automaton m a) f
 

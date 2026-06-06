@@ -76,6 +76,10 @@ tests =
         [ testCase "Remembers a Just value" $ runIdentity (embed (lastS 0) [Nothing, Just 10]) @?= [0, 10]
         , testCase "Remembers the last of several Just values" $ runIdentity (embed (lastS 0) [Nothing, Nothing, Just 1, Nothing, Just 2, Just 10]) @?= [0, 0, 1, 1, 2, 10]
         ]
+    , testGroup
+        "initial"
+        [ testCase "Remembers first value" $ runIdentity (embed initial [1, 2, 3]) @?= [1, 1, 1]
+        ]
     , Automaton.Except.tests
     , Automaton.Filter.tests
     , Automaton.Trans.Accum.tests

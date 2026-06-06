@@ -4,6 +4,7 @@ module Data.Stream.Except where
 import Control.Category ((>>>))
 import Control.Monad (ap)
 import Data.Bifunctor (bimap)
+import Data.Bitraversable (bisequenceA)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Void
@@ -11,6 +12,7 @@ import Data.Void
 -- transformers
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except
+import Control.Monad.Trans.Reader (ReaderT (..))
 
 -- mmorph
 import Control.Monad.Morph (MFunctor, hoist)
@@ -19,7 +21,8 @@ import Control.Monad.Morph (MFunctor, hoist)
 import Control.Selective
 
 -- automaton
-import Data.Stream (foreverExcept)
+import Data.Stream (foreverExcept, foreverExceptE)
+import Data.Stream qualified as StreamT
 import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept)
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
@@ -66,42 +69,61 @@ instance (Traversable m) => Traversable (StreamExcept a m) where
       traverseRecursive =
         getRecursive
           >>> runExceptT
-          >>> fmap (bimap f (mapResultState traverseRecursive >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bitraverseEither)
+          >>> fmap (bimap f (mapResultState traverseRecursive >>> (\Result {resultState, output} -> (Result <$> resultState) <&> ($ output))) >>> bisequenceA)
           >>> sequenceA
           >>> fmap (ExceptT >>> fmap (mapResultState Recursive))
-      bitraverseEither :: (Functor f) => Either (f a) (f b) -> f (Either a b)
-      bitraverseEither = either (fmap Left) (fmap Right)
 
 instance (Functor m) => Functor (StreamExcept a m) where
   fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
   fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ OptimizedStreamT.hoist' (withExceptT f) ae
+  {-# INLINEABLE fmap #-}
 
 instance (Monad m) => Applicative (StreamExcept a m) where
   pure = CoalgebraicExcept . constM . throwE
+  {-# INLINEABLE pure #-}
   CoalgebraicExcept f <*> CoalgebraicExcept a = CoalgebraicExcept $ applyExcept f a
   f <*> a = ap f a
+  {-# INLINEABLE (<*>) #-}
 
 instance (Monad m) => Selective (StreamExcept a m) where
   select (CoalgebraicExcept e) (CoalgebraicExcept f) = CoalgebraicExcept $ selectExcept e f
   select e f = selectM e f
+  {-# INLINEABLE select #-}
 
 -- | 'return'/'pure' throw exceptions, '(>>=)' uses the last thrown exception as input for an exception handler.
 instance (Monad m) => Monad (StreamExcept a m) where
   (>>) = (*>)
+  {-# INLINE (>>) #-} -- FIXME this doesn't inline properly. Because of polymorphism?
   ae >>= f = RecursiveExcept $ handleExceptT (toRecursive ae) (toRecursive . f)
 
 instance MonadTrans (StreamExcept a) where
   lift = CoalgebraicExcept . constM . ExceptT . fmap Left
+  {-# INLINEABLE lift #-}
 
 instance MFunctor (StreamExcept a) where
   hoist morph (RecursiveExcept recursive) = RecursiveExcept $ hoist (mapExceptT morph) recursive
   hoist morph (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist (mapExceptT morph) coalgebraic
+  {-# INLINEABLE hoist #-}
 
+{- | If no exception can occur, the stream can be executed without the 'ExceptT'
+layer.
+
+Used to exit the 'StreamExcept' context, often in combination with 'safe'.
+-}
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept
+{-# INLINEABLE safely #-}
+
+{- | A stream without an 'ExceptT' layer never throws an exception,
+and can thus have an arbitrary exception type.
+
+In particular, the exception type can be 'Void', so it can be used as the last statement in a 'StreamExcept' @do@-block.
+See 'safely' for an example.
+-}
 safe :: (Monad m) => OptimizedStreamT m a -> StreamExcept a m void
 safe = CoalgebraicExcept . hoist lift
 
+-- | Run the stream until the exception is thrown, then restart, continuing this cycle forever.
 forever :: (Monad m) => StreamExcept a m e -> OptimizedStreamT m a
 forever recursive@(RecursiveExcept _) = safely go
   where
@@ -110,3 +132,20 @@ forever (CoalgebraicExcept (StreamOptimized.Stateful stream)) = StreamOptimized.
 forever (CoalgebraicExcept (StreamOptimized.Stateless f)) = StreamOptimized.Stateless go
   where
     go = runExceptT f >>= either (const go) pure
+
+{- | Like 'forever', but keep the last thrown exception.
+
+Before any exception was thrown, an initialisation value is given.
+-}
+foreverE ::
+  (Monad m) =>
+  -- | The initial value that is supplied to the 'ReaderT' context before the first exception is thrown
+  e ->
+  StreamExcept a (ReaderT e m) e ->
+  OptimizedStreamT m a
+foreverE e = \case
+  (RecursiveExcept recursive) -> StreamOptimized.Stateful $ foreverExceptE e $ StreamT.fromRecursive recursive
+  (CoalgebraicExcept (StreamOptimized.Stateful stream)) -> StreamOptimized.Stateful $ foreverExceptE e stream
+  (CoalgebraicExcept (StreamOptimized.Stateless f)) -> StreamOptimized.Stateless $ go e
+    where
+      go e = runReaderT (runExceptT f) e >>= either go pure
