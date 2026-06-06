@@ -90,6 +90,7 @@ library
     Data.Automaton.Trans.Accum
     Data.Automaton.Trans.Changeset
     Data.Automaton.Trans.Except
+    Data.Automaton.Trans.List
     Data.Automaton.Trans.Maybe
     Data.Automaton.Trans.RWS
     Data.Automaton.Trans.Random
