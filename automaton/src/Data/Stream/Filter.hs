@@ -31,8 +31,9 @@ In this case, 'FilterStream' branches out and can explore multiple outputs at th
 -}
 newtype FilterStream m f a = FilterStream
   { getFilterStream :: StreamT m (f a)
-  -- ^ Interpret a 'FilterStream'.
-  --   For instance if @f = 'Maybe'@, the resulting stream will output 'Nothing' whenever there is no output of the 'FilterStream'.
+  {- ^ Interpret a 'FilterStream'.
+  For instance if @f = 'Maybe'@, the resulting stream will output 'Nothing' whenever there is no output of the 'FilterStream'.
+  -}
   }
   deriving (Functor, Foldable, Traversable)
   deriving (Applicative) via Compose (StreamT m) f

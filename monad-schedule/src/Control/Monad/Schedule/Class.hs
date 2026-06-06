@@ -50,9 +50,10 @@ Applying 'schedule' to values like @'pure' a@ will eventually return exactly the
 'schedule' thus can be thought of as a concurrency-utilizing version of 'sequence'.
 -}
 class MonadSchedule m where
-  -- | Run the actions concurrently,
-  --   and return the result of the first finishers,
-  --   together with completions for the unfinished actions.
+  {- | Run the actions concurrently,
+  and return the result of the first finishers,
+  together with completions for the unfinished actions.
+  -}
   schedule :: NonEmpty (m a) -> m (NonEmpty a, [m a])
 
 {- | Keeps 'schedule'ing actions until all are finished.

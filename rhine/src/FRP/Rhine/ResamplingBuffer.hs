@@ -53,14 +53,16 @@ data ResamplingBuffer m cla clb a b
       a ->
       s ->
       m s
-  -- ^ Store one input value of type 'a' at a given time stamp,
-  --   and return an updated state.
+  {- ^ Store one input value of type 'a' at a given time stamp,
+  and return an updated state.
+  -}
   , get ::
       TimeInfo clb ->
       s ->
       m (Result s b)
-  -- ^ Retrieve one output value of type 'b' at a given time stamp,
-  --   and an updated state.
+  {- ^ Retrieve one output value of type 'b' at a given time stamp,
+  and an updated state.
+  -}
   }
 
 -- | A type synonym to allow for abbreviation.

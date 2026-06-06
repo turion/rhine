@@ -89,10 +89,11 @@ data StreamT m a
   { state :: s
   -- ^ The internal state of the stream
   , step :: s -> m (Result s a)
-  -- ^ Stepping a stream by one tick means:
-  --   1. performing a side effect in @m@
-  --   2. updating the internal state @s@
-  --   3. outputting a value of type @a@
+  {- ^ Stepping a stream by one tick means:
+  1. performing a side effect in @m@
+  2. updating the internal state @s@
+  3. outputting a value of type @a@
+  -}
   }
 
 -- | Initialise with an internal state, update the state and produce output without side effects.
