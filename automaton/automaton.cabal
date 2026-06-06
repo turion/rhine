@@ -123,6 +123,7 @@ test-suite automaton-test
     Automaton.Schedule
     Automaton.Trans.Accum
     Automaton.Trans.Changeset
+    Automaton.Trans.List
     Stream
 
   build-depends:
