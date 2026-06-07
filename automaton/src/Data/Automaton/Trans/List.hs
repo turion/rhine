@@ -18,27 +18,15 @@ import Control.Monad.Trans.Reader (runReaderT)
 import ListT hiding (traverse, unfoldM)
 
 -- automaton
-import Data.Automaton (Automaton (..), getAutomaton, unfoldM)
+import Data.Automaton (Automaton (..), getAutomaton, handleListT, unfoldM)
 import Data.Stream.Optimized (stepOptimizedStream)
 import Data.Stream.Result (Result (..))
-
--- base
-import Data.List (singleton)
 
 {- | Run an 'Automaton' in the 'ListT' transformer by applying the input to
 each automaton in the list transformer and concatenating the outputs.
 -}
-widthFirst :: (Functor m, Monad m) => Automaton (ListT m) a b -> Automaton m a [b]
-widthFirst = flip unfoldM step . singleton
-  where
-    step a as = do
-      results <- concat <$> traverse (stepOne a) as
-      let (bs, as') = unzip results
-      pure $ Result as' bs
-    stepOne a auto =
-      toList $
-        (\(Result auto' b) -> (b, Automaton auto'))
-          <$> runReaderT (stepOptimizedStream (getAutomaton auto)) a
+widthFirst :: (Monad m) => Automaton (ListT m) a b -> Automaton m a [b]
+widthFirst = handleListT
 
 -- | Build an 'Automaton' in the 'ListT' transformer by broadcasting the input to each automaton in a given list.
 sequenceS :: (Monad m) => [Automaton m a b] -> Automaton (ListT m) a b
