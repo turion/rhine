@@ -2,52 +2,34 @@
 
 module Schedule where
 
--- base
-import Control.Arrow ((>>>))
-import Data.Functor (($>))
-import Data.Functor.Identity
-
 -- tasty
 import Test.Tasty
 
 -- tasty-hunit
 import Test.Tasty.HUnit
 
--- monad-schedule
-import Control.Monad.Schedule.Trans (Schedule, runScheduleT, wait)
-
 -- time-domain
 import Data.TimeDomain (Seconds)
 
 -- automaton
-import Data.Automaton (accumulateWith, constM, embed)
+import Data.Automaton (embed)
+import Data.Automaton.Schedule.Trans (Schedule, evalSchedule)
 
 -- rhine
-import FRP.Rhine.Clock (Clock (initClock), RunningClockInit)
-import FRP.Rhine.Clock.FixedStep (FixedStep (FixedStep))
-import FRP.Rhine.Schedule
-import Util
+import FRP.Rhine (FixedStep (..), ParallelClock (..), initClock, runningSchedule)
+import FRP.Rhine.Clock (RunningClockInit)
 
 tests =
   testGroup
     "Schedule"
     [ testGroup
-        "scheduleList"
-        [ testCase "schedule waits chronologically" $ do
-            let output = runIdentity $ runScheduleT (const (pure ())) $ embed (scheduleList $ (\n -> constM (wait n $> n) >>> accumulateWith (+) 0) <$> [3 :: Seconds Integer, 5]) $ replicate 6 ()
-            output @?= pure <$> [3, 5, 6, 9, 10, 12]
-        , testCase "schedule waits chronologically (mirrored)" $ do
-            let output = runSchedule $ embed (scheduleList $ (\n -> constM (wait n $> n) >>> accumulateWith (+) 0) <$> [5 :: Seconds Integer, 3]) $ replicate 6 ()
-            output @?= pure <$> [3, 5, 6, 9, 10, 12]
-        ]
-    , testGroup
-        "runningSchedule"
+        "scheduling running clocks"
         [ testCase "chronological ticks" $ do
             let clA = FixedStep @5
                 clB = FixedStep @3
-                (runningClockA, _) = runSchedule (initClock clA :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
-                (runningClockB, _) = runSchedule (initClock clB :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
-                output = runSchedule $ embed (runningSchedule clA clB runningClockA runningClockB) $ replicate 6 ()
+                (runningClockA, _) = evalSchedule (initClock clA :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
+                (runningClockB, _) = evalSchedule (initClock clB :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
+                output = evalSchedule $ embed (runningSchedule clA clB runningClockA runningClockB) $ replicate 6 ()
             output
               @?= [ (3, Right ())
                   , (5, Left ())
@@ -60,9 +42,8 @@ tests =
     , testGroup
         "ParallelClock"
         [ testCase "chronological ticks" $ do
-            let
-              (runningClock, _time) = runSchedule (initClock $ ParallelClock (FixedStep @5) (FixedStep @3) :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) (Either () ()))
-              output = runSchedule $ embed runningClock $ replicate 6 ()
+            let (runningClock, _time) = evalSchedule (initClock (ParallelClock (FixedStep @5) (FixedStep @3)) :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) (Either () ()))
+                output = evalSchedule $ embed runningClock $ replicate 6 ()
             output
               @?= [ (3, Right ())
                   , (5, Left ())

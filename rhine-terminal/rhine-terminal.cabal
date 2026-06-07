@@ -24,9 +24,9 @@ source-repository this
 
 common opts
   build-depends:
-    base >=4.16 && <4.22,
+    automaton ^>=1.7,
+    base >=4.18 && <4.22,
     exceptions >=0.10.4,
-    monad-schedule >=1.6,
     rhine ^>=1.7,
     terminal >=0.2.0.0,
     text >=1.2,

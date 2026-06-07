@@ -1,11 +1,11 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE DataKinds #-}
 
--- transformers
+-- base
 import Control.Monad.IO.Class
 
--- monad-schedule
-import Control.Monad.Schedule.Trans
+-- automaton
+import Data.Automaton.Schedule.Trans (ScheduleT, runScheduleIO)
 
 -- rhine
 import FRP.Rhine

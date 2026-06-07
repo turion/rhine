@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 {- |
-The 'MonadSchedule' class from the @monad-schedule@ package is the compatibility mechanism between two different clocks.
+The 'MonadSchedule' class is the compatibility mechanism between two different clocks.
 It implements a concurrency abstraction that allows the clocks to run at the same time, independently.
 Several such clocks running together form composite clocks, such as 'ParallelClock' and 'SequentialClock'.
 This module defines these composite clocks,
@@ -18,39 +18,23 @@ module FRP.Rhine.Schedule where
 
 -- base
 import Control.Arrow
-import Data.List.NonEmpty as N
-
--- monad-schedule
-import Control.Monad.Schedule.Class
 
 -- automaton
 import Data.Automaton hiding (toStreamT)
-import Data.Stream.Optimized (OptimizedStreamT (..), toStreamT)
+import Data.Automaton.Schedule
+import Data.List.NonEmpty as N
 
 -- rhine
 import FRP.Rhine.Clock
-import FRP.Rhine.Schedule.Internal
 
 -- * Scheduling
-
-{- | Run several automata concurrently.
-
-Whenever one automaton outputs a value,
-it is returned together with all other values that happen to be output at the same time.
--}
-scheduleList :: (Monad m, MonadSchedule m) => NonEmpty (Automaton m a b) -> Automaton m a (NonEmpty b)
-scheduleList automatons0 =
-  Automaton $
-    Stateful $
-      scheduleStreams' $
-        toStreamT . getAutomaton <$> automatons0
 
 {- | Run two automata concurrently.
 
 Whenever one automaton returns a value, it is returned.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
-schedulePair automatonL automatonR = concatS $ fmap toList $ scheduleList $ automatonL :| [automatonR]
+schedulePair automatonL automatonR = schedule $ automatonL :| [automatonR]
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
@@ -68,8 +52,8 @@ runningSchedule ::
 runningSchedule _ _ rc1 rc2 = schedulePair (rc1 >>> arr (second Left)) (rc2 >>> arr (second Right))
 
 {- | A schedule implements a combination of two clocks.
-   It outputs a time stamp and an 'Either' value,
-   which specifies which of the two subclocks has ticked.
+  It outputs a time stamp and an 'Either' value,
+  which specifies which of the two subclocks has ticked.
 -}
 initSchedule ::
   ( Time cl1 ~ Time cl2
@@ -94,7 +78,7 @@ initSchedule cl1 cl2 = do
 -- ** Sequentially combined clocks
 
 {- | Two clocks can be combined with a schedule as a clock
-   for an asynchronous sequential composition of signal networks.
+  for an asynchronous sequential composition of signal networks.
 -}
 data SequentialClock cl1 cl2
   = (Time cl1 ~ Time cl2) =>
@@ -119,7 +103,7 @@ instance
 -- ** Parallelly combined clocks
 
 {- | Two clocks can be combined with a schedule as a clock
-   for an asynchronous parallel composition of signal networks.
+  for an asynchronous parallel composition of signal networks.
 -}
 data ParallelClock cl1 cl2
   = (Time cl1 ~ Time cl2) =>
@@ -156,7 +140,7 @@ type family Out cl where
   Out cl = cl
 
 {- | A tree representing possible last times to which
-   the constituents of a clock may have ticked.
+  the constituents of a clock may have ticked.
 -}
 data LastTime cl where
   SequentialLastTime ::
@@ -180,7 +164,7 @@ data ParClockInclusion clS cl where
   ParClockRefl :: ParClockInclusion cl cl
 
 {- | Generates a tag for the composite clock from a tag of a leaf clock,
-   given a parallel clock inclusion.
+  given a parallel clock inclusion.
 -}
 parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left tag

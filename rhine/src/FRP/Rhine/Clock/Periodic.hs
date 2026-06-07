@@ -16,30 +16,33 @@ module FRP.Rhine.Clock.Periodic (Periodic (Periodic)) where
 
 -- base
 import Control.Arrow
-import Data.List.NonEmpty hiding (unfold)
-import GHC.TypeLits (KnownNat, Nat, natVal)
 
--- monad-schedule
-import Control.Monad.Schedule.Trans
+-- automaton
+import Data.Automaton (
+  Automaton (..),
+  accumulateWith,
+  arrM,
+  concatS,
+ )
+import Data.Automaton.Schedule.Trans (ScheduleT, wait)
+import Data.List.NonEmpty hiding (unfold)
 
 -- time-domain
 import Data.TimeDomain (Seconds (..))
 
--- automaton
-import Data.Automaton (Automaton (..), accumulateWith, concatS, withSideEffect)
-
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import GHC.TypeLits (KnownNat, Nat, natVal)
 
 -- * The 'Periodic' clock
 
 {- | A clock whose tick lengths cycle through
-   a (nonempty) list of type-level natural numbers.
-   E.g. @Periodic '[1, 2]@ ticks at times 1, 3, 4, 5, 7, 8, etc.
+  a (nonempty) list of type-level natural numbers.
+  E.g. @Periodic '[1, 2]@ ticks at times 1, 3, 4, 5, 7, 8, etc.
 
-   The waiting side effect is formal, in 'ScheduleT'.
-   You can use e.g. 'runScheduleIO' to produce an actual delay.
+  The waiting side effect is formal, in 'ScheduleT'.
+  You can use e.g. 'runScheduleIO' to produce an actual delay.
 -}
 data Periodic (v :: [Nat]) where
   Periodic :: Periodic (n : ns)
@@ -51,8 +54,8 @@ instance
   type Time (Periodic v) = Seconds Integer
   type Tag (Periodic v) = ()
   initClock cl =
-    return
-      ( cycleS (theList cl) >>> withSideEffect wait >>> accumulateWith (+) 0 &&& arr (const ())
+    pure
+      ( cycleS (theList cl) >>> accumulateWith (+) 0 &&& arrM (wait . fromIntegral)
       , 0
       )
   {-# INLINE initClock #-}

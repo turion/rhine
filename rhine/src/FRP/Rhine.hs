@@ -13,30 +13,21 @@ main = flow \$ constMCl (putStrLn \"Hello World!\") \@\@ (waitClock :: Milliseco
 module FRP.Rhine (module X) where
 
 -- time-domain
-import Data.TimeDomain as X
 
 -- automaton
 import Data.Automaton as X
 import Data.Stream.Result as X (Result (..))
+import Data.TimeDomain as X
 
 -- rhine
 import Data.VectorSpace as X
 import FRP.Rhine.ClSF as X
 import FRP.Rhine.Clock as X
-import FRP.Rhine.Clock.Proxy as X
-import FRP.Rhine.Clock.Util as X
-import FRP.Rhine.Reactimation as X
-import FRP.Rhine.Reactimation.Combinators as X
-import FRP.Rhine.ResamplingBuffer as X
-import FRP.Rhine.ResamplingBuffer.Util as X
-import FRP.Rhine.SN as X
-import FRP.Rhine.SN.Combinators as X
-import FRP.Rhine.Schedule as X
-import FRP.Rhine.Type as X
 
 -- rhine (components)
 import FRP.Rhine.Clock.FixedStep as X
 import FRP.Rhine.Clock.Periodic as X
+import FRP.Rhine.Clock.Proxy as X
 import FRP.Rhine.Clock.Realtime.Audio as X
 import FRP.Rhine.Clock.Realtime.Busy as X
 import FRP.Rhine.Clock.Realtime.Event as X
@@ -45,8 +36,10 @@ import FRP.Rhine.Clock.Realtime.Never as X
 import FRP.Rhine.Clock.Realtime.Stdin as X
 import FRP.Rhine.Clock.Select as X
 import FRP.Rhine.Clock.Trivial as X
-import FRP.Rhine.Clock.Unschedule as X
-
+import FRP.Rhine.Clock.Util as X
+import FRP.Rhine.Reactimation as X
+import FRP.Rhine.Reactimation.Combinators as X
+import FRP.Rhine.ResamplingBuffer as X
 import FRP.Rhine.ResamplingBuffer.ClSF as X
 import FRP.Rhine.ResamplingBuffer.Collect as X
 import FRP.Rhine.ResamplingBuffer.FIFO as X
@@ -54,3 +47,8 @@ import FRP.Rhine.ResamplingBuffer.Interpolation as X
 import FRP.Rhine.ResamplingBuffer.KeepLast as X
 import FRP.Rhine.ResamplingBuffer.LIFO as X
 import FRP.Rhine.ResamplingBuffer.Timeless as X
+import FRP.Rhine.ResamplingBuffer.Util as X
+import FRP.Rhine.SN as X
+import FRP.Rhine.SN.Combinators as X
+import FRP.Rhine.Schedule as X
+import FRP.Rhine.Type as X

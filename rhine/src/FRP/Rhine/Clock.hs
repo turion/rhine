@@ -103,25 +103,25 @@ retag f TimeInfo {..} = TimeInfo {tag = f tag, ..}
 type Rescaling cl time = Time cl -> time
 
 {- | An effectful morphism of time domains is a Kleisli arrow.
-   It can use a side effect to rescale a point in one time domain
-   into another one.
+  It can use a side effect to rescale a point in one time domain
+  into another one.
 -}
 type RescalingM m cl time = Time cl -> m time
 
 {- | An effectful, stateful morphism of time domains is an 'Automaton'
-   that uses side effects to rescale a point in one time domain
-   into another one.
+  that uses side effects to rescale a point in one time domain
+  into another one.
 -}
 type RescalingS m cl time tag = Automaton m (Time cl, Tag cl) (time, tag)
 
 {- | Like 'RescalingS', but allows for an initialisation
-   of the rescaling morphism, together with the initial time.
+  of the rescaling morphism, together with the initial time.
 -}
 type RescalingSInit m cl time tag = Time cl -> m (RescalingS m cl time tag, time)
 
 {- | Convert an effectful morphism of time domains into a stateful one with initialisation.
-   Think of its type as @RescalingM m cl time -> RescalingSInit m cl time tag@,
-   although this type is ambiguous.
+  Think of its type as @RescalingM m cl time -> RescalingSInit m cl time tag@,
+  although this type is ambiguous.
 -}
 rescaleMToSInit ::
   (Monad m) =>
@@ -146,14 +146,14 @@ instance
   type Tag (RescaledClock cl time) = Tag cl
   initClock (RescaledClock cl f) = do
     (runningClock, initTime) <- initClock cl
-    return
+    pure
       ( runningClock >>> first (arr f)
       , f initTime
       )
   {-# INLINE initClock #-}
 
 {- | Instead of a mere function as morphism of time domains,
-   we can transform one time domain into the other with an effectful morphism.
+  we can transform one time domain into the other with an effectful morphism.
 -}
 data RescaledClockM m cl time = RescaledClockM
   { unscaledClockM :: cl
@@ -171,7 +171,7 @@ instance
   initClock RescaledClockM {..} = do
     (runningClock, initTime) <- initClock unscaledClockM
     rescaledInitTime <- rescaleM initTime
-    return
+    pure
       ( runningClock >>> first (arrM rescaleM)
       , rescaledInitTime
       )
@@ -182,11 +182,11 @@ rescaledClockToM :: (Monad m) => RescaledClock cl time -> RescaledClockM m cl ti
 rescaledClockToM RescaledClock {..} =
   RescaledClockM
     { unscaledClockM = unscaledClock
-    , rescaleM = return . rescale
+    , rescaleM = pure . rescale
     }
 
 {- | Instead of a mere function as morphism of time domains,
-   we can transform one time domain into the other with an automaton.
+  we can transform one time domain into the other with an automaton.
 -}
 data RescaledClockS m cl time tag = RescaledClockS
   { unscaledClockS :: cl
@@ -206,7 +206,7 @@ instance
   initClock RescaledClockS {..} = do
     (runningClock, initTime) <- initClock unscaledClockS
     (rescaling, rescaledInitTime) <- rescaleS initTime
-    return
+    pure
       ( runningClock >>> rescaling
       , rescaledInitTime
       )
@@ -244,7 +244,7 @@ instance
   type Tag (HoistClock m1 m2 cl) = Tag cl
   initClock HoistClock {..} = do
     (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
-    return
+    pure
       ( hoistS monadMorphism runningClock
       , initialTime
       )

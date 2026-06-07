@@ -13,22 +13,16 @@ module FRP.Rhine.Clock.FixedStep where
 
 -- base
 import Control.Arrow
-import Data.Functor (($>))
-import Data.Maybe (fromMaybe)
 import GHC.TypeLits
 
--- vector-sized
+-- automaton
+import Data.Automaton (accumulateWith, constM)
+import Data.Automaton.Schedule.Trans (ScheduleT, wait)
+import Data.Maybe (fromMaybe)
 import Data.Vector.Sized (Vector, fromList)
-
--- monad-schedule
-import Control.Monad.Schedule.Class
-import Control.Monad.Schedule.Trans (ScheduleT, wait)
 
 -- time-domain
 import Data.TimeDomain (Seconds (..))
-
--- automaton
-import Data.Automaton (accumulateWith, arrM)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -38,9 +32,9 @@ import FRP.Rhine.ResamplingBuffer.Collect
 import FRP.Rhine.ResamplingBuffer.Util
 
 {- | A pure (side effect free) clock with fixed step size,
-   i.e. ticking at multiples of 'n'.
-   The tick rate is in the type signature,
-   which prevents composition of signals at different rates.
+  i.e. ticking at multiples of 'n'.
+  The tick rate is in the type signature,
+  which prevents composition of signals at different rates.
 -}
 data FixedStep (n :: Nat) where
   FixedStep :: (KnownNat n) => FixedStep n -- TODO Does the constraint bring any benefit?
@@ -49,15 +43,16 @@ data FixedStep (n :: Nat) where
 stepsize :: FixedStep n -> Seconds Integer
 stepsize fixedStep@FixedStep = Seconds $ natVal fixedStep
 
-instance (MonadSchedule m, Monad m) => Clock (ScheduleT (Seconds Integer) m) (FixedStep n) where
+instance (Monad m) => Clock (ScheduleT (Seconds Integer) m) (FixedStep n) where
   type Time (FixedStep n) = Seconds Integer
   type Tag (FixedStep n) = ()
   initClock cl =
     let step = stepsize cl
-     in return
-          ( arr (const step)
+     in pure
+          ( constM (wait (fromIntegral step))
+              >>> arr (const step)
               >>> accumulateWith (+) 0
-              >>> arrM (\time -> wait step $> (time, ()))
+              >>> arr (,())
           , 0
           )
   {-# INLINE initClock #-}
@@ -68,7 +63,7 @@ instance GetClockProxy (FixedStep n)
 type Count = FixedStep 1
 
 {- | Resample into a 'FixedStep' clock that ticks @n@ times slower,
-  by collecting all values into a vector.
+ by collecting all values into a vector.
 -}
 downsampleFixedStep ::
   (KnownNat n, Monad m) =>
