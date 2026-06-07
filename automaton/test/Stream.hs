@@ -20,7 +20,7 @@ import Test.Tasty (testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 -- automaton
-import Data.Stream (StreamT (..), constM, foreverExceptE, handleExceptT, handleWriterT, mmap, snapshot, streamToList, unfold, unfold_)
+import Data.Stream (StreamT (..), concatS, constM, foreverExceptE, handleExceptT, handleWriterT, mmap, snapshot, streamToList, unfold, unfold_)
 import Data.Stream.Except qualified as StreamExcept
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Result
@@ -87,6 +87,9 @@ tests =
              in take 10 (runIdentity $ streamToList $ StreamOptimized.toStreamT $ StreamExcept.foreverE 0 recursive)
                   @?= [0, 0, 1, 0, 1, 2, 0, 1, 2, 3]
         ]
+    , testCase "concatS" $
+        let stream = concatS $ unfold 0 (\n -> Result (n + 1) [n, n + 10])
+         in take 10 (runIdentity $ streamToList stream) @?= [0, 10, 1, 11, 2, 12, 3, 13, 4, 14]
     ]
 
 nats :: (Applicative m) => StreamT m Int
