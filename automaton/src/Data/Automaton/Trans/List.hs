@@ -26,18 +26,22 @@ each automaton in the list transformer and concatenating the outputs.
 -}
 widthFirst :: (Monad m) => Automaton (ListT m) a b -> Automaton m a [b]
 widthFirst = handleListT
+{-# INLINEABLE widthFirst #-}
 
 -- | Build an 'Automaton' in the 'ListT' transformer by broadcasting the input to each automaton in a given list.
 sequenceS :: (Monad m) => [Automaton m a b] -> Automaton (ListT m) a b
 sequenceS = asum . fmap liftS
+{-# INLINEABLE sequenceS #-}
 
 -- | Construct from a list.
 fromList :: (Monad m) => [a] -> ListT m a
 fromList = foldr cons empty
+{-# INLINEABLE fromList #-}
 
 -- | Fold into a list.
 toList :: (Monad m) => ListT m a -> m [a]
 toList = fmap reverse . fold (flip (:)) [] id
+{-# INLINEABLE toList #-}
 
 cons :: (Monad m) => a -> ListT m a -> ListT m a
 cons x xs = ListT $ pure $ Cons x xs
