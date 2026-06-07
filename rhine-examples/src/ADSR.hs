@@ -29,6 +29,9 @@ when the user stops pressing the key.
 -}
 module Main where
 
+-- changeset
+import Data.Monoid.RightAction (RightAction (..), RightTorsor (..))
+
 -- rhine
 import FRP.Rhine
 
@@ -87,7 +90,9 @@ runADSR ::
   , TimeDomain time
   , Ord amplitude
   , Fractional amplitude
-  , Diff time ~ amplitude
+  , RightTorsor amplitude (Diff time)
+  , Num (Diff time)
+  , Ord (Diff time)
   ) =>
   ADSR time amplitude ->
   BehaviourF m time Bool amplitude
@@ -117,7 +122,9 @@ linearly ::
   , TimeDomain time
   , Ord amplitude
   , Fractional amplitude
-  , Diff time ~ amplitude
+  , RightTorsor amplitude (Diff time)
+  , Num (Diff time)
+  , Ord (Diff time)
   ) =>
   -- | The time span, in which the amplitude will interpolate
   Diff time ->
@@ -132,11 +139,13 @@ linearly timeSpan initialAmplitude finalAmplitude overdue = proc _ -> do
   time <- (overdue +) ^<< sinceStart -< ()
   let
     remainingTime = timeSpan - time
+    -- actRight and differenceRight behave like (*) and (/) respectively,
+    -- so we weight the amplitudes according to the time that has passed or is remaining.
     currentLevel =
-      ( initialAmplitude * remainingTime
-          + finalAmplitude * time
+      ( (remainingTime `actRight` initialAmplitude)
+          + (time `actRight` finalAmplitude)
       )
-        / timeSpan
+        `differenceRight` timeSpan
   _ <- throwOn' -< (remainingTime < 0, remainingTime)
   returnA -< currentLevel
 
@@ -148,7 +157,9 @@ attack ::
   , TimeDomain time
   , Ord amplitude
   , Fractional amplitude
-  , Diff time ~ amplitude
+  , RightTorsor amplitude (Diff time)
+  , Num (Diff time)
+  , Ord (Diff time)
   ) =>
   -- | The attack time, in which the amplitude will rise from 0 to 1.
   Diff time ->
@@ -165,7 +176,9 @@ decay ::
   , TimeDomain time
   , Ord amplitude
   , Fractional amplitude
-  , Diff time ~ amplitude
+  , RightTorsor amplitude (Diff time)
+  , Num (Diff time)
+  , Ord (Diff time)
   ) =>
   -- | The decay time, in which the amplitude will fall from 1 to...
   Diff time ->
@@ -191,7 +204,9 @@ release ::
   , TimeDomain time
   , Ord amplitude
   , Fractional amplitude
-  , Diff time ~ amplitude
+  , RightTorsor amplitude (Diff time)
+  , Num (Diff time)
+  , Ord (Diff time)
   ) =>
   -- | The release time, in which the amplitude will fall from...
   Diff time ->

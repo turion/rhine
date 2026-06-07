@@ -31,6 +31,9 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 -- HUnit
 import Test.HUnit hiding (Test)
 
+-- time-domain
+import Data.TimeDomain (Seconds (..))
+
 -- monad-schedule
 import Control.Monad.Schedule.Class (scheduleAndFinish)
 import Control.Monad.Schedule.Trans
@@ -89,7 +92,7 @@ tests =
                         threadNames scripts
     , testCase "Regression example from rhine"
         $ assertRunsLike
-          (mapM_ wait <$> [[5, 5] :: [Integer], [3, 3, 3]])
+          (mapM_ (wait . Seconds) <$> [[5, 5] :: [Integer], [3, 3, 3]])
         $ Waited
           <$> differences
             [ 3
@@ -103,7 +106,7 @@ tests =
           let individualWaits = fmap getPositive <$> waits
               individualTimes = scanl1 (+) <$> individualWaits
               allWaits = map Waited $ filter (> 0) $ differences $ sort $ concat individualTimes
-              program = mapM wait <$> individualWaits
+              program = mapM (wait . Seconds) <$> individualWaits
            in runMySchedule program === allWaits
     ]
 
@@ -124,13 +127,13 @@ data Event
   | Waited Integer
   deriving (Eq, Show)
 
-type MySchedule a = ScheduleT Integer (Writer [Event]) a
+type MySchedule a = ScheduleT (Seconds Integer) (Writer [Event]) a
 
 myLog :: String -> MySchedule ()
 myLog = lift . tell . pure . Log
 
 runMySchedule :: NonEmpty (MySchedule a) -> [Event]
-runMySchedule = execWriter . runScheduleT (tell . pure . Waited) . scheduleAndFinish
+runMySchedule = execWriter . runScheduleT (tell . pure . Waited . getSeconds) . scheduleAndFinish
 
 differences :: [Integer] -> [Integer]
 differences times = uncurry (-) <$> zip times (0 : times)
@@ -165,7 +168,7 @@ type ThreadName = String
 
 interpretScript :: Script -> MySchedule ()
 interpretScript Script {..} = do
-  let perform interval = myLog threadName >> wait (getPositive interval)
+  let perform interval = myLog threadName >> wait (Seconds (getPositive interval))
   mapM_ perform prefix
   forever $ mapM_ perform loop
 

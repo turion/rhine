@@ -22,6 +22,9 @@ import GHC.TypeLits (KnownNat, Nat, natVal)
 -- monad-schedule
 import Control.Monad.Schedule.Trans
 
+-- time-domain
+import Data.TimeDomain (Seconds (..))
+
 -- automaton
 import Data.Automaton (Automaton (..), accumulateWith, concatS, withSideEffect)
 
@@ -43,9 +46,9 @@ data Periodic (v :: [Nat]) where
 
 instance
   (Monad m, NonemptyNatList v) =>
-  Clock (ScheduleT Integer m) (Periodic v)
+  Clock (ScheduleT (Seconds Integer) m) (Periodic v)
   where
-  type Time (Periodic v) = Integer
+  type Time (Periodic v) = Seconds Integer
   type Tag (Periodic v) = ()
   initClock cl =
     return
@@ -68,16 +71,16 @@ tailCl :: Periodic (n1 : n2 : ns) -> Periodic (n2 : ns)
 tailCl Periodic = Periodic
 
 class NonemptyNatList (v :: [Nat]) where
-  theList :: Periodic v -> NonEmpty Integer
+  theList :: Periodic v -> NonEmpty (Seconds Integer)
 
 instance (KnownNat n) => NonemptyNatList '[n] where
-  theList cl = headCl cl :| []
+  theList cl = Seconds (headCl cl) :| []
 
 instance
   (KnownNat n1, KnownNat n2, NonemptyNatList (n2 : ns)) =>
   NonemptyNatList (n1 : n2 : ns)
   where
-  theList cl = headCl cl <| theList (tailCl cl)
+  theList cl = Seconds (headCl cl) <| theList (tailCl cl)
 
 -- * Utilities
 

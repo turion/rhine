@@ -24,6 +24,9 @@ import Data.Vector.Sized (Vector, fromList)
 import Control.Monad.Schedule.Class
 import Control.Monad.Schedule.Trans (ScheduleT, wait)
 
+-- time-domain
+import Data.TimeDomain (Seconds (..))
+
 -- automaton
 import Data.Automaton (accumulateWith, arrM)
 
@@ -43,11 +46,11 @@ data FixedStep (n :: Nat) where
   FixedStep :: (KnownNat n) => FixedStep n -- TODO Does the constraint bring any benefit?
 
 -- | Extract the type-level natural number as an integer.
-stepsize :: FixedStep n -> Integer
-stepsize fixedStep@FixedStep = natVal fixedStep
+stepsize :: FixedStep n -> Seconds Integer
+stepsize fixedStep@FixedStep = Seconds $ natVal fixedStep
 
-instance (MonadSchedule m, Monad m) => Clock (ScheduleT Integer m) (FixedStep n) where
-  type Time (FixedStep n) = Integer
+instance (MonadSchedule m, Monad m) => Clock (ScheduleT (Seconds Integer) m) (FixedStep n) where
+  type Time (FixedStep n) = Seconds Integer
   type Tag (FixedStep n) = ()
   initClock cl =
     let step = stepsize cl
