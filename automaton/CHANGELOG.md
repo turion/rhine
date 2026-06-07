@@ -1,6 +1,6 @@
 # Revision history for automaton
 
-## Upcoming
+## 1.8
 
 * Added `Data.Automaton.Schedule` module with a new `MonadSchedule` class that
   works natively on `Automaton` values instead of monadic actions.
