@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: automaton
-version: 1.7
+version: 1.8
 synopsis: Effectful streams and automata in coalgebraic encoding
 description:
   Effectful streams have an internal state and a step function.
@@ -41,7 +41,7 @@ common opts
     simple-affine-space ^>=0.2,
     sop-core ^>=0.5,
     these >=1.1 && <=1.3,
-    time-domain ^>=1.7,
+    time-domain ^>=1.8,
     transformers >=0.5,
     witherable ^>=0.5,
 

@@ -1,6 +1,6 @@
 # Revision history for rhine
 
-## Upcoming
+## 1.8
 
 * Remove dependency on `monad-schedule` because of performance problems.
   See https://github.com/turion/rhine/issues/377.
