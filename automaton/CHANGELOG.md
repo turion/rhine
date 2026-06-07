@@ -1,5 +1,11 @@
 # Revision history for automaton
 
+## 1.7
+
+* Add `safely`, `forever` and `foreverE` exception handling functions for streams
+* Use `TimeDomain Seconds` extensively
+* Add `|-|` and `||-||` resampling buffer utilities
+
 ## 1.6
 
 * Fix `lastS`. Thanks to Sebastian Wålinder for reporting.
