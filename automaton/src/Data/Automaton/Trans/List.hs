@@ -4,18 +4,19 @@
 each input, or none. This enables dynamic spawning and stopping of automata.
 -}
 module Data.Automaton.Trans.List (
-  module Data.List.Class,
+  module List.Transformer,
   widthFirst,
   sequenceS,
+  fromList,
+  toList,
 )
 where
 
 -- base
 import Control.Applicative (asum)
 
--- List
-import Control.Monad.ListT (ListT)
-import Data.List.Class
+-- list-transformer
+import List.Transformer
 
 -- automaton
 import Data.Automaton (Automaton, handleListT, liftS)
@@ -29,3 +30,14 @@ widthFirst = handleListT
 -- | Build an 'Automaton' in the 'ListT' transformer by broadcasting the input to each automaton in a given list.
 sequenceS :: (Monad m) => [Automaton m a b] -> Automaton (ListT m) a b
 sequenceS = asum . fmap liftS
+
+-- | Construct from a list.
+fromList :: (Monad m) => [a] -> ListT m a
+fromList = foldr cons empty
+
+-- | Fold into a list.
+toList :: (Monad m) => ListT m a -> m [a]
+toList = fmap reverse . fold (flip (:)) [] id
+
+cons :: (Monad m) => a -> ListT m a -> ListT m a
+cons x xs = ListT $ pure $ Cons x xs

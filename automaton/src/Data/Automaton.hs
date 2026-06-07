@@ -48,9 +48,8 @@ import Data.These (these)
 -- witherable
 import Witherable (Filterable (..), Witherable (wither))
 
--- List
-import Control.Monad.ListT (ListT)
-import Data.List.Class (fromList, toList)
+-- list-transformer
+import List.Transformer (ListT (..), Step (..), fold)
 
 -- semialign
 import Data.Semialign (Align (..), Semialign (..))
@@ -622,6 +621,13 @@ handleEffect send interpret = handleAutomaton $ StreamT.handleEffect (lift . sen
 -- | Execute and collect all branches of a nondeterministic automaton.
 handleListT :: (Monad m) => Automaton (ListT m) a b -> Automaton m a [b]
 handleListT = handleEffect fromList toList
+  where
+    fromList :: (Monad m) => [a] -> ListT m a
+    fromList = foldr cons empty
+    toList :: (Monad m) => ListT m a -> m [a]
+    toList = fmap reverse . fold (flip (:)) [] id
+    cons :: (Monad m) => a -> ListT m a -> ListT m a
+    cons x xs = ListT $ return $ Cons x xs
 
 -- * Examples
 
