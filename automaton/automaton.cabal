@@ -29,8 +29,7 @@ source-repository this
 common opts
   build-depends:
     MonadRandom >=0.5,
-    base >=4.16 && <4.22,
-    base-compat >=0.13 && <0.15,
+    base >=4.18 && <4.22,
     changeset ^>=0.2,
     containers >=0.5,
     free >=5.1,

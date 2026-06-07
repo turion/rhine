@@ -29,7 +29,6 @@
       # To do: Automated check whether this is the same as what get-tested returns.
       # Currently blocked on https://github.com/Kleidukos/get-tested/issues/39
       supportedGhcs = [
-        "ghc94"
         "ghc96"
         "ghc98"
         "ghc910"
@@ -209,8 +208,8 @@
       devShells = forAllPlatforms (systems: pkgs: mapAttrs
         (_: hp: hp.shellFor {
           packages = ps: map (pname: ps.${pname}) pnames;
-          nativeBuildInputs = (with hp; lib.optional (lib.versionAtLeast hp.ghc.version "9.6")
-            haskell-language-server
+          nativeBuildInputs = (with hp;
+            [ haskell-language-server ]
           ) ++ (with pkgs; [
             haskellPackages.fourmolu
             haskellPackages.cabal-gild
@@ -219,8 +218,6 @@
         })
         (hpsFor pkgs));
 
-      # Doesn't build on darwin
-      # https://github.com/NixOS/nixpkgs/issues/367686
-      supportedGhcs = lib.lists.removePrefix [ "ghc94" ] supportedGhcs;
+      inherit supportedGhcs;
     };
 }

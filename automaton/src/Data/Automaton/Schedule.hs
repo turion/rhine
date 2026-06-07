@@ -28,6 +28,7 @@ import Control.Monad (forM_, guard, replicateM_)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Identity (Identity (..))
 import Data.Bifunctor qualified as Bifunctor
+import Data.Foldable1 (Foldable1 (foldrMap1))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compose (Compose (..))
@@ -36,9 +37,6 @@ import Data.List qualified as List
 import Data.List.NonEmpty as N
 import Data.Maybe (maybeToList)
 import Data.Tuple (swap)
-
--- base-compat
-import Data.Foldable1 (Foldable1 (foldrMap1))
 
 -- transformers
 import Control.Monad.Trans.Accum (AccumT (..), runAccumT)

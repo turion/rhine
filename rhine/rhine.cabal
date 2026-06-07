@@ -31,8 +31,6 @@ data-files:
   test/assets/*.txt
 
 tested-with:
-  ghc ==9.2
-  ghc ==9.4
   ghc ==9.6
   ghc ==9.8
   ghc ==9.10
@@ -50,7 +48,7 @@ source-repository this
 common opts
   build-depends:
     automaton ^>=1.7,
-    base >=4.16 && <4.22,
+    base >=4.18 && <4.22,
     mtl >=2.2 && <2.4,
     selective ^>=0.7,
     text >=1.2 && <2.2,
