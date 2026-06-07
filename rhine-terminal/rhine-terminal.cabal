@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: rhine-terminal
-version: 1.6
+version: 1.7
 synopsis: Terminal backend for Rhine
 description: This package provides an example of a `terminal` based program using rhine.
 license: BSD-3-Clause
@@ -27,7 +27,7 @@ common opts
     base >=4.16 && <4.22,
     exceptions >=0.10.4,
     monad-schedule >=1.6,
-    rhine ^>=1.6,
+    rhine ^>=1.7,
     terminal >=0.2.0.0,
     text >=1.2,
     time >=1.9.3,
