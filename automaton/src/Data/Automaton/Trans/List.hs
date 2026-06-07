@@ -4,7 +4,7 @@
 each input, or none. This enables dynamic spawning and stopping of automata.
 -}
 module Data.Automaton.Trans.List (
-  module ListT,
+  module Data.List.Class,
   widthFirst,
   sequenceS,
 )
@@ -13,8 +13,9 @@ where
 -- base
 import Control.Applicative (asum)
 
--- list-t
-import ListT
+-- List
+import Control.Monad.ListT (ListT)
+import Data.List.Class
 
 -- automaton
 import Data.Automaton (Automaton, handleListT, liftS)

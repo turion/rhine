@@ -19,7 +19,10 @@ import Control.Monad.Trans.Except (ExceptT (..), except, runExceptT, throwE, wit
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.Writer (WriterT (runWriterT), writer)
-import ListT (ListT, fromFoldable, toList)
+
+-- List
+import Control.Monad.ListT (ListT)
+import Data.List.Class (fromList, toList)
 
 -- mmorph
 import Control.Monad.Morph (MFunctor (hoist))
@@ -579,4 +582,4 @@ handleMaybeT = handleEffect (MaybeT . pure) runMaybeT
 
 -- | Execute and collect all branches of a nondeterministic stream.
 handleListT :: (Monad m) => StreamT (ListT m) a -> StreamT m [a]
-handleListT = handleEffect fromFoldable toList
+handleListT = handleEffect fromList toList

@@ -10,7 +10,7 @@ import Test.Tasty.HUnit
 -- automaton
 import Control.Arrow (arr)
 import Data.Automaton (arrM, count, embed, mapS)
-import Data.Automaton.Trans.List (fromFoldable, sequenceS, widthFirst)
+import Data.Automaton.Trans.List (fromList, sequenceS, widthFirst)
 
 tests :: TestTree
 tests =
@@ -19,10 +19,10 @@ tests =
     [ testGroup
         "widthFirst"
         [ testCase "branching automaton" $
-            runIdentity (embed (widthFirst (arrM (\n -> fromFoldable [1 .. (n :: Int)]))) [2, 1])
+            runIdentity (embed (widthFirst (arrM (\n -> fromList [1 .. (n :: Int)]))) [2, 1])
               @?= [[1, 2], [1, 1]]
         , testCase "no outputs" $
-            runIdentity (embed (widthFirst (arrM $ const $ fromFoldable ([] :: [Int]))) [1, 2, 3])
+            runIdentity (embed (widthFirst (arrM $ const $ fromList ([] :: [Int]))) [1, 2, 3])
               @?= [[], [], []]
         ]
     , testGroup
