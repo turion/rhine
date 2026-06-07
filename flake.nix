@@ -42,7 +42,7 @@
       # The Haskell packages set, for every supported GHC version
       hpsFor = pkgs:
         lib.genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
-        // { default = pkgs.haskellPackages; };
+        // { default = pkgs.haskell.packages.ghc912; };
 
       # A nixpkgs overlay containing necessary overrides on dependencies added in rhine
       localDependenciesOverlay = final: prev:
