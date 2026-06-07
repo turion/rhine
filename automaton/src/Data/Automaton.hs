@@ -457,6 +457,10 @@ instance (Monad m) => Cochoice (Automaton m) where
 
 -- ** Traversing automata
 
+-- | Apply an 'Automaton' to every input.
+mapS :: (Monad m) => Automaton m a b -> Automaton m [a] [b]
+mapS = traverse'
+
 -- | Only step the automaton if the input is 'Just'.
 mapMaybeS :: (Monad m) => Automaton m a b -> Automaton m (Maybe a) (Maybe b)
 mapMaybeS = traverse'

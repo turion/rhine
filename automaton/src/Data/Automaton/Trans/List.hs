@@ -7,7 +7,6 @@ module Data.Automaton.Trans.List (
   module ListT,
   widthFirst,
   sequenceS,
-  mapAutomaton,
 )
 where
 
@@ -19,7 +18,7 @@ import Control.Monad.Trans.Reader (runReaderT)
 import ListT hiding (traverse, unfoldM)
 
 -- automaton
-import Data.Automaton (Automaton (..), getAutomaton, traverseS, unfoldM)
+import Data.Automaton (Automaton (..), getAutomaton, unfoldM)
 import Data.Stream.Optimized (stepOptimizedStream)
 import Data.Stream.Result (Result (..))
 
@@ -51,7 +50,3 @@ sequenceS = flip unfoldM step
     stepOne a auto = do
       Result auto' b <- runReaderT (stepOptimizedStream (getAutomaton auto)) a
       pure $ Result [Automaton auto'] b
-
--- | Apply an 'Automaton' to every input.
-mapAutomaton :: (Monad m) => Automaton m a b -> Automaton m [a] [b]
-mapAutomaton = traverseS
