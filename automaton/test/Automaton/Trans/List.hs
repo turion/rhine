@@ -9,8 +9,8 @@ import Test.Tasty.HUnit
 
 -- automaton
 import Control.Arrow (arr)
-import Data.Automaton (arrM, count, embed)
-import Data.Automaton.Trans.List (fromFoldable, mapAutomaton, sequenceS, widthFirst)
+import Data.Automaton (arrM, count, embed, mapS)
+import Data.Automaton.Trans.List (fromFoldable, sequenceS, widthFirst)
 
 tests :: TestTree
 tests =
@@ -35,12 +35,12 @@ tests =
               @?= [[1, 1, 1], [2, 2, 2], [3, 3, 3]]
         ]
     , testGroup
-        "mapAutomaton"
+        "mapS"
         [ testCase "stateless" $
-            runIdentity (embed (mapAutomaton (arr (+ 1))) [[1, 2], [3, 4]])
+            runIdentity (embed (mapS (arr (+ 1))) [[1, 2], [3, 4]])
               @?= [[2, 3], [4, 5]]
         , testCase "stateful" $
-            runIdentity (embed (mapAutomaton count) [[(), (), ()], [(), ()]])
+            runIdentity (embed (mapS count) [[(), (), ()], [(), ()]])
               @?= [[1, 2, 3], [4, 5]]
         ]
     ]
