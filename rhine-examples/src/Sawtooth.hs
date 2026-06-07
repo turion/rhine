@@ -9,7 +9,7 @@ module Main where
 
 import FRP.Rhine
 
-sawtooth :: (Monad m) => Behaviour m UTCTime Double
+sawtooth :: (Monad m) => Behaviour m UTCTime (Seconds Double)
 sawtooth =
   forever $
     try $

@@ -62,10 +62,10 @@ import FRP.Rhine.Gloss.Common
 
 -- | Concurrent variables needed to communicate with the gloss backend.
 data GlossEnv = GlossEnv
-  { timeVar :: MVar Float
+  { timeVar :: MVar (Seconds Float)
   , eventVar :: MVar Event
   , picRef :: IORef Picture
-  , timeRef :: IORef Float
+  , timeRef :: IORef (Seconds Float)
   }
 
 {- | Effects in the gloss backend
@@ -124,7 +124,7 @@ See https://github.com/turion/rhine/issues/330.
 data GlossEventClockIO = GlossEventClockIO
 
 instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
-  type Time GlossEventClockIO = Float
+  type Time GlossEventClockIO = Seconds Float
   type Tag GlossEventClockIO = Event
   initClock _ = return (constM getEvent, 0)
     where
@@ -147,7 +147,7 @@ See https://github.com/turion/rhine/issues/330.
 data GlossSimClockIO = GlossSimClockIO
 
 instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
-  type Time GlossSimClockIO = Float
+  type Time GlossSimClockIO = Seconds Float
   type Tag GlossSimClockIO = ()
   initClock _ = return (constM getTime &&& arr (const ()), 0)
     where
@@ -190,7 +190,7 @@ launchGlossThread GlossSettings {..} = do
       return vars
     simStep diffTime vars@GlossEnv {timeVar, timeRef} = do
       time <- readIORef timeRef
-      let !time' = time + diffTime
+      let !time' = time + Seconds diffTime
       -- We don't do this in a separate thread, because forkIO putMVar would create a race condition on putting the MVar,
       -- which can lead to non-monotonous time updates.
       tryPutMVar timeVar time'

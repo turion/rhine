@@ -34,7 +34,7 @@ import Data.Automaton
 import Data.Automaton.Trans.Except hiding (step)
 
 -- time-domain
-import Data.TimeDomain (diffTime)
+import Data.TimeDomain (Seconds (..), diffTime)
 
 -- rhine
 import FRP.Rhine.Clock
@@ -119,7 +119,7 @@ instance
         currentTime <- once_ $ liftIO getCurrentTime
         let
           lateDiff = currentTime `diffTime` bufferFullTime
-          late = if lateDiff > 0 then Just lateDiff else Nothing
+          late = if lateDiff > 0 then Just $ getSeconds lateDiff else Nothing
         safe $ runningClock bufferFullTime late
     initialTime <- liftIO getCurrentTime
     return
@@ -148,12 +148,12 @@ class PureAudioClockRate (rate :: AudioRate) where
   thePureRateNum = fromInteger . thePureRateIntegral
 
 instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) where
-  type Time (PureAudioClock rate) = Double
+  type Time (PureAudioClock rate) = Seconds Double
   type Tag (PureAudioClock rate) = ()
 
   initClock audioClock =
     return
-      ( arr (const (1 / thePureRateNum audioClock)) >>> sumS &&& arr (const ())
+      ( arr (const (1 / thePureRateNum audioClock)) >>> sumN &&& arr (const ())
       , 0
       )
   {-# INLINE initClock #-}
@@ -170,5 +170,5 @@ pureAudioClockF :: PureAudioClockF rate
 pureAudioClockF =
   RescaledClock
     { unscaledClock = PureAudioClock
-    , rescale = double2Float
+    , rescale = double2Float . getSeconds
     }

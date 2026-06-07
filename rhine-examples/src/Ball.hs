@@ -10,8 +10,16 @@ import System.Random
 -- rhine
 import FRP.Rhine
 
-type Ball = (Double, Double, Double)
-type BallVel = (Double, Double, Double)
+data Ball = Ball Double Double Double
+  deriving (Eq, Show)
+
+type BallVel = Ball
+
+instance VectorSpace Ball (Seconds Double) where
+  zeroVector = Ball 0 0 0
+  (Ball x1 y1 z1) ^+^ (Ball x2 y2 z2) = Ball (x1 + x2) (y1 + y2) (z1 + z2)
+  Seconds r *^ (Ball x y z) = Ball (r * x) (r * y) (r * z)
+  dot (Ball x1 y1 z1) (Ball x2 y2 z2) = Seconds $ x1 * x2 + y1 * y2 + z1 * z2
 
 type SimClock = Millisecond 10
 type StatusClock = Millisecond 500
@@ -21,7 +29,7 @@ freeFall ::
   BallVel ->
   BehaviourF m UTCTime () Ball
 freeFall v0 =
-  arr (const (0, 0, -9.81))
+  arr (const (Ball 0 0 (-9.81)))
     >>> integralFrom v0
     >>> integral
 
@@ -30,7 +38,7 @@ startVel = arrMCl $ const $ do
   velX <- randomRIO (-10, 10)
   velY <- randomRIO (-10, 10)
   velZ <- randomRIO (3, 10)
-  return (velX, velY, velZ)
+  return $ Ball velX velY velZ
 
 waiting ::
   (Monad m) =>
@@ -51,7 +59,7 @@ falling ::
     Ball
 falling v0 = proc _ -> do
   pos <- freeFall v0 -< ()
-  let (_, _, height) = pos
+  let Ball _ _ height = pos
   throwMaybe -< guard $ height < 0
   returnA -< pos
 
@@ -70,7 +78,7 @@ downsampleSimToStatus :: ResBuf IO SimClock StatusClock Ball Ball
 downsampleSimToStatus = collect <&> (listToMaybe >>> fromMaybe zeroVector)
 
 statusMsg :: ClSF IO StatusClock Ball ()
-statusMsg = arrMCl $ \(x, y, z) ->
+statusMsg = arrMCl $ \(Ball x y z) ->
   printf "%.2f %.2f %.2f\n" x y z
 
 startVelRh :: Rhine IO StdinClock () BallVel

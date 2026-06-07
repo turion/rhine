@@ -17,6 +17,8 @@ import GHC.TypeLits
 import Data.Time.Clock
 
 -- rhine
+
+import Data.TimeDomain (Seconds (..))
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.FixedStep
 import FRP.Rhine.Clock.Proxy
@@ -35,16 +37,16 @@ The tag of this clock is 'Maybe Double',
 where 'Nothing' represents successful realtime,
 and @'Just' lag@ a lag (in seconds).
 -}
-newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (UnscheduleClock IO (FixedStep n)) Double))
+newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (UnscheduleClock IO (FixedStep n)) (Seconds Double)))
 
 instance Clock IO (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
-  initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second snd))
+  initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second (fmap getSeconds . snd)))
   {-# INLINE initClock #-}
 
 instance GetClockProxy (Millisecond n)
 
 -- | Tries to achieve real time by using 'waitUTC', see its docs.
 waitClock :: (KnownNat n) => Millisecond n
-waitClock = Millisecond $ waitUTC $ RescaledClock (unyieldClock FixedStep) ((/ 1000) . fromInteger)
+waitClock = Millisecond $ waitUTC $ RescaledClock (unyieldClock FixedStep) ((/ 1000) . fromInteger . getSeconds)

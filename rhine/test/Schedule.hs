@@ -16,6 +16,9 @@ import Test.Tasty.HUnit
 -- monad-schedule
 import Control.Monad.Schedule.Trans (Schedule, runScheduleT, wait)
 
+-- time-domain
+import Data.TimeDomain (Seconds)
+
 -- automaton
 import Data.Automaton (accumulateWith, constM, embed)
 
@@ -31,10 +34,10 @@ tests =
     [ testGroup
         "scheduleList"
         [ testCase "schedule waits chronologically" $ do
-            let output = runIdentity $ runScheduleT (const (pure ())) $ embed (scheduleList $ (\n -> constM (wait n $> n) >>> accumulateWith (+) 0) <$> [3 :: Integer, 5]) $ replicate 6 ()
+            let output = runIdentity $ runScheduleT (const (pure ())) $ embed (scheduleList $ (\n -> constM (wait n $> n) >>> accumulateWith (+) 0) <$> [3 :: Seconds Integer, 5]) $ replicate 6 ()
             output @?= pure <$> [3, 5, 6, 9, 10, 12]
         , testCase "schedule waits chronologically (mirrored)" $ do
-            let output = runSchedule $ embed (scheduleList $ (\n -> constM (wait n $> n) >>> accumulateWith (+) 0) <$> [5 :: Integer, 3]) $ replicate 6 ()
+            let output = runSchedule $ embed (scheduleList $ (\n -> constM (wait n $> n) >>> accumulateWith (+) 0) <$> [5 :: Seconds Integer, 3]) $ replicate 6 ()
             output @?= pure <$> [3, 5, 6, 9, 10, 12]
         ]
     , testGroup
@@ -42,8 +45,8 @@ tests =
         [ testCase "chronological ticks" $ do
             let clA = FixedStep @5
                 clB = FixedStep @3
-                (runningClockA, _) = runSchedule (initClock clA :: RunningClockInit (Schedule Integer) Integer ())
-                (runningClockB, _) = runSchedule (initClock clB :: RunningClockInit (Schedule Integer) Integer ())
+                (runningClockA, _) = runSchedule (initClock clA :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
+                (runningClockB, _) = runSchedule (initClock clB :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
                 output = runSchedule $ embed (runningSchedule clA clB runningClockA runningClockB) $ replicate 6 ()
             output
               @?= [ (3, Right ())
@@ -58,7 +61,7 @@ tests =
         "ParallelClock"
         [ testCase "chronological ticks" $ do
             let
-              (runningClock, _time) = runSchedule (initClock $ ParallelClock (FixedStep @5) (FixedStep @3) :: RunningClockInit (Schedule Integer) Integer (Either () ()))
+              (runningClock, _time) = runSchedule (initClock $ ParallelClock (FixedStep @5) (FixedStep @3) :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) (Either () ()))
               output = runSchedule $ embed runningClock $ replicate 6 ()
             output
               @?= [ (3, Right ())

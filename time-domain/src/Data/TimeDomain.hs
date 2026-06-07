@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -83,54 +84,15 @@ class (Group d) => TimeDifference d where
   add :: d -> d -> d
   add = (<>)
 
--- | Differences between 'UTCTime's are measured in seconds.
+-- | Differences between 'UTCTime's are measured in Secondss.
 instance TimeDomain UTCTime where
-  type Diff UTCTime = Double
+  type Diff UTCTime = Seconds Double
 
-instance RightAction Double UTCTime where
-  actRight = flip $ addUTCTime . realToFrac
+instance RightAction (Seconds Double) UTCTime where
+  actRight = flip $ addUTCTime . realToFrac . getSeconds
 
-instance RightTorsor Double UTCTime where
-  differenceRight t1 t2 = realToFrac $ diffUTCTime t1 t2
-
-deriving via Sum Double instance Semigroup Double
-deriving via Sum Double instance Monoid Double
-deriving via Sum Double instance Group Double
-deriving via NumTimeDomain Double instance TimeDifference Double
-
-instance RightAction Double Double where
-  actRight = (+)
-instance RightTorsor Double Double where
-  differenceRight = (-)
-
-instance TimeDomain Double where
-  type Diff Double = Double
-
-deriving via Sum Float instance Semigroup Float
-deriving via Sum Float instance Monoid Float
-deriving via Sum Float instance Group Float
-deriving via NumTimeDomain Float instance TimeDifference Float
-
-instance RightAction Float Float where
-  actRight = (+)
-instance RightTorsor Float Float where
-  differenceRight = (-)
-
-instance TimeDomain Float where
-  type Diff Float = Float
-
-deriving via Sum Integer instance Semigroup Integer
-deriving via Sum Integer instance Monoid Integer
-deriving via Sum Integer instance Group Integer
-deriving via NumTimeDomain Integer instance TimeDifference Integer
-
-instance RightAction Integer Integer where
-  actRight = (+)
-instance RightTorsor Integer Integer where
-  differenceRight = (-)
-
-instance TimeDomain Integer where
-  type Diff Integer = Integer
+instance RightTorsor (Seconds Double) UTCTime where
+  differenceRight t1 t2 = Seconds $ realToFrac $ diffUTCTime t1 t2
 
 instance TimeDifference () where
   zero = ()
@@ -140,21 +102,33 @@ instance TimeDifference () where
 instance TimeDomain () where
   type Diff () = ()
 
--- | Any 'Num' can be wrapped to form a 'TimeDomain'.
-newtype NumTimeDomain a = NumTimeDomain {fromNumTimeDomain :: a}
-  deriving (Num)
+{- | Any 'Num' can be wrapped to form a 'TimeDomain'.
 
-deriving via Sum (NumTimeDomain a) instance (Num a) => Semigroup (NumTimeDomain a)
-deriving via Sum (NumTimeDomain a) instance (Num a) => Monoid (NumTimeDomain a)
-deriving via Sum (NumTimeDomain a) instance (Num a) => Group (NumTimeDomain a)
-instance (Num a) => TimeDifference (NumTimeDomain a)
+The number 1 is interpreted as one second.
+-}
+newtype Seconds a = Seconds {getSeconds :: a}
+  deriving newtype (Show, Read, Eq, Ord, Num, Fractional, Floating, Real, RealFrac, RealFloat, Enum, Bounded, Integral)
+  deriving stock (Functor, Foldable, Traversable)
+
+deriving via Sum (Seconds a) instance (Num a) => Semigroup (Seconds a)
+deriving via Sum (Seconds a) instance (Num a) => Monoid (Seconds a)
+deriving via Sum (Seconds a) instance (Num a) => Group (Seconds a)
+instance (Num a) => TimeDifference (Seconds a)
 
 -- I would have thought I shouldn't be needing this, but it seems to overlap with the Zip instance for some reason.
-instance {-# OVERLAPPING #-} (Num a) => RightAction (NumTimeDomain a) (NumTimeDomain a) where
+instance {-# OVERLAPPING #-} (Num a) => RightAction (Seconds a) (Seconds a) where
   actRight = (+)
 
-instance (Num a) => RightTorsor (NumTimeDomain a) (NumTimeDomain a) where
+instance (Num a) => RightTorsor (Seconds a) (Seconds a) where
   differenceRight = (-)
 
-instance (Num a) => TimeDomain (NumTimeDomain a) where
-  type Diff (NumTimeDomain a) = NumTimeDomain a
+instance (Num a) => TimeDomain (Seconds a) where
+  type Diff (Seconds a) = Seconds a
+
+-- | Scale time differences by a factor.
+instance (Num a) => RightAction a (Seconds a) where
+  actRight seconds factor = fmap (* factor) seconds
+
+-- | Compute the quotient of two time differences.
+instance (Fractional a) => RightTorsor a (Seconds a) where
+  differenceRight (Seconds secondsOrig) (Seconds secondsScaled) = secondsOrig / secondsScaled

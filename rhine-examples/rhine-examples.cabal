@@ -25,6 +25,7 @@ common opts
 
   build-depends:
     base >=4.16 && <4.22,
+    changeset ^>=0.2,
     monad-schedule ^>=1.6,
     random >=1.1,
     rhine ^>=1.6,
@@ -35,6 +36,9 @@ common opts
   default-extensions:
     Arrows
     DataKinds
+    FlexibleContexts
+    FlexibleInstances
+    MultiParamTypeClasses
     OverloadedStrings
     RankNTypes
     TypeFamilies

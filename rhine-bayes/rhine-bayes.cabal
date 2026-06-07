@@ -41,10 +41,12 @@ common opts
     Arrows
     DataKinds
     DeriveFunctor
+    DerivingStrategies
     FlexibleContexts
     FlexibleInstances
     GeneralizedNewtypeDeriving
     MultiParamTypeClasses
+    NamedFieldPuns
     RankNTypes
     ScopedTypeVariables
     TupleSections

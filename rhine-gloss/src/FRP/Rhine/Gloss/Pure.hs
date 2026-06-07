@@ -48,7 +48,7 @@ import FRP.Rhine.Gloss.Common
 -- * @gloss@ effects
 
 -- | A pure monad in which all effects caused by the @gloss@ backend take place.
-newtype GlossM a = GlossM {unGlossM :: YieldT (ReaderT (Float, Maybe Event) (Writer Picture)) a}
+newtype GlossM a = GlossM {unGlossM :: YieldT (ReaderT (Seconds Float, Maybe Event) (Writer Picture)) a}
   deriving (Functor, Applicative, Monad)
 
 -- Would have liked to make this a derived instance, but for some reason deriving gets thrown off by the newtype
@@ -80,9 +80,9 @@ instance Semigroup GlossClock where
   _ <> _ = GlossClock
 
 instance Clock GlossM GlossClock where
-  type Time GlossClock = Float
+  type Time GlossClock = Seconds Float
   type Tag GlossClock = Maybe Event
-  initClock _ = return (constM (GlossM $ yield >> lift ask) >>> (sumS *** Category.id), 0)
+  initClock _ = return (constM (GlossM $ yield >> lift ask) >>> (sumN *** Category.id), 0)
   {-# INLINE initClock #-}
 
 instance GetClockProxy GlossClock
@@ -114,7 +114,7 @@ flowGlossClSF ::
   IO ()
 flowGlossClSF settings clsf = flowGloss settings $ clsf >-> arrMCl paintAll @@ GlossClock
 
-type WorldAutomaton = Automaton Identity ((Float, Maybe Event), ()) (Picture, Maybe ())
+type WorldAutomaton = Automaton Identity ((Seconds Float, Maybe Event), ()) (Picture, Maybe ())
 
 -- | The main function that will start the @gloss@ backend and run the 'Rhine'
 flowGloss ::
@@ -128,7 +128,7 @@ flowGloss GlossSettings {..} rhine =
     worldAutomaton :: WorldAutomaton
     worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (runYieldT . unGlossM) $ performOnFirstSample $ eraseClock rhine
     stepWith :: (Float, Maybe Event) -> (WorldAutomaton, Picture) -> (WorldAutomaton, Picture)
-    stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = runIdentity $ stepAutomaton automaton ((diff, eventMaybe), ()) in (automaton', picture)
+    stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = runIdentity $ stepAutomaton automaton ((Seconds diff, eventMaybe), ()) in (automaton', picture)
     getPic (_, pic) = pic
     handleEvent event = stepWith (0, Just event)
     simStep diff = stepWith (diff, Nothing)
