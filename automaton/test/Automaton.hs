@@ -88,6 +88,13 @@ tests =
               )
               @?= [M.fromList [("a", 1), ("b", 2)], M.fromList [("a", 11)], M.fromList [("a", 111), ("b", 2)]]
         ]
+    , testCase "fanIndexed" $
+        runIdentity
+          ( embed
+              (fanIndexed (maybeExit >>> sumN))
+              [(1, Just 1), (2, Just 2), (1, Just 10), (3, Just 3), (1, Nothing), (2, Just 20), (1, Just 1)]
+          )
+          @?= [Just 1, Just 2, Just 11, Just 3, Nothing, Just 22, Just 1]
     , testGroup
         "Selective"
         [ testCase "selects second Automaton conditionally" $

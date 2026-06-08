@@ -529,6 +529,18 @@ parallelyFinishable = \case
           }
   Automaton {getAutomaton = Stateless f} -> Automaton $ Stateless $ ReaderT $ wither $ runMaybeT <$> runReaderT f
 
+{- | Run copies of an automaton in parallel, distinguished by an index.
+
+* For each individual value of @i@ that is ever input,
+  a separate copy of the automaton is launched.
+* Whenever further inputs tagged with the same index value @i@ arrive,
+  that same copy is stepped with them, and its output forwarded.
+* If the inner automaton terminates by using 'MaybeT', it will output 'Nothing',
+  and the copy is removed from the whole state.
+-}
+fanIndexed :: (Applicative m, Ord i) => Automaton (MaybeT m) a b -> Automaton m (i, a) (Maybe b)
+fanIndexed automaton = dimap (\(i, a) -> (M.singleton i a, i)) (\(bs, i) -> M.lookup i bs) $ first' $ parallelyFinishable automaton
+
 -- ** Interaction with 'StreamT'
 
 {- | Create an 'Automaton' from a stream.
