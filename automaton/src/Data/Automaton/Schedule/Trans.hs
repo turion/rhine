@@ -107,6 +107,10 @@ runScheduleIO ::
   m a
 runScheduleIO = runScheduleT waitms
 
+-- | Wait for the given number of milliseconds.
+waitms :: (MonadIO m, Integral n) => n -> m ()
+waitms = liftIO . threadDelay . (* 1000) . fromIntegral
+
 {- | Formally execute all waiting actions,
 returning the final value and all moments when the schedule would have waited.
 -}
@@ -211,13 +215,3 @@ runSkipTWith action = iterT (\ima -> action >> runIdentity ima) . getSkipT
 -- | Run a pure 'Yield' computation, discarding all skipped steps.
 runYield :: Yield a -> a
 runYield = runIdentity . runSkipT
-
--- * Helper functions
-
--- | Wait for the given number of milliseconds.
-waitms :: (MonadIO m, Integral n) => n -> m ()
-waitms = liftIO . threadDelay . (* 1000) . fromIntegral
-
--- | Check whether a time difference is zero (i.e. equal to its own difference with itself).
-isZero :: (Eq diff, TimeDifference diff) => diff -> Bool
-isZero diff = diff `difference` diff == diff
