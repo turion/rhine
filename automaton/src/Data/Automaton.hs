@@ -541,7 +541,7 @@ The input for the automaton is not buffered.
 For example, if @'concatS' automaton@ receives one input @a@ and @automaton@ produces 10 @b@s from it,
 then the next 9 inputs will be ignored.
 -}
-concatS :: (Monad m) => Automaton m a [b] -> Automaton m a b
+concatS :: (Monad m, Foldable t) => Automaton m a (t b) -> Automaton m a b
 concatS (Automaton automaton) = Automaton $ Data.Stream.Optimized.concatS automaton
 
 -- * Handling effects

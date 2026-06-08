@@ -205,7 +205,7 @@ fromRecursive = Stateful . StreamT.fromRecursive
 {-# INLINE fromRecursive #-}
 
 -- | See 'Data.Stream.concatS'.
-concatS :: (Monad m) => OptimizedStreamT m [a] -> OptimizedStreamT m a
+concatS :: (Monad m, Foldable t) => OptimizedStreamT m (t a) -> OptimizedStreamT m a
 concatS stream = Stateful $ StreamT.concatS $ toStreamT stream
 {-# INLINE concatS #-}
 
