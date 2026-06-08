@@ -6,6 +6,7 @@ module Data.Stream where
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
 import Control.Monad ((<$!>))
 import Data.Bifunctor (bimap)
+import Data.Foldable (Foldable (..))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Monoid (Ap (..))
@@ -288,7 +289,7 @@ withStreamT f StreamT {state, step} = StreamT state $ fmap f step
 This function lets a stream control the speed at which it produces data,
 since it can decide to produce any amount of output at every step.
 -}
-concatS :: (Monad m) => StreamT m [a] -> StreamT m a
+concatS :: (Monad m, Foldable t) => StreamT m (t a) -> StreamT m a
 concatS StreamT {state, step} =
   StreamT
     { state = (state, [])
@@ -296,7 +297,7 @@ concatS StreamT {state, step} =
     }
   where
     go (s, []) = do
-      Result s' as <- step s
+      Result s' as <- fmap toList <$> step s
       go (s', as)
     go (s, a : as) = pure $ Result (s, as) a
 {-# INLINE concatS #-}

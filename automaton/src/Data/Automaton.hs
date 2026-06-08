@@ -21,11 +21,15 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Prelude hiding (id, (.))
 
+-- containers
+import Data.Map.Strict qualified as M
+
 -- mmorph
 import Control.Monad.Morph (MFunctor (..))
 
 -- transformers
 import Control.Monad.Trans.Class
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader
 
 -- profunctors
@@ -42,7 +46,7 @@ import Data.VectorSpace (VectorSpace (..))
 import Data.These (these)
 
 -- witherable
-import Witherable (Filterable (..), Witherable)
+import Witherable (Filterable (..), Witherable (wither))
 
 -- semialign
 import Data.Semialign (Align (..), Semialign (..))
@@ -188,20 +192,7 @@ instance (Monad m) => Arrow (Automaton m) where
   arr f = Automaton $! Stateless $! asks f
   {-# INLINE arr #-}
 
-  first (Automaton (Stateful StreamT {state, step})) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s ->
-              ReaderT
-                ( \(b, d) ->
-                    fmap (,d)
-                      <$> runReaderT (step s) b
-                )
-          }
-  first (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
-  {-# INLINE first #-}
+  first = first'
 
 instance (Monad m) => ArrowChoice (Automaton m) where
   Automaton (Stateful (StreamT stateL0 stepL)) +++ Automaton (Stateful (StreamT stateR0 stepR)) =
@@ -246,25 +237,8 @@ instance (Monad m) => ArrowChoice (Automaton m) where
             (runReaderT . fmap Right $ mR)
   {-# INLINE (+++) #-}
 
-  left (Automaton (Stateful (StreamT {state, step}))) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s -> ReaderT $ either (fmap (fmap Left) . runReaderT (step s)) (pure . Result s . Right)
-          }
-  left (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (fmap Left . runReaderT ma) (pure . Right)
-  {-# INLINE left #-}
-
-  right (Automaton (Stateful (StreamT {state, step}))) =
-    Automaton $!
-      Stateful $!
-        StreamT
-          { state
-          , step = \s -> ReaderT $ either (pure . Result s . Left) (fmap (fmap Right) . runReaderT (step s))
-          }
-  right (Automaton (Stateless ma)) = Automaton $! Stateless $! ReaderT $! either (pure . Left) (fmap Right . runReaderT ma)
-  {-# INLINE right #-}
+  right = right'
+  left = left'
 
   f ||| g = f +++ g >>> arr untag
     where
@@ -404,13 +378,46 @@ instance (Functor m) => Profunctor (Automaton m) where
   lmap f Automaton {getAutomaton} = Automaton $ StreamOptimized.hoist' (withReaderT f) getAutomaton
   rmap = fmap
 
-instance (Monad m) => Choice (Automaton m) where
-  right' = right
-  left' = left
+instance (Applicative m) => Choice (Automaton m) where
+  left' = \case
+    Automaton (Stateful (StreamT {state, step})) ->
+      Automaton $!
+        Stateful $!
+          StreamT
+            { state
+            , step = \s -> ReaderT $ either (fmap (fmap Left) . runReaderT (step s)) (pure . Result s . Right)
+            }
+    Automaton (Stateless ma) -> Automaton $! Stateless $! ReaderT $! either (fmap Left . runReaderT ma) (pure . Right)
+  {-# INLINE left' #-}
 
-instance (Monad m) => Strong (Automaton m) where
-  second' = second
-  first' = first
+  right' = \case
+    Automaton (Stateful (StreamT {state, step})) ->
+      Automaton $!
+        Stateful $!
+          StreamT
+            { state
+            , step = \s -> ReaderT $ either (pure . Result s . Left) (fmap (fmap Right) . runReaderT (step s))
+            }
+    Automaton (Stateless ma) ->
+      Automaton $! Stateless $! ReaderT $! either (pure . Left) (fmap Right . runReaderT ma)
+  {-# INLINE right' #-}
+
+instance (Functor m) => Strong (Automaton m) where
+  first' = \case
+    Automaton (Stateful StreamT {state, step}) ->
+      Automaton $!
+        Stateful $!
+          StreamT
+            { state
+            , step = \s ->
+                ReaderT
+                  ( \(b, d) ->
+                      fmap (,d)
+                        <$> runReaderT (step s) b
+                  )
+            }
+    Automaton (Stateless m) -> Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
+  {-# INLINE first' #-}
 
 -- | Step an automaton several steps at once, depending on how long the input is.
 instance (Monad m) => Traversing (Automaton m) where
@@ -480,6 +487,7 @@ parallelyList = parallely
 * The copies of the automaton are launched on demand as the input shape changes in such a way that there are new positions.
 * The automaton copy on a particular position will always receive the input from that position.
 * Only those automaton copies on positions with a matching input will be stepped.
+  ('Witherable' is used to suppress trivial output from those automata that have not received input and weren't stepped.)
 
 For example, if the first input is a map with keys @k1@ and @k2@,
 two copies will be started, one for each key.
@@ -491,19 +499,48 @@ and a new copy will be launched at @k3@.
 Caution: Uses memory of the order of the largest input that was ever input during runtime.
 -}
 parallely :: (Applicative m, Witherable t, Align t) => Automaton m a b -> Automaton m (t a) (t b)
-parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
-  where
-    parallely' :: (Applicative m, Witherable t, Align t) => StreamT (ReaderT a m) b -> StreamT (ReaderT (t a) m) (t b)
-    parallely' StreamT {state, step} =
-      StreamT
-        { state = nil
-        , step = \s -> ReaderT $ \as ->
-            let aligned = align s as
-                traversed = traverse (these (\s -> pure $ Result s Nothing) (fmap (fmap Just) . runReaderT (step state)) (\s a -> fmap Just <$> runReaderT (step s) a)) aligned
-                tupleised = fmap (\(Result s aMaybe) -> (s, aMaybe)) <$> traversed
-             in tupleised <&> (\sas -> let output = Witherable.mapMaybe snd sas in Result (fst <$> sas) output)
-        }
-parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
+-- I'm avoiding liftS here to keep the constraint on m down to Applicative
+parallely = parallelyFinishable . handleAutomaton (StreamT.hoist' (mapReaderT (MaybeT . fmap Just)))
+
+{- | Launch many copies of the automaton in parallel, depending on the input shape.
+
+Like 'parallely', but you may use the 'MaybeT' effect to terminate an automaton,
+which is then removed from the whole state.
+
+Caution: May use memory of the order of the largest input that was ever input during runtime.
+To free memory, implement the inner automaton in a way that it can terminate via the 'MaybeT' effect.
+-}
+parallelyFinishable :: (Applicative m, Witherable t, Align t) => Automaton (MaybeT m) a b -> Automaton m (t a) (t b)
+parallelyFinishable = \case
+  Automaton {getAutomaton = Stateful stream} -> Automaton $ Stateful $ parallelyFinishable' stream
+    where
+      parallelyFinishable' :: (Applicative m, Witherable t, Align t) => StreamT (ReaderT a (MaybeT m)) b -> StreamT (ReaderT (t a) m) (t b)
+      parallelyFinishable' StreamT {state, step} =
+        StreamT
+          { state = nil
+          , step = \s -> ReaderT $ \as ->
+              align s as
+                & traverse
+                  ( these
+                      (\s -> pure (Just s, Nothing))
+                      (\a -> runReaderT (step state) a & runMaybeT <&> maybe (Nothing, Nothing) (\(Result s b) -> (Just s, Just b)))
+                      (\s a -> runReaderT (step s) a & runMaybeT <&> maybe (Nothing, Nothing) (\(Result s b) -> (Just s, Just b)))
+                  )
+                <&> (\sas -> let output = Witherable.mapMaybe snd sas in Result (Witherable.mapMaybe fst sas) output)
+          }
+  Automaton {getAutomaton = Stateless f} -> Automaton $ Stateless $ ReaderT $ wither $ runMaybeT <$> runReaderT f
+
+{- | Run copies of an automaton in parallel, distinguished by an index.
+
+* For each individual value of @i@ that is ever input,
+  a separate copy of the automaton is launched.
+* Whenever further inputs tagged with the same index value @i@ arrive,
+  that same copy is stepped with them, and its output forwarded.
+* If the inner automaton terminates by using 'MaybeT', it will output 'Nothing',
+  and the copy is removed from the whole state.
+-}
+fanIndexed :: (Applicative m, Ord i) => Automaton (MaybeT m) a b -> Automaton m (i, a) (Maybe b)
+fanIndexed automaton = dimap (\(i, a) -> (M.singleton i a, i)) (\(bs, i) -> M.lookup i bs) $ first' $ parallelyFinishable automaton
 
 -- ** Interaction with 'StreamT'
 
@@ -541,7 +578,7 @@ The input for the automaton is not buffered.
 For example, if @'concatS' automaton@ receives one input @a@ and @automaton@ produces 10 @b@s from it,
 then the next 9 inputs will be ignored.
 -}
-concatS :: (Monad m) => Automaton m a [b] -> Automaton m a b
+concatS :: (Monad m, Foldable t) => Automaton m a (t b) -> Automaton m a b
 concatS (Automaton automaton) = Automaton $ Data.Stream.Optimized.concatS automaton
 
 -- * Handling effects

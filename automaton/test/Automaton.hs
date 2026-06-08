@@ -35,6 +35,7 @@ import Automaton.Trans.Changeset
 import Data.Automaton
 import Data.Automaton.Recursive
 import Data.Automaton.Trans.Maybe
+import Data.Map.Strict qualified as M
 
 tests =
   testGroup
@@ -63,6 +64,37 @@ tests =
         "parallely"
         [ testCase "Outputs separate sums" $ runIdentity (embed (parallely sumN) [[], [], [1, 2], [10, 20], [100], [], [1000, 200]]) @?= [[], [], [1, 2], [11, 22], [111], [], [1111, 222]]
         ]
+    , testGroup
+        "parallelyFinishable"
+        [ testCase "Outputs separate sums" $
+            runIdentity
+              ( embed
+                  (parallelyFinishable sumN)
+                  [[], [], [1, 2], [10, 20], [100], [], [1000, 200]]
+              )
+              @?= [[], [], [1, 2], [11, 22], [111], [], [1111, 222]]
+        , testCase "Stops and restarts" $
+            runIdentity
+              ( embed
+                  (parallelyFinishable (maybeExit >>> sumN))
+                  [[], [], [Just 1, Just 2], [Just 10, Just 20], [Just 100], [], [Nothing], [Just 200, Just 3]]
+              )
+              @?= [[], [], [1, 2], [11, 22], [111], [], [], [222, 3]]
+        , testCase "Stops and restarts (map)" $
+            runIdentity
+              ( embed
+                  (parallelyFinishable (maybeExit >>> sumN))
+                  [M.fromList [("a", Just 1), ("b", Just 2)], M.fromList [("a", Just 10), ("b", Nothing)], M.fromList [("a", Just 100), ("b", Just 2)]]
+              )
+              @?= [M.fromList [("a", 1), ("b", 2)], M.fromList [("a", 11)], M.fromList [("a", 111), ("b", 2)]]
+        ]
+    , testCase "fanIndexed" $
+        runIdentity
+          ( embed
+              (fanIndexed (maybeExit >>> sumN))
+              [(1, Just 1), (2, Just 2), (1, Just 10), (3, Just 3), (1, Nothing), (2, Just 20), (1, Just 1)]
+          )
+          @?= [Just 1, Just 2, Just 11, Just 3, Nothing, Just 22, Just 1]
     , testGroup
         "Selective"
         [ testCase "selects second Automaton conditionally" $
