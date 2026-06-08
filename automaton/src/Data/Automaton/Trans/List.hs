@@ -7,7 +7,7 @@ module Data.Automaton.Trans.List (
   module List.Transformer,
   widthFirst,
   sequenceS,
-  fromList,
+  fromFoldable,
   toList,
 )
 where
@@ -33,15 +33,12 @@ sequenceS :: (Monad m) => [Automaton m a b] -> Automaton (ListT m) a b
 sequenceS = asum . fmap liftS
 {-# INLINEABLE sequenceS #-}
 
--- | Construct from a list.
-fromList :: (Monad m) => [a] -> ListT m a
-fromList = foldr cons empty
-{-# INLINEABLE fromList #-}
+-- | Construct from an arbitrary Foldable (a wrapper around 'select').
+fromFoldable :: (Monad m, Foldable f) => f a -> ListT m a
+fromFoldable = select
+{-# INLINEABLE fromFoldable #-}
 
 -- | Fold into a list.
 toList :: (Monad m) => ListT m a -> m [a]
-toList = fmap reverse . fold (flip (:)) [] id
+toList = fold (flip (:)) [] reverse
 {-# INLINEABLE toList #-}
-
-cons :: (Monad m) => a -> ListT m a -> ListT m a
-cons x xs = ListT $ pure $ Cons x xs

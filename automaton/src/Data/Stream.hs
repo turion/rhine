@@ -21,7 +21,8 @@ import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.Writer (WriterT (runWriterT), writer)
 
 -- list-transformer
-import List.Transformer (ListT (..), Step (..), fold)
+import List.Transformer (ListT, fold)
+import List.Transformer qualified as ListT (select)
 
 -- mmorph
 import Control.Monad.Morph (MFunctor (hoist))
@@ -581,11 +582,7 @@ handleMaybeT = handleEffect (MaybeT . pure) runMaybeT
 
 -- | Execute and collect all branches of a nondeterministic stream.
 handleListT :: (Monad m) => StreamT (ListT m) a -> StreamT m [a]
-handleListT = handleEffect fromList toList
+handleListT = handleEffect ListT.select toList
   where
-    fromList :: (Monad m) => [a] -> ListT m a
-    fromList = foldr cons empty
     toList :: (Monad m) => ListT m a -> m [a]
-    toList = fmap reverse . fold (flip (:)) [] id
-    cons :: (Monad m) => a -> ListT m a -> ListT m a
-    cons x xs = ListT $ pure $ Cons x xs
+    toList = fold (flip (:)) [] reverse

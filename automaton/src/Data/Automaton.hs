@@ -49,7 +49,7 @@ import Data.These (these)
 import Witherable (Filterable (..), Witherable (wither))
 
 -- list-transformer
-import List.Transformer (ListT (..), Step (..), fold)
+import List.Transformer (ListT, fold, select)
 
 -- semialign
 import Data.Semialign (Align (..), Semialign (..))
@@ -620,14 +620,10 @@ handleEffect send interpret = handleAutomaton $ StreamT.handleEffect (lift . sen
 
 -- | Execute and collect all branches of a nondeterministic automaton.
 handleListT :: (Monad m) => Automaton (ListT m) a b -> Automaton m a [b]
-handleListT = handleEffect fromList toList
+handleListT = handleEffect select toList
   where
-    fromList :: (Monad m) => [a] -> ListT m a
-    fromList = foldr cons empty
     toList :: (Monad m) => ListT m a -> m [a]
-    toList = fmap reverse . fold (flip (:)) [] id
-    cons :: (Monad m) => a -> ListT m a -> ListT m a
-    cons x xs = ListT $ return $ Cons x xs
+    toList = fold (flip (:)) [] reverse
 
 -- * Examples
 
