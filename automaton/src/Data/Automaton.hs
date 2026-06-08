@@ -21,11 +21,15 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Last (..), Sum (..))
 import Prelude hiding (id, (.))
 
+-- containers
+import Data.Map.Strict qualified as M
+
 -- mmorph
 import Control.Monad.Morph (MFunctor (..))
 
 -- transformers
 import Control.Monad.Trans.Class
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader
 
 -- profunctors
@@ -42,7 +46,7 @@ import Data.VectorSpace (VectorSpace (..))
 import Data.These (these)
 
 -- witherable
-import Witherable (Filterable (..), Witherable)
+import Witherable (Filterable (..), Witherable (wither))
 
 -- semialign
 import Data.Semialign (Align (..), Semialign (..))
@@ -494,19 +498,36 @@ and a new copy will be launched at @k3@.
 Caution: Uses memory of the order of the largest input that was ever input during runtime.
 -}
 parallely :: (Applicative m, Witherable t, Align t) => Automaton m a b -> Automaton m (t a) (t b)
-parallely Automaton {getAutomaton = Stateful stream} = Automaton $ Stateful $ parallely' stream
-  where
-    parallely' :: (Applicative m, Witherable t, Align t) => StreamT (ReaderT a m) b -> StreamT (ReaderT (t a) m) (t b)
-    parallely' StreamT {state, step} =
-      StreamT
-        { state = nil
-        , step = \s -> ReaderT $ \as ->
-            let aligned = align s as
-                traversed = traverse (these (\s -> pure $ Result s Nothing) (fmap (fmap Just) . runReaderT (step state)) (\s a -> fmap Just <$> runReaderT (step s) a)) aligned
-                tupleised = fmap (\(Result s aMaybe) -> (s, aMaybe)) <$> traversed
-             in tupleised <&> (\sas -> let output = Witherable.mapMaybe snd sas in Result (fst <$> sas) output)
-        }
-parallely Automaton {getAutomaton = Stateless f} = Automaton $ Stateless $ ReaderT $ traverse $ runReaderT f
+-- I'm avoiding liftS here to keep the constraint on m down to Applicative
+parallely = parallelyFinishable . handleAutomaton (StreamT.hoist' (mapReaderT (MaybeT . fmap Just)))
+
+{- | Launch many copies of the automaton in parallel, depending on the input shape.
+
+Like 'parallely', but you may use the 'MaybeT' effect to terminate an automaton,
+which is then removed from the whole state.
+
+Caution: May use memory of the order of the largest input that was ever input during runtime.
+To free memory, implement the inner automaton in a way that it can terminate via the 'MaybeT' effect.
+-}
+parallelyFinishable :: (Applicative m, Witherable t, Align t) => Automaton (MaybeT m) a b -> Automaton m (t a) (t b)
+parallelyFinishable = \case
+  Automaton {getAutomaton = Stateful stream} -> Automaton $ Stateful $ parallelyFinishable' stream
+    where
+      parallelyFinishable' :: (Applicative m, Witherable t, Align t) => StreamT (ReaderT a (MaybeT m)) b -> StreamT (ReaderT (t a) m) (t b)
+      parallelyFinishable' StreamT {state, step} =
+        StreamT
+          { state = nil
+          , step = \s -> ReaderT $ \as ->
+              align s as
+                & traverse
+                  ( these
+                      (\s -> pure (Just s, Nothing))
+                      (\a -> runReaderT (step state) a & runMaybeT <&> maybe (Nothing, Nothing) (\(Result s b) -> (Just s, Just b)))
+                      (\s a -> runReaderT (step s) a & runMaybeT <&> maybe (Nothing, Nothing) (\(Result s b) -> (Just s, Just b)))
+                  )
+                <&> (\sas -> let output = Witherable.mapMaybe snd sas in Result (Witherable.mapMaybe fst sas) output)
+          }
+  Automaton {getAutomaton = Stateless f} -> Automaton $ Stateless $ ReaderT $ wither $ runMaybeT <$> runReaderT f
 
 -- ** Interaction with 'StreamT'
 
