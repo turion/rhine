@@ -15,24 +15,22 @@ module Data.Automaton.Schedule.Trans (module Data.Automaton.Schedule.Trans) wher
 
 -- base
 import Control.Concurrent (threadDelay)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Functor.Classes (Eq1 (..), liftEq)
 import Data.Functor.Identity (Identity (..))
 import Data.Ord (comparing)
 
 -- transformers
-import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Trans.Class (MonadTrans (..))
+import Control.Monad.Trans.Reader (ReaderT (..))
 
 -- free
 import Control.Monad.Trans.Free (FreeF (..), FreeT (..), iterT, liftF, runFreeT)
 
--- time-domain
-
-import Control.Monad.Trans.Class (MonadTrans (..))
-import Control.Monad.Trans.Reader (ReaderT (..))
+-- automaton
 import Data.Automaton (Automaton, handleAutomaton)
 import Data.Stream (StreamT (..))
 import Data.Stream.Result (Result (..))
-import Data.TimeDomain (TimeDifference (..))
 
 -- * Waiting action
 
