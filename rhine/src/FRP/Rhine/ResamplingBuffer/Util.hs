@@ -167,13 +167,15 @@ ResamplingBuffer stateL putL getL ||-|| ResamplingBuffer stateR putR getR =
         sL' <- putL theTimeInfo a sL
         sR' <- putR theTimeInfo a sR
         pure $! JointState (JointState lastTimeMaybeL sL') (JointState lastTimeMaybeR sR'),
-      get = \theTimeInfo (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR)) -> case tag theTimeInfo of
-        Left tagL -> do
-          Result sL' b <- getL (theTimeInfo & retag (const tagL) & fixSinceLast lastTimeMaybeL) sL
-          pure $! Result (JointState (JointState lastTimeMaybeL sL') (JointState lastTimeMaybeR sR)) b
-        Right tagR -> do
-          Result sR' b <- getR (theTimeInfo & retag (const tagR) & fixSinceLast lastTimeMaybeR) sR
-          pure $! Result (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR')) b
+      get = \theTimeInfo (JointState (JointState lastTimeMaybeL sL) (JointState lastTimeMaybeR sR)) -> do
+        let now = absolute theTimeInfo
+        case tag theTimeInfo of
+          Left tagL -> do
+            Result sL' b <- getL (theTimeInfo & retag (const tagL) & fixSinceLast lastTimeMaybeL) sL
+            pure $! Result (JointState (JointState (Just now) sL') (JointState lastTimeMaybeR sR)) b
+          Right tagR -> do
+            Result sR' b <- getR (theTimeInfo & retag (const tagR) & fixSinceLast lastTimeMaybeR) sR
+            pure $! Result (JointState (JointState lastTimeMaybeL sL) (JointState (Just now) sR')) b
     }
 
 -- | Helper function for 'ResamplingBuffer's over 'ParallelClock's to fix the 'sinceLast' field of the 'TimeInfo'.
