@@ -48,6 +48,9 @@ import Data.These (these)
 -- witherable
 import Witherable (Filterable (..), Witherable (wither))
 
+-- list-transformer
+import List.Transformer (ListT, fold, select)
+
 -- semialign
 import Data.Semialign (Align (..), Semialign (..))
 
@@ -457,6 +460,10 @@ instance (Monad m) => Cochoice (Automaton m) where
 
 -- ** Traversing automata
 
+-- | Apply an 'Automaton' to every input.
+mapS :: (Monad m) => Automaton m a b -> Automaton m [a] [b]
+mapS = traverse'
+
 -- | Only step the automaton if the input is 'Just'.
 mapMaybeS :: (Monad m) => Automaton m a b -> Automaton m (Maybe a) (Maybe b)
 mapMaybeS = traverse'
@@ -610,6 +617,13 @@ handleEffect ::
   Automaton eff a b ->
   Automaton m a (sig b)
 handleEffect send interpret = handleAutomaton $ StreamT.handleEffect (lift . send) (\raction -> ReaderT $ \a -> interpret $ runReaderT raction a)
+
+-- | Execute and collect all branches of a nondeterministic automaton.
+handleListT :: (Monad m) => Automaton (ListT m) a b -> Automaton m a [b]
+handleListT = handleEffect select toList
+  where
+    toList :: (Monad m) => ListT m a -> m [a]
+    toList = fold (flip (:)) [] reverse
 
 -- * Examples
 

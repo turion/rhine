@@ -33,6 +33,7 @@ common opts
     changeset ^>=0.2,
     containers >=0.5,
     free >=5.1,
+    list-transformer ^>=1.1,
     mmorph ^>=1.2,
     mtl >=2.2 && <2.4,
     profunctors ^>=5.6,
@@ -89,6 +90,7 @@ library
     Data.Automaton.Trans.Accum
     Data.Automaton.Trans.Changeset
     Data.Automaton.Trans.Except
+    Data.Automaton.Trans.List
     Data.Automaton.Trans.Maybe
     Data.Automaton.Trans.RWS
     Data.Automaton.Trans.Random
@@ -121,6 +123,7 @@ test-suite automaton-test
     Automaton.Schedule
     Automaton.Trans.Accum
     Automaton.Trans.Changeset
+    Automaton.Trans.List
     Stream
 
   build-depends:

@@ -32,6 +32,7 @@ import Automaton.Filter
 import Automaton.Schedule
 import Automaton.Trans.Accum
 import Automaton.Trans.Changeset
+import Automaton.Trans.List
 import Data.Automaton
 import Data.Automaton.Recursive
 import Data.Automaton.Trans.Maybe
@@ -117,6 +118,7 @@ tests =
     , Automaton.Filter.tests
     , Automaton.Trans.Accum.tests
     , Automaton.Trans.Changeset.tests
+    , Automaton.Trans.List.tests
     , Automaton.Schedule.tests
     ]
 

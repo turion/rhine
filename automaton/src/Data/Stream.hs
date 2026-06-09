@@ -6,7 +6,7 @@ module Data.Stream where
 import Control.Applicative (Alternative (..), Applicative (..), liftA2)
 import Control.Monad ((<$!>))
 import Data.Bifunctor (bimap)
-import Data.Foldable (Foldable (..))
+import Data.Foldable (Foldable (toList))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Monoid (Ap (..))
@@ -19,6 +19,10 @@ import Control.Monad.Trans.Except (ExceptT (..), except, runExceptT, throwE, wit
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Trans.Writer (WriterT (runWriterT), writer)
+
+-- list-transformer
+import List.Transformer (ListT, fold)
+import List.Transformer qualified as ListT (select)
 
 -- mmorph
 import Control.Monad.Morph (MFunctor (hoist))
@@ -575,3 +579,10 @@ handleWriterT = handleEffect (writer . swap) (fmap swap . runWriterT)
 -- | Execute a stream until it stops, then output 'Nothing' forever.
 handleMaybeT :: (Monad m) => StreamT (MaybeT m) a -> StreamT m (Maybe a)
 handleMaybeT = handleEffect (MaybeT . pure) runMaybeT
+
+-- | Execute and collect all branches of a nondeterministic stream.
+handleListT :: (Monad m) => StreamT (ListT m) a -> StreamT m [a]
+handleListT = handleEffect ListT.select toList
+  where
+    toList :: (Monad m) => ListT m a -> m [a]
+    toList = fold (flip (:)) [] reverse
