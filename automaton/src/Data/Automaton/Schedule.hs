@@ -298,7 +298,7 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (SkipT m) where
   schedule = fmap runSkipS >>> schedule >>> fmap maybeToList >>> Automaton.concatS >>> liftS
 
 -- | Each scheduled automaton must eventually produce an output or a diff greater than 'zero', otherwise this will loop indefinitely.
-instance (Show diff, Ord diff, TimeDifference diff, Monad m, MonadSchedule m) => MonadSchedule (ScheduleT diff m) where
+instance (Ord diff, TimeDifference diff, Monad m, MonadSchedule m) => MonadSchedule (ScheduleT diff m) where
   schedule automata = automata & N.zip [1 ..] & fmap instrument & schedule & backpressure & scheduleS & Automaton.concatS
     where
       nAutomata = List.length automata
