@@ -28,5 +28,6 @@ main =
           , testCase "automaton" $ Sum.automaton Sum.nMax @?= Sum.direct Sum.nMax
           , testCase "rhine flow" $ Sum.rhineFlow Sum.nMax @?= Sum.direct Sum.nMax
           , testCase "rhine IO" $ Sum.rhineIO >>= (@?= Sum.direct Sum.nMax)
+          , testCase "automaton reactimate" $ Sum.automatonReactimate >>= (@?= Sum.direct Sum.nMax)
           ]
       ]

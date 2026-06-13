@@ -30,6 +30,7 @@ benchmarks =
     , bench "rhine IO" $ whnfIO rhineIO
     , bench "automaton" $ nf automaton nMax
     , bench "automaton reactimate" $ nf automatonReactimate nMax
+    , bench "automaton reactimate IO" $ whnfIO automatonReactimateIO
     , bench "direct" $ nf direct nMax
     , bench "direct monad" $ nf directM nMax
     ]
@@ -79,6 +80,16 @@ automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
             { state = 1
             , Stream.step = \s -> return $! Result (s + 1) s
             }
+
+automatonReactimateIO :: IO Int
+automatonReactimateIO = fmap (either id absurd) $ runExceptT $ reactimate $
+  proc () -> do
+    k <- count -< ()
+    s <- sumN -< k
+    if k < nMax
+      then returnA -< ()
+      else arrM throwE -< s
+
 
 direct :: Int -> Int
 direct n = sum [0 .. n]
