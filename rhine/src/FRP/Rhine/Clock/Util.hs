@@ -16,7 +16,6 @@ import Data.Automaton (Automaton, delay, initial)
 
 import Data.Maybe (fromMaybe)
 import FRP.Rhine.Clock
-import FRP.Rhine.Clock.Proxy
 
 -- * Auxiliary definitions and utilities
 
@@ -24,10 +23,10 @@ import FRP.Rhine.Clock.Proxy
    generate a stream of time stamps.
 -}
 genTimeInfo ::
+  forall cl m.
   (Monad m, Clock m cl) =>
-  ClockProxy cl ->
   Automaton m (Time cl, Tag cl) (TimeInfo cl)
-genTimeInfo _ = proc (absolute, tag) -> do
+genTimeInfo = proc (absolute, tag) -> do
   initialTime <- initial -< absolute
   lastTime <- delay Nothing -< Just absolute
   returnA
