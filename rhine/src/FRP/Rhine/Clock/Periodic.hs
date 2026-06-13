@@ -19,7 +19,6 @@ import Control.Arrow
 
 -- automaton
 import Data.Automaton (
-  Automaton (..),
   accumulateWith,
   arrM,
   concatS,
@@ -53,12 +52,8 @@ instance
   where
   type Time (Periodic v) = Seconds Integer
   type Tag (Periodic v) = ()
-  initClock cl =
-    pure
-      ( cycleS (theList cl) >>> accumulateWith (+) 0 &&& arrM (wait . fromIntegral)
-      , 0
-      )
-  {-# INLINE initClock #-}
+  runClock = concatS (arr (toList . theList)) >>> accumulateWith (+) 0 &&& arrM (wait . fromIntegral)
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (Periodic v)
 
@@ -84,9 +79,3 @@ instance
   NonemptyNatList (n1 : n2 : ns)
   where
   theList cl = Seconds (headCl cl) <| theList (tailCl cl)
-
--- * Utilities
-
--- | Repeatedly outputs the values of a given list, in order.
-cycleS :: (Monad m) => NonEmpty a -> Automaton m () a
-cycleS as = concatS $ arr $ const $ toList as

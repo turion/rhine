@@ -16,7 +16,7 @@ import Control.Arrow
 import GHC.TypeLits
 
 -- automaton
-import Data.Automaton (accumulateWith, constM)
+import Data.Automaton (accumulateWith, arrM)
 import Data.Automaton.Schedule.Trans (ScheduleT, wait)
 import Data.Maybe (fromMaybe)
 import Data.Vector.Sized (Vector, fromList)
@@ -47,16 +47,12 @@ stepsize fixedStep@FixedStep = Seconds $ natVal fixedStep
 instance (Monad m, time ~ Seconds Integer) => Clock (ScheduleT time m) (FixedStep n) where
   type Time (FixedStep n) = Seconds Integer
   type Tag (FixedStep n) = ()
-  initClock cl =
+  runClock = proc cl -> do
     let step = stepsize cl
-     in pure
-          ( constM (wait (fromIntegral step))
-              >>> arr (const step)
-              >>> accumulateWith (+) 0
-              >>> arr (,())
-          , 0
-          )
-  {-# INLINE initClock #-}
+    arrM $ wait . fromIntegral -< step
+    n <- accumulateWith (+) 0 -< step
+    returnA -< (n, ())
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (FixedStep n)
 

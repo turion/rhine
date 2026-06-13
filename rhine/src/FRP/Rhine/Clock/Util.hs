@@ -10,9 +10,11 @@ import Control.Arrow
 import Data.TimeDomain
 
 -- automaton
-import Data.Automaton (Automaton, delay)
+import Data.Automaton (Automaton, delay, initial)
 
 -- rhine
+
+import Data.Maybe (fromMaybe)
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 
@@ -24,14 +26,14 @@ import FRP.Rhine.Clock.Proxy
 genTimeInfo ::
   (Monad m, Clock m cl) =>
   ClockProxy cl ->
-  Time cl ->
   Automaton m (Time cl, Tag cl) (TimeInfo cl)
-genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- delay initialTime -< absolute
+genTimeInfo _ = proc (absolute, tag) -> do
+  initialTime <- initial -< absolute
+  lastTime <- delay Nothing -< Just absolute
   returnA
     -<
       TimeInfo
-        { sinceLast = absolute `diffTime` lastTime
+        { sinceLast = absolute `diffTime` fromMaybe initialTime lastTime
         , sinceInit = absolute `diffTime` initialTime
         , ..
         }

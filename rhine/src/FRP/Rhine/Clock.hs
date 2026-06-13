@@ -20,32 +20,22 @@ module FRP.Rhine.Clock where
 -- base
 import Control.Arrow
 import Control.Category qualified as Category
+import Data.Functor ((<&>))
+
+-- profunctors
+import Data.Profunctor (Profunctor (..))
 
 -- transformers
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
 -- automaton
-import Data.Automaton (Automaton, arrM, hoistS)
+import Data.Automaton (Automaton, MonadMorph (..), arrM, hoistSS, joinS)
 
 -- time-domain
 import Data.TimeDomain
 
 -- * The 'Clock' type class
-
-{- |
-A clock creates a stream of time stamps and additional information,
-possibly together with side effects in a monad 'm'
-that cause the environment to wait until the specified time is reached.
--}
-type RunningClock m time tag = Automaton m () (time, tag)
-
-{- |
-When initialising a clock, the initial time is measured
-(typically by means of a side effect),
-and a running clock is returned.
--}
-type RunningClockInit m time tag = m (RunningClock m time tag, time)
 
 {- |
 Since we want to leverage Haskell's type system to annotate signal networks by their clocks,
@@ -67,11 +57,12 @@ class (TimeDomain (Time cl)) => Clock m cl where
   {- | The method that produces to a clock value a running clock,
   i.e. an effectful stream of tagged time stamps together with an initialisation time.
   -}
-  initClock ::
-    -- | The clock value, containing e.g. settings or device parameters
-    cl ->
-    -- | The stream of time stamps, and the initial time
-    RunningClockInit m (Time cl) (Tag cl)
+  runClock ::
+    {- | The stream of time stamps and tags,
+    which may depend on the clock value, containing e.g. settings or device parameters.
+    It may produce side effects in @m@ to read the current time or wait for the next tick.
+    -}
+    Automaton m cl (Time cl, Tag cl)
 
 -- * Auxiliary definitions and utilities
 
@@ -144,13 +135,10 @@ instance
   where
   type Time (RescaledClock cl time) = time
   type Tag (RescaledClock cl time) = Tag cl
-  initClock (RescaledClock cl f) = do
-    (runningClock, initTime) <- initClock cl
-    pure
-      ( runningClock >>> first (arr f)
-      , f initTime
-      )
-  {-# INLINE initClock #-}
+  runClock = proc RescaledClock {unscaledClock, rescale} -> do
+    (time, tag) <- runClock -< unscaledClock
+    returnA -< (rescale time, tag)
+  {-# INLINE runClock #-}
 
 {- | Instead of a mere function as morphism of time domains,
   we can transform one time domain into the other with an effectful morphism.
@@ -168,14 +156,10 @@ instance
   where
   type Time (RescaledClockM m cl time) = time
   type Tag (RescaledClockM m cl time) = Tag cl
-  initClock RescaledClockM {..} = do
-    (runningClock, initTime) <- initClock unscaledClockM
-    rescaledInitTime <- rescaleM initTime
-    pure
-      ( runningClock >>> first (arrM rescaleM)
-      , rescaledInitTime
-      )
-  {-# INLINE initClock #-}
+  runClock = proc RescaledClockM {..} -> do
+    (time, tag) <- runClock -< unscaledClockM
+    joinS -< rescaleM time <&> (,tag)
+  {-# INLINE runClock #-}
 
 -- | A 'RescaledClock' is trivially a 'RescaledClockM'.
 rescaledClockToM :: (Monad m) => RescaledClock cl time -> RescaledClockM m cl time
@@ -184,51 +168,6 @@ rescaledClockToM RescaledClock {..} =
     { unscaledClockM = unscaledClock
     , rescaleM = pure . rescale
     }
-
-{- | Instead of a mere function as morphism of time domains,
-  we can transform one time domain into the other with an automaton.
--}
-data RescaledClockS m cl time tag = RescaledClockS
-  { unscaledClockS :: cl
-  -- ^ The clock before the rescaling
-  , rescaleS :: RescalingSInit m cl time tag
-  {- ^ The rescaling stream function, and rescaled initial time,
-  depending on the initial time before rescaling
-  -}
-  }
-
-instance
-  (Monad m, TimeDomain time, Clock m cl) =>
-  Clock m (RescaledClockS m cl time tag)
-  where
-  type Time (RescaledClockS m cl time tag) = time
-  type Tag (RescaledClockS m cl time tag) = tag
-  initClock RescaledClockS {..} = do
-    (runningClock, initTime) <- initClock unscaledClockS
-    (rescaling, rescaledInitTime) <- rescaleS initTime
-    pure
-      ( runningClock >>> rescaling
-      , rescaledInitTime
-      )
-  {-# INLINE initClock #-}
-
--- | A 'RescaledClockM' is trivially a 'RescaledClockS'.
-rescaledClockMToS ::
-  (Monad m) =>
-  RescaledClockM m cl time ->
-  RescaledClockS m cl time (Tag cl)
-rescaledClockMToS RescaledClockM {..} =
-  RescaledClockS
-    { unscaledClockS = unscaledClockM
-    , rescaleS = rescaleMToSInit rescaleM
-    }
-
--- | A 'RescaledClock' is trivially a 'RescaledClockS'.
-rescaledClockToS ::
-  (Monad m) =>
-  RescaledClock cl time ->
-  RescaledClockS m cl time (Tag cl)
-rescaledClockToS = rescaledClockMToS . rescaledClockToM
 
 -- | Applying a monad morphism yields a new clock.
 data HoistClock m1 m2 cl = HoistClock
@@ -242,13 +181,8 @@ instance
   where
   type Time (HoistClock m1 m2 cl) = Time cl
   type Tag (HoistClock m1 m2 cl) = Tag cl
-  initClock HoistClock {..} = do
-    (runningClock, initialTime) <- monadMorphism $ initClock unhoistedClock
-    pure
-      ( hoistS monadMorphism runningClock
-      , initialTime
-      )
-  {-# INLINE initClock #-}
+  runClock = lmap (\HoistClock {..} -> (MonadMorph monadMorphism, unhoistedClock)) $ hoistSS runClock
+  {-# INLINE runClock #-}
 
 -- | Lift a clock type into a monad transformer.
 type LiftClock m t = HoistClock m (t m)

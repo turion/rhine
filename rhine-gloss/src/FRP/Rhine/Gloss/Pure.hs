@@ -34,7 +34,6 @@ import Control.Monad.Trans.Writer.Strict
 -- automaton
 import Data.Automaton.Schedule (MonadSchedule (..))
 import Data.Automaton.Schedule.Trans (ScheduleT, evalScheduleT, wait)
-import Data.Automaton.Trans.Except (performOnFirstSample)
 import qualified Data.Automaton.Trans.Reader as AutomatonReader
 import qualified Data.Automaton.Trans.Writer as AutomatonWriter
 
@@ -81,8 +80,8 @@ instance Semigroup GlossClock where
 instance Clock GlossM GlossClock where
   type Time GlossClock = Seconds Float
   type Tag GlossClock = Maybe Event
-  initClock _ = pure (constM (GlossM (wait () >> lift ask)) >>> (sumN *** Category.id), 0)
-  {-# INLINE initClock #-}
+  runClock = constM (GlossM (wait () >> lift ask)) >>> (sumN *** Category.id)
+  {-# INLINE runClock #-}
 
 instance GetClockProxy GlossClock
 
@@ -125,7 +124,7 @@ flowGloss GlossSettings {..} rhine =
   play display backgroundColor stepsPerSecond (worldAutomaton, Blank) getPic handleEvent simStep
   where
     worldAutomaton :: WorldAutomaton
-    worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (evalScheduleT . unGlossM) $ performOnFirstSample $ eraseClock rhine
+    worldAutomaton = AutomatonWriter.runWriterS $ AutomatonReader.runReaderS $ hoistS (evalScheduleT . unGlossM) $ eraseClock rhine
     stepWith :: (Float, Maybe Event) -> (WorldAutomaton, Picture) -> (WorldAutomaton, Picture)
     stepWith (diff, eventMaybe) (automaton, _) = let Result automaton' (picture, _) = runIdentity $ stepAutomaton automaton ((Seconds diff, eventMaybe), ()) in (automaton', picture)
     getPic (_, pic) = pic
