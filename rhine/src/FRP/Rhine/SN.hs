@@ -42,7 +42,7 @@ synchronous ::
   ClSF m cl a b ->
   SN m cl a b
 synchronous clsf = SN $ proc (time, tag, Just a) -> do
-  b <- eraseClockClSF (getClockProxy @cl) clsf -< (time, tag, a)
+  b <- eraseClockClSF clsf -< (time, tag, a)
   returnA -< Just b
 {-# INLINE synchronous #-}
 
@@ -82,7 +82,7 @@ sequential sn1 resBuf sn2 = SN $
           returnA -< Left <$> ((time,,) <$> outTag proxy1 tagL <*> maybeB)
         Right tagR -> do
           returnA -< Right . (time,) <$> inTag proxy2 tagR
-      maybeC <- mapMaybeS $ eraseClockResBuf (outProxy proxy1) (inProxy proxy2) resBuf -< resBufIn
+      maybeC <- mapMaybeS $ eraseClockResBuf resBuf -< resBufIn
       case tag of
         Left _ -> do
           returnA -< Nothing
@@ -104,7 +104,7 @@ postcompose sn clsf = SN $
    in
     proc input@(time, tag, _) -> do
       bMaybe <- eraseClockSN sn -< input
-      mapMaybeS $ eraseClockClSF (outProxy proxy) clsf -< (time,,) <$> outTag proxy tag <*> bMaybe
+      mapMaybeS $ eraseClockClSF clsf -< (time,,) <$> outTag proxy tag <*> bMaybe
 {-# INLINE postcompose #-}
 
 -- | A 'ClSF' can always be precomposed onto an 'SN' if the clocks match on the input.
@@ -113,13 +113,16 @@ precompose clsf sn = SN $
     proxy = toClockProxy sn
    in
     proc (time, tag, aMaybe) -> do
-      bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy)  clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
+      bMaybe <- mapMaybeS $ eraseClockClSF clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
       eraseClockSN sn -< (time, tag, bMaybe)
 {-# INLINE precompose #-}
 
 {- | Data can be looped back to the beginning of an 'SN',
   but it must be resampled since the 'Out' and 'In' clocks are generally different.
 -}
+feedbackSN ::
+  (Time cl ~ Time (In cl), Time cl ~ Time (Out cl), GetClockProxy cl, Functor m, Monad m, Clock m (In cl), Clock m (Out cl)) =>
+  ResamplingBuffer m (Out cl) (In cl) d b -> SN m cl (a, b) (c, d) -> SN m cl a c
 feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $
   let
     proxy = toClockProxy sn
@@ -129,7 +132,7 @@ feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $
         Nothing -> do
           returnA -< (Nothing, buf)
         Just tagIn -> do
-          timeInfo <- genTimeInfo (inProxy proxy) -< (time, tagIn)
+          timeInfo <- genTimeInfo -< (time, tagIn)
           Result buf' c <- arrM $ uncurry get -< (timeInfo, buf)
           returnA -< (Just c, buf')
       bdMaybe <- eraseClockSN sn -< (time, tag, (,) <$> aMaybe <*> cMaybe)
@@ -137,12 +140,22 @@ feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $
         Nothing -> do
           returnA -< (Nothing, buf')
         Just (tagOut, (b, d)) -> do
-          timeInfo <- genTimeInfo (outProxy proxy) -< (time, tagOut)
+          timeInfo <- genTimeInfo -< (time, tagOut)
           buf'' <- arrM $ uncurry $ uncurry put -< ((timeInfo, d), buf')
           returnA -< (Just b, buf'')
 {-# INLINE feedbackSN #-}
 
 -- | Bypass the signal network by forwarding data in parallel through a 'ResamplingBuffer'.
+firstResampling ::
+  ( Monad m
+  , Time cl ~ Time (In cl)
+  , Time cl ~ Time (Out cl), GetClockProxy cl
+  , Clock m (In cl)
+  , Clock m (Out cl)
+  ) =>
+  SN m cl a b ->
+  ResamplingBuffer m (In cl) (Out cl) c d ->
+  SN m cl (a, c) (b, d)
 firstResampling sn buf = SN $
   let
     proxy = toClockProxy sn
@@ -154,6 +167,6 @@ firstResampling sn buf = SN $
           (Just tagIn, _, Just c) -> Just $ Left (time, tagIn, c)
           (_, Just tagOut, _) -> Just $ Right (time, tagOut)
           _ -> Nothing
-      dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy)  buf -< resBufInput
+      dMaybe <- mapMaybeS $ eraseClockResBuf buf -< resBufInput
       returnA -< (,) <$> bMaybe <*> join dMaybe
 {-# INLINE firstResampling #-}
