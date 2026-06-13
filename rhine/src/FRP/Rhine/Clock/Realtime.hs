@@ -1,7 +1,8 @@
+{-# LANGUAGE UndecidableInstances #-}
 module FRP.Rhine.Clock.Realtime where
 
 -- base
-import Control.Arrow (arr)
+import Control.Arrow (returnA)
 import Control.Concurrent (threadDelay)
 import Control.Monad (guard)
 import Control.Monad.IO.Class
@@ -17,22 +18,18 @@ import FRP.Rhine.Clock
 
 -- time-domain
 import Data.TimeDomain (Diff, UTCTime)
+import FRP.Rhine.Clock.Proxy (GetClockProxy)
 
-{- | A clock rescaled to the 'UTCTime' time domain.
+-- | Use the waiting effect of @cl@, but overwrite the time stamps with the current system time.
+newtype OverwriteUTCClock cl = OverwriteUTCClock cl
 
-There are different strategies how a clock may be rescaled, see below.
--}
-type UTCClock m cl = RescaledClockS m cl UTCTime (Tag cl)
-
--- | Rescale an 'IO' clock to the UTC time domain, overwriting its timestamps.
-overwriteUTC :: (MonadIO m) => cl -> UTCClock m cl
-overwriteUTC cl =
-  RescaledClockS
-    { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arrM $ \(_timePassed, tag) -> (,tag) <$> liftIO getCurrentTime, now)
-    }
+instance (Clock m cl, MonadIO m) => Clock m (OverwriteUTCClock cl) where
+  type Time (OverwriteUTCClock cl) = UTCTime
+  type Tag (OverwriteUTCClock cl) = Tag cl
+  runClock = proc (OverwriteUTCClock cl) -> do
+    (_timePassed, tag) <- runClock -< cl
+    time <- constM $ liftIO getCurrentTime -< ()
+    returnA -< (time, tag)
 
 {- | Rescale a clock to the UTC time domain.
 
@@ -40,15 +37,19 @@ The initial time stamp is measured as system time,
 and the increments (durations between ticks) are taken from the original clock.
 No attempt at waiting until the specified time is made,
 the timestamps of the original clock are trusted unconditionally.
+Th original clock is expected to start running at the time '0'.
 -}
-addUTC :: (Real (Time cl), MonadIO m) => cl -> UTCClock m cl
-addUTC cl =
-  RescaledClockS
-    { unscaledClockS = cl
-    , rescaleS = const $ do
-        now <- liftIO getCurrentTime
-        return (arr $ \(timePassed, tag) -> (addUTCTime (realToFrac timePassed) now, tag), now)
-    }
+newtype AddUTCClock cl = AddUTCClock cl
+
+instance (Clock m cl, Real (Time cl), MonadIO m  ) => Clock m (AddUTCClock cl) where
+  type Time (AddUTCClock cl) = UTCTime
+  type Tag (AddUTCClock cl) = Tag cl
+  runClock = proc (AddUTCClock cl) -> do
+    (timePassed, tag) <- runClock -< cl
+    initTime <- constM $ liftIO getCurrentTime -< ()
+    returnA -< (addUTCTime (realToFrac timePassed) initTime, tag)
+
+instance GetClockProxy (AddUTCClock cl) where
 
 {- | Like 'UTCClock', but also output in the tag whether and by how much the target realtime was missed.
 
@@ -57,7 +58,7 @@ the UTC clock should tick.
 A tag of @(tag, 'Nothing')@ means that the tick was in time.
 @(tag, 'Just' dt)@ means that the tick was too late by @dt@.
 -}
-type WaitUTCClock m cl = RescaledClockS m cl UTCTime (Tag cl, Maybe (Diff (Time cl)))
+newtype WaitUTCClock cl = WaitUTCClock cl
 
 {- | Measure the time after each tick, and wait for the remaining time until the next tick.
 
@@ -74,21 +75,19 @@ this option (around 100 microseconds). For fast clocks it is recommended
 that @-threaded@ not be used in order to miss less ticks. The clock will adjust
 the wait time, up to no wait time at all, to catch up when a tick is missed.
 -}
-waitUTC :: (Real (Time cl), MonadIO m, Fractional (Diff (Time cl))) => cl -> WaitUTCClock m cl
-waitUTC unscaledClockS =
-  RescaledClockS
-    { unscaledClockS
-    , rescaleS = \_ -> do
-        initTime <- liftIO getCurrentTime
-        let
-          runningClock = arrM $ \(sinceInitTarget, tag) -> liftIO $ do
-            beforeSleep <- getCurrentTime
-            let
-              diff :: Rational
-              diff = toRational $ beforeSleep `diffUTCTime` initTime
-              remaining = toRational sinceInitTarget - diff
-            threadDelay $ round $ 1000000 * remaining
-            now <- getCurrentTime
-            return (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
-        return (runningClock, initTime)
-    }
+instance (Clock m cl, Real (Time cl), MonadIO m, Fractional (Diff (Time cl))) => Clock m (WaitUTCClock cl) where
+  type Time (WaitUTCClock cl) = UTCTime
+  type Tag (WaitUTCClock cl) = (Tag cl, Maybe (Diff (Time cl)))
+  runClock = proc (WaitUTCClock cl) -> do
+    (sinceInitTarget, tag) <- runClock -< cl
+    initTime <- initialised_ $ liftIO getCurrentTime -< ()
+    beforeSleep <- constM $ liftIO getCurrentTime -< ()
+    let
+      diff :: Rational
+      diff = toRational $ beforeSleep `diffUTCTime` initTime
+      remaining = toRational sinceInitTarget - diff
+    arrM $ liftIO . threadDelay -< round $ 1000000 * realToFrac remaining
+    now <- constM $ liftIO getCurrentTime -< ()
+    returnA -< (now, (tag, guard (remaining > 0) >> return (fromRational remaining)))
+
+instance GetClockProxy (WaitUTCClock cl) where

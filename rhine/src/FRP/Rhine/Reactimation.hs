@@ -54,9 +54,7 @@ flow ::
   ) =>
   Rhine m cl () () ->
   m void
-flow rhine = do
-  automaton <- eraseClock rhine
-  reactimate $ automaton >>> arr (const ())
+flow rhine = reactimate $ eraseClock rhine >>> arr (const ())
 {-# INLINE flow #-}
 
 {- | Like 'flow', but with the type signature specialized to @m ()@.

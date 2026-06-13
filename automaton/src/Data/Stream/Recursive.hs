@@ -12,6 +12,8 @@ import Control.Monad.Morph (MFunctor (..))
 
 -- automaton
 import Data.Stream.Result
+import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import Control.Monad.Trans.Reader (ReaderT (..))
 
 {- | A stream transformer in recursive encoding.
 
@@ -66,3 +68,11 @@ mmap f Recursive {getRecursive} = Recursive $ do
   Result recursive a <- getRecursive
   b <- f a
   pure $ Result (mmap f recursive) b
+
+-- FIXME can rewrite with Selective
+(>>>=) :: forall m e1 e2 a . Monad m => Recursive (ExceptT e1 m) a -> Recursive (ReaderT e1 (ExceptT e2 m)) a -> Recursive (ExceptT e2 m) a
+f >>>= g  = Recursive $ ExceptT $ do
+  ea <- runExceptT $ getRecursive f
+  case ea of
+    Left e1 -> runExceptT $ getRecursive $ hoist (`runReaderT` e1) g
+    Right (Result f' a) -> pure $ pure $ Result (f' >>>= g) a

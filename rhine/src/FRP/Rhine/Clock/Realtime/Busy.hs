@@ -29,13 +29,8 @@ instance (MonadIO m) => Clock m Busy where
   type Time Busy = UTCTime
   type Tag Busy = ()
 
-  initClock _ = do
-    initialTime <- liftIO getCurrentTime
-    return
-      ( constM (liftIO getCurrentTime)
+  runClock = constM (liftIO getCurrentTime)
           &&& arr (const ())
-      , initialTime
-      )
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy Busy

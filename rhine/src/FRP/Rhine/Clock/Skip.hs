@@ -13,10 +13,6 @@ instance (TimeDomain (Time cl), Clock (SkipT m) cl, Monad m) => Clock m (SkipClo
   type Time (SkipClock cl) = Time cl
   type Tag (SkipClock cl) = Tag cl
 
-  initClock SkipClock {getSkipClock} = do
-    (runningClock, initialTime) <- runSkipT $ initClock getSkipClock
-    pure
-      ( hoistS runSkipT runningClock
-      , initialTime
-      )
-  {-# INLINE initClock #-}
+  runClock = proc  SkipClock {getSkipClock} -> do
+    hoistS runSkipT runClock -< getSkipClock
+  {-# INLINE runClock #-}

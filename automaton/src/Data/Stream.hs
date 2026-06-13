@@ -377,6 +377,21 @@ foreverExceptE e StreamT {state, step} =
         Left e -> stepNew $! JointState e state
         Right result -> pure $! mapResultState (JointState e) result
 
+(>>>=) :: Monad m => StreamT (ExceptT e m) a -> StreamT (ReaderT e (ExceptT e2 m)) a -> StreamT (ExceptT e2 m) a
+(>>>=) StreamT {state = state1, step = step1} StreamT {state = state2, step = step2} =
+  StreamT
+    { state = Right state1
+    , step
+    }
+  where
+    step = \case
+      Right s1 -> do
+        resultOrException <- lift $ runExceptT $ step1 s1
+        case resultOrException of
+          Left e -> step $ Left $! JointState e state2
+          Right (Result s1' a) -> pure $! Result (Right s1') a
+      Left (JointState e s2) -> mapResultState (Left . JointState e) <$> runReaderT (step2 s2) e
+
 -- | Whenever an exception occurs, output it and retry on the next step.
 exceptS :: (Applicative m) => StreamT (ExceptT e m) b -> StreamT m (Either e b)
 exceptS StreamT {state, step} =

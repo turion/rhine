@@ -4,6 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 
 module Data.Automaton where
 
@@ -290,10 +291,20 @@ constM :: (Functor m) => m b -> Automaton m a b
 constM = arrM . const
 {-# INLINE constM #-}
 
+-- | Execute the incoming effect in @m@ and return its result.
+joinS :: Monad m => Automaton m (m a) a
+joinS = arrM id
+
 -- | Apply an arbitrary monad morphism to an automaton.
 hoistS :: (Monad m) => (forall x. m x -> n x) -> Automaton m a b -> Automaton n a b
 hoistS morph (Automaton automaton) = Automaton $ hoist (mapReaderT morph) automaton
 {-# INLINE hoistS #-}
+
+newtype MonadMorph m n = MonadMorph (forall x . m x -> n x)
+
+-- | Like 'hoistS', but the monad morphism is provided on the live input.
+hoistSS :: (Functor m, Functor n) => Automaton m a b -> Automaton n (MonadMorph m n, a) b
+hoistSS = withAutomaton $ \f (MonadMorph morph, a) -> morph $ f a
 
 -- | Lift the monad of an automaton to a transformer.
 liftS :: (MonadTrans t, Monad m, Functor (t m)) => Automaton m a b -> Automaton (t m) a b
