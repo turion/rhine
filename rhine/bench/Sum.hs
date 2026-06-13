@@ -27,6 +27,7 @@ benchmarks =
     "Sum"
     [ bench "rhine" $ nf rhine nMax
     , bench "rhine flow" $ nf rhineFlow nMax
+    , bench "rhine IO" $ whnfIO rhineIO
     , bench "automaton" $ nf automaton nMax
     , bench "automaton reactimate" $ nf automatonReactimate nMax
     , bench "direct" $ nf direct nMax
@@ -47,6 +48,15 @@ rhineFlow n =
         if k < n
           then returnA -< ()
           else arrMCl Left -< s
+
+rhineIO :: IO Int
+rhineIO = fmap (either id absurd) $ runExceptT $ flow $
+  (@@ Trivial) $ proc () -> do
+    k <- count -< ()
+    s <- sumN -< k
+    if k < nMax
+      then returnA -< ()
+      else throwS -< s
 
 automatonReactimate :: Int -> Int
 automatonReactimate n =
