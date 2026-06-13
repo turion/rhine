@@ -21,12 +21,14 @@ import Control.Monad.Morph (MFunctor, hoist)
 import Control.Selective
 
 -- automaton
+
+import Data.Automaton.Trans.Except.Internal
 import Data.Stream (foreverExcept, foreverExceptE)
 import Data.Stream qualified as StreamT
-import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept)
+import Data.Stream.Optimized as OptimizedStreamT (OptimizedStreamT, applyExcept, constM, hoist', selectExcept, toStreamT)
 import Data.Stream.Optimized qualified as StreamOptimized
 import Data.Stream.Recursive (Recursive (..))
-import Data.Stream.Recursive as Recursive (hoist')
+import Data.Stream.Recursive as Recursive (hoist', (>>>=))
 import Data.Stream.Recursive.Except
 import Data.Stream.Result
 
@@ -149,3 +151,12 @@ foreverE e = \case
   (CoalgebraicExcept (StreamOptimized.Stateless f)) -> StreamOptimized.Stateless $ go e
     where
       go e = runReaderT (runExceptT f) e >>= either go pure
+
+{- | Run the first stream until it throws an exception, then run the second one, with the previously thrown exception in the 'ReaderT' environment.
+
+See 'Data.Stream.>>>='.
+-}
+(>>>=) :: (Monad m) => StreamExcept a m e1 -> StreamExcept a (ReaderT e1 m) e2 -> StreamExcept a m e2
+CoalgebraicExcept s1 >>>= CoalgebraicExcept s2 = CoalgebraicExcept $ StreamOptimized.Stateful $ toStreamT s1 StreamT.>>>= toStreamT (hoist commuteReaderBack s2)
+s1 >>>= s2 = RecursiveExcept $ toRecursive s1 Recursive.>>>= hoist commuteReaderBack (toRecursive s2)
+{-# INLINE (>>>=) #-}

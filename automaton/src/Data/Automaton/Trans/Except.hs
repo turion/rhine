@@ -46,6 +46,7 @@ import Data.Automaton (
   reactimate,
  )
 import Data.Automaton.Trans.Except.Internal
+import Data.Automaton.Trans.Reader (commuteReaders)
 import Data.Stream.Except hiding (safe, safely)
 import Data.Stream.Except qualified as StreamExcept hiding (safe)
 import Data.Stream.Optimized (mapOptimizedStreamT)
@@ -357,6 +358,14 @@ foreverE ::
   Automaton m a b
 foreverE e = Automaton . StreamExcept.foreverE e . hoist (\rae -> ReaderT $ \e -> ReaderT $ \a -> runReaderT (runReaderT rae a) e) . getAutomatonExcept
 {-# INLINE foreverE #-}
+
+{- | Run the first stream until it throws an exception, then run the second one, with the previously thrown exception in the 'ReaderT' environment.
+
+Also see 'Data.Stream.>>>=.
+-}
+(>>>=) :: (Monad m) => AutomatonExcept a b m e1 -> AutomatonExcept a b (ReaderT e1 m) e2 -> AutomatonExcept a b m e2
+AutomatonExcept f >>>= AutomatonExcept g = AutomatonExcept $ f StreamExcept.>>>= hoist commuteReaders g
+{-# INLINE (>>>=) #-}
 
 {- | Inside the 'AutomatonExcept' monad, execute an action of the wrapped monad.
 This passes the last input value to the action, but doesn't advance a tick.
