@@ -196,6 +196,7 @@ instance (Monad m) => Arrow (Automaton m) where
   {-# INLINE arr #-}
 
   first = first'
+  {-# INLINE first #-}
 
 instance (Monad m) => ArrowChoice (Automaton m) where
   Automaton (Stateful (StreamT stateL0 stepL)) +++ Automaton (Stateful (StreamT stateR0 stepR)) =
