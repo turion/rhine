@@ -50,6 +50,7 @@ import Data.Stream.Except hiding (safe, safely)
 import Data.Stream.Except qualified as StreamExcept hiding (safe)
 import Data.Stream.Optimized (mapOptimizedStreamT)
 import Data.Stream.Optimized qualified as StreamOptimized
+import Data.Automaton.Trans.Reader (commuteReaders)
 
 -- * Throwing exceptions
 
@@ -357,6 +358,9 @@ foreverE ::
   Automaton m a b
 foreverE e = Automaton . StreamExcept.foreverE e . hoist (\rae -> ReaderT $ \e -> ReaderT $ \a -> runReaderT (runReaderT rae a) e) . getAutomatonExcept
 {-# INLINEABLE foreverE #-}
+
+(>>>=) :: Monad m => AutomatonExcept a b m e1 -> AutomatonExcept a b (ReaderT e1 m) e2 -> AutomatonExcept a b m e2
+AutomatonExcept f >>>= AutomatonExcept g = AutomatonExcept $ f StreamExcept.>>>= hoist commuteReaders g
 
 {- | Inside the 'AutomatonExcept' monad, execute an action of the wrapped monad.
 This passes the last input value to the action, but doesn't advance a tick.

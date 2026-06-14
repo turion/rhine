@@ -52,7 +52,7 @@ import Data.Automaton.Schedule
 
 -- rhine
 import FRP.Rhine
-import FRP.Rhine.Clock.Realtime (UTCClock, addUTC)
+import FRP.Rhine.Clock.Realtime (AddUTCClock (..))
 
 -- rhine-gloss
 import FRP.Rhine.Gloss.Common
@@ -127,7 +127,7 @@ data GlossEventClockIO = GlossEventClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
   type Time GlossEventClockIO = Seconds Float
   type Tag GlossEventClockIO = Event
-  initClock _ = pure (constM getEvent, 0)
+  runClock = constM getEvent
     where
       getEvent = do
         GlossEnv {eventVar, timeRef} <- GlossConcT ask
@@ -135,7 +135,7 @@ instance (MonadIO m) => Clock (GlossConcT m) GlossEventClockIO where
           event <- takeMVar eventVar
           time <- readIORef timeRef
           pure (time, event)
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy GlossEventClockIO
 
@@ -150,12 +150,12 @@ data GlossSimClockIO = GlossSimClockIO
 instance (MonadIO m) => Clock (GlossConcT m) GlossSimClockIO where
   type Time GlossSimClockIO = Seconds Float
   type Tag GlossSimClockIO = ()
-  initClock _ = pure (constM getTime &&& arr (const ()), 0)
+  runClock = constM getTime &&& arr (const ())
     where
       getTime = GlossConcT $ do
         GlossEnv {timeVar} <- ask
         liftIO $ takeMVar timeVar
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy GlossSimClockIO
 
@@ -286,12 +286,12 @@ glossConcClock = glossConcTClock
 
 This is needed for compatibility with other realtime clocks like 'Millisecond'.
 -}
-type GlossClockUTC m cl = UTCClock (GlossConcT m) cl
+type GlossClockUTC = AddUTCClock
 
 {- | Rescale a gloss clock like 'GlossSimClockIO' or 'GlossEventClockIO' to 'UTCTime'.
 
 Uses 'addUTC'. For other strategies to rescale a gloss clock to 'UTCTime',
 see "FRP.Rhine.Clock.Realtime".
 -}
-glossClockUTC :: (MonadIO m, Real (Time cl)) => cl -> GlossClockUTC m cl
-glossClockUTC = addUTC
+glossClockUTC :: (Real (Time cl)) => cl -> GlossClockUTC cl
+glossClockUTC = AddUTCClock

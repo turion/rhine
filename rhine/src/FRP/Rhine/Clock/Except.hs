@@ -1,7 +1,6 @@
 module FRP.Rhine.Clock.Except where
 
 -- base
-import Control.Arrow
 import Control.Exception
 import Control.Exception qualified as Exception
 import Control.Monad ((<=<))
@@ -14,6 +13,9 @@ import Data.Time (UTCTime, getCurrentTime)
 
 -- mtl
 import Control.Monad.Error.Class
+
+-- profunctors
+import Data.Profunctor (Profunctor(..))
 
 -- time-domain
 import Data.TimeDomain (TimeDomain)
@@ -50,15 +52,11 @@ instance (Exception e, Clock IO cl, MonadIO eio, MonadError e eio) => Clock eio 
   type Time (ExceptClock cl e) = Time cl
   type Tag (ExceptClock cl e) = Tag cl
 
-  initClock ExceptClock {getExceptClock} = do
-    ioerror $
-      Exception.try $
-        initClock getExceptClock
-          <&> first (hoistS (ioerror . Exception.try))
+  runClock = lmap getExceptClock $ hoistS (ioerror . Exception.try) runClock
     where
       ioerror :: (MonadError e eio, MonadIO eio) => IO (Either e a) -> eio a
       ioerror = liftEither <=< liftIO
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (ExceptClock cl e)
 
@@ -72,23 +70,18 @@ this exception is caught, and a clock @cl2@ is started from the exception value.
 For this to be possible, @cl1@ must run in the monad @'ExceptT' e m@, while @cl2@ must run in @m@.
 To give @cl2@ the ability to throw another exception, you need to add a further 'ExceptT' layer to the stack in @m@.
 -}
-data CatchClock cl1 e cl2 = CatchClock cl1 (e -> cl2)
+data CatchClock cl1 e cl2 = CatchClock
+  { throwingClock :: cl1
+  , handler :: e -> cl2
+  }
 
 instance (Time cl1 ~ Time cl2, Clock (ExceptT e m) cl1, Clock m cl2, Monad m) => Clock m (CatchClock cl1 e cl2) where
   type Time (CatchClock cl1 e cl2) = Time cl1
   type Tag (CatchClock cl1 e cl2) = Either (Tag cl2) (Tag cl1)
-  initClock (CatchClock cl1 handler) = do
-    tryToInit <- runExceptT $ first (>>> arr (second Right)) <$> initClock cl1
-    case tryToInit of
-      Right (runningClock, initTime) -> do
-        let catchingClock = safely $ do
-              e <- AutomatonExcept.try runningClock
-              let cl2 = handler e
-              (runningClock', _) <- once_ $ initClock cl2
-              safe $ runningClock' >>> arr (second Left)
-        return (catchingClock, initTime)
-      Left e -> (fmap (first (>>> arr (second Left))) . initClock) $ handler e
-  {-# INLINE initClock #-}
+  runClock = safely $
+    AutomatonExcept.try (dimap throwingClock (fmap Right) runClock)
+    >>>= safe (readerS (dimap (uncurry (\e CatchClock {handler} -> handler e)) (fmap Left) runClock))
+  {-# INLINE runClock #-}
 
 instance (GetClockProxy (CatchClock cl1 e cl2))
 
@@ -136,15 +129,12 @@ data Single m time tag e = Single
 instance (TimeDomain time, MonadError e m) => Clock m (Single m time tag e) where
   type Time (Single m time tag e) = time
   type Tag (Single m time tag e) = tag
-  initClock Single {singleTag, getTime, exception} = do
-    initTime <- getTime
-    let runningClock = hoistS (errorT . runExceptT) $ runAutomatonExcept $ do
-          step_ (initTime, singleTag)
-          return exception
-        errorT :: (MonadError e m) => m (Either e a) -> m a
-        errorT = (>>= liftEither)
-    return (runningClock, initTime)
-  {-# INLINE initClock #-}
+  runClock = hoistS (errorT . runExceptT) $ runAutomatonExcept $ step
+    $ \Single {singleTag, getTime, exception} -> getTime <&> \time -> ((time, singleTag), exception)
+    where
+      errorT :: (MonadError e m) => m (Either e a) -> m a
+      errorT = (>>= liftEither)
+  {-# INLINE runClock #-}
 
 -- * 'DelayException'
 

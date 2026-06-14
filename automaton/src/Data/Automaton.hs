@@ -4,6 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 
 module Data.Automaton where
 
@@ -195,7 +196,20 @@ instance (Monad m) => Arrow (Automaton m) where
   arr f = Automaton $! Stateless $! asks f
   {-# INLINE arr #-}
 
-  first = first'
+  first (Automaton (Stateful StreamT {state, step})) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s ->
+              ReaderT
+                ( \(b, d) ->
+                    fmap (,d)
+                      <$> runReaderT (step s) b
+                )
+          }
+  first (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
+  {-# INLINE first #-}
 
 instance (Monad m) => ArrowChoice (Automaton m) where
   Automaton (Stateful (StreamT stateL0 stepL)) +++ Automaton (Stateful (StreamT stateR0 stepR)) =
@@ -277,10 +291,20 @@ constM :: (Functor m) => m b -> Automaton m a b
 constM = arrM . const
 {-# INLINE constM #-}
 
+-- | Execute the incoming effect in @m@ and return its result.
+joinS :: Monad m => Automaton m (m a) a
+joinS = arrM id
+
 -- | Apply an arbitrary monad morphism to an automaton.
 hoistS :: (Monad m) => (forall x. m x -> n x) -> Automaton m a b -> Automaton n a b
 hoistS morph (Automaton automaton) = Automaton $ hoist (mapReaderT morph) automaton
 {-# INLINE hoistS #-}
+
+newtype MonadMorph m n = MonadMorph (forall x . m x -> n x)
+
+-- | Like 'hoistS', but the monad morphism is provided on the live input.
+hoistSS :: (Functor m, Functor n) => Automaton m a b -> Automaton n (MonadMorph m n, a) b
+hoistSS = withAutomaton $ \f (MonadMorph morph, a) -> morph $ f a
 
 -- | Lift the monad of an automaton to a transformer.
 liftS :: (MonadTrans t, Monad m, Functor (t m)) => Automaton m a b -> Automaton (t m) a b
@@ -378,8 +402,12 @@ withAutomaton_ f = Automaton . StreamOptimized.mapOptimizedStreamT (mapReaderT f
 
 instance (Functor m) => Profunctor (Automaton m) where
   dimap f g Automaton {getAutomaton} = Automaton $ g <$> StreamOptimized.hoist' (withReaderT f) getAutomaton
+  {-# INLINE dimap #-}
+
   lmap f Automaton {getAutomaton} = Automaton $ StreamOptimized.hoist' (withReaderT f) getAutomaton
+  {-# INLINE lmap #-}
   rmap = fmap
+  {-# INLINE rmap #-}
 
 instance (Applicative m) => Choice (Automaton m) where
   left' = \case
@@ -463,18 +491,22 @@ instance (Monad m) => Cochoice (Automaton m) where
 -- | Apply an 'Automaton' to every input.
 mapS :: (Monad m) => Automaton m a b -> Automaton m [a] [b]
 mapS = traverse'
+{-# INLINE mapS #-}
 
 -- | Only step the automaton if the input is 'Just'.
 mapMaybeS :: (Monad m) => Automaton m a b -> Automaton m (Maybe a) (Maybe b)
 mapMaybeS = traverse'
+{-# INLINE mapMaybeS #-}
 
 -- | Use an 'Automaton' with a variable amount of input.
 traverseS :: (Monad m, Traversable f) => Automaton m a b -> Automaton m (f a) (f b)
 traverseS = traverse'
+{-# INLINE traverseS #-}
 
 -- | Like 'traverseS', discarding the output.
 traverseS_ :: (Monad m, Traversable f) => Automaton m a b -> Automaton m (f a) ()
 traverseS_ automaton = traverse' automaton >>> arr (const ())
+{-# INLINE traverseS_ #-}
 
 {- | Launch arbitrarily many copies of the automaton in parallel.
 
@@ -486,6 +518,7 @@ Caution: Uses memory of the order of the largest list that was ever input during
 -}
 parallelyList :: (Applicative m) => Automaton m a b -> Automaton m [a] [b]
 parallelyList = parallely
+{-# INLINE parallelyList #-}
 
 {- | Launch many copies of the automaton in parallel, depending on the input shape.
 
@@ -508,6 +541,7 @@ Caution: Uses memory of the order of the largest input that was ever input durin
 parallely :: (Applicative m, Witherable t, Align t) => Automaton m a b -> Automaton m (t a) (t b)
 -- I'm avoiding liftS here to keep the constraint on m down to Applicative
 parallely = parallelyFinishable . handleAutomaton (StreamT.hoist' (mapReaderT (MaybeT . fmap Just)))
+{-# INLINE parallely #-}
 
 {- | Launch many copies of the automaton in parallel, depending on the input shape.
 
@@ -536,6 +570,7 @@ parallelyFinishable = \case
                 <&> (\sas -> let output = Witherable.mapMaybe snd sas in Result (Witherable.mapMaybe fst sas) output)
           }
   Automaton {getAutomaton = Stateless f} -> Automaton $ Stateless $ ReaderT $ wither $ runMaybeT <$> runReaderT f
+{-# INLINE parallelyFinishable #-}
 
 {- | Run copies of an automaton in parallel, distinguished by an index.
 
@@ -548,6 +583,7 @@ parallelyFinishable = \case
 -}
 fanIndexed :: (Applicative m, Ord i) => Automaton (MaybeT m) a b -> Automaton m (i, a) (Maybe b)
 fanIndexed automaton = dimap (\(i, a) -> (M.singleton i a, i)) (\(bs, i) -> M.lookup i bs) $ first' $ parallelyFinishable automaton
+{-# INLINE fanIndexed #-}
 
 -- ** Interaction with 'StreamT'
 
@@ -557,6 +593,7 @@ It will ignore its input.
 -}
 fromStream :: (Monad m) => StreamT m a -> Automaton m any a
 fromStream = Automaton . Stateful . hoist lift
+{-# INLINE fromStream #-}
 
 {- | Create a 'StreamT' from an 'Automaton'.
 
@@ -564,18 +601,22 @@ The resulting stream can read the current input as an effect in 'ReaderT'.
 -}
 toStreamT :: (Functor m) => Automaton m a b -> StreamT (ReaderT a m) b
 toStreamT = StreamOptimized.toStreamT . getAutomaton
+{-# INLINE toStreamT #-}
 
 -- | Given a transformation of streams, apply it to an automaton, without changing the input.
 handleAutomaton_ :: (Monad m) => (forall m. (Monad m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomaton_ f = Automaton . StreamOptimized.withOptimized f . getAutomaton
+{-# INLINE handleAutomaton_ #-}
 
 -- | Like 'handleAutomaton_', but with fewer constraints.
 handleAutomatonF_ :: (Functor m) => (forall m. (Functor m) => StreamT m a -> StreamT m b) -> Automaton m i a -> Automaton m i b
 handleAutomatonF_ f = Automaton . StreamOptimized.withOptimizedF f . getAutomaton
+{-# INLINE handleAutomatonF_ #-}
 
 -- | Given a transformation of streams, apply it to an automaton. The input can be accessed through the 'ReaderT' effect.
 handleAutomaton :: (Functor m) => (StreamT (ReaderT a m) b -> StreamT (ReaderT c n) d) -> Automaton m a b -> Automaton n c d
 handleAutomaton f = Automaton . StreamOptimized.handleOptimized f . getAutomaton
+{-# INLINE handleAutomaton #-}
 
 -- ** Buffering
 
@@ -587,6 +628,7 @@ then the next 9 inputs will be ignored.
 -}
 concatS :: (Monad m, Foldable t) => Automaton m a (t b) -> Automaton m a b
 concatS (Automaton automaton) = Automaton $ Data.Stream.Optimized.concatS automaton
+{-# INLINE concatS #-}
 
 -- * Handling effects
 
@@ -617,6 +659,7 @@ handleEffect ::
   Automaton eff a b ->
   Automaton m a (sig b)
 handleEffect send interpret = handleAutomaton $ StreamT.handleEffect (lift . send) (\raction -> ReaderT $ \a -> interpret $ runReaderT raction a)
+{-# INLINE handleEffect #-}
 
 -- | Execute and collect all branches of a nondeterministic automaton.
 handleListT :: (Monad m) => Automaton (ListT m) a b -> Automaton m a [b]
@@ -624,6 +667,7 @@ handleListT = handleEffect select toList
   where
     toList :: (Monad m) => ListT m a -> m [a]
     toList = fold (flip (:)) [] reverse
+{-# INLINE handleListT #-}
 
 -- * Examples
 
@@ -634,6 +678,7 @@ withSideEffect ::
   (a -> m b) ->
   Automaton m a a
 withSideEffect f = (id &&& arrM f) >>> arr fst
+{-# INLINE withSideEffect #-}
 
 -- | Accumulate the input, output the accumulator.
 accumulateWith ::
@@ -644,6 +689,7 @@ accumulateWith ::
   b ->
   Automaton m a b
 accumulateWith f state = unfold state $ \a b -> let b' = f a b in Result b' b'
+{-# INLINE accumulateWith #-}
 
 {- | Like 'accumulateWith', with 'mappend' as the accumulation function.
 
@@ -651,10 +697,12 @@ The new values are 'mappend'ed from the left.
 -}
 mappendFrom :: (Monoid w, Monad m) => w -> Automaton m w w
 mappendFrom = accumulateWith mappend
+{-# INLINE mappendFrom #-}
 
 -- | Like 'mappendFrom', but 'mappend'ing new values from the right.
 mappendFromR :: (Monoid w, Monad m) => w -> Automaton m w w
 mappendFromR = accumulateWith $ flip mappend
+{-# INLINE mappendFromR #-}
 
 -- | Delay the input by one step.
 delay ::
@@ -663,6 +711,7 @@ delay ::
   a ->
   Automaton m a a
 delay a0 = unfold a0 $ \aIn aState -> Result aIn aState
+{-# INLINE delay #-}
 
 {- | Delay an automaton by one step by prepending one value to the output.
 
@@ -708,6 +757,7 @@ initial :: (Applicative m) => Automaton m a a
 initial = unfold Nothing $ \aInput -> \case
   Nothing -> Result (Just aInput) aInput
   s@(Just a) -> Result s a
+{-# INLINE initial #-}
 
 -- | Call the monadic action once on the first tick and provide its result indefinitely.
 initialised :: (Monad m) => (a -> m b) -> Automaton m a b

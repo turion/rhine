@@ -123,6 +123,7 @@ infixr 6 >->
   cat b c ->
   cat a c
 (>->) = (>>>)
+{-# INLINE (>->) #-}
 
 -- | Alias for 'Control.Category.<<<'.
 infixl 6 <-<

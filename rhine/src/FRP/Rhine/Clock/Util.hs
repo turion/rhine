@@ -10,28 +10,27 @@ import Control.Arrow
 import Data.TimeDomain
 
 -- automaton
-import Data.Automaton (Automaton, delay)
+import Data.Automaton (Automaton, delay, initial)
 
 -- rhine
 import FRP.Rhine.Clock
-import FRP.Rhine.Clock.Proxy
+import Data.Maybe (fromMaybe)
 
 -- * Auxiliary definitions and utilities
 
 {- | Given a clock value and an initial time,
    generate a stream of time stamps.
 -}
-genTimeInfo ::
+genTimeInfo :: forall cl m .
   (Monad m, Clock m cl) =>
-  ClockProxy cl ->
-  Time cl ->
   Automaton m (Time cl, Tag cl) (TimeInfo cl)
-genTimeInfo _ initialTime = proc (absolute, tag) -> do
-  lastTime <- delay initialTime -< absolute
+genTimeInfo = proc (absolute, tag) -> do
+  initialTime <- initial -< absolute
+  lastTime <- delay Nothing -< Just absolute
   returnA
     -<
       TimeInfo
-        { sinceLast = absolute `diffTime` lastTime
+        { sinceLast = absolute `diffTime` fromMaybe initialTime lastTime
         , sinceInit = absolute `diffTime` initialTime
         , ..
         }

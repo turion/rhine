@@ -43,7 +43,7 @@ instance (MonadInput m, MonadIO m) => Clock m TerminalEventClock where
   type Time TerminalEventClock = UTCTime
   type Tag TerminalEventClock = Either Interrupt Event
 
-  initClock TerminalEventClock = do
+  runClock TerminalEventClock = do
     initialTime <- liftIO getCurrentTime
     pure
       ( constM $ do
@@ -52,7 +52,7 @@ instance (MonadInput m, MonadIO m) => Clock m TerminalEventClock where
           pure (time, event)
       , initialTime
       )
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy TerminalEventClock
 

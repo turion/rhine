@@ -39,6 +39,10 @@ import Data.TimeDomain (Seconds (..), diffTime)
 -- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
+import Control.Monad.Trans.Reader (ask)
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Data.Maybe (fromMaybe)
+import qualified Control.Category as Category
 
 -- | Rates at which audio signals are typically sampled.
 data AudioRate
@@ -102,31 +106,26 @@ instance
   type Time (AudioClock rate bufferSize) = UTCTime
   type Tag (AudioClock rate bufferSize) = Maybe Double
 
-  initClock audioClock = do
+  runClock = ((Category.id &&& initialised_ (liftIO getCurrentTime)) >>>) $ foreverE (Nothing, Nothing) $ do
+    bufferFullTime <- try $ proc (audioClock, initialTime) -> do
+      let
+        step =
+          picosecondsToDiffTime $
+            round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double) -- The only sufficiently precise conversion function
+        bufferSize = theBufferSize audioClock
+      (lastBufferFullTimeMaybe, maybeWasLate) <- constM $ lift ask -< ()
+      n <- count -< ()
+      let
+        lastBufferFullTime = fromMaybe initialTime lastBufferFullTimeMaybe
+        nextTime = (realToFrac step * fromIntegral (n :: Int)) `addUTCTime` lastBufferFullTime
+      _ <- throwOn' -< (n >= bufferSize, nextTime)
+      returnA -< (nextTime, if n == 0 then maybeWasLate else Nothing)
+    currentTime <- once_ $ liftIO getCurrentTime
     let
-      step =
-        picosecondsToDiffTime $
-          round (10 ^ (12 :: Integer) / theRateNum audioClock :: Double) -- The only sufficiently precise conversion function
-      bufferSize = theBufferSize audioClock
-
-      runningClock :: (MonadIO m) => UTCTime -> Maybe Double -> Automaton m () (UTCTime, Maybe Double)
-      runningClock initialTime maybeWasLate = safely $ do
-        bufferFullTime <- try $ proc () -> do
-          n <- count -< ()
-          let nextTime = (realToFrac step * fromIntegral (n :: Int)) `addUTCTime` initialTime
-          _ <- throwOn' -< (n >= bufferSize, nextTime)
-          returnA -< (nextTime, if n == 0 then maybeWasLate else Nothing)
-        currentTime <- once_ $ liftIO getCurrentTime
-        let
-          lateDiff = currentTime `diffTime` bufferFullTime
-          late = if lateDiff > 0 then Just $ getSeconds lateDiff else Nothing
-        safe $ runningClock bufferFullTime late
-    initialTime <- liftIO getCurrentTime
-    return
-      ( runningClock initialTime Nothing
-      , initialTime
-      )
-  {-# INLINE initClock #-}
+      lateDiff = currentTime `diffTime` bufferFullTime
+      late = if lateDiff > 0 then Just $ getSeconds lateDiff else Nothing
+    pure (Just bufferFullTime, late)
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (AudioClock rate bufferSize)
 
@@ -151,12 +150,8 @@ instance (Monad m, PureAudioClockRate rate) => Clock m (PureAudioClock rate) whe
   type Time (PureAudioClock rate) = Seconds Double
   type Tag (PureAudioClock rate) = ()
 
-  initClock audioClock =
-    return
-      ( arr (const (1 / thePureRateNum audioClock)) >>> sumN &&& arr (const ())
-      , 0
-      )
-  {-# INLINE initClock #-}
+  runClock =arr (\audioClock -> 1 / thePureRateNum audioClock) >>> sumN &&& arr (const ())
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (PureAudioClock rate)
 

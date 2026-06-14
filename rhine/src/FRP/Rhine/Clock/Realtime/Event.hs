@@ -150,17 +150,12 @@ instance Semigroup (EventClock event) where
 instance (MonadIO m) => Clock (EventChanT event m) (EventClock event) where
   type Time (EventClock event) = UTCTime
   type Tag (EventClock event) = event
-  initClock _ = do
-    initialTime <- liftIO getCurrentTime
-    return
-      ( constM $ do
+  runClock = constM $ do
           chan <- ask
           event <- liftIO $ readChan chan
           time <- liftIO getCurrentTime
           return (time, event)
-      , initialTime
-      )
-  {-# INLINE initClock #-}
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (EventClock event)
 
