@@ -193,6 +193,7 @@ benchmark benchmark
   other-modules:
     Paths_rhine
     Sum
+    SumMultirate
     WordCount
 
   build-depends:
