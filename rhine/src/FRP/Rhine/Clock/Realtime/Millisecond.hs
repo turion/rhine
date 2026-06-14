@@ -55,6 +55,7 @@ instance GetClockProxy (Millisecond n)
 -- | Tries to achieve real time by using 'waitUTC', see its docs.
 waitClock :: (KnownNat n) => Millisecond n
 waitClock = Millisecond $ WaitUTCClock $ RescaledClock CountClock ((/ 1000) . fromInteger . getSeconds)
+{-# INLINE waitClock #-}
 
 data CountClock (n :: Nat) = CountClock
 
