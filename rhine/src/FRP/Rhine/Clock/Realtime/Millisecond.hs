@@ -10,22 +10,23 @@ module FRP.Rhine.Clock.Realtime.Millisecond where
 
 -- base
 import Control.Arrow (arr, first, second, (>>>))
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Functor ((<&>))
+import GHC.TypeLits
 
 -- time
-
--- rhine
-
-import Data.Automaton (count)
-import Data.Functor ((<&>))
 import Data.Time.Clock
 
--- rhine
+-- automaton
+import Data.Automaton (count, hoistS)
 
+-- time-domain
 import Data.TimeDomain (Seconds (..))
+
+-- rhine
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Realtime (WaitUTCClock, waitUTC)
-import GHC.TypeLits
 
 {- | A clock ticking every 'n' milliseconds, in real time.
 
@@ -41,10 +42,10 @@ and @'Just' lag@ a lag (in seconds).
 -}
 newtype Millisecond (n :: Nat) = Millisecond (WaitUTCClock IO (RescaledClock (CountClock n) (Seconds Double)))
 
-instance (KnownNat n) => Clock IO (Millisecond n) where
+instance (KnownNat n, MonadIO m) => Clock m (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
-  initClock (Millisecond cl) = initClock cl <&> first (>>> arr (second (fmap getSeconds . snd)))
+  initClock (Millisecond cl) = liftIO (initClock cl) <&> first ((>>> arr (second (fmap getSeconds . snd))) . hoistS liftIO)
   {-# INLINE initClock #-}
 
 instance GetClockProxy (Millisecond n)
