@@ -43,6 +43,7 @@ timelessResamplingBuffer AsyncMealy {..} buffer = ResamplingBuffer {..}
   where
     put _ a s = amPut s a
     get _ = amGet
+{-# INLINE timelessResamplingBuffer #-}
 
 -- | A resampling buffer that only accepts and emits units.
 trivialResamplingBuffer :: (Monad m) => ResamplingBuffer m cl1 cl2 () ()

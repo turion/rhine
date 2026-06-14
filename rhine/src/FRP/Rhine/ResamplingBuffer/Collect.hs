@@ -25,6 +25,7 @@ collect = timelessResamplingBuffer AsyncMealy {..} []
   where
     amPut as a = pure $ a : as
     amGet as = pure $! Result [] as
+{-# INLINE collect #-}
 
 {- | Reimplementation of 'collect' with sequences,
    which gives a performance benefit if the sequence needs to be reversed or searched.
