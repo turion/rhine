@@ -23,8 +23,8 @@ import FRP.Rhine.ResamplingBuffer.Timeless
 collect :: (Monad m) => ResamplingBuffer m cl1 cl2 a [a]
 collect = timelessResamplingBuffer AsyncMealy {..} []
   where
-    amPut as a = return $ a : as
-    amGet as = return $! Result [] as
+    amPut as a = pure $ a : as
+    amGet as = pure $! Result [] as
 
 {- | Reimplementation of 'collect' with sequences,
    which gives a performance benefit if the sequence needs to be reversed or searched.
@@ -32,8 +32,8 @@ collect = timelessResamplingBuffer AsyncMealy {..} []
 collectSequence :: (Monad m) => ResamplingBuffer m cl1 cl2 a (Seq a)
 collectSequence = timelessResamplingBuffer AsyncMealy {..} empty
   where
-    amPut as a = return $ a <| as
-    amGet as = return $! Result empty as
+    amPut as a = pure $ a <| as
+    amGet as = pure $! Result empty as
 
 {- | 'pureBuffer' collects all input values lazily in a list
    and processes it when output is required.
@@ -43,8 +43,8 @@ collectSequence = timelessResamplingBuffer AsyncMealy {..} empty
 pureBuffer :: (Monad m) => ([a] -> b) -> ResamplingBuffer m cl1 cl2 a b
 pureBuffer f = timelessResamplingBuffer AsyncMealy {..} []
   where
-    amPut as a = return (a : as)
-    amGet as = return $! Result [] $! f as
+    amPut as a = pure (a : as)
+    amGet as = pure $! Result [] $! f as
 
 -- TODO Test whether strictness works here, or consider using deepSeq
 
@@ -60,5 +60,5 @@ foldBuffer ::
   ResamplingBuffer m cl1 cl2 a b
 foldBuffer f = timelessResamplingBuffer AsyncMealy {..}
   where
-    amPut b a = let !b' = f a b in return b'
-    amGet b = return $! Result b b
+    amPut b a = let !b' = f a b in pure b'
+    amGet b = pure $! Result b b
