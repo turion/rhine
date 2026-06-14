@@ -64,6 +64,7 @@ data RhineAndResamplingBuffer m cl1 inCl2 a c
   ResamplingBuffer         m (Out cl1) inCl2   b c ->
   RhineAndResamplingBuffer m      cl1  inCl2 a   c
 (>--) = RhineAndResamplingBuffer
+{-# INLINE (>--) #-}
 
 {- | The combinators for sequential composition allow for the following syntax:
 
@@ -99,6 +100,7 @@ infixr 1 -->
   Rhine m (SequentialClock cl1 cl2) a c
 RhineAndResamplingBuffer (Rhine sn1 cl1) rb --> (Rhine sn2 cl2) =
   Rhine (sequential sn1 rb sn2) (SequentialClock cl1 cl2)
+{-# INLINE (-->) #-}
 
 {- | The combinators for parallel composition allow for the following syntax:
 

@@ -26,6 +26,7 @@ import FRP.Rhine.Clock.Proxy
 import FRP.Rhine.Clock.Realtime (WaitUTCClock (WaitUTCClock))
 import GHC.TypeLits
 import Data.Profunctor (Profunctor(dimap))
+import Control.Monad.IO.Class (MonadIO)
 
 {- | A clock ticking every 'n' milliseconds, in real time.
 
@@ -41,7 +42,7 @@ and @'Just' lag@ a lag (in seconds).
 -}
 newtype Millisecond (n :: Nat) = Millisecond { getMillisecond :: WaitUTCClock (RescaledClock (CountClock n) (Seconds Double))}
 
-instance (KnownNat n) => Clock IO (Millisecond n) where
+instance (KnownNat n, MonadIO m) => Clock m (Millisecond n) where
   type Time (Millisecond n) = UTCTime
   type Tag (Millisecond n) = Maybe Double
   runClock  = dimap getMillisecond ( second (fmap getSeconds . snd)) runClock
@@ -52,6 +53,7 @@ instance GetClockProxy (Millisecond n)
 -- | Tries to achieve real time by using 'waitUTC', see its docs.
 waitClock :: (KnownNat n) => Millisecond n
 waitClock = Millisecond $ WaitUTCClock $ RescaledClock CountClock ((/ 1000) . fromInteger . getSeconds)
+{-# INLINE waitClock #-}
 
 data CountClock (n :: Nat) = CountClock
 
