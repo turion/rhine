@@ -28,6 +28,7 @@ benchmarks =
     [ bench "rhine" $ nf rhine nMax
     , bench "rhine flow" $ nf rhineFlow nMax
     , bench "automaton" $ nf automaton nMax
+    , bench "automaton reactimate" $ nf automatonReactimate nMax
     , bench "direct" $ nf direct nMax
     , bench "direct monad" $ nf directM nMax
     ]
@@ -46,6 +47,16 @@ rhineFlow n =
         if k < n
           then returnA -< ()
           else arrMCl Left -< s
+
+automatonReactimate :: Int -> Int
+automatonReactimate n =
+  either id absurd $
+    reactimate $ proc () -> do
+      k <- count -< ()
+      s <- sumN -< k
+      if k < n
+        then returnA -< ()
+        else arrM Left -< s
 
 automaton :: Int -> Int
 automaton n = sum $ runIdentity $ embed myCount $ replicate n ()

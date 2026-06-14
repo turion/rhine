@@ -195,7 +195,20 @@ instance (Monad m) => Arrow (Automaton m) where
   arr f = Automaton $! Stateless $! asks f
   {-# INLINE arr #-}
 
-  first = first'
+  first (Automaton (Stateful StreamT {state, step})) =
+    Automaton $!
+      Stateful $!
+        StreamT
+          { state
+          , step = \s ->
+              ReaderT
+                ( \(b, d) ->
+                    fmap (,d)
+                      <$> runReaderT (step s) b
+                )
+          }
+  first (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ \(b, d) -> (,d) <$> runReaderT m b
+  {-# INLINE first #-}
 
 instance (Monad m) => ArrowChoice (Automaton m) where
   Automaton (Stateful (StreamT stateL0 stepL)) +++ Automaton (Stateful (StreamT stateR0 stepR)) =
