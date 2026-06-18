@@ -253,9 +253,9 @@ instance (Monad m) => ArrowChoice (Automaton m) where
             (runReaderT . fmap Right $ mR)
   {-# INLINE (+++) #-}
 
-  right = right'
+  right f = right' f
   {-# INLINE right #-}
-  left = left'
+  left f = left' f
   {-# INLINE left #-}
 
   f ||| g = f +++ g >>> arr untag
@@ -281,7 +281,7 @@ instance (Monad m, Alternative m) => ArrowZero (Automaton m) where
   {-# INLINE zeroArrow #-}
 
 instance (Monad m, Alternative m) => ArrowPlus (Automaton m) where
-  (<+>) = (<|>)
+  f <+> g = f <|> g
   {-# INLINE (<+>) #-}
 
 -- | Consume an input and produce output effectfully, without keeping internal state
@@ -291,7 +291,7 @@ arrM f = Automaton $! StreamOptimized.constM $! ReaderT f
 
 -- | Produce output effectfully, without keeping internal state
 constM :: (Functor m) => m b -> Automaton m a b
-constM = arrM . const
+constM mb = arrM $ const mb
 {-# INLINE constM #-}
 
 -- | Execute the incoming effect in @m@ and return its result.
@@ -703,12 +703,12 @@ accumulateWith f state = unfold state $ \a b -> let b' = f a b in Result b' b'
 The new values are 'mappend'ed from the left.
 -}
 mappendFrom :: (Monoid w, Monad m) => w -> Automaton m w w
-mappendFrom = accumulateWith mappend
+mappendFrom w = accumulateWith mappend w
 {-# INLINE mappendFrom #-}
 
 -- | Like 'mappendFrom', but 'mappend'ing new values from the right.
 mappendFromR :: (Monoid w, Monad m) => w -> Automaton m w w
-mappendFromR = accumulateWith $ flip mappend
+mappendFromR w = accumulateWith (flip mappend) w
 {-# INLINE mappendFromR #-}
 
 -- | Delay the input by one step.
