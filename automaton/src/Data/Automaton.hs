@@ -210,6 +210,16 @@ instance (Monad m) => Arrow (Automaton m) where
   first f = first' f
   {-# INLINE first #-}
 
+  -- Copying the default definition so I can inline it
+  f &&& g = arr (\b -> (b, b)) >>> f *** g
+  {-# INLINE (&&&) #-}
+
+  -- Copying the default definition so I can inline it
+  f *** g = first f >>> arr swap >>> first g >>> arr swap
+    where
+      swap ~(x, y) = (y, x)
+  {-# INLINE (***) #-}
+
 instance (Monad m) => ArrowChoice (Automaton m) where
   Automaton (Stateful (StreamT stateL0 stepL)) +++ Automaton (Stateful (StreamT stateR0 stepR)) =
     Automaton $!
