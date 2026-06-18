@@ -35,6 +35,7 @@ Whenever one automaton returns a value, it is returned.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
 schedulePair automatonL automatonR = schedule $ automatonL :| [automatonR]
+{-# INLINE schedulePair #-}
 
 -- | Run two running clocks concurrently.
 runningSchedule ::
