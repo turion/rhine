@@ -118,12 +118,14 @@ instance MonadSchedule IO where
         forkIO $ replicateM_ (N.length automata - 1) $ putMVar input a0
         forM_ automata $ \automaton -> forkIO $ reactimate $ constM (takeMVar input) >>> automaton >>> arrM (putMVar output)
         return (output, input)
+  {-# INLINE schedule #-}
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (ReaderT r m) where
   schedule =
     fmap runReaderS
       >>> schedule
       >>> readerS
+  {-# INLINE schedule #-}
 
 {- | Schedule automata in 'ExceptT'.
 
@@ -140,6 +142,7 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (ExceptT e m) where
     fmap exceptS
       >>> schedule
       >>> withAutomaton_ (fmap sequenceA >>> ExceptT)
+  {-# INLINE schedule #-}
 
 {- | Schedule automata in 'MaybeT'.
 
@@ -156,6 +159,7 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (MaybeT m) where
     fmap runMaybeS
       >>> schedule
       >>> withAutomaton_ (fmap sequenceA >>> MaybeT)
+  {-# INLINE schedule #-}
 
 {- | A monad transformer for scheduling automata that all need to run to
 completion.
@@ -190,24 +194,28 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (FinalizeT m) where
       haveAllFinished = Automaton.unfold S.empty $ \input is -> case input of
         Left i -> let is' = S.insert i is in Result is' $ if is' == allN then Nothing else Just Nothing
         Right b -> Result is $ Just $ Just b
+  {-# INLINE schedule #-}
 
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (CPS.WriterT w m) where
   schedule =
     fmap (withAutomaton_ (CPS.runWriterT >>> fmap (\(Result s a, w) -> Result s (a, w))))
       >>> schedule
       >>> withAutomaton_ (fmap (\(Result s (a, w)) -> (Result s a, w)) >>> CPS.writerT)
+  {-# INLINE schedule #-}
 
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (Strict.WriterT w m) where
   schedule =
     fmap (withAutomaton_ (Strict.runWriterT >>> fmap (\(Result s a, w) -> Result s (a, w))))
       >>> schedule
       >>> withAutomaton_ (fmap (\(Result s (a, w)) -> (Result s a, w)) >>> Strict.WriterT)
+  {-# INLINE schedule #-}
 
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (Lazy.WriterT w m) where
   schedule =
     fmap (withAutomaton_ (Lazy.runWriterT >>> fmap (\(Result s a, w) -> Result s (a, w))))
       >>> schedule
       >>> withAutomaton_ (fmap (\(Result s (a, w)) -> (Result s a, w)) >>> Lazy.WriterT)
+  {-# INLINE schedule #-}
 
 -- | This will share the accumulated log from the past with all automata
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (AccumT w m) where
@@ -215,6 +223,7 @@ instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (AccumT w m) wher
     fmap (withAutomaton_ (runAccumT >>> ReaderT >>> CPS.writerT))
       >>> schedule
       >>> withAutomaton_ (CPS.runWriterT >>> runReaderT >>> AccumT)
+  {-# INLINE schedule #-}
 
 -- | This will share the accumulated state from the past with all automata
 instance (Monoid w, RightAction w s, Monad m, MonadSchedule m) => MonadSchedule (ChangesetT s w m) where
@@ -222,6 +231,7 @@ instance (Monoid w, RightAction w s, Monad m, MonadSchedule m) => MonadSchedule 
     fmap (withAutomaton_ (getChangesetT >>> ReaderT >>> fmap swap >>> CPS.writerT))
       >>> schedule
       >>> withAutomaton_ (CPS.runWriterT >>> fmap swap >>> runReaderT >>> ChangesetT)
+  {-# INLINE schedule #-}
 
 {- | Cycle through all automata in a round-robin fashion.
 
@@ -252,6 +262,7 @@ instance MonadSchedule Identity where
           { states = I state :* states
           , steps = Step (ResultStateT step) :* steps
           }
+  {-# INLINE schedule #-}
 
 -- The order of outputs matches the order of inputs: 'foldrMap1' places the
 -- first input element at the head of the 'NP', so 'hnonemptycollapse' extracts
@@ -274,6 +285,7 @@ roundRobinStreams Streams {states, steps} =
                     (results & hmap (getRunningResult >>> output >>> K) & hnonemptycollapse)
               )
     }
+{-# INLINE roundRobinStreams #-}
 
 -- | Collapse a non-empty n-ary product of constant functors into a 'NonEmpty' list.
 hnonemptycollapse :: (SListI as) => NP (K b) (a ': as) -> NonEmpty b
