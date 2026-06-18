@@ -359,6 +359,7 @@ foreverExcept StreamT {state, step} =
       case resultOrException of
         Left _ -> stepNew state
         Right result -> pure result
+{-# INLINE foreverExcept #-}
 
 {- | Like 'foreverExcept', but keep the last thrown exception.
 
@@ -376,6 +377,7 @@ foreverExceptE e StreamT {state, step} =
       case resultOrException of
         Left e -> stepNew $! JointState e state
         Right result -> pure $! mapResultState (JointState e) result
+{-# INLINE foreverExceptE #-}
 
 {- | Run the first stream until it throws an exception, then run the second one, with the previously thrown exception in the 'ReaderT' environment.
 
@@ -432,6 +434,7 @@ selectExcept (StreamT stateE0 stepE) (StreamT stateF0 stepF) =
         Left (Left e1) -> step (Right (e1, stateF0))
         Left (Right e2) -> throwE e2
     step (Right (e1, stateF)) = withExceptT ($ e1) $ mapResultState (Right . (e1,)) <$> stepF stateF
+{-# INLINE selectExcept #-}
 
 instance (Selective m) => Selective (StreamT m) where
   select (StreamT stateE0 stepE) (StreamT stateF0 stepF) =
@@ -444,6 +447,7 @@ instance (Selective m) => Selective (StreamT m) where
     where
       eitherResult :: Result s (Either a b) -> Either (Result s a) (Result s b)
       eitherResult (Result s eab) = bimap (Result s) (Result s) eab
+  {-# INLINE select #-}
 
 {- | Run both streams in parallel and use @'Semialign' m@ to decide which stream produces output.
   If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.
