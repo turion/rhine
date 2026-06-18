@@ -5,6 +5,8 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{- HLINT ignore "Eta reduce" -}
+
 module Data.Automaton where
 
 -- base
@@ -205,7 +207,7 @@ instance (Monad m) => Arrow (Automaton m) where
   arr f = Automaton $! Stateless $! asks f
   {-# INLINE arr #-}
 
-  first = first'
+  first f = first' f
   {-# INLINE first #-}
 
 instance (Monad m) => ArrowChoice (Automaton m) where
