@@ -59,7 +59,7 @@ throwOnCond cond e = proc a ->
   if cond a
     then throwS -< e
     else returnA -< a
-{-# INLINEABLE throwOnCond #-}
+{-# INLINE throwOnCond #-}
 
 {- | Throws the exception when the input is 'True'.
 
@@ -71,12 +71,12 @@ throwOnCondM cond e = proc a -> do
   if b
     then throwS -< e
     else returnA -< a
-{-# INLINEABLE throwOnCondM #-}
+{-# INLINE throwOnCondM #-}
 
 -- | Throw the exception when the input is 'True'.
 throwOn :: (Monad m) => e -> Automaton (ExceptT e m) Bool ()
 throwOn e = proc b -> throwOn' -< (b, e)
-{-# INLINEABLE throwOn #-}
+{-# INLINE throwOn #-}
 
 -- | Variant of 'throwOn', where the exception may change every tick.
 throwOn' :: (Monad m) => Automaton (ExceptT e m) (Bool, e) ()
@@ -84,14 +84,14 @@ throwOn' = proc (b, e) ->
   if b
     then throwS -< e
     else returnA -< ()
-{-# INLINEABLE throwOn' #-}
+{-# INLINE throwOn' #-}
 
 -- | When the predicate evaluates to @Just e@, throw the exception @e@, otherwise forward the input.
 throwOnMaybe :: (Monad m) => (a -> Maybe e) -> Automaton (ExceptT e m) a a
 throwOnMaybe f = proc a -> do
   throwMaybe -< f a
   returnA -< a
-{-# INLINEABLE throwOnMaybe #-}
+{-# INLINE throwOnMaybe #-}
 
 {- | When the input is @Just e@, throw the exception @e@.
 
@@ -99,7 +99,7 @@ This does not output any data since it terminates on the first nontrivial input.
 -}
 throwMaybe :: (Monad m) => Automaton (ExceptT e m) (Maybe e) (Maybe void)
 throwMaybe = mapMaybeS throwS
-{-# INLINEABLE throwMaybe #-}
+{-# INLINE throwMaybe #-}
 
 {- | Immediately throw the incoming exception.
 
@@ -108,17 +108,17 @@ e.g. with @if@ and @case@ expressions in Arrow syntax.
 -}
 throwS :: (Monad m) => Automaton (ExceptT e m) e a
 throwS = arrM throwE
-{-# INLINEABLE throwS #-}
+{-# INLINE throwS #-}
 
 -- | Immediately throw the given exception.
 throw :: (Monad m) => e -> Automaton (ExceptT e m) a b
 throw = constM . throwE
-{-# INLINEABLE throw #-}
+{-# INLINE throw #-}
 
 -- | Do not throw an exception.
 pass :: (Monad m) => Automaton (ExceptT e m) a a
 pass = Category.id
-{-# INLINEABLE pass #-}
+{-# INLINE pass #-}
 
 {- | Converts an 'Automaton' in 'MaybeT' to an 'Automaton' in 'ExceptT'.
 
@@ -129,7 +129,7 @@ maybeToExceptS ::
   Automaton (MaybeT m) a b ->
   Automaton (ExceptT () m) a b
 maybeToExceptS = hoistS (ExceptT . (maybe (Left ()) Right <$>) . runMaybeT)
-{-# INLINEABLE maybeToExceptS #-}
+{-# INLINE maybeToExceptS #-}
 
 -- * Catching exceptions
 
@@ -144,7 +144,7 @@ catchS :: (Monad m) => Automaton (ExceptT e m) a b -> (e -> Automaton m a b) -> 
 catchS automaton f = safely $ do
   e <- try automaton
   safe $ f e
-{-# INLINEABLE catchS #-}
+{-# INLINE catchS #-}
 
 -- | Similar to Yampa's delayed switching. Loses a @b@ in case of an exception.
 untilE ::
@@ -155,8 +155,8 @@ untilE ::
 untilE automaton automatone = proc a -> do
   b <- liftS automaton -< a
   me <- liftS automatone -< b
-  inExceptT -< ExceptT $ return $ maybe (Right b) Left me
-{-# INLINEABLE untilE #-}
+  inExceptT -< ExceptT $ pure $ maybe (Right b) Left me
+{-# INLINE untilE #-}
 
 {- | Escape an 'ExceptT' layer by outputting the exception whenever it occurs.
 
@@ -164,7 +164,7 @@ If an exception occurs, the current state is is tested again on the next input.
 -}
 exceptS :: (Functor m, Monad m) => Automaton (ExceptT e m) a b -> Automaton m a (Either e b)
 exceptS = Automaton . StreamOptimized.exceptS . mapOptimizedStreamT commuteReader . getAutomaton
-{-# INLINEABLE exceptS #-}
+{-# INLINE exceptS #-}
 
 {- | Embed an 'ExceptT' value inside the 'Automaton'.
 
@@ -172,14 +172,14 @@ Whenever the input value is an ordinary value, it is passed on. If it is an exce
 -}
 inExceptT :: (Monad m) => Automaton (ExceptT e m) (ExceptT e m a) a
 inExceptT = arrM id
-{-# INLINEABLE inExceptT #-}
+{-# INLINE inExceptT #-}
 
 {- | In case an exception occurs in the first argument, replace the exception
 by the second component of the tuple.
 -}
 tagged :: (Monad m) => Automaton (ExceptT e1 m) a b -> Automaton (ExceptT e2 m) (a, e2) b
 tagged automaton = runAutomatonExcept $ try (automaton <<< arr fst) *> (snd <$> currentInput)
-{-# INLINEABLE tagged #-}
+{-# INLINE tagged #-}
 
 -- * Monad interface for Exception Automatons
 
@@ -287,11 +287,11 @@ newtype AutomatonExcept a b m e = AutomatonExcept {getAutomatonExcept :: StreamE
 
 instance MonadTrans (AutomatonExcept a b) where
   lift = AutomatonExcept . lift . lift
-  {-# INLINEABLE lift #-}
+  {-# INLINE lift #-}
 
 instance MFunctor (AutomatonExcept a b) where
   hoist morph = AutomatonExcept . hoist (mapReaderT morph) . getAutomatonExcept
-  {-# INLINEABLE hoist #-}
+  {-# INLINE hoist #-}
 
 runAutomatonExcept :: (Monad m) => AutomatonExcept a b m e -> Automaton (ExceptT e m) a b
 runAutomatonExcept = Automaton . hoist commuteReaderBack . runStreamExcept . getAutomatonExcept
@@ -303,7 +303,7 @@ Typically used to enter the monad context of 'AutomatonExcept'.
 -}
 try :: (Monad m) => Automaton (ExceptT e m) a b -> AutomatonExcept a b m e
 try = AutomatonExcept . CoalgebraicExcept . hoist commuteReader . getAutomaton
-{-# INLINEABLE try #-}
+{-# INLINE try #-}
 
 {- | Immediately throw the current input as an exception.
 
@@ -312,7 +312,7 @@ but first see what the current input is before continuing.
 -}
 currentInput :: (Monad m) => AutomatonExcept e b m e
 currentInput = try throwS
-{-# INLINEABLE currentInput #-}
+{-# INLINE currentInput #-}
 
 {- | If no exception can occur, the 'Automaton' can be executed without the 'ExceptT'
 layer.
@@ -328,7 +328,7 @@ automaton = safely $ do
 -}
 safely :: (Monad m) => AutomatonExcept a b m Void -> Automaton m a b
 safely = Automaton . StreamExcept.safely . getAutomatonExcept
-{-# INLINEABLE safely #-}
+{-# INLINE safely #-}
 
 {- | An 'Automaton' without an 'ExceptT' layer never throws an exception, and can
 thus have an arbitrary exception type.
@@ -338,12 +338,12 @@ See 'safely' for an example.
 -}
 safe :: (Monad m) => Automaton m a b -> AutomatonExcept a b m e
 safe = try . liftS
-{-# INLINEABLE safe #-}
+{-# INLINE safe #-}
 
 -- | Run the automaton until the exception is thrown, then restart, continuing this cycle forever.
 forever :: (Monad m) => AutomatonExcept a b m e -> Automaton m a b
 forever = Automaton . StreamExcept.forever . getAutomatonExcept
-{-# INLINEABLE forever #-}
+{-# INLINE forever #-}
 
 {- | Like 'forever', but keep the last thrown exception.
 
@@ -356,19 +356,19 @@ foreverE ::
   AutomatonExcept a b (ReaderT e m) e ->
   Automaton m a b
 foreverE e = Automaton . StreamExcept.foreverE e . hoist (\rae -> ReaderT $ \e -> ReaderT $ \a -> runReaderT (runReaderT rae a) e) . getAutomatonExcept
-{-# INLINEABLE foreverE #-}
+{-# INLINE foreverE #-}
 
 {- | Inside the 'AutomatonExcept' monad, execute an action of the wrapped monad.
 This passes the last input value to the action, but doesn't advance a tick.
 -}
 once :: (Monad m) => (a -> m e) -> AutomatonExcept a b m e
 once f = AutomatonExcept $ CoalgebraicExcept $ StreamOptimized.constM $ ExceptT $ ReaderT $ fmap Left <$> f
-{-# INLINEABLE once #-}
+{-# INLINE once #-}
 
 -- | Variant of 'once' without input.
 once_ :: (Monad m) => m e -> AutomatonExcept a b m e
 once_ = once . const
-{-# INLINEABLE once_ #-}
+{-# INLINE once_ #-}
 
 -- | Advances a single tick with the given Kleisli arrow, and then throws an exception.
 step :: (Monad m) => (a -> m (b, e)) -> AutomatonExcept a b m e
@@ -377,19 +377,19 @@ step f = try $ proc a -> do
   (b, e) <- arrM (lift . f) -< a
   _ <- throwOn' -< (n > (1 :: Int), e)
   returnA -< b
-{-# INLINEABLE step #-}
+{-# INLINE step #-}
 
 -- | Advances a single tick outputting the value, and then throws '()'.
 step_ :: (Monad m) => b -> AutomatonExcept a b m ()
-step_ b = step $ const $ return (b, ())
-{-# INLINEABLE step_ #-}
+step_ b = step $ const $ pure (b, ())
+{-# INLINE step_ #-}
 
 {- | Converts a list to an 'AutomatonExcept', which outputs an element of the list at
 each step, throwing '()' when the list ends.
 -}
 listToAutomatonExcept :: (Monad m) => [b] -> AutomatonExcept a b m ()
 listToAutomatonExcept = mapM_ step_
-{-# INLINEABLE listToAutomatonExcept #-}
+{-# INLINE listToAutomatonExcept #-}
 
 -- * Utilities definable in terms of 'AutomatonExcept'
 
@@ -402,17 +402,17 @@ performOnFirstSample :: (Monad m) => m (Automaton m a b) -> Automaton m a b
 performOnFirstSample mAutomaton = safely $ do
   automaton <- once_ mAutomaton
   safe automaton
-{-# INLINEABLE performOnFirstSample #-}
+{-# INLINE performOnFirstSample #-}
 
 -- | 'reactimate's an 'AutomatonExcept' until it throws an exception.
 reactimateExcept :: (Monad m) => AutomatonExcept () () m e -> m e
 reactimateExcept ae = fmap (either id absurd) $ runExceptT $ reactimate $ runAutomatonExcept ae
-{-# INLINEABLE reactimateExcept #-}
+{-# INLINE reactimateExcept #-}
 
 -- | 'reactimate's an 'Automaton' until it returns 'True'.
 reactimateB :: (Monad m) => Automaton m () Bool -> m ()
 reactimateB ae = reactimateExcept $ try $ liftS ae >>> throwOn ()
-{-# INLINEABLE reactimateB #-}
+{-# INLINE reactimateB #-}
 
 {- | Run the first 'Automaton' until the second value in the output tuple is @Just c@,
 then start the second automaton, discarding the current output @b@.
@@ -426,7 +426,7 @@ switch automaton = catchS $ proc a -> do
   (b, me) <- liftS automaton -< a
   throwMaybe -< me
   returnA -< b
-{-# INLINEABLE switch #-}
+{-# INLINE switch #-}
 
 {- | Run the first 'Automaton' until the second value in the output tuple is @Just c@,
 then start the second automaton one step later (after the current @b@ has been output).
@@ -439,4 +439,4 @@ dSwitch :: (Monad m) => Automaton m a (b, Maybe c) -> (c -> Automaton m a b) -> 
 dSwitch sf = catchS $ feedback Nothing $ proc (a, me) -> do
   throwMaybe -< me
   liftS sf -< a
-{-# INLINEABLE dSwitch #-}
+{-# INLINE dSwitch #-}

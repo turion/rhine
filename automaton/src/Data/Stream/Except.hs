@@ -76,19 +76,19 @@ instance (Traversable m) => Traversable (StreamExcept a m) where
 instance (Functor m) => Functor (StreamExcept a m) where
   fmap f (RecursiveExcept fe) = RecursiveExcept $ Recursive.hoist' (withExceptT f) fe
   fmap f (CoalgebraicExcept ae) = CoalgebraicExcept $ OptimizedStreamT.hoist' (withExceptT f) ae
-  {-# INLINEABLE fmap #-}
+  {-# INLINE fmap #-}
 
 instance (Monad m) => Applicative (StreamExcept a m) where
   pure = CoalgebraicExcept . constM . throwE
-  {-# INLINEABLE pure #-}
+  {-# INLINE pure #-}
   CoalgebraicExcept f <*> CoalgebraicExcept a = CoalgebraicExcept $ applyExcept f a
   f <*> a = ap f a
-  {-# INLINEABLE (<*>) #-}
+  {-# INLINE (<*>) #-}
 
 instance (Monad m) => Selective (StreamExcept a m) where
   select (CoalgebraicExcept e) (CoalgebraicExcept f) = CoalgebraicExcept $ selectExcept e f
   select e f = selectM e f
-  {-# INLINEABLE select #-}
+  {-# INLINE select #-}
 
 -- | 'return'/'pure' throw exceptions, '(>>=)' uses the last thrown exception as input for an exception handler.
 instance (Monad m) => Monad (StreamExcept a m) where
@@ -98,12 +98,12 @@ instance (Monad m) => Monad (StreamExcept a m) where
 
 instance MonadTrans (StreamExcept a) where
   lift = CoalgebraicExcept . constM . ExceptT . fmap Left
-  {-# INLINEABLE lift #-}
+  {-# INLINE lift #-}
 
 instance MFunctor (StreamExcept a) where
   hoist morph (RecursiveExcept recursive) = RecursiveExcept $ hoist (mapExceptT morph) recursive
   hoist morph (CoalgebraicExcept coalgebraic) = CoalgebraicExcept $ hoist (mapExceptT morph) coalgebraic
-  {-# INLINEABLE hoist #-}
+  {-# INLINE hoist #-}
 
 {- | If no exception can occur, the stream can be executed without the 'ExceptT'
 layer.
@@ -112,7 +112,7 @@ Used to exit the 'StreamExcept' context, often in combination with 'safe'.
 -}
 safely :: (Monad m) => StreamExcept a m Void -> OptimizedStreamT m a
 safely = hoist (fmap (either absurd id) . runExceptT) . runStreamExcept
-{-# INLINEABLE safely #-}
+{-# INLINE safely #-}
 
 {- | A stream without an 'ExceptT' layer never throws an exception,
 and can thus have an arbitrary exception type.
