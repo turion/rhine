@@ -750,7 +750,7 @@ sumS = sumFrom zeroVector
 
 -- | Sum up all inputs so far, initialised at 0.
 sumN :: (Monad m, Num a) => Automaton m a a
-sumN = arr Sum >>> mappendS >>> arr getSum
+sumN = dimap Sum getSum mappendS
 {-# INLINE sumN #-}
 
 -- | Count the natural numbers, beginning at 1.
