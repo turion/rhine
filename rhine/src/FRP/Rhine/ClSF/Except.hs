@@ -86,6 +86,10 @@ throwOnCondM cond e = proc a -> do
     else returnA -< a
 {-# INLINE throwOnCondM #-}
 
+throwLeft :: (Applicative m) => ClSF (ExceptT e m) cl (Either e a) a
+throwLeft = arrMCl $ ExceptT . pure
+{-# INLINE throwLeft #-}
+
 -- | When the input is @Just e@, throw the exception @e@.
 throwMaybe :: (Monad m) => ClSF (ExceptT e m) cl (Maybe e) (Maybe a)
 throwMaybe = proc me -> case me of

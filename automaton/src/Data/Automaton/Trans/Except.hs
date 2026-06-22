@@ -87,6 +87,10 @@ throwOn' = proc (b, e) ->
     else returnA -< ()
 {-# INLINE throwOn' #-}
 
+throwLeft :: (Applicative m) => Automaton (ExceptT e m) (Either e a) a
+throwLeft = arrM $ ExceptT . pure
+{-# INLINE throwLeft #-}
+
 -- | When the predicate evaluates to @Just e@, throw the exception @e@, otherwise forward the input.
 throwOnMaybe :: (Monad m) => (a -> Maybe e) -> Automaton (ExceptT e m) a a
 throwOnMaybe f = proc a -> do
