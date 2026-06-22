@@ -43,7 +43,7 @@ data FixedStep (n :: Nat) where
 stepsize :: FixedStep n -> Seconds Integer
 stepsize fixedStep@FixedStep = Seconds $ natVal fixedStep
 
-instance (Monad m) => Clock (ScheduleT (Seconds Integer) m) (FixedStep n) where
+instance (Monad m, time ~ Seconds Integer) => Clock (ScheduleT time m) (FixedStep n) where
   type Time (FixedStep n) = Seconds Integer
   type Tag (FixedStep n) = ()
   initClock cl =
