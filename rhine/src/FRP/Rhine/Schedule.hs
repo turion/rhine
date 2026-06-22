@@ -51,6 +51,7 @@ runningSchedule ::
   RunningClock m (Time cl2) (Tag cl2) ->
   RunningClock m (Time cl1) (Either (Tag cl1) (Tag cl2))
 runningSchedule _ _ rc1 rc2 = schedulePair (rc1 >>> arr (second Left)) (rc2 >>> arr (second Right))
+{-# INLINE runningSchedule #-}
 
 {- | A schedule implements a combination of two clocks.
   It outputs a time stamp and an 'Either' value,
@@ -73,6 +74,7 @@ initSchedule cl1 cl2 = do
     ( runningSchedule cl1 cl2 runningClock1 runningClock2
     , initTime
     )
+{-# INLINE initSchedule #-}
 
 -- * Composite clocks
 
