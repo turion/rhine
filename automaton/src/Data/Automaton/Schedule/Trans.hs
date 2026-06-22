@@ -138,6 +138,7 @@ runScheduleS = handleAutomaton $ \StreamT {state, step} ->
           Pure (Result s' b) -> Result (step s') (Right b)
           Free (Wait diff cont) -> Result (lift cont) (Left diff)
     }
+{-# INLINE runScheduleS #-}
 
 {- | Embed an automaton that produces @'Either' diff b@ values into
 'ScheduleT', interpreting @'Left' diff@ as a 'wait' instruction.
@@ -159,6 +160,7 @@ scheduleS = handleAutomaton $ \StreamT {state, step} ->
         { state
         , step = step'
         }
+{-# INLINE scheduleS #-}
 
 -- * The symbolic effect of skipping one step of an automaton
 
@@ -197,6 +199,7 @@ runSkipS = handleAutomaton $ \StreamT {state, step} ->
           Pure (Result s' b) -> Result (step s') (Just b)
           Free (Identity cont) -> Result (lift $ SkipT cont) Nothing
     }
+{-# INLINE runSkipS #-}
 
 -- | Signal that the current step should be skipped, deferring output to the next tick.
 skip :: (Monad m) => SkipT m ()
