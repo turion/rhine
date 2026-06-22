@@ -95,6 +95,7 @@ throwMaybe :: (Monad m) => ClSF (ExceptT e m) cl (Maybe e) (Maybe a)
 throwMaybe = proc me -> case me of
   Nothing -> returnA -< Nothing
   Just e -> throwS -< e
+{-# INLINE throwMaybe #-}
 
 -- * Monad interface
 
@@ -127,6 +128,7 @@ type BehaviorFExcept time a b m e = BehaviourFExcept time a b m e
 -- | Leave the monad context, to use the 'ClSFExcept' as an 'Arrow'.
 runClSFExcept :: (Monad m) => ClSFExcept cl a b m e -> ClSF (ExceptT e m) cl a b
 runClSFExcept = hoistS commuteExceptReader . runAutomatonExcept
+{-# INLINE runClSFExcept #-}
 
 {- | Enter the monad context in the exception
    for 'ClSF's in the 'ExceptT' monad.
@@ -134,19 +136,23 @@ runClSFExcept = hoistS commuteExceptReader . runAutomatonExcept
 -}
 try :: (Monad m) => ClSF (ExceptT e m) cl a b -> ClSFExcept cl a b m e
 try = AutomatonE.try . hoistS commuteReaderExcept
+{-# INLINE try #-}
 
 {- | Within the same tick, perform a monadic action,
    and immediately throw the value as an exception.
 -}
 once :: (Monad m) => (a -> m e) -> ClSFExcept cl a b m e
 once f = AutomatonE.once $ lift . f
+{-# INLINE once #-}
 
 -- | A variant of 'once' without input.
 once_ :: (Monad m) => m e -> ClSFExcept cl a b m e
 once_ = once . const
+{-# INLINE once_ #-}
 
 {- | Advances a single tick with the given Kleisli arrow,
    and then throws an exception.
 -}
 step :: (Monad m) => (a -> m (b, e)) -> ClSFExcept cl a b m e
 step f = AutomatonE.step $ lift . f
+{-# INLINE step #-}
