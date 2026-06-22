@@ -42,18 +42,22 @@ import FRP.Rhine.Clock
 -- | Immediately throw the incoming exception.
 throwS :: (Monad m) => ClSF (ExceptT e m) cl e a
 throwS = arrMCl throwE
+{-# INLINE throwS #-}
 
 -- | Immediately throw the given exception.
 throw :: (Monad m) => e -> Automaton (ExceptT e m) a b
 throw = constM . throwE
+{-# INLINE throw #-}
 
 -- | Do not throw an exception.
 pass :: (Monad m) => Automaton (ExceptT e m) a a
 pass = Category.id
+{-# INLINE pass #-}
 
 -- | Throw the given exception when the 'Bool' turns true.
 throwOn :: (Monad m) => e -> ClSF (ExceptT e m) cl Bool ()
 throwOn e = proc b -> throwOn' -< (b, e)
+{-# INLINE throwOn #-}
 
 -- | Variant of 'throwOn', where the exception can vary every tick.
 throwOn' :: (Monad m) => ClSF (ExceptT e m) cl (Bool, e) ()
@@ -69,6 +73,7 @@ throwOnCond cond e = proc a ->
   if cond a
     then throwS -< e
     else returnA -< a
+{-# INLINE throwOnCond #-}
 
 {- | Variant of 'throwOnCond' for Kleisli arrows.
    Throws the exception when the input is 'True'.
@@ -79,6 +84,7 @@ throwOnCondM cond e = proc a -> do
   if b
     then throwS -< e
     else returnA -< a
+{-# INLINE throwOnCondM #-}
 
 -- | When the input is @Just e@, throw the exception @e@.
 throwMaybe :: (Monad m) => ClSF (ExceptT e m) cl (Maybe e) (Maybe a)
