@@ -116,7 +116,6 @@ library
     FRP.Rhine.Clock.Realtime.Never
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
-    FRP.Rhine.Clock.Skip
     FRP.Rhine.Clock.Trivial
     FRP.Rhine.Clock.Util
     FRP.Rhine.Reactimation

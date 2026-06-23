@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
-
 {- |
 This module supplies a general-purpose monad transformer that adds a syntactical
 "delay", or "waiting" side effect, used for time-based scheduling of automata.
@@ -10,56 +8,34 @@ how long until its next output.
 
 The 'Data.Automaton.Schedule.MonadSchedule' instance for 'ScheduleT' interleaves
 several such automata in time order.
+
+This module re-exports the underlying 'WriterT' representation (CPS-encoded).
+Each call to 'wait' contributes to the writer log; the total wait per
+'ScheduleT' action is the monoidal sum of all interspersed 'wait's. This
+means consecutive 'wait's fuse — a consumer cannot distinguish
+@wait 3 >> wait 2@ from @wait 5@. For typical clock implementations
+(one 'wait' per logical tick) this is irrelevant.
 -}
 module Data.Automaton.Schedule.Trans (module Data.Automaton.Schedule.Trans) where
 
 -- base
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Functor.Classes (Eq1 (..), liftEq)
 import Data.Functor.Identity (Identity (..))
-import Data.Ord (comparing)
 
 -- transformers
 import Control.Monad.Trans.Class (MonadTrans (..))
-import Control.Monad.Trans.Reader (ReaderT (..))
-
--- free
-import Control.Monad.Trans.Free (FreeF (..), FreeT (..), iterT, liftF, runFreeT)
 
 -- automaton
-import Data.Automaton (Automaton, handleAutomaton)
-import Data.Stream (StreamT (..))
-import Data.Stream.Result (Result (..))
-
--- * Waiting action
-
--- | A functor implementing a syntactical "waiting" action.
-data Wait diff a = Wait
-  { getDiff :: diff
-  -- ^ The duration to wait.
-  , awaited :: a
-  -- ^ The encapsulated value.
-  }
-  deriving (Functor, Eq, Show)
-
-instance (Eq diff) => Eq1 (Wait diff) where
-  liftEq eq (Wait diff1 a) (Wait diff2 b) = diff1 == diff2 && eq a b
-
-{- | Compare by the time difference, regardless of the value.
-
-Note that this would not give a lawful 'Ord' instance since we do not compare
-the @a@.
--}
-compareWait :: (Ord diff) => Wait diff a -> Wait diff a -> Ordering
-compareWait = comparing getDiff
+import Data.Automaton (Automaton, hoistS)
+import Data.Automaton.Trans.Writer.CPS qualified as W
 
 -- * 'ScheduleT'
 
 {- |
 Values in @ScheduleT diff m@ are delayed computations with side effects in @m@.
 Delays can occur between any two side effects, with lengths specified by a @diff@
-value.
+value. Consecutive delays fuse monoidally: the total wait is @<>@ of all delays.
 
 These delays don't have any semantics on their own; semantics can be given with
 'runScheduleT'.
@@ -68,22 +44,32 @@ The 'Data.Automaton.Schedule.MonadSchedule' instance for 'ScheduleT' interprets
 delays as logical time and interleaves several such computations in order of
 their next scheduled time.
 -}
-type ScheduleT diff = FreeT (Wait diff)
+newtype ScheduleT diff m a = ScheduleT
+  { getScheduleT :: W.WriterT diff m a
+  -- ^ Unwrap 'ScheduleT' to the underlying CPS 'WriterT'.
+  }
+  deriving newtype (Functor, Applicative, Monad, MonadTrans, MonadIO)
 
 -- | 'ScheduleT' over the 'Identity' monad.
 type Schedule diff = ScheduleT diff Identity
 
 -- | The side effect that waits for a specified amount.
-wait :: (Monad m) => diff -> ScheduleT diff m ()
-wait diff = FreeT $ pure $ Free $ Wait diff $ pure ()
+wait :: (Monoid diff, Monad m) => diff -> ScheduleT diff m ()
+wait = ScheduleT . W.tell
 {-# INLINE wait #-}
 
-{- | Supply a semantic meaning to 'Wait'.
-For every occurrence of @Wait diff@ in the @ScheduleT diff m a@ value,
-a waiting action is executed, depending on @diff@.
+{- | Supply a semantic meaning to the accumulated wait.
+
+For every 'ScheduleT diff m a' the @waitAction@ is executed once, with the
+total accumulated @diff@ value. This is observationally equivalent to
+running the action once per individual 'wait' boundary whenever the
+underlying effect is purely additive (e.g. 'threadDelay').
 -}
-runScheduleT :: (Monad m) => (diff -> m ()) -> ScheduleT diff m a -> m a
-runScheduleT waitAction = iterT $ \(Wait n ma) -> waitAction n >> ma
+runScheduleT :: (Monoid diff, Monad m) => (diff -> m ()) -> ScheduleT diff m a -> m a
+runScheduleT waitAction (ScheduleT w) = do
+  (a, total) <- W.runWriterT w
+  waitAction total
+  pure a
 {-# INLINE runScheduleT #-}
 
 {- | Run a 'ScheduleT' value, ignoring the waiting actions.
@@ -91,12 +77,12 @@ runScheduleT waitAction = iterT $ \(Wait n ma) -> waitAction n >> ma
 Usually, you would apply this function after having scheduled several automata together with 'schedule',
 and you want to get the final result of the schedule without caring about the timing.
 -}
-evalScheduleT :: (Monad m) => ScheduleT diff m a -> m a
-evalScheduleT = runScheduleT $ const $ pure ()
+evalScheduleT :: (Monoid diff, Monad m) => ScheduleT diff m a -> m a
+evalScheduleT (ScheduleT w) = fst <$> W.runWriterT w
 {-# INLINE evalScheduleT #-}
 
 -- | Run a 'Schedule' value, ignoring the waiting actions.
-evalSchedule :: Schedule diff a -> a
+evalSchedule :: (Monoid diff) => Schedule diff a -> a
 evalSchedule = runIdentity . evalScheduleT
 {-# INLINE evalSchedule #-}
 
@@ -104,7 +90,7 @@ evalSchedule = runIdentity . evalScheduleT
 interpreting the times as milliseconds.
 -}
 runScheduleIO ::
-  (MonadIO m, Integral n) =>
+  (MonadIO m, Integral n, Monoid n) =>
   ScheduleT n m a ->
   m a
 runScheduleIO = runScheduleT waitms
@@ -115,115 +101,23 @@ waitms :: (MonadIO m, Integral n) => n -> m ()
 waitms = liftIO . threadDelay . (* 1000) . fromIntegral
 {-# INLINE waitms #-}
 
-{- | Formally execute all waiting actions,
-returning the final value and all moments when the schedule would have waited.
--}
-execScheduleT :: (Monad m) => ScheduleT diff m a -> m (a, [diff])
-execScheduleT action = do
-  free <- runFreeT action
-  case free of
-    Pure a -> pure (a, [])
-    Free (Wait diff cont) -> do
-      (a, diffs) <- execScheduleT cont
-      pure (a, diff : diffs)
-{-# INLINEABLE execScheduleT #-}
+{- | Break down the steps of an 'Automaton' in 'ScheduleT' into a paired
+wait duration and output.
 
-{- | Break down the steps of an 'Automaton' in 'ScheduleT' into waiting
-effects and returning values.
-
-Each tick either produces a @'Right' b@ (a regular output) or a
-@'Left' diff@ (a wait duration), exposing the internal scheduling information
-to the caller.  The dual of 'scheduleS'.
+Each tick produces @(diff, b)@: the total wait the underlying action would
+have consumed before yielding @b@, and the output itself.  The dual of
+'scheduleS'.
 -}
-runScheduleS :: (Functor m, Monad m) => Automaton (ScheduleT diff m) a b -> Automaton m a (Either diff b)
-runScheduleS = handleAutomaton $ \StreamT {state, step} ->
-  StreamT
-    { state = step state
-    , step = \s -> ReaderT $ \a -> do
-        oneStep <- runFreeT $ runReaderT s a
-        pure $ case oneStep of
-          Pure (Result s' b) -> Result (step s') (Right b)
-          Free (Wait diff cont) -> Result (lift cont) (Left diff)
-    }
+runScheduleS :: (Monoid diff, Functor m, Monad m) => Automaton (ScheduleT diff m) a b -> Automaton m a (diff, b)
+runScheduleS = W.runWriterS . hoistS getScheduleT
 {-# INLINE runScheduleS #-}
 
-{- | Embed an automaton that produces @'Either' diff b@ values into
-'ScheduleT', interpreting @'Left' diff@ as a 'wait' instruction.
+{- | Embed an automaton that produces @(diff, b)@ values into
+'ScheduleT', interpreting the @diff@ component as a 'wait' duration.
 
-The dual of 'runScheduleS': whenever the inner automaton emits @'Left' diff@,
-'scheduleS' calls @'wait' diff@ and then re-runs the step with the same
-input until a @'Right' b@ is produced.
+The dual of 'runScheduleS': whenever the inner automaton emits @(diff, b)@,
+'scheduleS' calls @'wait' diff@ and then yields @b@.
 -}
-scheduleS :: (Monad m) => Automaton m a (Either diff b) -> Automaton (ScheduleT diff m) a b
-scheduleS = handleAutomaton $ \StreamT {state, step} ->
-  let step' s = ReaderT $ \a -> do
-        Result s' eitherDiffB <- lift $ runReaderT (step s) a
-        case eitherDiffB of
-          Right b -> pure $ Result s' b
-          Left diff -> do
-            wait diff
-            runReaderT (step' s') a
-   in StreamT
-        { state
-        , step = step'
-        }
+scheduleS :: (Monoid diff, Monad m) => Automaton m a (diff, b) -> Automaton (ScheduleT diff m) a b
+scheduleS = hoistS ScheduleT . W.writerS
 {-# INLINE scheduleS #-}
-
--- * The symbolic effect of skipping one step of an automaton
-
-{- | A monad transformer that adds the ability to __skip__ one output step.
-
-An automaton in @'SkipT' m@ may call 'skip' to signal that it wants to
-defer its output to the next step.  'MonadSchedule' for 'SkipT' uses this to
-implement cooperative, non-preemptive round-robin scheduling: an automaton
-that has not yet skipped enough times simply skips instead of emitting an
-output, giving other automata a chance to catch up.
-
-See also 'runSkipS' and 'skip'.
--}
-newtype SkipT m a = SkipT
-  { getSkipT :: FreeT Identity m a
-  -- ^ Unwrap 'SkipT' to the underlying free-monad transformer.
-  }
-  deriving newtype (Functor, Applicative, Monad, MonadTrans, MonadIO)
-
--- | 'SkipT' specialised to 'Identity': a pure automaton with skip steps.
-type Yield = SkipT Identity
-
-{- | Run an 'Automaton' in 'SkipT', exposing skipped steps as 'Nothing'.
-
-Each tick of the result automaton corresponds to one tick of the input
-automaton.  If the input automaton called 'skip' on that tick the result is
-'Nothing'; otherwise it is 'Just' the output.
--}
-runSkipS :: (Functor m, Monad m) => Automaton (SkipT m) a b -> Automaton m a (Maybe b)
-runSkipS = handleAutomaton $ \StreamT {state, step} ->
-  StreamT
-    { state = step state
-    , step = \s -> ReaderT $ \a -> do
-        oneTick <- runFreeT $ getSkipT $ runReaderT s a
-        pure $ case oneTick of
-          Pure (Result s' b) -> Result (step s') (Just b)
-          Free (Identity cont) -> Result (lift $ SkipT cont) Nothing
-    }
-{-# INLINE runSkipS #-}
-
--- | Signal that the current step should be skipped, deferring output to the next tick.
-skip :: (Monad m) => SkipT m ()
-skip = SkipT $ liftF $ pure ()
-{-# INLINE skip #-}
-
--- | Run a 'SkipT' action, discarding all 'skip' steps.
-runSkipT :: (Monad m) => SkipT m a -> m a
-runSkipT = iterT runIdentity . getSkipT
-{-# INLINE runSkipT #-}
-
--- | Run a 'SkipT' action, executing @action@ for every 'skip' step.
-runSkipTWith :: (Monad m) => m () -> SkipT m a -> m a
-runSkipTWith action = iterT (\ima -> action >> runIdentity ima) . getSkipT
-{-# INLINE runSkipTWith #-}
-
--- | Run a pure 'Yield' computation, discarding all skipped steps.
-runYield :: Yield a -> a
-runYield = runIdentity . runSkipT
-{-# INLINE runYield #-}
