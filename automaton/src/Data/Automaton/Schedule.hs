@@ -276,6 +276,7 @@ roundRobinStreams streams =
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (SkipT m) where
   schedule = fmap runSkipS >>> schedule >>> fmap maybeToList >>> Automaton.concatS >>> liftS
+  {-# INLINE schedule #-}
 
 -- | Each scheduled automaton must eventually produce an output or a diff greater than 'zero', otherwise this will loop indefinitely.
 instance (Ord diff, TimeDifference diff, Monad m, MonadSchedule m) => MonadSchedule (ScheduleT diff m) where
@@ -350,3 +351,4 @@ instance (Ord diff, TimeDifference diff, Monad m, MonadSchedule m) => MonadSched
                     adjustedDiffs = diffs <&?> \diff -> guard (diff /= minDiff) >> Just (diff `difference` minDiff)
                  in (Left minDiff, pushDiffsBack adjustedDiffs queues')
           Just bs -> (Right $ List.reverse $ toList bs, pushDiffsBack diffs queues')
+  {-# INLINE schedule #-}
