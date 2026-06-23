@@ -76,6 +76,7 @@ type Schedule diff = ScheduleT diff Identity
 -- | The side effect that waits for a specified amount.
 wait :: (Monad m) => diff -> ScheduleT diff m ()
 wait diff = FreeT $ pure $ Free $ Wait diff $ pure ()
+{-# INLINE wait #-}
 
 {- | Supply a semantic meaning to 'Wait'.
 For every occurrence of @Wait diff@ in the @ScheduleT diff m a@ value,
@@ -83,6 +84,7 @@ a waiting action is executed, depending on @diff@.
 -}
 runScheduleT :: (Monad m) => (diff -> m ()) -> ScheduleT diff m a -> m a
 runScheduleT waitAction = iterT $ \(Wait n ma) -> waitAction n >> ma
+{-# INLINE runScheduleT #-}
 
 {- | Run a 'ScheduleT' value, ignoring the waiting actions.
 
@@ -91,10 +93,12 @@ and you want to get the final result of the schedule without caring about the ti
 -}
 evalScheduleT :: (Monad m) => ScheduleT diff m a -> m a
 evalScheduleT = runScheduleT $ const $ pure ()
+{-# INLINE evalScheduleT #-}
 
 -- | Run a 'Schedule' value, ignoring the waiting actions.
 evalSchedule :: Schedule diff a -> a
 evalSchedule = runIdentity . evalScheduleT
+{-# INLINE evalSchedule #-}
 
 {- | Run a 'ScheduleT' value in a 'MonadIO',
 interpreting the times as milliseconds.
@@ -104,10 +108,12 @@ runScheduleIO ::
   ScheduleT n m a ->
   m a
 runScheduleIO = runScheduleT waitms
+{-# INLINE runScheduleIO #-}
 
 -- | Wait for the given number of milliseconds.
 waitms :: (MonadIO m, Integral n) => n -> m ()
 waitms = liftIO . threadDelay . (* 1000) . fromIntegral
+{-# INLINE waitms #-}
 
 {- | Formally execute all waiting actions,
 returning the final value and all moments when the schedule would have waited.
@@ -120,6 +126,7 @@ execScheduleT action = do
     Free (Wait diff cont) -> do
       (a, diffs) <- execScheduleT cont
       pure (a, diff : diffs)
+{-# INLINEABLE execScheduleT #-}
 
 {- | Break down the steps of an 'Automaton' in 'ScheduleT' into waiting
 effects and returning values.
@@ -204,15 +211,19 @@ runSkipS = handleAutomaton $ \StreamT {state, step} ->
 -- | Signal that the current step should be skipped, deferring output to the next tick.
 skip :: (Monad m) => SkipT m ()
 skip = SkipT $ liftF $ pure ()
+{-# INLINE skip #-}
 
 -- | Run a 'SkipT' action, discarding all 'skip' steps.
 runSkipT :: (Monad m) => SkipT m a -> m a
 runSkipT = iterT runIdentity . getSkipT
+{-# INLINE runSkipT #-}
 
 -- | Run a 'SkipT' action, executing @action@ for every 'skip' step.
 runSkipTWith :: (Monad m) => m () -> SkipT m a -> m a
 runSkipTWith action = iterT (\ima -> action >> runIdentity ima) . getSkipT
+{-# INLINE runSkipTWith #-}
 
 -- | Run a pure 'Yield' computation, discarding all skipped steps.
 runYield :: Yield a -> a
 runYield = runIdentity . runSkipT
+{-# INLINE runYield #-}
