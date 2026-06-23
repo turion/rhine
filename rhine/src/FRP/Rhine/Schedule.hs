@@ -173,3 +173,4 @@ parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left tag
 parClockTagInclusion (ParClockInR parClockInR) tag = parClockTagInclusion parClockInR $ Right tag
 parClockTagInclusion ParClockRefl tag = tag
+{-# INLINE parClockTagInclusion #-}
