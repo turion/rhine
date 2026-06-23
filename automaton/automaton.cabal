@@ -72,6 +72,7 @@ common opts
     RankNTypes
     ScopedTypeVariables
     StandaloneDeriving
+    StrictData
     TupleSections
     TypeApplications
     TypeFamilies
