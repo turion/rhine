@@ -28,11 +28,9 @@ import Control.Monad (forM_, guard, replicateM_)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Identity (Identity (..))
 import Data.Bifunctor qualified as Bifunctor
-import Data.Foldable1 (Foldable1 (foldrMap1))
+import Data.Foldable1 (Foldable1 (toNonEmpty))
 import Data.Function ((&))
 import Data.Functor ((<&>))
-import Data.Functor.Compose (Compose (..))
-import Data.Kind (Type)
 import Data.List qualified as List
 import Data.List.NonEmpty as N
 import Data.Maybe (maybeToList)
@@ -49,15 +47,15 @@ import Control.Monad.Trans.Writer.CPS qualified as CPS
 import Control.Monad.Trans.Writer.Lazy qualified as Lazy
 import Control.Monad.Trans.Writer.Strict qualified as Strict
 
--- sop-core
-import Data.SOP (HCollapse (hcollapse), HSequence (htraverse'), I (..), K (..), NP (..), SListI, hmap, hzipWith)
-
 -- containers
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IM
 import Data.Sequence (Seq, ViewL (..), viewl)
 import Data.Sequence qualified as Seq
 import Data.Set qualified as S
+
+-- nonempty-containers
+import Data.Sequence.NonEmpty qualified as NESeq
 
 -- mmorph
 import Control.Monad.Morph (MFunctor)
@@ -82,7 +80,7 @@ import Data.Automaton.Trans.Reader (readerS, runReaderS)
 import Data.Automaton.Trans.State (modify, runStateS__)
 import Data.Stream (StreamT (..), concatS)
 import Data.Stream.Optimized (OptimizedStreamT (Stateful), toStreamT)
-import Data.Stream.Result
+import Data.Stream.Result (Result (..))
 
 {- | Class of monads that support running several 'Automaton's concurrently,
 interleaving their outputs into a single 'Automaton'.
@@ -242,69 +240,39 @@ the input 'NonEmpty' list, cycling indefinitely.
 instance MonadSchedule Identity where
   schedule =
     fmap (getAutomaton >>> toStreamT)
-      >>> foldrMap1 buildStreams consStreams
       >>> roundRobinStreams
       >>> fmap N.toList
       >>> concatS
       >>> Stateful
       >>> Automaton
-    where
-      buildStreams :: StreamT m b -> Streams m b
-      buildStreams StreamT {state, step} =
-        Streams
-          { states = I state :* Nil
-          , steps = Step (ResultStateT step) :* Nil
-          }
-
-      consStreams :: StreamT m b -> Streams m b -> Streams m b
-      consStreams StreamT {state, step} Streams {states, steps} =
-        Streams
-          { states = I state :* states
-          , steps = Step (ResultStateT step) :* steps
-          }
   {-# INLINE schedule #-}
 
--- The order of outputs matches the order of inputs: 'foldrMap1' places the
--- first input element at the head of the 'NP', so 'hnonemptycollapse' extracts
--- outputs in the original order.
+{- | Step every substream in lock-step against the same input state and collect
+the outputs into a 'NonEmpty' list, preserving input order.
 
-{- | Step all streams in a 'Streams' bundle simultaneously and collect the
-results into a 'NonEmpty' list, preserving the input order.
+The schedule state is a non-empty sequence of 'StreamT' cells.
+Each tick advances all substreams via the underlying 'Applicative',
+so any 'Applicative'-level effects (e.g. a 'WriterT' log) see the joint tick
+as one atomic event rather than a per-substream sequence.
+Downstream, 'concatS' flattens the @NonEmpty b@ into one @b@ per outer tick,
+giving the round-robin semantics.
 -}
-roundRobinStreams :: (Functor m, Applicative m) => Streams m b -> StreamT m (NonEmpty b)
-roundRobinStreams Streams {states, steps} =
+roundRobinStreams :: (Applicative m) => NonEmpty (StreamT m b) -> StreamT m (NonEmpty b)
+roundRobinStreams streams =
   StreamT
-    { state = states
-    , step = \s ->
-        s
-          & hzipWith (\Step {getStep} (I s) -> getResultStateT getStep s <&> RunningResult & Compose) steps
-          & htraverse' getCompose
-          <&> ( \results ->
-                  Result
-                    (results & hmap (getRunningResult >>> resultState >>> I))
-                    (results & hmap (getRunningResult >>> output >>> K) & hnonemptycollapse)
-              )
+    { state = NESeq.fromList streams
+    , step =
+        fmap
+          ( \stepped ->
+              Result
+                ((\(Result s' _) -> s') <$> stepped)
+                (toNonEmpty ((\(Result _ b) -> b) <$> stepped))
+          )
+          . traverse stepOne
     }
+  where
+    stepOne (StreamT s f) = (\(Result s' b) -> Result (StreamT s' f) b) <$> f s
 {-# INLINE roundRobinStreams #-}
-
--- | Collapse a non-empty n-ary product of constant functors into a 'NonEmpty' list.
-hnonemptycollapse :: (SListI as) => NP (K b) (a ': as) -> NonEmpty b
-hnonemptycollapse (K a :* as) = a :| hcollapse as
-
--- | A nonempty list of 'StreamT's, unzipped into their states and their steps.
-data Streams m b
-  = forall state (states :: [Type]).
-  (SListI states) =>
-  Streams
-  { states :: NP I (state ': states)
-  , steps :: NP (Step m b) (state ': states)
-  }
-
--- | One step of a stream, with the state type argument going last, so it is usable with sop-core.
-newtype Step m b state = Step {getStep :: ResultStateT state m b}
-
--- | The result of a stream, with the type arguments swapped, so it's usable with sop-core
-newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (SkipT m) where
   schedule = fmap runSkipS >>> schedule >>> fmap maybeToList >>> Automaton.concatS >>> liftS
