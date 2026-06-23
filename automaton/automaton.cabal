@@ -98,6 +98,7 @@ library
     Data.Automaton.Trans.Reader
     Data.Automaton.Trans.State
     Data.Automaton.Trans.Writer
+    Data.Automaton.Trans.Writer.CPS
     Data.Stream
     Data.Stream.Except
     Data.Stream.Filter
