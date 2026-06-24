@@ -39,6 +39,7 @@ stateS :: (Functor m, Monad m) => Automaton m (s, a) (s, b) -> Automaton (StateT
 stateS = withAutomaton $ \f a -> StateT $ \s ->
   (\(Result s' (s, b)) -> (Result s' b, s))
     <$> f (s, a)
+{-# INLINE stateS #-}
 
 {- | Make the state transition in 'StateT' explicit as 'Automaton' inputs and outputs.
 
@@ -48,6 +49,7 @@ runStateS :: (Functor m, Monad m) => Automaton (StateT s m) a b -> Automaton m (
 runStateS = withAutomaton $ \f (s, a) ->
   (\(Result s' b, s) -> Result s' (s, b))
     <$> runStateT (f a) s
+{-# INLINE runStateS #-}
 
 {- | Convert global state to internal state of an 'Automaton'.
 
@@ -63,7 +65,9 @@ runStateS_ ::
 runStateS_ automaton s =
   feedback s $
     arr swap >>> runStateS automaton >>> arr (\(s', b) -> ((s', b), s'))
+{-# INLINE runStateS_ #-}
 
 -- | Like 'runStateS_', but don't output the current state.
 runStateS__ :: (Functor m, Monad m) => Automaton (StateT s m) a b -> s -> Automaton m a b
 runStateS__ automaton s = runStateS_ automaton s >>> arr snd
+{-# INLINE runStateS__ #-}
