@@ -18,8 +18,7 @@ import "rhine" FRP.Rhine
 import "transformers" Control.Monad.Trans.Class (MonadTrans (..))
 
 nMax :: Int
--- nMax = 1_000_000
-nMax = 100_000 -- Multirate is much slower, so we reduce the number of iterations to get a result in a reasonable time
+nMax = 1_000_000
 
 benchmarks :: Benchmark
 benchmarks =
