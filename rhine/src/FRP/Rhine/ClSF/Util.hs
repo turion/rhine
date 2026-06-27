@@ -123,6 +123,7 @@ infixr 6 >->
   cat b c ->
   cat a c
 (>->) = (>>>)
+{-# INLINE (>->) #-}
 
 -- | Alias for 'Control.Category.<<<'.
 infixl 6 <-<
@@ -400,7 +401,7 @@ delayBy ::
   -- | The time span to delay the signal
   Diff td ->
   BehaviorF m td a a
-delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS undefined >>> arr snd
+delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS (error "not implemented") >>> arr snd
   where
     safeHead EmptyR = Nothing
     safeHead (_ :> a) = Just a

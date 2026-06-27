@@ -4,7 +4,6 @@
 {- | Sums up natural numbers.
 
 First create a lazy list [0, 1, 2, ...] and then sum over it.
-Most of the implementations really benchmark 'embed', as the lazy list is created using it.
 -}
 module Sum where
 
@@ -14,8 +13,6 @@ import "base" Data.Void (absurd)
 
 import "criterion" Criterion.Main
 
-import "automaton" Data.Stream as Stream (StreamT (..))
-import "automaton" Data.Stream.Optimized (OptimizedStreamT (Stateful))
 import "rhine" FRP.Rhine
 
 nMax :: Int
@@ -25,17 +22,14 @@ benchmarks :: Benchmark
 benchmarks =
   bgroup
     "Sum"
-    [ bench "rhine" $ nf rhine nMax
-    , bench "rhine flow" $ nf rhineFlow nMax
-    , bench "automaton" $ nf automaton nMax
+    [ bench "rhine flow" $ nf rhineFlow nMax
+    , bench "rhine IO" $ whnfIO rhineIO
+    , bench "automaton reactimate" $ nf automatonReactimate nMax
+    , bench "automaton reactimate IO" $ whnfIO automatonReactimateIO
     , bench "direct" $ nf direct nMax
     , bench "direct monad" $ nf directM nMax
     ]
 
-rhine :: Int -> Int
-rhine n = sum $ runIdentity $ embed count $ replicate n ()
-
--- FIXME separate ticket to improve performance of this
 rhineFlow :: Int -> Int
 rhineFlow n =
   either id absurd $
@@ -47,17 +41,37 @@ rhineFlow n =
           then returnA -< ()
           else arrMCl Left -< s
 
-automaton :: Int -> Int
-automaton n = sum $ runIdentity $ embed myCount $ replicate n ()
-  where
-    myCount :: Automaton Identity () Int
-    myCount =
-      Automaton $
-        Stateful
-          StreamT
-            { state = 1
-            , Stream.step = \s -> return $! Result (s + 1) s
-            }
+rhineIO :: IO Int
+rhineIO = fmap (either id absurd) $
+  runExceptT $
+    flow $
+      (@@ Trivial) $ proc () -> do
+        k <- count -< ()
+        s <- sumN -< k
+        if k < nMax
+          then returnA -< ()
+          else throwS -< s
+
+automatonReactimate :: Int -> Int
+automatonReactimate n =
+  either id absurd $
+    reactimate $ proc () -> do
+      k <- count -< ()
+      s <- sumN -< k
+      if k < n
+        then returnA -< ()
+        else arrM Left -< s
+
+automatonReactimateIO :: IO Int
+automatonReactimateIO = fmap (either id absurd) $
+  runExceptT $
+    reactimate $
+      proc () -> do
+        k <- count -< ()
+        s <- sumN -< k
+        if k < nMax
+          then returnA -< ()
+          else arrM throwE -< s
 
 direct :: Int -> Int
 direct n = sum [0 .. n]

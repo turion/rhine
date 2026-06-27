@@ -70,7 +70,7 @@ withInput action = do
 rhineWordCount :: IO Int
 rhineWordCount = do
   Left (Right nWords) <- withInput $ runExceptT $ flow $ wc @@ delayIOError (ExceptClock StdinClock) Left
-  return nWords
+  pure nWords
   where
     wc :: ClSF (ExceptT (Either IOError Int) IO) (DelayIOError (ExceptClock StdinClock IOError) (Either IOError Int)) () ()
     wc = proc _ -> do
@@ -86,7 +86,7 @@ if all the extra complexity introduced by clocks is optimized away completely.
 automatonWordCount :: IO Int
 automatonWordCount = do
   Left (Right nWords) <- withInput $ runExceptT $ reactimate wc
-  return nWords
+  pure nWords
   where
     wc = proc () -> do
       lineOrEOF <- constM $ liftIO $ Control.Exception.try getLine -< ()
@@ -109,7 +109,7 @@ textWordCount = do
   wcOut <- newIORef (0 :: Int)
   catch (withInput $ go wcOut) $ \(e :: IOError) ->
     if isEOFError e
-      then return ()
+      then pure ()
       else throwIO e
   readIORef wcOut
   where
@@ -129,14 +129,14 @@ textWordCountNoIORef = do
   where
     processLine n = do
       line <- getLine
-      return $ Right $ n + length (words line)
+      pure $ Right $ n + length (words line)
     go n = do
       n' <- catch (processLine n) $
         \(e :: IOError) ->
           if isEOFError e
-            then return $ Left n
+            then pure $ Left n
             else throwIO e
-      either return go n'
+      either pure go n'
 
 -- | Just for fun the probably most readable but not the fastest way to count the number of words.
 textLazy :: IO Int
