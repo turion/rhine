@@ -1,5 +1,6 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
+{-# OPTIONS_GHC -fsimpl-tick-factor=1000000 #-}
 
 {- | Sums up natural numbers.
 
