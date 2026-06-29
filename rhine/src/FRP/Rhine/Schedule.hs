@@ -4,7 +4,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {- |
@@ -25,6 +24,8 @@ import Data.Automaton.Schedule
 import Data.List.NonEmpty as N
 
 -- rhine
+
+import Data.Profunctor (Profunctor (..))
 import FRP.Rhine.Clock
 
 -- * Scheduling
@@ -35,43 +36,7 @@ Whenever one automaton returns a value, it is returned.
 -}
 schedulePair :: (Monad m, MonadSchedule m) => Automaton m a b -> Automaton m a b -> Automaton m a b
 schedulePair automatonL automatonR = schedule $ automatonL :| [automatonR]
-
--- | Run two running clocks concurrently.
-runningSchedule ::
-  ( Monad m
-  , MonadSchedule m
-  , Clock m cl1
-  , Clock m cl2
-  , Time cl1 ~ Time cl2
-  ) =>
-  cl1 ->
-  cl2 ->
-  RunningClock m (Time cl1) (Tag cl1) ->
-  RunningClock m (Time cl2) (Tag cl2) ->
-  RunningClock m (Time cl1) (Either (Tag cl1) (Tag cl2))
-runningSchedule _ _ rc1 rc2 = schedulePair (rc1 >>> arr (second Left)) (rc2 >>> arr (second Right))
-
-{- | A schedule implements a combination of two clocks.
-  It outputs a time stamp and an 'Either' value,
-  which specifies which of the two subclocks has ticked.
--}
-initSchedule ::
-  ( Time cl1 ~ Time cl2
-  , Monad m
-  , MonadSchedule m
-  , Clock m cl1
-  , Clock m cl2
-  ) =>
-  cl1 ->
-  cl2 ->
-  RunningClockInit m (Time cl1) (Either (Tag cl1) (Tag cl2))
-initSchedule cl1 cl2 = do
-  (runningClock1, initTime) <- initClock cl1
-  (runningClock2, _) <- initClock cl2
-  pure
-    ( runningSchedule cl1 cl2 runningClock1 runningClock2
-    , initTime
-    )
+{-# INLINE schedulePair #-}
 
 -- * Composite clocks
 
@@ -90,15 +55,18 @@ data SequentialClock cl1 cl2
 -- | Abbrevation synonym.
 type SeqClock cl1 cl2 = SequentialClock cl1 cl2
 
+{- | A schedule implements a combination of two clocks.
+  It outputs a time stamp and an 'Either' value,
+  which specifies which of the two subclocks has ticked.
+-}
 instance
-  (Monad m, MonadSchedule m, Clock m cl1, Clock m cl2) =>
+  (Monad m, MonadSchedule m, Clock m cl1, Clock m cl2, Time cl1 ~ Time cl2) =>
   Clock m (SequentialClock cl1 cl2)
   where
   type Time (SequentialClock cl1 cl2) = Time cl1
   type Tag (SequentialClock cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  initClock SequentialClock {..} =
-    initSchedule sequentialCl1 sequentialCl2
-  {-# INLINE initClock #-}
+  runClock = schedulePair (dimap (\(SequentialClock cl1 _cl2) -> cl1) (second Left) runClock) (dimap (\(SequentialClock _cl1 cl2) -> cl2) (second Right) runClock)
+  {-# INLINE runClock #-}
 
 -- ** Parallelly combined clocks
 
@@ -116,14 +84,13 @@ data ParallelClock cl1 cl2
 type ParClock cl1 cl2 = ParallelClock cl1 cl2
 
 instance
-  (Monad m, MonadSchedule m, Clock m cl1, Clock m cl2) =>
+  (Monad m, MonadSchedule m, Clock m cl1, Clock m cl2, Time cl1 ~ Time cl2) =>
   Clock m (ParallelClock cl1 cl2)
   where
   type Time (ParallelClock cl1 cl2) = Time cl1
   type Tag (ParallelClock cl1 cl2) = Either (Tag cl1) (Tag cl2)
-  initClock ParallelClock {..} =
-    initSchedule parallelCl1 parallelCl2
-  {-# INLINE initClock #-}
+  runClock = schedulePair (dimap (\(ParallelClock cl1 _cl2) -> cl1) (second Left) runClock) (dimap (\(ParallelClock _cl1 cl2) -> cl2) (second Right) runClock)
+  {-# INLINE runClock #-}
 
 -- * Navigating the clock tree
 
@@ -170,3 +137,4 @@ parClockTagInclusion :: ParClockInclusion clS cl -> Tag clS -> Tag cl
 parClockTagInclusion (ParClockInL parClockInL) tag = parClockTagInclusion parClockInL $ Left tag
 parClockTagInclusion (ParClockInR parClockInR) tag = parClockTagInclusion parClockInR $ Right tag
 parClockTagInclusion ParClockRefl tag = tag
+{-# INLINE parClockTagInclusion #-}

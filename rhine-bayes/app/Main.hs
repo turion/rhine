@@ -273,7 +273,7 @@ main = do
 
 -- ** Single-rate : One simulation step = one inference step = one display step
 
-glossClockSingleRate :: GlossClockUTC SamplerIO GlossSimClockIO
+glossClockSingleRate :: GlossClockUTC GlossSimClockIO
 glossClockSingleRate = glossClockUTC GlossSimClockIO
 
 -- *** Poor attempt at temperature inference: Particle collapse
@@ -361,7 +361,7 @@ modelRhine :: Rhine App (GlossConcTClock SamplerIO (Millisecond 100)) Temperatur
 modelRhine = (clId &&& genModelWithoutTemperature) @@ glossConcTClock waitClock
 
 -- | The user can change the temperature by pressing the up and down arrow keys.
-userTemperature :: ClSF App (GlossClockUTC SamplerIO GlossEventClockIO) () Temperature
+userTemperature :: ClSF App (GlossClockUTC GlossEventClockIO) () Temperature
 userTemperature = tagS >>> arr (selector >>> fmap Product) >>> mappendS >>> arr (fmap getProduct >>> fromMaybe 1 >>> (* initialTemperature))
   where
     selector (EventKey (SpecialKey KeyUp) Down _ _) = Just 1.2
@@ -388,7 +388,7 @@ inferenceBehaviour = proc (temperature, (measured, latent)) -> do
         }
 
 -- | Visualize the current 'Result' at a rate controlled by the @gloss@ backend, usually 30 FPS.
-visualisationRhine :: Rhine App (GlossClockUTC SamplerIO GlossSimClockIO) Result ()
+visualisationRhine :: Rhine App (GlossClockUTC GlossSimClockIO) Result ()
 visualisationRhine = visualisation @@ glossClockUTC GlossSimClockIO
 
 {- FOURMOLU_DISABLE -}
