@@ -359,6 +359,7 @@ foreverExcept StreamT {state, step} =
       case resultOrException of
         Left _ -> stepNew state
         Right result -> pure result
+{-# INLINE foreverExcept #-}
 
 {- | Like 'foreverExcept', but keep the last thrown exception.
 
@@ -376,6 +377,35 @@ foreverExceptE e StreamT {state, step} =
       case resultOrException of
         Left e -> stepNew $! JointState e state
         Right result -> pure $! mapResultState (JointState e) result
+{-# INLINE foreverExceptE #-}
+
+{- | Run the first stream until it throws an exception, then run the second one, with the previously thrown exception in the 'ReaderT' environment.
+
+The similarity to '>>=' is apparent if you consider its type  for 'Either a',
+with type arguments swapped:
+
+@
+(>>=) :: Either a e -> (e -> Either a e2) -> Either a e2
+@
+
+Throwing an @e@ exception in the first argument corresponds to throwing an exception in the first stream,
+and the @e@ input to the second argument corresponds to the 'ReaderT' environment of the second stream.
+-}
+(>>>=) :: (Monad m) => StreamT (ExceptT e m) a -> StreamT (ReaderT e (ExceptT e2 m)) a -> StreamT (ExceptT e2 m) a
+(>>>=) StreamT {state = state1, step = step1} StreamT {state = state2, step = step2} =
+  StreamT
+    { state = Right state1
+    , step
+    }
+  where
+    step = \case
+      Right s1 -> do
+        resultOrException <- lift $ runExceptT $ step1 s1
+        case resultOrException of
+          Left e -> step $ Left $! JointState e state2
+          Right (Result s1' a) -> pure $! Result (Right s1') a
+      Left (JointState e s2) -> mapResultState (Left . JointState e) <$> runReaderT (step2 s2) e
+{-# INLINE (>>>=) #-}
 
 -- | Whenever an exception occurs, output it and retry on the next step.
 exceptS :: (Applicative m) => StreamT (ExceptT e m) b -> StreamT m (Either e b)
@@ -404,6 +434,7 @@ selectExcept (StreamT stateE0 stepE) (StreamT stateF0 stepF) =
         Left (Left e1) -> step (Right (e1, stateF0))
         Left (Right e2) -> throwE e2
     step (Right (e1, stateF)) = withExceptT ($ e1) $ mapResultState (Right . (e1,)) <$> stepF stateF
+{-# INLINE selectExcept #-}
 
 instance (Selective m) => Selective (StreamT m) where
   select (StreamT stateE0 stepE) (StreamT stateF0 stepF) =
@@ -416,6 +447,7 @@ instance (Selective m) => Selective (StreamT m) where
     where
       eitherResult :: Result s (Either a b) -> Either (Result s a) (Result s b)
       eitherResult (Result s eab) = bimap (Result s) (Result s) eab
+  {-# INLINE select #-}
 
 {- | Run both streams in parallel and use @'Semialign' m@ to decide which stream produces output.
   If you understand @m@ as an effect that models the passage of time, then 'align' runs both streams concurrently.

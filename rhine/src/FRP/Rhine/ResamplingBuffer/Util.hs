@@ -48,6 +48,7 @@ resbuf  >>-^ clsf = helper resbuf $ toStreamT $ getAutomaton clsf
           Result s' c <- step s `runReaderT` b `runReaderT` theTimeInfo
           pure $! Result (JointState b' s') c
       }
+{-# INLINE (>>-^) #-}
 
 infix 1 ^->>
 
@@ -68,6 +69,7 @@ clsf ^->> resBuf = helper (toStreamT (getAutomaton clsf)) resBuf
       pure $! JointState buf' s'
     , get = \theTimeInfo (JointState buf s) -> mapResultState (`JointState` s) <$> get theTimeInfo buf
       }
+{-# INLINE (^->>) #-}
 
 infixl 4 *-*
 
@@ -89,6 +91,7 @@ ResamplingBuffer buf1 put1 get1 *-* ResamplingBuffer buf2 put2 get2 = Resampling
       Result s2' d <- get2 theTimeInfo s2
       pure $! Result (JointState s1' s2') (b, d)
   }
+{-# INLINE (*-*) #-}
 
 infixl 4 &-&
 
@@ -99,6 +102,7 @@ infixl 4 &-&
   ResamplingBuffer m cl1 cl2  a     c ->
   ResamplingBuffer m cl1 cl2  a (b, c)
 resBuf1 &-& resBuf2 = arr (\a -> (a, a)) ^->> resBuf1 *-* resBuf2
+{-# INLINE (&-&) #-}
 
 {- | Given a 'ResamplingBuffer' where the output type depends on the input type polymorphically,
    we can produce a timestamped version that simply annotates every input value
@@ -109,6 +113,7 @@ timestamped ::
   (forall b. ResamplingBuffer m cl clf b (f b)) ->
   ResamplingBuffer m cl clf a (f (a, TimeInfo cl))
 timestamped resBuf = (clId &&& timeInfo) ^->> resBuf
+{-# INLINE timestamped #-}
 
 infixl 4 |-|
 
@@ -143,6 +148,7 @@ ResamplingBuffer stateL putL getL |-| ResamplingBuffer stateR putR getR =
         Result sR' c <- getR theTimeInfo sR
         pure $! Result (JointState (JointState lastTimeMaybeL sL') (JointState lastTimeMaybeR sR')) (b, c)
     }
+{-# INLINE (|-|) #-}
 
 infixl 4 ||-||
 
@@ -177,6 +183,7 @@ ResamplingBuffer stateL putL getL ||-|| ResamplingBuffer stateR putR getR =
             Result sR' b <- getR (theTimeInfo & retag (const tagR) & fixSinceLast lastTimeMaybeR) sR
             pure $! Result (JointState (JointState lastTimeMaybeL sL) (JointState (Just now) sR')) b
     }
+{-# INLINE (||-||) #-}
 
 -- | Helper function for 'ResamplingBuffer's over 'ParallelClock's to fix the 'sinceLast' field of the 'TimeInfo'.
 fixSinceLast :: (TimeDomain (Time cl)) => Maybe (Time cl) -> TimeInfo cl -> TimeInfo cl

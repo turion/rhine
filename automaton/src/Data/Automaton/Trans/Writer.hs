@@ -28,6 +28,7 @@ writerS ::
   Automaton m a (w, b) ->
   Automaton (WriterT w m) a b
 writerS = withAutomaton $ \f a -> WriterT $ (\(Result s (w, b)) -> (Result s b, w)) <$> f a
+{-# INLINE writerS #-}
 
 {- | Convert a 'WriterT' effect into an extra log output.
 
@@ -40,3 +41,4 @@ runWriterS ::
 runWriterS = withAutomaton $ \f a ->
   (\(Result s b, w) -> Result s (w, b))
     <$> runWriterT (f a)
+{-# INLINE runWriterS #-}

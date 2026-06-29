@@ -65,6 +65,7 @@ newtype FilterAutomaton m f a b = FilterAutomaton
 -- | Create a 'FilterAutomaton' that ignores its input from a 'FilterStream'.
 fromFilterStream :: (Monad m) => FilterStream m f a -> FilterAutomaton m f any a
 fromFilterStream = FilterAutomaton . fromStream . getFilterStream
+{-# INLINE fromFilterStream #-}
 
 {- | Create a 'FilterStream' from a 'FilterAutomaton'.
 
@@ -72,14 +73,17 @@ The current input can be read as an effect in 'ReaderT'.
 -}
 toFilterStream :: (Functor m) => FilterAutomaton m f a b -> FilterStream (ReaderT a m) f b
 toFilterStream = FilterStream . toStreamT . getFilterAutomaton
+{-# INLINE toFilterStream #-}
 
 -- | Use a filtering function to create a 'FilterAutomaton'.
 arrFilter :: (Monad m) => (a -> f b) -> FilterAutomaton m f a b
 arrFilter = FilterAutomaton . arr
+{-# INLINE arrFilter #-}
 
 -- | Filter the input according to a predicate.
 filterS :: (Monad m, Filterable f, Applicative f) => (a -> Bool) -> FilterAutomaton m f a a
 filterS f = filter f id'
+{-# INLINE filterS #-}
 
 {- | Given an @f@-effect in the step, push it into the output type.
 
