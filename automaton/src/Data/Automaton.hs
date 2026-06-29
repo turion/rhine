@@ -13,7 +13,7 @@ module Data.Automaton where
 import Control.Applicative (Alternative (..))
 import Control.Arrow
 import Control.Category
-import Control.Monad ((<=<))
+import Control.Monad ((<=<), (>=>))
 import Control.Monad.Fix (MonadFix (mfix))
 import Data.Coerce (coerce)
 import Data.Function ((&))
@@ -488,20 +488,29 @@ instance (Monad m) => Traversing (Automaton m) where
   wander f (Automaton (Stateless m)) = Automaton $ Stateless $ ReaderT $ f $ runReaderT m
   {-# INLINE wander #-}
 
+-- | 'unleft' retries the automaton upon 'Right'
 instance (Monad m) => Cochoice (Automaton m) where
-  unleft = handleAutomaton $ \StreamT {state, step} ->
-    let
-      go s ea = do
-        Result s' ebd <- runReaderT (step s) ea
-        case ebd of
-          Left b -> pure $ Result s' b
-          Right d -> go s $ Right d
-     in
-      StreamT
-        { state
-        , step = \s -> ReaderT $ \a -> go s $ Left a
-        }
+  unleft = \case
+    Automaton {getAutomaton = Stateful StreamT {state, step}} ->
+      let
+        go s ea = do
+          Result s' ebd <- runReaderT (step s) ea
+          case ebd of
+            Left b -> pure $ Result s' b
+            Right d -> go s $ Right d
+      in
+        Automaton $ Stateful $ StreamT
+          { state
+          , step = \s -> ReaderT $ \a -> go s $ Left a
+          }
+    Automaton {getAutomaton = Stateless (ReaderT f)} -> Automaton $ Stateless $ ReaderT $ \a ->
+      let go = f >=> either pure (go . Right)
+      in go $ Left a
   {-# INLINE unleft #-}
+
+  -- Repeat default definition of 'unright' to inline it
+  unright = unleft . dimap (either Right Left) (either Right Left)
+  {-# INLINE unright #-}
 
 -- ** Traversing automata
 
