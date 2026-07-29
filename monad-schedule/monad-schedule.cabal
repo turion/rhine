@@ -62,7 +62,7 @@ test-suite test
   hs-source-dirs: test
   build-depends:
     HUnit ^>=1.6,
-    QuickCheck >=2.14 && <2.16,
+    QuickCheck >=2.14 && <2.17,
     generic-arbitrary ^>=1.0,
     monad-schedule,
     test-framework ^>=0.8,
