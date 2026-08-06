@@ -57,7 +57,7 @@ jobs:
     name: Haskell GHC ${{ matrix.ghc }} cabal
     steps:
       - uses: actions/checkout@v7
-      - uses: haskell-actions/setup@v2.11.0
+      - uses: haskell-actions/setup@v2.12.0
         id: setup
         with:
           ghc-version: ${{ matrix.ghc }}
