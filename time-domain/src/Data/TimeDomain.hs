@@ -24,7 +24,7 @@ where
 import Data.Monoid (Sum (..))
 
 -- time
-import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
+import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime, NominalDiffTime)
 
 -- groups
 import Data.Group (Group (..))
@@ -86,13 +86,24 @@ class (Group d) => TimeDifference d where
 
 -- | Differences between 'UTCTime's are measured in Secondss.
 instance TimeDomain UTCTime where
-  type Diff UTCTime = Seconds Double
+  type Diff UTCTime = NominalDiffTime
 
-instance RightAction (Seconds Double) UTCTime where
-  actRight = flip $ addUTCTime . realToFrac . getSeconds
+instance TimeDifference NominalDiffTime
 
-instance RightTorsor (Seconds Double) UTCTime where
-  differenceRight t1 t2 = Seconds $ realToFrac $ diffUTCTime t1 t2
+instance RightAction NominalDiffTime UTCTime where
+  actRight = flip addUTCTime
+
+instance RightTorsor NominalDiffTime UTCTime where
+  differenceRight = diffUTCTime
+
+instance Semigroup NominalDiffTime where
+    (<>) = (+)
+
+instance Monoid NominalDiffTime where
+    mempty = 0
+
+instance Group NominalDiffTime where
+    invert = negate
 
 instance TimeDifference () where
   zero = ()
