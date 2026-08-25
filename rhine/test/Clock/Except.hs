@@ -92,7 +92,7 @@ catchClockTests =
 
 -- ** Clock failing at init
 
-{- | This clock throws an exception at initialization.
+{- | This clock throws an exception on the first step.
 
 Useful for testing clock initialization.
 -}
@@ -101,8 +101,8 @@ data FailingClock = FailingClock
 instance (Monad m) => Clock (ExceptT () m) FailingClock where
   type Time FailingClock = UTCTime
   type Tag FailingClock = ()
-  initClock FailingClock = throwE ()
-  {-# INLINE initClock #-}
+  runClock = constM $ throwE ()
+  {-# INLINE runClock #-}
 
 instance GetClockProxy FailingClock
 

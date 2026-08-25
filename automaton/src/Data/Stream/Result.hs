@@ -7,6 +7,9 @@ module Data.Stream.Result where
 import Data.Bifunctor (Bifunctor (..))
 
 -- automaton
+
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Trans.Class (MonadTrans (..))
 import Data.Stream.Internal
 
 {- | A tuple that is strict in its first argument.
@@ -42,6 +45,17 @@ instance (Monad m) => Applicative (ResultStateT s m) where
     Result s' f <- mf s
     Result s'' a <- ma s'
     pure (Result s'' (f a))
+
+instance (Monad m) => Monad (ResultStateT s m) where
+  ResultStateT ma >>= f = ResultStateT $ \s -> do
+    Result s' a <- ma s
+    getResultStateT (f a) s'
+
+instance MonadTrans (ResultStateT s) where
+  lift ma = ResultStateT $ \s -> Result s <$> ma
+
+instance (MonadIO m) => MonadIO (ResultStateT s m) where
+  liftIO = lift . liftIO
 
 -- | Like 'unzip'.
 unzipResult :: (Functor f) => f (Result s a) -> Result (f s) (f a)

@@ -3,7 +3,6 @@ module Automaton.Schedule where
 -- base
 import Control.Category ((>>>))
 import Control.Concurrent (threadDelay, yield)
-import Control.Monad (replicateM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Identity (Identity (runIdentity))
 import Data.Foldable (Foldable (..))
@@ -43,7 +42,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Data.Automaton (Automaton, accumulateWith, arrM, constM, embed, hoistS)
 import Data.Automaton qualified as Automaton
 import Data.Automaton.Schedule (FinalizeT (..), MonadSchedule, schedule)
-import Data.Automaton.Schedule.Trans (ScheduleT, runScheduleT, runSkipS, runYield, skip, wait)
+import Data.Automaton.Schedule.Trans (ScheduleT, runScheduleT, wait)
 import Data.Automaton.Trans.Maybe (runMaybeS)
 import Data.Stream.Result (Result (..))
 import Data.TimeDomain (Seconds (..))
@@ -85,24 +84,6 @@ tests =
                       else FinalizeT $ MaybeT $ pure $ Just $ Result (k + 1) (startVal + stepVal * k :: Int)
                 outputs = embedFinalize (schedule $ mkCounting 10 10 2 :| [mkCounting 100 100 3])
             outputs @?= [10, 100, 20, 200, 300]
-        ]
-    , testGroup
-        "SkipT"
-        [ testCase "SkipT skips an output step" $ do
-            let output = runIdentity $ embed (runSkipS $ constM (waitSkip 5 $> (5 :: Int)) >>> accumulateWith (+) 0) $ replicate 10 ()
-            output @?= [Nothing, Nothing, Nothing, Nothing, Just 5, Nothing, Nothing, Nothing, Nothing, Just 10]
-        , testCase "schedule waits chronologically (mirrored)" $ do
-            let output = runIdentity $ embed (runSkipS $ constM (waitSkip 3 $> (3 :: Int)) >>> accumulateWith (+) 0) $ replicate 10 ()
-            output @?= [Nothing, Nothing, Just 3, Nothing, Nothing, Just 6, Nothing, Nothing, Just 9, Nothing]
-        ]
-    , testGroup
-        "Yield"
-        [ testCase "schedule waits chronologically" $ do
-            let output = runYield $ embed (schedule $ (\n -> constM (waitSkip n $> n) >>> accumulateWith (+) 0) <$> 3 :| [5]) $ replicate 10 ()
-            output @?= [3, 5, 6, 9, 10, 12, 15, 15, 18, 20]
-        , testCase "schedule waits chronologically (mirrored)" $ do
-            let output = runYield $ embed (schedule $ (\n -> constM (waitSkip n $> n) >>> accumulateWith (+) 0) <$> 5 :| [3]) $ replicate 10 ()
-            output @?= [3, 5, 6, 9, 10, 12, 15, 15, 18, 20]
         ]
     , scheduleTests
         "ScheduleT IO busy"
@@ -193,7 +174,6 @@ tests =
         ]
     ]
   where
-    waitSkip n = replicateM (n - 1) skip
     -- \| Automaton in FinalizeT that counts down from n, outputting each value, then terminates.
     make :: Int -> Automaton (FinalizeT Identity) () Int
     make n = Automaton.unfoldM n $ const $ \k ->

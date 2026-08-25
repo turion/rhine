@@ -32,15 +32,14 @@ common opts
     base >=4.18 && <4.22,
     changeset ^>=0.2,
     containers >=0.5,
-    free >=5.1,
     list-transformer ^>=1.1,
     mmorph ^>=1.2,
     mtl >=2.2 && <2.4,
+    nonempty-containers ^>=0.3,
     profunctors ^>=5.6,
     selective ^>=0.7,
     semialign >=1.2 && <=1.4,
     simple-affine-space ^>=0.2,
-    sop-core ^>=0.5,
     these >=1.1 && <=1.3,
     time-domain ^>=1.8,
     transformers >=0.5,
@@ -72,6 +71,7 @@ common opts
     RankNTypes
     ScopedTypeVariables
     StandaloneDeriving
+    StrictData
     TupleSections
     TypeApplications
     TypeFamilies
@@ -97,6 +97,7 @@ library
     Data.Automaton.Trans.Reader
     Data.Automaton.Trans.State
     Data.Automaton.Trans.Writer
+    Data.Automaton.Trans.Writer.CPS
     Data.Stream
     Data.Stream.Except
     Data.Stream.Filter

@@ -54,9 +54,7 @@ flow ::
   ) =>
   Rhine m cl () () ->
   m void
-flow rhine = do
-  automaton <- eraseClock rhine
-  reactimate $ automaton >>> arr (const ())
+flow rhine = reactimate $ eraseClock rhine >>> arr (const ())
 {-# INLINE flow #-}
 
 {- | Like 'flow', but with the type signature specialized to @m ()@.
@@ -73,6 +71,7 @@ flow_ ::
   Rhine m cl () () ->
   m ()
 flow_ = flow
+{-# INLINE flow_ #-}
 
 {- | Run a synchronous 'ClSF' with its clock as a main loop,
    similar to Yampa's, or Dunai's, 'reactimate'.

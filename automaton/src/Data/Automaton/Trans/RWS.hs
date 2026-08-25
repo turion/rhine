@@ -29,6 +29,7 @@ rwsS ::
 rwsS = withAutomaton $ \f a -> RWST $ \r s ->
   (\(Result c (w, s', b)) -> (Result c b, s', w))
     <$> f (r, s, a)
+{-# INLINE rwsS #-}
 
 -- | Run the 'RWST' layer by making the state variables explicit.
 runRWSS ::
@@ -38,3 +39,4 @@ runRWSS ::
 runRWSS = withAutomaton $ \f (r, s, a) ->
   (\(Result c b, s', w) -> Result c (w, s', b))
     <$> runRWST (f a) r s
+{-# INLINE runRWSS #-}

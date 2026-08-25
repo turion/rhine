@@ -16,7 +16,7 @@ import Control.Arrow
 import GHC.TypeLits
 
 -- automaton
-import Data.Automaton (accumulateWith, constM)
+import Data.Automaton (accumulateWith, arrM)
 import Data.Automaton.Schedule.Trans (ScheduleT, wait)
 import Data.Maybe (fromMaybe)
 import Data.Vector.Sized (Vector, fromList)
@@ -42,20 +42,17 @@ data FixedStep (n :: Nat) where
 -- | Extract the type-level natural number as an integer.
 stepsize :: FixedStep n -> Seconds Integer
 stepsize fixedStep@FixedStep = Seconds $ natVal fixedStep
+{-# INLINE stepsize #-}
 
-instance (Monad m) => Clock (ScheduleT (Seconds Integer) m) (FixedStep n) where
+instance (Monad m, time ~ Seconds Integer) => Clock (ScheduleT time m) (FixedStep n) where
   type Time (FixedStep n) = Seconds Integer
   type Tag (FixedStep n) = ()
-  initClock cl =
+  runClock = proc cl -> do
     let step = stepsize cl
-     in pure
-          ( constM (wait (fromIntegral step))
-              >>> arr (const step)
-              >>> accumulateWith (+) 0
-              >>> arr (,())
-          , 0
-          )
-  {-# INLINE initClock #-}
+    arrM $ wait . fromIntegral -< step
+    n <- accumulateWith (+) 0 -< step
+    returnA -< (n, ())
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (FixedStep n)
 
@@ -71,3 +68,4 @@ downsampleFixedStep ::
 downsampleFixedStep = collect >>-^ arr (fromList >>> assumeSize)
   where
     assumeSize = fromMaybe $ error "downsampleFixedStep: Internal error. Please report this as a bug: https://github.com/turion/rhine/issues"
+{-# INLINE downsampleFixedStep #-}
