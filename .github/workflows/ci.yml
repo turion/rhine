@@ -169,10 +169,28 @@ jobs:
 
   success:
     name: Successfully build and test on all systems
+    # Every job defined above must be listed here: `success` is the one check
+    # required by branch protection, and it can only fail for a job that this
+    # list names. A bare `needs:` list is not enough either — GitHub *skips* a
+    # job whose dependency failed, and branch protection counts a skipped
+    # required check as passing, so the gate would go green on a red build.
+    # `if: always()` plus `alls-green` is what prevents that: the action's
+    # default policy accepts only `success` for every job handed to it.
+    # Do not change `always()` to `!cancelled()` — a cancelled dependency
+    # would then skip this job, and a skipped required check reports Success.
     needs:
+      - lint
+      - fourmolu
+      - generateMatrix
       - build-cabal
+      - generate-flake-ghc-matrix
       - build-flake
+      - cabal-check
+    if: always()
     runs-on:
       - ubuntu-latest
     steps:
-      - run: echo "Success"
+      - name: Fail if any dependency did not succeed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
