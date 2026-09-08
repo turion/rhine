@@ -37,12 +37,14 @@ import Data.Automaton.Trans.Except (
 -- | Throw the exception immediately.
 exit :: (Monad m) => Automaton (MaybeT m) a b
 exit = constM $ MaybeT $ return Nothing
+{-# INLINE exit #-}
 
 -- | Throw the exception when the condition becomes true on the input.
 exitWhen :: (Monad m) => (a -> Bool) -> Automaton (MaybeT m) a a
 exitWhen condition = proc a -> do
   _ <- exitIf -< condition a
   returnA -< a
+{-# INLINE exitWhen #-}
 
 -- | Exit when the incoming value is 'True'.
 exitIf :: (Monad m) => Automaton (MaybeT m) Bool ()
@@ -50,14 +52,17 @@ exitIf = proc condition ->
   if condition
     then exit -< ()
     else returnA -< ()
+{-# INLINE exitIf #-}
 
 -- | @Just a@ is passed along, 'Nothing' causes the whole 'Automaton' to exit.
 maybeExit :: (Monad m) => Automaton (MaybeT m) (Maybe a) a
 maybeExit = inMaybeT
+{-# INLINE maybeExit #-}
 
 -- | Embed a 'Maybe' value in the 'MaybeT' layer. Identical to 'maybeExit'.
 inMaybeT :: (Monad m) => Automaton (MaybeT m) (Maybe a) a
 inMaybeT = arrM $ MaybeT . return
+{-# INLINE inMaybeT #-}
 
 -- * Catching Maybe exceptions
 
@@ -67,6 +72,7 @@ untilMaybe automaton cond = proc a -> do
   b <- liftS automaton -< a
   c <- liftS cond -< b
   inMaybeT -< if c then Nothing else Just b
+{-# INLINE untilMaybe #-}
 
 {- | When an exception occurs in the first 'automaton', the second 'automaton' is executed
 from there.
@@ -77,6 +83,7 @@ catchMaybe ::
   Automaton m a b ->
   Automaton m a b
 catchMaybe automaton1 automaton2 = safely $ try (maybeToExceptS automaton1) >> safe automaton2
+{-# INLINE catchMaybe #-}
 
 -- * Converting to and from 'MaybeT'
 
@@ -87,12 +94,14 @@ exceptToMaybeS ::
   Automaton (MaybeT m) a b
 exceptToMaybeS =
   hoistS $ MaybeT . fmap (either (const Nothing) Just) . runExceptT
+{-# INLINE exceptToMaybeS #-}
 
 {- | Converts a list to an 'Automaton' in 'MaybeT', which outputs an element of the
 list at each step, throwing 'Nothing' when the list ends.
 -}
 listToMaybeS :: (Functor m, Monad m) => [b] -> Automaton (MaybeT m) a b
 listToMaybeS = exceptToMaybeS . runAutomatonExcept . listToAutomatonExcept
+{-# INLINE listToMaybeS #-}
 
 -- * Running 'MaybeT'
 
@@ -105,6 +114,7 @@ runMaybeS automaton = exceptS (maybeToExceptS automaton) >>> arr eitherToMaybe
   where
     eitherToMaybe (Left ()) = Nothing
     eitherToMaybe (Right b) = Just b
+{-# INLINE runMaybeS #-}
 
 -- | 'reactimate's an 'Automaton' in the 'MaybeT' monad until it throws 'Nothing'.
 reactimateMaybe ::
@@ -112,9 +122,11 @@ reactimateMaybe ::
   Automaton (MaybeT m) () () ->
   m ()
 reactimateMaybe automaton = reactimateExcept $ try $ maybeToExceptS automaton
+{-# INLINE reactimateMaybe #-}
 
 {- | Run an 'Automaton' fed from a list, discarding results. Useful when one needs to
 combine effects and streams (i.e., for testing purposes).
 -}
 embed_ :: (Functor m, Monad m) => Automaton m a () -> [a] -> m ()
 embed_ automaton as = reactimateMaybe $ listToMaybeS as >>> liftS automaton
+{-# INLINE embed_ #-}

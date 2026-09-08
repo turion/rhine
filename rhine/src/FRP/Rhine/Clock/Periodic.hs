@@ -48,8 +48,8 @@ data Periodic (v :: [Nat]) where
   Periodic :: Periodic (n : ns)
 
 instance
-  (Monad m, NonemptyNatList v) =>
-  Clock (ScheduleT (Seconds Integer) m) (Periodic v)
+  (Monad m, NonemptyNatList v, time ~ Seconds Integer) =>
+  Clock (ScheduleT time m) (Periodic v)
   where
   type Time (Periodic v) = Seconds Integer
   type Tag (Periodic v) = ()

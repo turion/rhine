@@ -310,8 +310,8 @@ joinS = arrM id
 {-# INLINE joinS #-}
 
 -- | Apply an arbitrary monad morphism to an automaton.
-hoistS :: (Monad m) => (forall x. m x -> n x) -> Automaton m a b -> Automaton n a b
-hoistS morph (Automaton automaton) = Automaton $ hoist (mapReaderT morph) automaton
+hoistS :: (Functor m) => (forall x. m x -> n x) -> Automaton m a b -> Automaton n a b
+hoistS morph (Automaton automaton) = Automaton $ StreamOptimized.hoist' (mapReaderT morph) automaton
 {-# INLINE hoistS #-}
 
 newtype MonadMorph m n = MonadMorph (forall x. m x -> n x)

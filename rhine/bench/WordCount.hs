@@ -6,6 +6,7 @@ module WordCount where
 
 -- base
 import Control.Exception
+import Data.Functor (void)
 import Data.IORef (modifyIORef', newIORef, readIORef)
 import Data.Monoid (Sum (..))
 import GHC.IO.Handle hiding (hGetContents)
@@ -14,7 +15,7 @@ import System.IO.Error (isEOFError)
 import Prelude hiding (getContents, getLine, words)
 
 -- text
-import Data.Text (words)
+import Data.Text (Text, words)
 import Data.Text.IO (getLine)
 import Data.Text.Lazy qualified as Lazy
 import Data.Text.Lazy.IO (hGetContents)
@@ -30,7 +31,9 @@ import FRP.Rhine
 import FRP.Rhine.Clock.Except (
   DelayIOError,
   ExceptClock (..),
+  WithExceptClock,
   delayIOError,
+  withExceptClock,
  )
 import Paths_rhine
 
@@ -41,6 +44,7 @@ benchmarks =
   bgroup
     "WordCount"
     [ bench "rhine" $ nfIO rhineWordCount
+    , bench "rhine multirate" $ nfIO multiRate
     , bench "automaton" $ nfIO automatonWordCount
     , bgroup
         "Text"
@@ -144,3 +148,25 @@ textLazy = do
   inputFileName <- testFile
   h <- openFile inputFileName ReadMode
   length . Lazy.words <$> hGetContents h
+
+type EmitWordsClock = WithExceptClock IO IOError (Either IOError Int) (DelayIOError (ExceptClock StdinClock IOError) IOError)
+emitWordsClock :: EmitWordsClock
+emitWordsClock = withExceptClock (const (Right 0)) (delayIOError (ExceptClock StdinClock) id)
+
+multiRate :: IO Int
+multiRate = do
+  Left eWords <-
+    withInput $
+      runExceptT $
+        flow $
+          tagS @@ emitWordsClock
+            >-- collect
+            --> countWords @@ Busy
+  case eWords of
+    Left e -> throwIO e
+    Right nWords -> pure nWords
+  where
+    countWords :: ClSF (ExceptT (Either IOError Int) IO) Busy [Either IOError Text] ()
+    countWords = hoistClSF (withExceptT Right) $ void $ traverseS $ feedback 0 $ proc (et, nWords) -> do
+      throwOn' -< (either isEOFError (const False) et, nWords)
+      returnA -< ((), nWords + either (const 0) (length . words) et)

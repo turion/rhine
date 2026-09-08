@@ -73,6 +73,7 @@ flow_ ::
   Rhine m cl () () ->
   m ()
 flow_ = flow
+{-# INLINE flow_ #-}
 
 {- | Run a synchronous 'ClSF' with its clock as a main loop,
    similar to Yampa's, or Dunai's, 'reactimate'.
