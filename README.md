@@ -177,7 +177,9 @@ See [`Contributing.md`](./Contributing.md) for details.
   If you have questions, don't hesitate to ask on Github.
 
 On failure of the scheduled build or flake-lock update workflows, an issue is automatically opened and the coding agent is asked to triage and recommend a fix.
+
 The triage issue links back to [`turion/upkeep`](https://github.com/turion/upkeep) for the governing maintenance policy and skills that the agent should follow.
+
 Complex or ambiguous fixes are left for human review; the agent should not merge anything itself here.
 
 ## Related projects
