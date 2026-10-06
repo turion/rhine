@@ -42,6 +42,7 @@ import FRP.Rhine.Clock
 -- | Read the environment variable, i.e. the 'TimeInfo'.
 timeInfo :: (Monad m) => ClSF m cl a (TimeInfo cl)
 timeInfo = constM ask
+{-# INLINE timeInfo #-}
 
 {- | Utility to apply functions to the current 'TimeInfo',
 such as record selectors:
@@ -53,22 +54,27 @@ printAbsoluteTime = timeInfoOf absolute >>> arrMCl print
 -}
 timeInfoOf :: (Monad m) => (TimeInfo cl -> b) -> ClSF m cl a b
 timeInfoOf f = constM $ asks f
+{-# INLINE timeInfoOf #-}
 
 -- | Continuously return the time difference since the last tick.
 sinceLastS :: (Monad m) => ClSF m cl a (Diff (Time cl))
 sinceLastS = timeInfoOf sinceLast
+{-# INLINE sinceLastS #-}
 
 -- | Continuously return the time difference since clock initialisation.
 sinceInitS :: (Monad m) => ClSF m cl a (Diff (Time cl))
 sinceInitS = timeInfoOf sinceInit
+{-# INLINE sinceInitS #-}
 
 -- | Continuously return the absolute time.
 absoluteS :: (Monad m) => ClSF m cl a (Time cl)
 absoluteS = timeInfoOf absolute
+{-# INLINE absoluteS #-}
 
 -- | Continuously return the tag of the current tick.
 tagS :: (Monad m) => ClSF m cl a (Tag cl)
 tagS = timeInfoOf tag
+{-# INLINE tagS #-}
 
 {- |
 Calculate the time passed since this 'ClSF' was instantiated,
@@ -101,6 +107,7 @@ sinceStart =
   absoluteS >>> proc time -> do
     startTime <- keepFirst -< time
     returnA -< time `diffTime` startTime
+{-# INLINE sinceStart #-}
 
 -- * Useful aliases
 
@@ -134,6 +141,7 @@ infixl 6 <-<
   cat a b ->
   cat a c
 (<-<) = (<<<)
+{-# INLINE (<-<) #-}
 
 {- | Output a constant value.
 Specialises e.g. to this type signature:
@@ -142,10 +150,12 @@ Specialises e.g. to this type signature:
 -}
 arr_ :: (Arrow a) => b -> a c b
 arr_ = arr . const
+{-# INLINE arr_ #-}
 
 -- | The identity synchronous stream function.
 clId :: (Monad m) => ClSF m cl a a
 clId = Control.Category.id
+{-# INLINE clId #-}
 
 -- * Basic signal processing components
 
@@ -164,6 +174,7 @@ integralFrom ::
 integralFrom v0 = proc v -> do
   _sinceLast <- timeInfoOf sinceLast -< ()
   sumFrom v0 -< _sinceLast *^ v
+{-# INLINE integralFrom #-}
 
 -- | Euler integration, with zero initial offset.
 integral ::
@@ -173,6 +184,7 @@ integral ::
   ) =>
   BehaviorF m td v v
 integral = integralFrom zeroVector
+{-# INLINE integral #-}
 
 {- | The output of @derivativeFrom v0@ is the numerical derivative of the input,
    with a Newton difference quotient.
@@ -189,6 +201,7 @@ derivativeFrom v0 = proc v -> do
   vLast <- delay v0 -< v
   TimeInfo {..} <- timeInfo -< ()
   returnA -< (v ^-^ vLast) ^/ sinceLast
+{-# INLINE derivativeFrom #-}
 
 -- | Numerical derivative with input initialised to zero.
 derivative ::
@@ -198,6 +211,7 @@ derivative ::
   ) =>
   BehaviorF m td v v
 derivative = derivativeFrom zeroVector
+{-# INLINE derivative #-}
 
 {- | Like 'derivativeFrom', but uses three samples to compute the derivative.
    Consequently, it is delayed by one sample.
@@ -215,6 +229,7 @@ threePointDerivativeFrom v0 = proc v -> do
   dv <- derivativeFrom v0 -< v
   dv' <- delay zeroVector -< dv
   returnA -< (dv ^+^ dv') ^/ 2
+{-# INLINE threePointDerivativeFrom #-}
 
 {- | Like 'threePointDerivativeFrom',
    but with the initial position initialised to 'zeroVector'.
@@ -227,6 +242,7 @@ threePointDerivative ::
   ) =>
   BehaviorF m td v v
 threePointDerivative = threePointDerivativeFrom zeroVector
+{-# INLINE threePointDerivative #-}
 
 -- ** Averaging and filters
 
@@ -251,6 +267,7 @@ weightedAverageFrom v0 = feedback v0 $ proc ((v, weight), vAvg) -> do
   let
     vAvg' = weight *^ vAvg ^+^ (1 - weight) *^ v
   returnA -< (vAvg', vAvg')
+{-# INLINE weightedAverageFrom #-}
 
 {- | An exponential moving average, or low pass.
    It will average out, or filter,
@@ -273,6 +290,7 @@ averageFrom v0 t = proc v -> do
   let
     weight = exp $ -(sinceLast / t)
   weightedAverageFrom v0 -< (v, weight)
+{-# INLINE averageFrom #-}
 
 -- | An average, or low pass, initialised to zero.
 average ::
@@ -285,6 +303,7 @@ average ::
   Diff td ->
   BehaviourF m td v v
 average = averageFrom zeroVector
+{-# INLINE average #-}
 
 {- | A linearised version of 'averageFrom'.
    It is more efficient, but only accurate
@@ -307,6 +326,7 @@ averageLinFrom v0 t = proc v -> do
   let
     weight = t / (sinceLast + t)
   weightedAverageFrom v0 -< (v, weight)
+{-# INLINE averageLinFrom #-}
 
 -- | Linearised version of 'average'.
 averageLin ::
@@ -319,6 +339,7 @@ averageLin ::
   Diff td ->
   BehaviourF m td v v
 averageLin = averageLinFrom zeroVector
+{-# INLINE averageLin #-}
 
 -- *** First-order filters
 
@@ -332,6 +353,7 @@ lowPass ::
   Diff td ->
   BehaviourF m td v v
 lowPass = average
+{-# INLINE lowPass #-}
 
 -- | Filters out frequencies below @1 / (2 * pi * t)@.
 highPass ::
@@ -345,6 +367,7 @@ highPass ::
   Diff td ->
   BehaviourF m td v v
 highPass t = clId ^-^ lowPass t
+{-# INLINE highPass #-}
 
 -- | Filters out frequencies other than @1 / (2 * pi * t)@.
 bandPass ::
@@ -358,6 +381,7 @@ bandPass ::
   Diff td ->
   BehaviourF m td v v
 bandPass t = lowPass t >>> highPass t
+{-# INLINE bandPass #-}
 
 -- | Filters out the frequency @1 / (2 * pi * t)@.
 bandStop ::
@@ -371,6 +395,7 @@ bandStop ::
   Diff td ->
   BehaviourF m td v v
 bandStop t = clId ^-^ bandPass t
+{-# INLINE bandStop #-}
 
 -- * Delays
 
@@ -379,6 +404,7 @@ keepFirst :: (Monad m) => ClSF m cl a a
 keepFirst = safely $ do
   a <- try throwS
   safe $ arr $ const a
+{-# INLINE keepFirst #-}
 
 {- | Remembers all input values that arrived within a given time window.
    New values are appended left.
@@ -392,6 +418,7 @@ historySince dTime = readerS $ accumulateWith appendValue empty
   where
     appendValue (ti, a) tias = takeWhileL (recentlySince ti) $ (ti, a) <| tias
     recentlySince ti (ti', _) = diffTime (absolute ti) (absolute ti') < dTime
+{-# INLINE historySince #-}
 
 {- | Delay a signal by certain time span,
    initialising with the first input.
@@ -405,6 +432,7 @@ delayBy dTime = historySince dTime >>> arr (viewr >>> safeHead) >>> lastS (error
   where
     safeHead EmptyR = Nothing
     safeHead (_ :> a) = Just a
+{-# INLINE delayBy #-}
 
 -- * Timers
 
@@ -422,6 +450,7 @@ timer diff = proc _ -> do
   time <- sinceStart -< ()
   _ <- throwOn () -< time > diff
   returnA -< time
+{-# INLINE timer #-}
 
 -- | Like 'timer_', but doesn't output the remaining time at all.
 timer_ ::
@@ -432,6 +461,7 @@ timer_ ::
   Diff td ->
   BehaviorF (ExceptT () m) td a ()
 timer_ diff = timer diff >>> arr (const ())
+{-# INLINE timer_ #-}
 
 -- | Like 'timer', but divides the remaining time by the total time.
 scaledTimer ::
@@ -443,3 +473,4 @@ scaledTimer ::
   Diff td ->
   BehaviorF (ExceptT () m) td a (Diff td)
 scaledTimer diff = timer diff >>> arr (/ diff)
+{-# INLINE scaledTimer #-}

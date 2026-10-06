@@ -72,6 +72,8 @@ common opts
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType
+    ScopedTypeVariables
+    StrictData
     TupleSections
     TypeApplications
     TypeFamilies
@@ -115,7 +117,6 @@ library
     FRP.Rhine.Clock.Realtime.Never
     FRP.Rhine.Clock.Realtime.Stdin
     FRP.Rhine.Clock.Select
-    FRP.Rhine.Clock.Skip
     FRP.Rhine.Clock.Trivial
     FRP.Rhine.Clock.Util
     FRP.Rhine.Reactimation
@@ -219,6 +220,7 @@ test-suite benchmark-test
   other-modules:
     Paths_rhine
     Sum
+    SumMultirate
     WordCount
 
   build-depends:

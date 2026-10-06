@@ -10,6 +10,4 @@ runScheduleRhinePure :: (Clock (Schedule (Seconds Integer)) cl, GetClockProxy cl
 runScheduleRhinePure rhine = evalSchedule . runRhine rhine
 
 runRhine :: (Clock m cl, GetClockProxy cl, Monad m) => Rhine m cl a b -> [a] -> m [Maybe b]
-runRhine rhine input = do
-  automaton <- eraseClock rhine
-  embed automaton input
+runRhine rhine = embed $ eraseClock rhine

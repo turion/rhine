@@ -58,19 +58,15 @@ instance (Monoid cl, Semigroup a) => Monoid (SelectClock cl a) where
 instance (Monad m, Clock m cl) => Clock m (SelectClock cl a) where
   type Time (SelectClock cl a) = Time cl
   type Tag (SelectClock cl a) = a
-  initClock SelectClock {..} = do
-    (runningClock, initialTime) <- initClock mainClock
-    let
-      runningSelectClock = filterS $ proc _ -> do
-        (time, tag) <- runningClock -< ()
-        returnA -< (time,) <$> select tag
-    return (runningSelectClock, initialTime)
-  {-# INLINE initClock #-}
+  runClock = filterS $ proc SelectClock {..} -> do
+    (time, tag) <- runClock -< mainClock
+    returnA -< (time,) <$> select tag
+  {-# INLINE runClock #-}
 
 instance GetClockProxy (SelectClock cl a)
 
 {- | Helper function that runs an 'Automaton' with 'Maybe' output
    until it returns a value.
 -}
-filterS :: (Monad m) => Automaton m () (Maybe b) -> Automaton m () b
+filterS :: (Monad m) => Automaton m a (Maybe b) -> Automaton m a b
 filterS = concatS . (>>> arr maybeToList)

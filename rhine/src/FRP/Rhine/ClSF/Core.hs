@@ -20,7 +20,7 @@ import Control.Arrow
 
 -- transformers
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader (ReaderT, mapReaderT, withReaderT)
+import Control.Monad.Trans.Reader (ReaderT (..), mapReaderT, withReaderT)
 
 -- automaton
 import Data.Automaton as X
@@ -95,15 +95,15 @@ liftClSFAndClock = hoistClSFAndClock lift
 {- | An automaton without dependency on time
    is a 'ClSF' for any clock.
 -}
-timeless :: (Monad m) => Automaton m a b -> ClSF m cl a b
-timeless = liftS
+timeless :: (Functor m) => Automaton m a b -> ClSF m cl a b
+timeless = hoistS $ ReaderT . const
 
 -- | Utility to lift Kleisli arrows directly to 'ClSF's.
-arrMCl :: (Monad m) => (a -> m b) -> ClSF m cl a b
+arrMCl :: (Functor m) => (a -> m b) -> ClSF m cl a b
 arrMCl = timeless . arrM
 
 -- | Version without input.
-constMCl :: (Monad m) => m b -> ClSF m cl a b
+constMCl :: (Functor m) => m b -> ClSF m cl a b
 constMCl = timeless . constM
 
 {- | Call a 'ClSF' every time the input is 'Just a'.

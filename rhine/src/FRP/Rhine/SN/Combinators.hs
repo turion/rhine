@@ -10,6 +10,8 @@ module FRP.Rhine.SN.Combinators where
 import Data.Functor ((<&>))
 
 -- rhine
+
+import Data.Profunctor (Profunctor (..))
 import FRP.Rhine.ClSF.Core
 import FRP.Rhine.Clock
 import FRP.Rhine.Clock.Proxy
@@ -23,7 +25,8 @@ import FRP.Rhine.Schedule
   => SN m cl a b
   ->          (b -> c)
   -> SN m cl a      c
-SN {getSN} >>>^ f = SN $ getSN <&> (>>> arr (fmap f))
+SN {getSN} >>>^ f = SN $ getSN <&> fmap f
+{-# INLINE (>>>^) #-}
 
 -- | Precompose a signal network with a pure function.
 (^>>>)
@@ -31,7 +34,8 @@ SN {getSN} >>>^ f = SN $ getSN <&> (>>> arr (fmap f))
   =>        (a -> b)
   -> SN m cl      b c
   -> SN m cl a      c
-f ^>>> SN {getSN} = SN $ getSN <&> (arr (fmap (fmap f)) >>>)
+f ^>>> SN {getSN} = SN $ lmap (fmap (fmap f)) getSN
+{-# INLINE (^>>>) #-}
 
 -- | Postcompose a signal network with a 'ClSF'.
 (>--^)
@@ -43,6 +47,7 @@ f ^>>> SN {getSN} = SN $ getSN <&> (arr (fmap (fmap f)) >>>)
   -> ClSF  m (Out cl)   b c
   -> SN    m      cl  a   c
 (>--^) = postcompose
+{-# INLINE (>--^) #-}
 
 -- | Precompose a signal network with a 'ClSF'.
 (^-->)
@@ -53,6 +58,7 @@ f ^>>> SN {getSN} = SN $ getSN <&> (arr (fmap (fmap f)) >>>)
   -> SN   m     cl    b c
   -> SN   m     cl  a   c
 (^-->) = precompose
+{-# INLINE (^-->) #-}
 
 -- | Compose two signal networks on the same clock in data-parallel.
 --   At one tick of @cl@, both networks are stepped.
@@ -61,10 +67,8 @@ f ^>>> SN {getSN} = SN $ getSN <&> (arr (fmap (fmap f)) >>>)
   => SN m cl  a      b
   -> SN m cl     c      d
   -> SN m cl (a, c) (b, d)
-SN sn1 **** SN sn2 = SN $ do
-  sn1' <- sn1
-  sn2' <- sn2
-  pure $ arr (\(time, tag, mac) -> ((time, tag, fst <$> mac), (time, tag, snd <$> mac))) >>> (sn1' *** sn2') >>> arr (\(mb, md) -> (,) <$> mb <*> md)
+SN sn1 **** SN sn2 = SN $ arr (\(time, tag, mac) -> ((time, tag, fst <$> mac), (time, tag, snd <$> mac))) >>> (sn1 *** sn2) >>> arr (\(mb, md) -> (,) <$> mb <*> md)
+{-# INLINE (****) #-}
 
 -- | Compose two signal networks on different clocks in clock-parallel.
 --   At one tick of @ParClock cl1 cl2@, one of the networks is stepped,
@@ -83,6 +87,7 @@ SN sn1 **** SN sn2 = SN $ do
   -> SN m                 clR  a b
   -> SN m (ParClock clL clR) a b
 (||||) = parallel
+{-# INLINE (||||) #-}
 
 -- | Compose two signal networks on different clocks in clock-parallel.
 --   At one tick of @ParClock cl1 cl2@, one of the networks is stepped,
@@ -99,3 +104,4 @@ SN sn1 **** SN sn2 = SN $ do
   -> SN m                 clR  a           c
   -> SN m (ParClock clL clR) a (Either b c)
 snL ++++ snR = (snL >>>^ Left) |||| (snR >>>^ Right)
+{-# INLINE (++++) #-}

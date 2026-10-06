@@ -24,18 +24,15 @@ module Data.Automaton.Schedule where
 -- base
 import Control.Arrow
 import Control.Concurrent (forkIO, newEmptyMVar, putMVar, takeMVar)
-import Control.Monad (forM_, guard, replicateM_)
+import Control.Monad (forM_, replicateM_)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Identity (Identity (..))
 import Data.Bifunctor qualified as Bifunctor
-import Data.Foldable1 (Foldable1 (foldrMap1))
+import Data.Foldable1 (Foldable1 (toNonEmpty))
 import Data.Function ((&))
 import Data.Functor ((<&>))
-import Data.Functor.Compose (Compose (..))
-import Data.Kind (Type)
-import Data.List qualified as List
 import Data.List.NonEmpty as N
-import Data.Maybe (maybeToList)
+import Data.Maybe (isNothing, maybeToList)
 import Data.Tuple (swap)
 
 -- transformers
@@ -44,26 +41,22 @@ import Control.Monad.Trans.Class (MonadTrans (..))
 import Control.Monad.Trans.Except (ExceptT (..))
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader (ReaderT (..))
-import Control.Monad.Trans.State.Strict (StateT (..), get)
+import Control.Monad.Trans.State.Strict (get, gets)
+import Control.Monad.Trans.State.Strict qualified as State
 import Control.Monad.Trans.Writer.CPS qualified as CPS
 import Control.Monad.Trans.Writer.Lazy qualified as Lazy
 import Control.Monad.Trans.Writer.Strict qualified as Strict
 
--- sop-core
-import Data.SOP (HCollapse (hcollapse), HSequence (htraverse'), I (..), K (..), NP (..), SListI, hmap, hzipWith)
-
 -- containers
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IM
-import Data.Sequence (Seq, ViewL (..), viewl)
-import Data.Sequence qualified as Seq
 import Data.Set qualified as S
+
+-- nonempty-containers
+import Data.Sequence.NonEmpty qualified as NESeq
 
 -- mmorph
 import Control.Monad.Morph (MFunctor)
-
--- witherable
-import Witherable ((<&?>))
 
 -- changeset
 import Control.Monad.Trans.Changeset (ChangesetT (..))
@@ -73,16 +66,16 @@ import Data.Monoid.RightAction (RightAction)
 import Data.TimeDomain (TimeDifference (..))
 
 -- automaton
-import Data.Automaton (Automaton (..), arrM, constM, feedback, hoistS, initialised, liftS, reactimate, withAutomaton_)
+import Data.Automaton (Automaton (..), arrM, constM, hoistS, initialised, liftS, mapMaybeS, reactimate, withAutomaton_)
 import Data.Automaton qualified as Automaton
-import Data.Automaton.Schedule.Trans (ScheduleT, SkipT, runScheduleS, runSkipS, scheduleS)
+import Data.Automaton.Schedule.Trans (ScheduleT, runScheduleS, scheduleS)
 import Data.Automaton.Trans.Except (exceptS)
 import Data.Automaton.Trans.Maybe (maybeExit, runMaybeS)
 import Data.Automaton.Trans.Reader (readerS, runReaderS)
 import Data.Automaton.Trans.State (modify, runStateS__)
 import Data.Stream (StreamT (..), concatS)
 import Data.Stream.Optimized (OptimizedStreamT (Stateful), toStreamT)
-import Data.Stream.Result
+import Data.Stream.Result (Result (..))
 
 {- | Class of monads that support running several 'Automaton's concurrently,
 interleaving their outputs into a single 'Automaton'.
@@ -118,12 +111,14 @@ instance MonadSchedule IO where
         forkIO $ replicateM_ (N.length automata - 1) $ putMVar input a0
         forM_ automata $ \automaton -> forkIO $ reactimate $ constM (takeMVar input) >>> automaton >>> arrM (putMVar output)
         return (output, input)
+  {-# INLINE schedule #-}
 
 instance (Monad m, MonadSchedule m) => MonadSchedule (ReaderT r m) where
   schedule =
     fmap runReaderS
       >>> schedule
       >>> readerS
+  {-# INLINE schedule #-}
 
 {- | Schedule automata in 'ExceptT'.
 
@@ -140,6 +135,7 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (ExceptT e m) where
     fmap exceptS
       >>> schedule
       >>> withAutomaton_ (fmap sequenceA >>> ExceptT)
+  {-# INLINE schedule #-}
 
 {- | Schedule automata in 'MaybeT'.
 
@@ -156,6 +152,7 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (MaybeT m) where
     fmap runMaybeS
       >>> schedule
       >>> withAutomaton_ (fmap sequenceA >>> MaybeT)
+  {-# INLINE schedule #-}
 
 {- | A monad transformer for scheduling automata that all need to run to
 completion.
@@ -190,24 +187,28 @@ instance (Monad m, MonadSchedule m) => MonadSchedule (FinalizeT m) where
       haveAllFinished = Automaton.unfold S.empty $ \input is -> case input of
         Left i -> let is' = S.insert i is in Result is' $ if is' == allN then Nothing else Just Nothing
         Right b -> Result is $ Just $ Just b
+  {-# INLINE schedule #-}
 
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (CPS.WriterT w m) where
   schedule =
     fmap (withAutomaton_ (CPS.runWriterT >>> fmap (\(Result s a, w) -> Result s (a, w))))
       >>> schedule
       >>> withAutomaton_ (fmap (\(Result s (a, w)) -> (Result s a, w)) >>> CPS.writerT)
+  {-# INLINE schedule #-}
 
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (Strict.WriterT w m) where
   schedule =
     fmap (withAutomaton_ (Strict.runWriterT >>> fmap (\(Result s a, w) -> Result s (a, w))))
       >>> schedule
       >>> withAutomaton_ (fmap (\(Result s (a, w)) -> (Result s a, w)) >>> Strict.WriterT)
+  {-# INLINE schedule #-}
 
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (Lazy.WriterT w m) where
   schedule =
     fmap (withAutomaton_ (Lazy.runWriterT >>> fmap (\(Result s a, w) -> Result s (a, w))))
       >>> schedule
       >>> withAutomaton_ (fmap (\(Result s (a, w)) -> (Result s a, w)) >>> Lazy.WriterT)
+  {-# INLINE schedule #-}
 
 -- | This will share the accumulated log from the past with all automata
 instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (AccumT w m) where
@@ -215,6 +216,7 @@ instance (Monoid w, Monad m, MonadSchedule m) => MonadSchedule (AccumT w m) wher
     fmap (withAutomaton_ (runAccumT >>> ReaderT >>> CPS.writerT))
       >>> schedule
       >>> withAutomaton_ (CPS.runWriterT >>> runReaderT >>> AccumT)
+  {-# INLINE schedule #-}
 
 -- | This will share the accumulated state from the past with all automata
 instance (Monoid w, RightAction w s, Monad m, MonadSchedule m) => MonadSchedule (ChangesetT s w m) where
@@ -222,6 +224,7 @@ instance (Monoid w, RightAction w s, Monad m, MonadSchedule m) => MonadSchedule 
     fmap (withAutomaton_ (getChangesetT >>> ReaderT >>> fmap swap >>> CPS.writerT))
       >>> schedule
       >>> withAutomaton_ (CPS.runWriterT >>> fmap swap >>> runReaderT >>> ChangesetT)
+  {-# INLINE schedule #-}
 
 {- | Cycle through all automata in a round-robin fashion.
 
@@ -232,141 +235,108 @@ the input 'NonEmpty' list, cycling indefinitely.
 instance MonadSchedule Identity where
   schedule =
     fmap (getAutomaton >>> toStreamT)
-      >>> foldrMap1 buildStreams consStreams
       >>> roundRobinStreams
       >>> fmap N.toList
       >>> concatS
       >>> Stateful
       >>> Automaton
-    where
-      buildStreams :: StreamT m b -> Streams m b
-      buildStreams StreamT {state, step} =
-        Streams
-          { states = I state :* Nil
-          , steps = Step (ResultStateT step) :* Nil
-          }
+  {-# INLINE schedule #-}
 
-      consStreams :: StreamT m b -> Streams m b -> Streams m b
-      consStreams StreamT {state, step} Streams {states, steps} =
-        Streams
-          { states = I state :* states
-          , steps = Step (ResultStateT step) :* steps
-          }
+{- | Step every substream in lock-step against the same input state and collect
+the outputs into a 'NonEmpty' list, preserving input order.
 
--- The order of outputs matches the order of inputs: 'foldrMap1' places the
--- first input element at the head of the 'NP', so 'hnonemptycollapse' extracts
--- outputs in the original order.
-
-{- | Step all streams in a 'Streams' bundle simultaneously and collect the
-results into a 'NonEmpty' list, preserving the input order.
+The schedule state is a non-empty sequence of 'StreamT' cells.
+Each tick advances all substreams via the underlying 'Applicative',
+so any 'Applicative'-level effects (e.g. a 'WriterT' log) see the joint tick
+as one atomic event rather than a per-substream sequence.
+Downstream, 'concatS' flattens the @NonEmpty b@ into one @b@ per outer tick,
+giving the round-robin semantics.
 -}
-roundRobinStreams :: (Functor m, Applicative m) => Streams m b -> StreamT m (NonEmpty b)
-roundRobinStreams Streams {states, steps} =
+roundRobinStreams :: (Applicative m) => NonEmpty (StreamT m b) -> StreamT m (NonEmpty b)
+roundRobinStreams streams =
   StreamT
-    { state = states
-    , step = \s ->
-        s
-          & hzipWith (\Step {getStep} (I s) -> getResultStateT getStep s <&> RunningResult & Compose) steps
-          & htraverse' getCompose
-          <&> ( \results ->
-                  Result
-                    (results & hmap (getRunningResult >>> resultState >>> I))
-                    (results & hmap (getRunningResult >>> output >>> K) & hnonemptycollapse)
-              )
+    { state = NESeq.fromList streams
+    , step =
+        fmap
+          ( \stepped ->
+              Result
+                ((\(Result s' _) -> s') <$> stepped)
+                (toNonEmpty ((\(Result _ b) -> b) <$> stepped))
+          )
+          . traverse stepOne
     }
-
--- | Collapse a non-empty n-ary product of constant functors into a 'NonEmpty' list.
-hnonemptycollapse :: (SListI as) => NP (K b) (a ': as) -> NonEmpty b
-hnonemptycollapse (K a :* as) = a :| hcollapse as
-
--- | A nonempty list of 'StreamT's, unzipped into their states and their steps.
-data Streams m b
-  = forall state (states :: [Type]).
-  (SListI states) =>
-  Streams
-  { states :: NP I (state ': states)
-  , steps :: NP (Step m b) (state ': states)
-  }
-
--- | One step of a stream, with the state type argument going last, so it is usable with sop-core.
-newtype Step m b state = Step {getStep :: ResultStateT state m b}
-
--- | The result of a stream, with the type arguments swapped, so it's usable with sop-core
-newtype RunningResult b state = RunningResult {getRunningResult :: Result state b}
-
-instance (Monad m, MonadSchedule m) => MonadSchedule (SkipT m) where
-  schedule = fmap runSkipS >>> schedule >>> fmap maybeToList >>> Automaton.concatS >>> liftS
+  where
+    stepOne (StreamT s f) = (\(Result s' b) -> Result (StreamT s' f) b) <$> f s
+{-# INLINE roundRobinStreams #-}
 
 -- | Each scheduled automaton must eventually produce an output or a diff greater than 'zero', otherwise this will loop indefinitely.
-instance (Ord diff, TimeDifference diff, Monad m, MonadSchedule m) => MonadSchedule (ScheduleT diff m) where
-  schedule automata = automata & N.zip [1 ..] & fmap instrument & schedule & backpressure & scheduleS & Automaton.concatS
+instance (Monoid diff, Ord diff, TimeDifference diff, Monad m, MonadSchedule m) => MonadSchedule (ScheduleT diff m) where
+  schedule automata =
+    automata
+      & N.zip [1 ..]
+      & fmap instrument -- substream per tick: (i, Maybe (diff, b))
+      & schedule -- inner scheduler interleaves the substreams
+      & backpressure -- buffer slots, gate by consensus, coalesce
+      & scheduleS -- repack (diff, [b]) into ScheduleT diff
+      & Automaton.concatS -- flatten [b] into one b per outer tick
     where
-      nAutomata = List.length automata
-      instrument :: (Int, Automaton (ScheduleT diff m) a b) -> Automaton m (a, diff) (Int, Either (Maybe diff) b)
+      nAutomata = N.length automata
+
+      -- Per-substream wrapper. State = localTime (total diff consumed).
+      -- Skips when ahead of consensus; otherwise steps once and bumps localTime.
+      instrument ::
+        (Int, Automaton (ScheduleT diff m) a b) ->
+        Automaton m (a, diff) (Int, Maybe (diff, b))
       instrument (i, automaton) = flip runStateS__ mempty $ proc (a, globalTime) -> do
         localTime <- constM get -< ()
-
         if globalTime < localTime
-          -- We are ahead of the consensus time, skip this tick instead of emitting
-          -- Each automaton ticks once per round-robin cycle over all N automata,
-          -- so each input 'a' is delivered to each automaton exactly once per cycle.
-          then do
-            returnA -< (i, Left Nothing)
+          then returnA -< (i, Nothing) -- ahead of consensus, sit out
           else do
-            diffOrOutput <- liftS $ runScheduleS automaton -< a
-            case diffOrOutput of
-              Left diffNew -> do
-                arrM modify -< (`add` diffNew)
-              _ -> returnA -< ()
-            returnA -< (i, Bifunctor.first Just diffOrOutput)
+            (diff, b) <- liftS $ runScheduleS automaton -< a -- one (diff, b)
+            arrM modify -< (`add` diff) -- localTime += diff
+            returnA -< (i, Just (diff, b))
 
-      -- Each tick of 'schedule' advances exactly one of the N instrumented automata.
-      -- 'backpressure' feeds the current consensus time back as the second input
-      -- so that automata which are ahead of the consensus will skip their tick.
-      backpressure :: Automaton m (a, diff) (Int, Either (Maybe diff) b) -> Automaton m a (Either diff [b])
-      backpressure scheduled = feedback (IM.fromAscList $ (,Seq.Empty) <$> [1 .. nAutomata], mempty) $ proc (a, (queues, lastGlobalTime)) -> do
-        (i, outputOrDiffMaybe) <- scheduled -< (a, lastGlobalTime)
-        let (output, queues') = popOutput $ enqueueOutput i outputOrDiffMaybe queues
-        returnA -< (output, (queues', lastGlobalTime & either add (const id) output))
+      -- Buffers per-substream slots, advances consensus when all slots are
+      -- full, emits the min-diff substream's b (or several b's on ties).
+      -- State = (slots, globalTime), threaded via `runStateS__` for
+      -- consistency with `instrument`.
+      backpressure ::
+        Automaton m (a, diff) (Int, Maybe (diff, b)) ->
+        Automaton m a (diff, [b])
+      backpressure scheduled = flip runStateS__ (initialSlots, mempty) $ proc a -> do
+        globalTime <- constM (gets snd) -< ()
+        (i, maybeEmit) <- liftS scheduled -< (a, globalTime)
+        -- Install slot-i's emission (when present). The skip-gate in
+        -- `instrument` ensures we never overwrite an already-Just slot
+        -- (queue depth stays ≤ 1).
+        _ <- mapMaybeS (arrM (\(i', db) -> modify $ Bifunctor.first $ IM.insert i' (Just db))) -< (i,) <$> maybeEmit
+        -- Pop a consensus tick atomically: read slots, compute popOutput,
+        -- write back updated slots and advanced consensus, return (advance, bs).
+        constM
+          ( State.state $ \(slots, gt) ->
+              let (advance, bs, slots') = popOutput slots
+               in ((advance, bs), (slots', gt `add` advance))
+          )
+          -<
+            ()
+        where
+          initialSlots :: IntMap (Maybe (diff, b))
+          initialSlots = IM.fromAscList ((,Nothing) <$> [1 .. nAutomata])
 
-      enqueueOutput :: Int -> Either (Maybe diff) b -> IntMap (Seq (Either diff b)) -> IntMap (Seq (Either diff b))
-      enqueueOutput i = \case
-        Left Nothing -> id
-        Left (Just diff) -> IM.insertWith (<>) i $ Seq.singleton $ Left diff
-        Right b -> IM.insertWith (<>) i $ Seq.singleton $ Right b
-
-      analyseQueue :: IntMap (Seq (Either diff b)) -> Maybe (IntMap (Seq (Either diff b)), (IntMap diff, [b]))
-      analyseQueue =
-        let peekOutput i queuei = do
-              case viewl queuei of
-                -- Queue empty: we cannot yet determine a consensus output for this
-                -- automaton, so we abort and wait for more input from 'schedule'.
-                -- This conservatively waits even if some other automata already
-                -- have outputs queued; a more aggressive variant could return
-                -- those partial results early.
-                EmptyL -> lift Nothing
-                -- New diff enqueued.
-                Left diff :< queuei' -> do
-                  modify $ Bifunctor.first $ IM.insert i diff
-                  pure queuei'
-                -- New output.
-                Right b :< queuei' -> do
-                  modify $ Bifunctor.second (b :)
-                  pure queuei'
-         in flip runStateT (IM.empty, []) . IM.traverseWithKey peekOutput
-
-      pushDiffsBack :: IntMap diff -> IntMap (Seq (Either diff b)) -> IntMap (Seq (Either diff b))
-      pushDiffsBack diffs = IM.unionWith (<>) $ diffs <&> pure . Left
-
-      popOutput :: IntMap (Seq (Either diff b)) -> (Either diff [b], IntMap (Seq (Either diff b)))
-      popOutput queues = case analyseQueue queues of
-        Nothing -> (Right [], queues) -- Queues weren't full yet, need to wait for more input
-        Just (queues', (diffs, bs)) -> case N.nonEmpty bs of
-          Nothing ->
-            if IM.null diffs
-              then (Right [], queues') -- No diffs or outputs enqueued
-              else
-                let minDiff = minimum diffs
-                    adjustedDiffs = diffs <&?> \diff -> guard (diff /= minDiff) >> Just (diff `difference` minDiff)
-                 in (Left minDiff, pushDiffsBack adjustedDiffs queues')
-          Just bs -> (Right $ List.reverse $ toList bs, pushDiffsBack diffs queues')
+      -- Emit a consensus tick when every slot is Just. Pop all b's whose
+      -- diff equals the min, leaving the rest with their diff reduced by
+      -- minDiff (they're still ahead of consensus by that delta).
+      popOutput ::
+        IntMap (Maybe (diff, b)) ->
+        (diff, [b], IntMap (Maybe (diff, b)))
+      popOutput slots
+        | any isNothing (IM.elems slots) = (mempty, [], slots)
+        | otherwise =
+            let pairs = IM.mapMaybe id slots
+                minDiff = minimum (fst <$> IM.elems pairs)
+                stepSlot (d, b)
+                  | d == minDiff = (Nothing, Just b)
+                  | otherwise = (Just (d `difference` minDiff, b), Nothing)
+                stepped = stepSlot <$> pairs
+             in (minDiff, IM.elems (IM.mapMaybe snd stepped), fst <$> stepped)
+  {-# INLINE schedule #-}
