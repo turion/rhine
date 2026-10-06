@@ -42,8 +42,9 @@ data FixedStep (n :: Nat) where
 -- | Extract the type-level natural number as an integer.
 stepsize :: FixedStep n -> Seconds Integer
 stepsize fixedStep@FixedStep = Seconds $ natVal fixedStep
+{-# INLINE stepsize #-}
 
-instance (Monad m) => Clock (ScheduleT (Seconds Integer) m) (FixedStep n) where
+instance (Monad m, time ~ Seconds Integer) => Clock (ScheduleT time m) (FixedStep n) where
   type Time (FixedStep n) = Seconds Integer
   type Tag (FixedStep n) = ()
   initClock cl =
@@ -71,3 +72,4 @@ downsampleFixedStep ::
 downsampleFixedStep = collect >>-^ arr (fromList >>> assumeSize)
   where
     assumeSize = fromMaybe $ error "downsampleFixedStep: Internal error. Please report this as a bug: https://github.com/turion/rhine/issues"
+{-# INLINE downsampleFixedStep #-}
