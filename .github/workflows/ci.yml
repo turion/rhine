@@ -120,7 +120,7 @@ jobs:
       versions: ${{ steps.generate-versions.outputs.versions }}
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
       - name: Generate versions
         id: generate-versions
         run: |
@@ -140,7 +140,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
       - uses: cachix/cachix-action@v17
         with:
           name: rhine
