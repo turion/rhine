@@ -110,8 +110,8 @@ constMCl = timeless . constM
 
 Caution: This will not change the time differences since the last tick.
 For example,
-while @integrate 1@ is approximately the same as @timeInfoOf sinceInit@,
-@mapMaybe $ integrate 1@ is very different from
+while @integral 1@ is approximately the same as @timeInfoOf sinceInit@,
+@mapMaybe $ integral 1@ is very different from
 @mapMaybe $ timeInfoOf sinceInit@.
 The former only integrates when the input is @Just 1@,
 whereas the latter always returns the correct time since initialisation.
