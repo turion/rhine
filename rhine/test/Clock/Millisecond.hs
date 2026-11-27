@@ -29,12 +29,14 @@ tests =
     "Millisecond"
     [ testCase "Outputs milliseconds chronologically" $ do
         output <- runRhine (millisecondsSinceInit @@ (waitClock @1)) $ replicate 5 ()
-        assertTiming output $ Just <$> [1, 2, 3, 4, 5]
+        assertTiming output $ Just <$> [0, 1, 2, 3, 4]
     , testCase "Schedules chronologically" $ do
-        output <- runRhine (millisecondsSinceInit @@ (waitClock @30) >-- collect --> (clId &&& millisecondsSinceInit) @@ (waitClock @50)) $ replicate 5 ()
+        output <- runRhine (millisecondsSinceInit @@ (waitClock @30) >-- collect --> (clId &&& millisecondsSinceInit) @@ (waitClock @50)) $ replicate 7 ()
         assertTiming
           output
           [ Nothing
+          , Just ([0], 0)
+          , Nothing
           , Just ([30], 50)
           , Nothing
           , Nothing
@@ -45,7 +47,7 @@ tests =
 assertTiming :: (Show a, TimingSubsumes a) => a -> a -> Assertion
 assertTiming observed expected =
   when (os /= "darwin") $
-    assertBool ("Observed timing: " ++ show observed ++ "\nExpected timing: " ++ show expected) $
+    assertBool ("Observed timing: " <> (show observed <> ("\nExpected timing: " <> show expected))) $
       timingSubsumes observed expected
 
 class TimingSubsumes a where

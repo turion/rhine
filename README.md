@@ -154,6 +154,16 @@ Several [strategies exist](https://github.com/turion/rhine/issues/151) and it de
 For [`FixedStep`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine-Clock-FixedStep.html#t:FixedStep) clocks, it won't matter since the execution of the program isn't tied to a realtime clock.
 For [`ClSF`](https://hackage.haskell.org/package/rhine/docs/FRP-Rhine-ClSF-Core.html#t:ClSF)s running on `UTCTime` clocks, you can execute the slow code in a separate thread and coordinate merging the results back into the signal network.
 
+* GHC says `Simplifier ticks exhausted`. What to do?
+
+`automaton` and thus `rhine` relies heavily on inlining to achieve high performance.
+This puts some load onto GHCs simplifier and in some edge cases triggers this error message.
+Usually you should be able to work around it by putting a stanza like this in the failing module:
+
+```haskell
+{-# OPTIONS_GHC -fsimpl-tick-factor=1000000 #-}
+```
+
 ## Support
 
 Any question about Rhine is welcome.

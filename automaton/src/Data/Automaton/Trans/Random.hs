@@ -44,30 +44,36 @@ import Data.Automaton.Trans.State (StateT (..), runStateS_)
 -- | Create a stream of random values.
 getRandomS :: (MonadRandom m, Random b) => Automaton m a b
 getRandomS = constM getRandom
+{-# INLINE getRandomS #-}
 
 -- | Create a stream of lists of random values.
 getRandomsS :: (MonadRandom m, Random b) => Automaton m a [b]
 getRandomsS = constM getRandoms
+{-# INLINE getRandomsS #-}
 
 -- | Create a stream of random values in a given fixed range.
 getRandomRS :: (MonadRandom m, Random b) => (b, b) -> Automaton m a b
 getRandomRS range = constM $ getRandomR range
+{-# INLINE getRandomRS #-}
 
 {- | Create a stream of random values in a given range, where the range is
 specified on every tick.
 -}
 getRandomRS_ :: (MonadRandom m, Random b) => Automaton m (b, b) b
 getRandomRS_ = arrM getRandomR
+{-# INLINE getRandomRS_ #-}
 
 -- | Create a stream of lists of random values in a given fixed range.
 getRandomsRS :: (MonadRandom m, Random b) => (b, b) -> Automaton m a [b]
 getRandomsRS range = constM $ getRandomRs range
+{-# INLINE getRandomsRS #-}
 
 {- | Create a stream of lists of random values in a given range, where the
 range is specified on every tick.
 -}
 getRandomsRS_ :: (MonadRandom m, Random b) => Automaton m (b, b) [b]
 getRandomsRS_ = arrM getRandomRs
+{-# INLINE getRandomsRS_ #-}
 
 -- * Running automata with random effects
 
@@ -81,6 +87,7 @@ runRandS ::
   g ->
   Automaton m a (g, b)
 runRandS = runStateS_ . hoistS (StateT . runRandT)
+{-# INLINE runRandS #-}
 
 {- | Evaluate an 'Automaton' in the 'RandT' transformer, i.e. extract possibly random
 values by supplying an initial random generator. Updates the generator every
@@ -92,3 +99,4 @@ evalRandS ::
   g ->
   Automaton m a b
 evalRandS automaton g = runRandS automaton g >>> arr snd
+{-# INLINE evalRandS #-}

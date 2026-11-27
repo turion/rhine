@@ -20,9 +20,6 @@ module FRP.Rhine.SN (
 -- base
 import Control.Monad (join)
 
--- transformers
-import Control.Monad.Trans.Reader (reader)
-
 -- automata
 import Data.Stream.Result (Result (..))
 
@@ -44,8 +41,8 @@ synchronous ::
   (cl ~ In cl, cl ~ Out cl, Monad m, Clock m cl, GetClockProxy cl) =>
   ClSF m cl a b ->
   SN m cl a b
-synchronous clsf = SN $ reader $ \initialTime -> proc (time, tag, Just a) -> do
-  b <- eraseClockClSF (getClockProxy @cl) initialTime clsf -< (time, tag, a)
+synchronous clsf = SN $ proc (time, tag, Just a) -> do
+  b <- eraseClockClSF clsf -< (time, tag, a)
   returnA -< Just b
 {-# INLINE synchronous #-}
 
@@ -73,90 +70,109 @@ sequential ::
 -- the resampling buffer (which connects the two components) may be triggered,
 -- but only if the outgoing clock of the first component ticks,
 -- or the incoming clock of the second component ticks.
-sequential sn1 resBuf sn2 = SN $ reader $ \initialTime ->
-  let
-    proxy1 = toClockProxy sn1
-    proxy2 = toClockProxy sn2
-   in
-    proc (time, tag, maybeA) -> do
-      resBufIn <- case tag of
-        Left tagL -> do
-          maybeB <- eraseClockSN initialTime sn1 -< (time, tagL, maybeA)
-          returnA -< Left <$> ((time,,) <$> outTag proxy1 tagL <*> maybeB)
-        Right tagR -> do
-          returnA -< Right . (time,) <$> inTag proxy2 tagR
-      maybeC <- mapMaybeS $ eraseClockResBuf (outProxy proxy1) (inProxy proxy2) initialTime resBuf -< resBufIn
-      case tag of
-        Left _ -> do
-          returnA -< Nothing
-        Right tagR -> do
-          eraseClockSN initialTime sn2 -< (time, tagR, join maybeC)
+sequential sn1 resBuf sn2 =
+  SN $
+    let
+      proxy1 = toClockProxy sn1
+      proxy2 = toClockProxy sn2
+     in
+      proc (time, tag, maybeA) -> do
+        resBufIn <- case tag of
+          Left tagL -> do
+            maybeB <- eraseClockSN sn1 -< (time, tagL, maybeA)
+            returnA -< Left <$> ((time,,) <$> outTag proxy1 tagL <*> maybeB)
+          Right tagR -> do
+            returnA -< Right . (time,) <$> inTag proxy2 tagR
+        maybeC <- mapMaybeS $ eraseClockResBuf resBuf -< resBufIn
+        case tag of
+          Left _ -> do
+            returnA -< Nothing
+          Right tagR -> do
+            eraseClockSN sn2 -< (time, tagR, join maybeC)
 {-# INLINE sequential #-}
 
 -- | Two 'SN's with the same input and output data may be parallely composed.
-parallel snL snR = SN $ reader $ \initialTime -> proc (time, tag, maybeA) -> do
+parallel snL snR = SN $ proc (time, tag, maybeA) -> do
   case tag of
-    Left tagL -> eraseClockSN initialTime snL -< (time, tagL, maybeA)
-    Right tagR -> eraseClockSN initialTime snR -< (time, tagR, maybeA)
+    Left tagL -> eraseClockSN snL -< (time, tagL, maybeA)
+    Right tagR -> eraseClockSN snR -< (time, tagR, maybeA)
 {-# INLINE parallel #-}
 
 -- | A 'ClSF' can always be postcomposed onto an 'SN' if the clocks match on the output.
-postcompose sn clsf = SN $ reader $ \initialTime ->
-  let
-    proxy = toClockProxy sn
-   in
-    proc input@(time, tag, _) -> do
-      bMaybe <- eraseClockSN initialTime sn -< input
-      mapMaybeS $ eraseClockClSF (outProxy proxy) initialTime clsf -< (time,,) <$> outTag proxy tag <*> bMaybe
+postcompose sn clsf =
+  SN $
+    let
+      proxy = toClockProxy sn
+     in
+      proc input@(time, tag, _) -> do
+        bMaybe <- eraseClockSN sn -< input
+        mapMaybeS $ eraseClockClSF clsf -< (time,,) <$> outTag proxy tag <*> bMaybe
 {-# INLINE postcompose #-}
 
 -- | A 'ClSF' can always be precomposed onto an 'SN' if the clocks match on the input.
-precompose clsf sn = SN $ reader $ \initialTime ->
-  let
-    proxy = toClockProxy sn
-   in
-    proc (time, tag, aMaybe) -> do
-      bMaybe <- mapMaybeS $ eraseClockClSF (inProxy proxy) initialTime clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
-      eraseClockSN initialTime sn -< (time, tag, bMaybe)
+precompose clsf sn =
+  SN $
+    let
+      proxy = toClockProxy sn
+     in
+      proc (time, tag, aMaybe) -> do
+        bMaybe <- mapMaybeS $ eraseClockClSF clsf -< (time,,) <$> inTag proxy tag <*> aMaybe
+        eraseClockSN sn -< (time, tag, bMaybe)
 {-# INLINE precompose #-}
 
 {- | Data can be looped back to the beginning of an 'SN',
   but it must be resampled since the 'Out' and 'In' clocks are generally different.
 -}
-feedbackSN ResamplingBuffer {buffer, put, get} sn = SN $ reader $ \initialTime ->
-  let
-    proxy = toClockProxy sn
-   in
-    feedback buffer $ proc ((time, tag, aMaybe), buf) -> do
-      (cMaybe, buf') <- case inTag proxy tag of
-        Nothing -> do
-          returnA -< (Nothing, buf)
-        Just tagIn -> do
-          timeInfo <- genTimeInfo (inProxy proxy) initialTime -< (time, tagIn)
-          Result buf' c <- arrM $ uncurry get -< (timeInfo, buf)
-          returnA -< (Just c, buf')
-      bdMaybe <- eraseClockSN initialTime sn -< (time, tag, (,) <$> aMaybe <*> cMaybe)
-      case (,) <$> outTag proxy tag <*> bdMaybe of
-        Nothing -> do
-          returnA -< (Nothing, buf')
-        Just (tagOut, (b, d)) -> do
-          timeInfo <- genTimeInfo (outProxy proxy) initialTime -< (time, tagOut)
-          buf'' <- arrM $ uncurry $ uncurry put -< ((timeInfo, d), buf')
-          returnA -< (Just b, buf'')
+feedbackSN ::
+  (Time cl ~ Time (In cl), Time cl ~ Time (Out cl), GetClockProxy cl, Functor m, Monad m, Clock m (In cl), Clock m (Out cl)) =>
+  ResamplingBuffer m (Out cl) (In cl) d b -> SN m cl (a, b) (c, d) -> SN m cl a c
+feedbackSN ResamplingBuffer {buffer, put, get} sn =
+  SN $
+    let
+      proxy = toClockProxy sn
+     in
+      feedback buffer $ proc ((time, tag, aMaybe), buf) -> do
+        (cMaybe, buf') <- case inTag proxy tag of
+          Nothing -> do
+            returnA -< (Nothing, buf)
+          Just tagIn -> do
+            timeInfo <- genTimeInfo -< (time, tagIn)
+            Result buf' c <- arrM $ uncurry get -< (timeInfo, buf)
+            returnA -< (Just c, buf')
+        bdMaybe <- eraseClockSN sn -< (time, tag, (,) <$> aMaybe <*> cMaybe)
+        case (,) <$> outTag proxy tag <*> bdMaybe of
+          Nothing -> do
+            returnA -< (Nothing, buf')
+          Just (tagOut, (b, d)) -> do
+            timeInfo <- genTimeInfo -< (time, tagOut)
+            buf'' <- arrM $ uncurry $ uncurry put -< ((timeInfo, d), buf')
+            returnA -< (Just b, buf'')
 {-# INLINE feedbackSN #-}
 
 -- | Bypass the signal network by forwarding data in parallel through a 'ResamplingBuffer'.
-firstResampling sn buf = SN $ reader $ \initialTime ->
-  let
-    proxy = toClockProxy sn
-   in
-    proc (time, tag, acMaybe) -> do
-      bMaybe <- eraseClockSN initialTime sn -< (time, tag, fst <$> acMaybe)
-      let
-        resBufInput = case (inTag proxy tag, outTag proxy tag, snd <$> acMaybe) of
-          (Just tagIn, _, Just c) -> Just $ Left (time, tagIn, c)
-          (_, Just tagOut, _) -> Just $ Right (time, tagOut)
-          _ -> Nothing
-      dMaybe <- mapMaybeS $ eraseClockResBuf (inProxy proxy) (outProxy proxy) initialTime buf -< resBufInput
-      returnA -< (,) <$> bMaybe <*> join dMaybe
+firstResampling ::
+  ( Monad m
+  , Time cl ~ Time (In cl)
+  , Time cl ~ Time (Out cl)
+  , GetClockProxy cl
+  , Clock m (In cl)
+  , Clock m (Out cl)
+  ) =>
+  SN m cl a b ->
+  ResamplingBuffer m (In cl) (Out cl) c d ->
+  SN m cl (a, c) (b, d)
+firstResampling sn buf =
+  SN $
+    let
+      proxy = toClockProxy sn
+     in
+      proc (time, tag, acMaybe) -> do
+        bMaybe <- eraseClockSN sn -< (time, tag, fst <$> acMaybe)
+        let
+          resBufInput = case (inTag proxy tag, outTag proxy tag, snd <$> acMaybe) of
+            (Just tagIn, _, Just c) -> Just $ Left (time, tagIn, c)
+            (_, Just tagOut, _) -> Just $ Right (time, tagOut)
+            _ -> Nothing
+        dMaybe <- mapMaybeS $ eraseClockResBuf buf -< resBufInput
+        returnA -< (,) <$> bMaybe <*> join dMaybe
 {-# INLINE firstResampling #-}

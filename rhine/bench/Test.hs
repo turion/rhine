@@ -1,6 +1,6 @@
 -- rhine
-
 import Sum
+import SumMultirate
 import WordCount
 
 -- tasty
@@ -13,6 +13,8 @@ import Test.Tasty.HUnit (testCase, (@?=))
 wordCount :: Int
 wordCount = 966503
 
+expected = Sum.direct Sum.nMax
+
 main :: IO ()
 main =
   defaultMain $
@@ -24,9 +26,19 @@ main =
           ]
       , testGroup
           "Sum"
-          [ testCase "rhine flow" $ Sum.rhineFlow Sum.nMax @?= Sum.direct Sum.nMax
-          , testCase "rhine IO" $ Sum.rhineIO >>= (@?= Sum.direct Sum.nMax)
-          , testCase "automaton reactimate" $ Sum.automatonReactimate Sum.nMax @?= Sum.direct Sum.nMax
-          , testCase "automaton reactimate IO" $ Sum.automatonReactimateIO >>= (@?= Sum.direct Sum.nMax)
+          [ testCase "rhine flow" $ Sum.rhineFlow Sum.nMax @?= expected
+          , testCase "rhine IO" $ Sum.rhineIO >>= (@?= expected)
+          , testCase "automaton reactimate" $ Sum.automatonReactimate Sum.nMax @?= expected
+          , testCase "automaton reactimate IO" $ Sum.automatonReactimateIO >>= (@?= expected)
+          ]
+      , testGroup
+          "Sum multirate"
+          [ testCase "rhine Busy Waitclock" $ SumMultirate.rhineBusyWaitclock SumMultirate.nMax >>= (@?= expected)
+          , testCase "rhine Busy Busy" $ SumMultirate.rhineBusyBusy SumMultirate.nMax >>= (@?= expected)
+          , testCase "rhine FixedStep 1:1 IO" $ SumMultirate.rhineFixedStep11IO SumMultirate.nMax >>= (@?= expected)
+          , testCase "rhine FixedStep 1000:1" $ SumMultirate.rhineFixedStep10001 SumMultirate.nMax @?= expected
+          , testCase "rhine FixedStep 1:1" $ SumMultirate.rhineFixedStep11 SumMultirate.nMax @?= expected
+          , testCase "rhine FixedStep 1000:1 downsampleFixedStep" $ SumMultirate.rhineFixedStep11000downsampleFixedStep SumMultirate.nMax @?= expected
+          , testCase "rhine Trivial Trivial" $ SumMultirate.rhineTrivialTrivial SumMultirate.nMax @?= expected
           ]
       ]

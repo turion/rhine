@@ -13,11 +13,10 @@ import Data.TimeDomain (Seconds)
 
 -- automaton
 import Data.Automaton (embed)
-import Data.Automaton.Schedule.Trans (Schedule, evalSchedule)
+import Data.Automaton.Schedule.Trans (evalSchedule)
 
 -- rhine
-import FRP.Rhine (FixedStep (..), ParallelClock (..), initClock, runningSchedule)
-import FRP.Rhine.Clock (RunningClockInit)
+import FRP.Rhine (FixedStep (..), ParallelClock (..), runClock)
 
 tests =
   testGroup
@@ -27,9 +26,7 @@ tests =
         [ testCase "chronological ticks" $ do
             let clA = FixedStep @5
                 clB = FixedStep @3
-                (runningClockA, _) = evalSchedule (initClock clA :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
-                (runningClockB, _) = evalSchedule (initClock clB :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) ())
-                output = evalSchedule $ embed (runningSchedule clA clB runningClockA runningClockB) $ replicate 6 ()
+                output = evalSchedule @(Seconds Integer) $ embed runClock $ replicate 6 $ ParallelClock clA clB
             output
               @?= [ (3, Right ())
                   , (5, Left ())
@@ -42,8 +39,7 @@ tests =
     , testGroup
         "ParallelClock"
         [ testCase "chronological ticks" $ do
-            let (runningClock, _time) = evalSchedule (initClock (ParallelClock (FixedStep @5) (FixedStep @3)) :: RunningClockInit (Schedule (Seconds Integer)) (Seconds Integer) (Either () ()))
-                output = evalSchedule $ embed runningClock $ replicate 6 ()
+            let output = evalSchedule @(Seconds Integer) $ embed runClock $ replicate 6 $ ParallelClock (FixedStep @5) (FixedStep @3)
             output
               @?= [ (3, Right ())
                   , (5, Left ())

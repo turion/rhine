@@ -32,6 +32,7 @@ accumS :: (Functor m) => Automaton m (w, a) (w, b) -> Automaton (AccumT w m) a b
 accumS = withAutomaton $ \f a -> AccumT $ \w ->
   (\(Result s (w', b)) -> (Result s b, w'))
     <$> f (w, a)
+{-# INLINE accumS #-}
 
 {- | Make the accumulation transition in 'AccumT' explicit as 'Automaton' inputs and outputs.
 
@@ -41,6 +42,7 @@ runAccumS :: (Functor m) => Automaton (AccumT w m) a b -> Automaton m (w, a) (w,
 runAccumS = withAutomaton $ \f (w, a) ->
   (\(Result s b, w') -> Result s (w', b))
     <$> runAccumT (f a) w
+{-# INLINE runAccumS #-}
 
 {- | Convert global accumulation state to internal state of an 'Automaton'.
 
@@ -55,7 +57,9 @@ runAccumS_ automaton = feedback mempty $ proc (a, wState) -> do
   (wAdd, b) <- runAccumS automaton -< (wState, a)
   let wState' = wState <> wAdd
   returnA -< ((wState', b), wState')
+{-# INLINE runAccumS_ #-}
 
 -- | Like 'runAccumS_', but don't output the current accum.
 runAccumS__ :: (Functor m, Monoid w, Monad m) => Automaton (AccumT w m) a b -> Automaton m a b
 runAccumS__ automaton = runAccumS_ automaton <&> snd
+{-# INLINE runAccumS__ #-}
