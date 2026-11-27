@@ -33,6 +33,7 @@ changesetS :: (Functor m) => Automaton m (s, a) (w, b) -> Automaton (ChangesetT 
 changesetS = withAutomaton $ \f a -> ChangesetT $ \s ->
   f (s, a)
     <&> (\(Result s' (w, b)) -> (w, Result s' b))
+{-# INLINE changesetS #-}
 
 {- | Make the accumulation transition in 'ChangesetT' explicit as 'Automaton' inputs and outputs.
 
@@ -42,6 +43,7 @@ getChangesetS :: (Functor m) => Automaton (ChangesetT s w m) a b -> Automaton m 
 getChangesetS = withAutomaton $ \f (s, a) ->
   getChangesetT (f a) s
     <&> (\(w, Result s' b) -> Result s' (w, b))
+{-# INLINE getChangesetS #-}
 
 {- | Convert global accumulation state to internal state of an 'Automaton'.
 
@@ -58,7 +60,9 @@ runChangesetS s automaton = feedback s $ proc (a, s) -> do
   (w, b) <- getChangesetS automaton -< (s, a)
   let s' = s `actRight` w
   returnA -< ((s', b), s')
+{-# INLINE runChangesetS #-}
 
 -- | Like 'runChangesetS', but don't output the current state.
 runChangesetS_ :: (Monoid w, Monad m, RightAction w s) => s -> Automaton (ChangesetT s w m) a b -> Automaton m a b
 runChangesetS_ s automaton = runChangesetS s automaton >>> arr snd
+{-# INLINE runChangesetS_ #-}

@@ -9,6 +9,9 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Functor ((<&>))
 import Data.Void
 
+-- transformers
+import Control.Monad.Trans.Except (withExceptT)
+
 -- time
 import Data.Time (UTCTime, getCurrentTime)
 
@@ -33,6 +36,16 @@ import FRP.Rhine.Clock (
   retag,
  )
 import FRP.Rhine.Clock.Proxy (GetClockProxy)
+
+{- | A clock that has been 'hoist'ed with 'withExceptT'.
+
+This is typically needed when you want to change the type of an exception.
+-}
+type WithExceptClock m e1 e2 cl = HoistClock (ExceptT e1 m) (ExceptT e2 m) cl
+
+-- | 'hoist' a clock with 'withExceptT' to change its exception type.
+withExceptClock :: (Functor m) => (e1 -> e2) -> cl -> WithExceptClock m e1 e2 cl
+withExceptClock f cl = HoistClock cl $ withExceptT f
 
 -- * 'ExceptClock'
 

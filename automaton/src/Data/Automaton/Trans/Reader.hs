@@ -7,6 +7,7 @@ module Data.Automaton.Trans.Reader (
   readerS,
   runReaderS,
   runReaderS_,
+  commuteReaders,
 )
 where
 
@@ -41,3 +42,11 @@ runReaderS = withAutomaton $ \f (r, a) -> runReaderT (f a) r
 runReaderS_ :: (Monad m) => Automaton (ReaderT s m) a b -> s -> Automaton m a b
 runReaderS_ automaton s = arr (s,) >>> runReaderS automaton
 {-# INLINE runReaderS_ #-}
+
+-- * Helper functions
+
+-- | Commute two 'ReaderT' transformer layers past each other
+commuteReaders :: ReaderT r1 (ReaderT r2 m) a -> ReaderT r2 (ReaderT r1 m) a
+commuteReaders a =
+  ReaderT $ \r1 -> ReaderT $ \r2 -> runReaderT (runReaderT a r2) r1
+{-# INLINE commuteReaders #-}

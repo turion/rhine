@@ -72,6 +72,7 @@ common opts
     MultiParamTypeClasses
     NamedFieldPuns
     NoStarIsType
+    StrictData
     TupleSections
     TypeApplications
     TypeFamilies
@@ -219,6 +220,7 @@ test-suite benchmark-test
   other-modules:
     Paths_rhine
     Sum
+    SumMultirate
     WordCount
 
   build-depends:
