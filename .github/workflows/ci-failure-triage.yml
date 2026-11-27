@@ -1,0 +1,105 @@
+name: CI failure triage
+
+# When the scheduled/master "build" workflow or the "update-flake-lock"
+# workflow fails, automatically open an issue and hand it off to the
+# Copilot coding agent for triage. This workflow never fixes or merges
+# anything itself; it only escalates failures that would otherwise only
+# show up as a red check that a human has to notice.
+on:
+  workflow_run:
+    workflows:
+      - build
+      - update-flake-lock
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Workflow run ID of a (past) failed run to triage, for manual testing"
+        required: true
+        type: string
+
+permissions:
+  issues: write
+  actions: read
+
+jobs:
+  triage:
+    name: Open a triage issue for the failed run
+    runs-on: ubuntu-latest
+    # Only react to actual failures: either the workflow_run trigger reports
+    # conclusion == 'failure', or this was dispatched manually to test the
+    # workflow against a specific past run.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Determine failed run details
+        id: run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RUN_ID="${{ inputs.run_id }}"
+          else
+            RUN_ID="${{ github.event.workflow_run.id }}"
+          fi
+
+          RUN_JSON=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID")
+          {
+            echo "run_id=$RUN_ID"
+            echo "name=$(echo "$RUN_JSON" | jq -r '.name')"
+            echo "url=$(echo "$RUN_JSON" | jq -r '.html_url')"
+            echo "branch=$(echo "$RUN_JSON" | jq -r '.head_branch')"
+            echo "event=$(echo "$RUN_JSON" | jq -r '.event')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure the needs-triage label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create needs-triage \
+            --repo "${{ github.repository }}" \
+            --color "d93f0b" \
+            --description "Automatically opened issue that needs triage" \
+            || true
+
+      - name: Open triage issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_NAME: ${{ steps.run.outputs.name }}
+          RUN_BRANCH: ${{ steps.run.outputs.branch }}
+          RUN_EVENT: ${{ steps.run.outputs.event }}
+          RUN_URL: ${{ steps.run.outputs.url }}
+        run: |
+          BODY="The **$RUN_NAME** workflow failed on branch \`$RUN_BRANCH\` (triggered by \`$RUN_EVENT\`).
+
+          Failed run: $RUN_URL
+
+          Before proceeding, read and follow the policies and skills in [turion/upkeep](https://github.com/turion/upkeep), especially [\`skills/ci-triage.md\`](https://github.com/turion/upkeep/blob/main/skills/ci-triage.md) and [\`skills/classical-first.md\`](https://github.com/turion/upkeep/blob/main/skills/classical-first.md). If this failure requires upstream/human-facing action beyond this repo, or is policy-sensitive, open an issue in [turion/upkeep](https://github.com/turion/upkeep) describing findings instead of acting further here. See also [\`AGENTS.md\`](https://github.com/turion/upkeep/blob/main/AGENTS.md), [\`skills/version-bound-fix.md\`](https://github.com/turion/upkeep/blob/main/skills/version-bound-fix.md), and [\`skills/flake-lock-update.md\`](https://github.com/turion/upkeep/blob/main/skills/flake-lock-update.md) if relevant.
+
+          @copilot please investigate the failed run above, determine the root cause, and recommend a fix. If the fix is simple and safe (e.g. bumping a pinned version, adjusting a config value), feel free to open a PR with it. If the failure is ambiguous, flaky, or requires a judgment call, leave a clear summary here for human review instead of guessing. Please do not merge anything yourself.
+
+          This issue was opened automatically by \`.github/workflows/ci-failure-triage.yml\`; it does not attempt to fix anything itself."
+
+          URL=$(gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "CI failure: ${{ steps.run.outputs.name }} failed on ${{ steps.run.outputs.branch }} (run #${{ steps.run.outputs.run_id }})" \
+            --label "needs-triage" \
+            --body "$BODY")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "number=${URL##*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Assign the issue to the Copilot coding agent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Assigning to the Copilot coding agent requires the repo to have it
+        # enabled and (depending on GitHub's current API support) may need a
+        # token with more privileges than the default GITHUB_TOKEN. This is
+        # best-effort: if it fails, the issue still exists with the
+        # needs-triage label and an explicit @copilot mention in the body,
+        # so a maintainer can assign Copilot manually.
+        continue-on-error: true
+        run: |
+          gh issue edit "${{ steps.issue.outputs.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-assignee copilot-swe-agent

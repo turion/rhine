@@ -176,6 +176,12 @@ See [`Contributing.md`](./Contributing.md) for details.
   Have a look at issues labelled [`good first issue`](https://github.com/turion/rhine/issues?q=state%3Aopen%20label%3A%22good%20first%20issue%22).
   If you have questions, don't hesitate to ask on Github.
 
+On failure of the scheduled build or flake-lock update workflows, an issue is automatically opened and the coding agent is asked to triage and recommend a fix.
+
+The triage issue links back to [`turion/upkeep`](https://github.com/turion/upkeep) for the governing maintenance policy and skills that the agent should follow.
+
+Complex or ambiguous fixes are left for human review; the agent should not merge anything itself here.
+
 ## Related projects
 
 * https://github.com/turion/rhine-tutorial: Presentation and tutorial app
